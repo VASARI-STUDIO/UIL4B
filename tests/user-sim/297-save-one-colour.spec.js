@@ -138,7 +138,9 @@ for (const width of [390, 1440]) {
       await expect(swatches).toHaveCount(1)
       await expect(swatches.first()).toHaveText(hex)
       const box = await swatches.first().boundingBox()
-      expect(box.height, 'the swatch is a 44px target').toBeGreaterThanOrEqual(44)
+      // V3 .pjv-chip is 44px only in the phone block; on desktop it is a 36px chip by design.
+      const min = touch ? 44 : 36
+      expect(box.height, `the swatch is a ${min}px target`).toBeGreaterThanOrEqual(min)
 
       // A project with no saved colours shows no empty row.
       await go(page, '/projects/p-harbour')

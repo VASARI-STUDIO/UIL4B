@@ -1,37 +1,39 @@
 // REPORTING COMMUNITY CONTENT.
 //
-// Anyone can report a community design or prompt: there is a "Report <name>"
-// button on every card (and in the prompt modal), it opens one form, and the
-// form posts to /api/support as type 'report'. This file holds the promises
+// Anyone can report a community piece: every tile has an "Actions for <title>"
+// button, its menu has a Report row, that opens one form, and the form posts to
+// /api/support as type 'report'. (The V3 Community page replaced the old
+// per-card "Report <name>" button with that menu.) This file holds the promises
 // that are easy to break without a build error:
 //
-//   - every card has the control, named for its item, with a 44x44 target at
-//     phone, tablet and desktop widths, and it does not sit on the monogram;
+//   - every tile has the "..." control, named for its piece, with a 44x44 hit
+//     target at phone, tablet and desktop widths, and a Report row in its menu;
 //   - the form refuses an incomplete report INLINE and moves focus to the first
 //     field that is wrong, in the order it is read;
 //   - a signed-out reporter must leave an email, except for "Illegal content"
 //     (the one reason that may be sent without an address);
 //   - a valid report reaches /api/support with the item's id, kind and page;
-//   - Escape closes the form and gives focus back to the Report button;
+//   - Escape closes the form and gives focus back to the tile's "..." button;
 //   - the prompt modal's Report closes the modal and opens the form;
 //   - the Help Centre offers the no-account email route.
 //
 // /api/support is ALWAYS intercepted. Nothing here reaches a real endpoint, and
 // a test that expects no request asserts the ledger is empty.
 //
-// MUTATIONS this file was seen to fail under (one each, restored after):
+// MUTATIONS this file was seen to fail under (older ones first; the card Report
+// button's CSS mutation no longer applies, the "..." hit area replaced it):
 //   src/utils/contentReport.js  `reason.id !== 'illegal'` -> `true` in the email
 //        rule            fails "illegal content may be sent without an email".
 //   src/components/ContentReportDialog.jsx  drop the `.focus()` call in the
 //        `!check.ok` branch      fails the three "focus lands on ..." tests.
-//   src/styles/global.css  `.report-btn--icon{min-width:44px;min-height:44px}`
-//        -> 28px                 fails "every design card's Report button is a
-//        44px target" at all three widths.
+//   src/styles/pages/community.css  `.cm-disc::before { inset: -6px }` -> 0
+//        fails "each tile's ... button has a 44px hit area" at all widths
+//        (seen to fail for this retarget by changing the test's own bound).
 //   src/components/prompt/PromptModal.jsx  remove `beforeOpen={onClose}`
 //        fails "the prompt modal's Report closes the modal ...".
 import { test, expect } from './base.js'
 import { go, watch, signIn, expectRendered } from './helpers.js'
-import { COMMUNITY_DESIGNS } from '../../src/data/communityDesigns.js'
+import { SHOWCASE_PIECES, makerName } from '../../src/data/communityShowcase.js'
 import { COMMUNITY_PROMPT_ROWS } from '../../src/data/communityPrompts.js'
 
 const WIDTHS = [
@@ -60,51 +62,70 @@ const sendButton = (page) => formDialog(page).getByRole('button', { name: 'Send 
 async function gotoCommunity(page) {
   await go(page, '/community')
   await expectRendered(page)
-  await expect(page.locator('.ch-card').first()).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('.cm-tile').first()).toBeVisible({ timeout: 20000 })
 }
 
-/** The first design card's Report button, and the design it belongs to. */
-async function firstDesign(page) {
-  const name = (await page.locator('.ch-card .ch-card-name').first().textContent()).trim()
-  const design = COMMUNITY_DESIGNS.find((d) => d.name === name)
-  expect(design, `"${name}" on /community is not in the curated list - the id lookup would be a guess`).toBeTruthy()
-  return { design, button: page.getByRole('button', { name: `Report ${name}`, exact: true }) }
+/**
+ * The nth tile's "..." button, and the piece it belongs to. The report names the
+ * piece "<title> by <maker>", which is what the dialog and the email carry.
+ */
+async function nthDesign(page, n = 0) {
+  const tile = page.locator('.cm-tile').nth(n)
+  const title = (await tile.locator('.cm-tile-title').textContent()).trim()
+  const piece = SHOWCASE_PIECES.find((p) => p.title === title)
+  expect(piece, `"${title}" on /community is not in the showcase list - the id lookup would be a guess`).toBeTruthy()
+  const design = { id: piece.id, name: `${piece.title} by ${makerName(piece)}`, title: piece.title }
+  return { design, tile, button: tile.getByRole('button', { name: `Actions for ${title}`, exact: true }) }
+}
+const firstDesign = (page) => nthDesign(page, 0)
+
+/** Open a tile's menu and choose Report, as a person does. */
+async function openReport(page, button) {
+  await button.click()
+  await page.getByRole('menuitem', { name: 'Report', exact: true }).click()
+  await expect(formDialog(page)).toBeVisible()
 }
 
-test.describe('every community design card has a Report control', () => {
+test.describe('every community tile has a Report control', () => {
   for (const vp of WIDTHS) {
-    test(`/community at ${vp.width}px: each card has "Report <name>", a 44px target clear of the monogram`, async ({ page }) => {
-      watch(page, `someone browsing community designs at ${vp.width}px`)
+    test(`/community at ${vp.width}px: each tile has "Actions for <title>", a 44px hit area, and Report in its menu`, async ({ page }) => {
+      watch(page, `someone browsing community pieces at ${vp.width}px`)
       await page.setViewportSize(vp)
       await gotoCommunity(page)
 
-      const cards = await page.evaluate(() => [...document.querySelectorAll('.ch-card')].map((card) => {
-        const box = (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
-        const btn = card.querySelector('.report-btn')
-        const mono = card.querySelector('.ch-thumb-mono')
-        return {
-          name: card.querySelector('.ch-card-name')?.textContent.trim(),
-          label: btn?.getAttribute('aria-label') || null,
-          btn: btn ? box(btn) : null,
-          chip: btn ? box(btn.querySelector('.report-btn-chip')) : null,
-          mono: mono ? box(mono) : null,
-        }
-      }))
-
+      const tiles = page.locator('.cm-tile')
+      const count = await tiles.count()
       // Positive control: an empty grid would make every check below vacuous.
-      expect(cards.length, 'no community card rendered - nothing below would be tested').toBeGreaterThan(0)
+      expect(count, 'no community tile rendered - nothing below would be tested').toBeGreaterThan(0)
 
-      for (const c of cards) {
-        expect(c.label, `the card "${c.name}" has no Report button`).toBe(`Report ${c.name}`)
-        expect(c.btn.w, `Report ${c.name} is ${c.btn.w}px wide`).toBeGreaterThanOrEqual(44)
-        expect(c.btn.h, `Report ${c.name} is ${c.btn.h}px tall`).toBeGreaterThanOrEqual(44)
-        // The visible chip is smaller than its target; it must not cover the monogram.
-        if (c.mono) {
-          const overlaps = c.chip.x < c.mono.x + c.mono.w && c.chip.x + c.chip.w > c.mono.x
-            && c.chip.y < c.mono.y + c.mono.h && c.chip.y + c.chip.h > c.mono.y
-          expect(overlaps, `the Report chip on "${c.name}" covers its monogram`).toBe(false)
-        }
+      for (let i = 0; i < count; i++) {
+        const tile = tiles.nth(i)
+        const title = (await tile.locator('.cm-tile-title').textContent()).trim()
+        const more = tile.getByRole('button', { name: `Actions for ${title}`, exact: true })
+        await expect(more, `the tile "${title}" has no Actions button`).toHaveCount(1)
+        await tile.scrollIntoViewIfNeeded()
+        await tile.hover()
+        // The button draws 32px; its ::before reaches 6px past every side. A
+        // press anywhere in the 44px square must land on the button itself.
+        const hit = await more.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const at = (x, y) => document.elementFromPoint(x, y)
+          // Edge midpoints, not corners: the tile's rounded corner clips a corner probe.
+          const cx = r.left + r.width / 2
+          const cy = r.top + r.height / 2
+          const corners = [[r.left - 5, cy], [r.right + 5, cy], [cx, r.top - 5], [cx, r.bottom + 5], [cx, cy]]
+          return { w: r.width, h: r.height, onButton: corners.map(([x, y]) => at(x, y) === el) }
+        })
+        expect(hit.w, `"${title}" ... draws ${hit.w}px wide`).toBeGreaterThanOrEqual(32)
+        expect(hit.h, `"${title}" ... draws ${hit.h}px tall`).toBeGreaterThanOrEqual(32)
+        expect(hit.onButton, `a press 5px beyond the edge of the "${title}" ... button must still reach it`).toEqual([true, true, true, true, true])
       }
+
+      // The menu carries the Report row, and Report is named for no one else's piece.
+      const { button } = await nthDesign(page, 0)
+      await button.click()
+      await expect(page.getByRole('menu', { name: /^Actions for / })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Report', exact: true })).toBeVisible()
     })
   }
 })
@@ -115,8 +136,7 @@ test.describe('the content-report form', () => {
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
     const { button } = await firstDesign(page)
-    await button.click()
-    await expect(formDialog(page)).toBeVisible()
+    await openReport(page, button)
 
     await sendButton(page).click()
 
@@ -129,7 +149,7 @@ test.describe('the content-report form', () => {
     watch(page, 'a signed-out visitor forgetting the confirmation')
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
-    await (await firstDesign(page)).button.click()
+    await openReport(page, (await firstDesign(page)).button)
 
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
@@ -147,7 +167,7 @@ test.describe('the content-report form', () => {
     const { button } = await firstDesign(page)
 
     for (const reason of ['Illegal content', 'Infringes intellectual property', 'Something else']) {
-      await button.click()
+      await openReport(page, button)
       await reasonRadio(page, reason).check()
       await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
       await formDialog(page).getByRole('checkbox').check()
@@ -166,7 +186,7 @@ test.describe('the content-report form', () => {
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
     const { button } = await firstDesign(page)
-    await button.click()
+    await openReport(page, button)
 
     // Harassment needs no details, so the email is the only thing missing.
     await reasonRadio(page, 'Harassment or hate').check()
@@ -188,7 +208,7 @@ test.describe('the content-report form', () => {
     watch(page, 'a visitor mistyping their address')
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
-    await (await firstDesign(page)).button.click()
+    await openReport(page, (await firstDesign(page)).button)
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByLabel(/^Your email/).fill('not-an-address')
     await formDialog(page).getByRole('checkbox').check()
@@ -202,7 +222,7 @@ test.describe('the content-report form', () => {
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
     const { design, button } = await firstDesign(page)
-    await button.click()
+    await openReport(page, button)
 
     await reasonRadio(page, 'Infringes intellectual property').check()
     await formDialog(page).getByLabel(/^Details/).fill(DETAILS)
@@ -231,7 +251,7 @@ test.describe('the content-report form', () => {
     const me = await signIn(page)
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
-    await (await firstDesign(page)).button.click()
+    await openReport(page, (await firstDesign(page)).button)
 
     await expect(formDialog(page)).toContainText(`If we need more, we may write to ${me.email}.`)
     await expect(formDialog(page).getByLabel(/^Your email/)).toHaveCount(0)
@@ -250,7 +270,7 @@ test.describe('the content-report form', () => {
     const sent = page.getByRole('dialog', { name: 'Report sent' })
 
     // With an address: the whole sentence, word for word.
-    await button.click()
+    await openReport(page, button)
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
     await formDialog(page).getByRole('checkbox').check()
@@ -262,7 +282,7 @@ test.describe('the content-report form', () => {
     await sent.getByRole('button', { name: 'Close', exact: true }).click()
 
     // Illegal content may be sent with no address: then there is nobody to write to, and it says so by saying nothing.
-    await button.click()
+    await openReport(page, button)
     await reasonRadio(page, 'Illegal content').check()
     await formDialog(page).getByLabel(/^Details/).fill(DETAILS)
     await formDialog(page).getByRole('checkbox').check()
@@ -275,7 +295,7 @@ test.describe('the content-report form', () => {
     watch(page, 'a visitor reading the form copy')
     await gotoCommunity(page)
     const { button } = await firstDesign(page)
-    await button.click()
+    await openReport(page, button)
     for (const reason of ['Illegal content', 'Spam or a scam']) {
       await reasonRadio(page, reason).check()
       await expect(formDialog(page)).toContainText(/write to you/)
@@ -291,7 +311,7 @@ test.describe('the content-report form', () => {
 
     await signIn(page)
     await gotoCommunity(page)
-    await (await firstDesign(page)).button.click()
+    await openReport(page, (await firstDesign(page)).button)
     await expect(formDialog(page).locator('.fb-sending-as')).toContainText('If we need more, we may write to')
     await expect(formDialog(page), 'signed in').not.toContainText(/decision|decide/i)
   })
@@ -303,7 +323,7 @@ test.describe('the content-report form', () => {
     page.on('request', (req) => { if (req.url().includes('/api/support')) auth.push(req.headers().authorization || '') })
     await gotoCommunity(page)
     const { button } = await firstDesign(page)
-    await button.click()
+    await openReport(page, button)
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
     await formDialog(page).getByRole('checkbox').check()
@@ -314,7 +334,7 @@ test.describe('the content-report form', () => {
 
     await signIn(page)
     await gotoCommunity(page)
-    await (await firstDesign(page)).button.click()
+    await openReport(page, (await firstDesign(page)).button)
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByRole('checkbox').check()
     await sendButton(page).click()
@@ -325,12 +345,18 @@ test.describe('the content-report form', () => {
     expect(auth[1], 'a member sends their ID token as a Bearer header').toBe('Bearer uil4b-test-session.test-uid-free')
   })
 
-  test('Escape closes the form and focus returns to the Report button', async ({ page }) => {
+  test('Escape closes the form and focus returns to the tile ... button', async ({ page }) => {
     watch(page, 'a keyboard user backing out of a report')
     const posts = await interceptSupport(page)
     await gotoCommunity(page)
     const { button } = await firstDesign(page)
     await button.focus()
+    await page.keyboard.press('Enter')
+    // The menu opens with focus on its first row (Save); Report is the third.
+    await expect(page.getByRole('menuitem', { name: 'Save', exact: true })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Report', exact: true })).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(formDialog(page)).toBeVisible()
 
@@ -341,20 +367,22 @@ test.describe('the content-report form', () => {
     expect(posts).toEqual([])
   })
 
-  test('a second report starts blank, not from the first one\'s words', async ({ page }) => {
-    watch(page, 'a visitor reporting two designs')
+  test('a second report starts blank, not from the first words', async ({ page }) => {
+    watch(page, 'a visitor reporting two pieces')
     await interceptSupport(page)
     await gotoCommunity(page)
-    const cards = page.locator('.ch-card')
-    await expect(cards.nth(1)).toBeVisible()
+    await expect(page.locator('.cm-tile').nth(1)).toBeVisible()
+    const first = await nthDesign(page, 0)
+    const second = await nthDesign(page, 1)
 
-    await cards.nth(0).locator('.report-btn').click()
+    await openReport(page, first.button)
     await reasonRadio(page, 'Spam or a scam').check()
     await formDialog(page).getByLabel(/^Your email/).fill(EMAIL)
     await page.keyboard.press('Escape')
     await expect(formDialog(page)).toBeHidden()
 
-    await cards.nth(1).locator('.report-btn').click()
+    await openReport(page, second.button)
+    await expect(formDialog(page)).toContainText(second.design.name)
     await expect(reasonRadio(page, 'Spam or a scam')).not.toBeChecked()
     await expect(formDialog(page).getByLabel(/^Your email/)).toHaveValue('')
   })

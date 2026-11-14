@@ -9,13 +9,14 @@
 // For a design and for an icon, each test walks the same three steps:
 //   1. the admin presses the control and the row leaves the list it was in;
 //   2. the stored queue document says what the admin chose (or is gone);
-//   3. the author, signed in on the same session, sees the result on /community.
+//   3. the author, signed in on the same session, sees the result under "Your
+//      submissions" on their own profile (/u/me).
 //
 // The seams are the ones 204 and 290 use: /api/verify-admin is stubbed (vite
 // preview runs no functions), the queue is documents in `community-submissions`
 // handed to the session double through signIn(), and the double stands in for
 // Firestore. The author is reached by switching the signed-in account under the
-// mounted page and moving to /community without a reload, because a reload
+// mounted page and moving to the profile without a reload, because a reload
 // would empty the in-memory store the decision was written to.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -44,27 +45,18 @@ const iconDoc = (over = {}) => ({
   ...over,
 })
 
-// What differs between the two kinds: how to make one, and where the author
-// finds it. A design is a card in the browse grid unless it was turned down; an
-// icon is only ever a row under "Your submissions".
+// What differs between the two kinds: how to make one. Where the author finds
+// it does not: the V3 Community page is a showcase of sample pieces, so a
+// design and an icon are both only ever a row under "Your submissions" on the
+// author's own profile.
 const KINDS = {
   design: { make: designDoc, subject: 'Harbour Dashboard', other: 'Pier Landing' },
   icon: { make: iconDoc, subject: 'Plus mark', other: 'Minus mark' },
 }
 
-const gridCard = (page, name) => page.locator('.ch-grid article.ch-card', { hasText: name })
-const queueRow = (page, name) => page
-  .locator('section', { has: page.getByRole('heading', { name: 'Your submissions' }) })
-  .locator('li', { hasText: name })
+const queueRow = (page, name) => page.locator('#your-submissions .cm-sub', { hasText: name })
 // The tag the author reads for one of their own submissions.
-function authorTag(page, kind, name, status) {
-  if (kind === 'design' && status !== 'rejected') return gridCard(page, name).locator('.ch-card-own')
-  return queueRow(page, name).locator('.ch-card-tag')
-}
-// Where the author would find it at all, whatever it says.
-const authorEntry = (page, kind, name, status) => (
-  kind === 'design' && status !== 'rejected' ? gridCard(page, name) : queueRow(page, name)
-)
+const authorTag = (page, name) => queueRow(page, name).locator('.cm-sub-status')
 
 const adminRow = (page, name) => page.locator('.cq-item', { hasText: name })
 const docOf = (page, id) => page.evaluate((k) => {
@@ -90,7 +82,7 @@ async function actAs(page, who, path) {
     window.__UIL4B_TEST_AUTH__.switchTo(who)
   }, { who, path })
 }
-const asAuthor = (page) => actAs(page, AUTHOR, '/community')
+const asAuthor = (page) => actAs(page, AUTHOR, '/u/me#your-submissions')
 async function asAdmin(page) {
   await actAs(page, { uid: 'test-uid-admin', email: admin.email, displayName: 'Founder', claims: { admin: true, email_verified: true } }, '/admin')
   await page.locator('#admtab-community').click()
@@ -112,8 +104,7 @@ for (const [kind, k] of Object.entries(KINDS)) {
       expect((await docOf(page, 's-1')).status, 'the stored document must say approved').toBe('approved')
 
       await asAuthor(page)
-      await expect(authorTag(page, kind, k.subject, 'approved'), 'the author reads it as approved').toContainText('Approved')
-      await expect(authorTag(page, kind, k.subject, 'approved')).not.toContainText('Pending')
+      await expect(authorTag(page, k.subject), 'the author reads it as approved').toHaveText('Approved')
     })
 
     // MUTATION: in src/components/admin/CommunityQueue.jsx make `decide` write
@@ -136,13 +127,9 @@ for (const [kind, k] of Object.entries(KINDS)) {
       expect((await docOf(page, 's-2')).status, 'the other document is untouched').toBe('pending')
 
       await asAuthor(page)
-      await expect(authorTag(page, kind, k.subject, 'rejected'), 'the author reads it as not approved').toContainText('Not approved')
-      // Once the account has answered (the other one is there), the rejected
-      // design must not be among the browsable cards.
-      await expect(authorEntry(page, kind, k.other, 'pending')).toBeVisible()
-      if (kind === 'design') {
-        await expect(page.locator('.ch-grid'), 'a rejected design is not in the browse grid').not.toContainText(k.subject)
-      }
+      await expect(authorTag(page, k.subject), 'the author reads it as not approved').toHaveText('Not approved')
+      // The control: the one the admin left alone still reads as waiting.
+      await expect(authorTag(page, k.other), 'the one left alone is still pending for the author').toHaveText('Pending review')
     })
 
     // MUTATION: in src/components/admin/CommunityQueue.jsx make `remove` skip the
@@ -159,7 +146,7 @@ for (const [kind, k] of Object.entries(KINDS)) {
 
       // The author has it to begin with, so its absence later means something.
       await asAuthor(page)
-      await expect(authorEntry(page, kind, k.subject, 'approved')).toBeVisible()
+      await expect(queueRow(page, k.subject)).toBeVisible()
       await asAdmin(page)
 
       await page.getByRole('tab', { name: /^Approved/ }).click()
@@ -172,8 +159,8 @@ for (const [kind, k] of Object.entries(KINDS)) {
       expect(await docOf(page, 's-2'), 'the other document must stay').not.toBeNull()
 
       await asAuthor(page)
-      await expect(authorEntry(page, kind, k.other, 'approved'), 'the account has answered').toBeVisible()
-      await expect(authorEntry(page, kind, k.subject, 'approved'), 'the removed one is off the author page').toHaveCount(0)
+      await expect(queueRow(page, k.other), 'the account has answered').toBeVisible()
+      await expect(queueRow(page, k.subject), 'the removed one is off the author page').toHaveCount(0)
     })
   })
 }

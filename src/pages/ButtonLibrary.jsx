@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
@@ -24,6 +24,8 @@ import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 // This page's own sheet — every selector rooted at `.blib-page`.
 import '../styles/pages/button-library.css'
+// The V3 roles for the three Discover libraries, last so they win ties.
+import '../styles/pages/library-v3.css'
 
 // /discover/buttons — the Button Library. Ten button designs, each running on a
 // fixed light stage, with the HTML and CSS to copy. A card copies the CSS in one
@@ -55,12 +57,19 @@ export default function ButtonLibrary({ onCopy }) {
   const items = useMemo(() => filterButtons({ role, query }), [role, query])
   const openItem = openId ? buttonById(openId) : null
 
-  const clearFilters = useCallback(() => { setQuery(''); setRole('all') }, [])
+  // Resetting leaves focus in the search field, so the next keystroke starts a
+  // new search instead of landing on a button that has just left the page.
+  const root = useRef(null)
+  const clearFilters = useCallback(() => {
+    setQuery('')
+    setRole('all')
+    root.current?.querySelector('.lbry-search input')?.focus()
+  }, [])
   const closeDialog = useCallback(() => setOpenId(null), [])
   const copy = useCallback((text) => onCopy?.(text), [onCopy])
 
   return (
-    <div className="sec lib-surface blib-page">
+    <div ref={root} className="sec lib-surface lib-v3 blib-page">
       <DiscoverGalleryHero
         title="Button Library"
         description="Ten buttons for the jobs a button does, each with hover, pressed, focus and disabled states built in. Copy the HTML and CSS, free."

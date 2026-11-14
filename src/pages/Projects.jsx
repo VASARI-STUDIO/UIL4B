@@ -50,7 +50,10 @@ const readOnline = () => (typeof navigator === 'undefined' ? true : navigator.on
 export default function Projects() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
-  const { plan, isPro, loading: planLoading } = useSubscription()
+  const { plan, isPro, planKnown } = useSubscription()
+  // `loading` alone settles to false while auth still has no user, so for a moment after sign-in answers the plan
+  // is the free default, and a Pro account saw "See plans". `planKnown` waits for this account's own entitlement.
+  const planLoading = !planKnown
   const { projects, projectsLoading, projectCountKnown, projectCountPending, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
   useProjectIcons()
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true)

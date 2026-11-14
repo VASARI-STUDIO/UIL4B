@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
 import { canSeePack, viewerTier } from '../../data/iconPackTiers'
-import { creditRows } from '../../data/iconPackCredits'
+import { creditRows, packCredit } from '../../data/iconPackCredits'
 import { EMOJI_STYLE_SETS, styleIconName } from '../../utils/emojiStyleNames'
-import { loadStyleImage } from '../../utils/emojiStyleImage'
+import { attributedSvg, loadStyleImage, styleFileName } from '../../utils/emojiStyleImage'
+import { saveBlobAs } from '../../utils/iconDownload'
 
 // The detail dialog's "Styles" row: the same emoji drawn by other emoji art
 // sets, next to how this device draws it.
@@ -16,6 +17,11 @@ import { loadStyleImage } from '../../utils/emojiStyleImage'
 // nothing is requested for them (a pack the viewer cannot see is never asked
 // for). A Pro viewer gets a tile per set, and a set that has no artwork for
 // this emoji gets no tile at all: only an answered image is ever drawn.
+//
+// A drawn tile is also its download: pressing it saves that set's SVG, with
+// the set's credit and licence written into the file as a comment. Only the art
+// sets are offered as files. "Your device" is the visitor's system font, which
+// is not ours to hand out, so it stays copy-only.
 //
 // The row is one line that scrolls sideways when it is wider than the dialog,
 // and every tile keeps its size while loading, so nothing around it moves.
@@ -67,6 +73,11 @@ export default function EmojiStyles({ glyph, name, nameSettled, toneId }) {
   const failed = tiles.some(t => t.status === 'error')
   const credits = creditRows(drawn.map(t => t.set.prefix))
 
+  const download = (t) => {
+    const file = attributedSvg(t.svg, packCredit(t.set.prefix))
+    saveBlobAs(new Blob([file], { type: 'image/svg+xml' }), styleFileName(toneId ? `${name} ${toneId}` : name, t.set.prefix))
+  }
+
   return (
     <section className="emd-styles" aria-labelledby="emd-styles-h">
       <h3 className="emd-styles-h" id="emd-styles-h">Styles</h3>
@@ -95,7 +106,24 @@ export default function EmojiStyles({ glyph, name, nameSettled, toneId }) {
           if (t.status !== 'ok') return null
           return (
             <li className="emd-style" key={t.set.prefix}>
-              <span className="emd-style-art"><img className="emd-style-img" src={t.src} alt="" width="48" height="48" /></span>
+              {t.svg ? (
+                <button
+                  type="button"
+                  className="emd-style-art emd-style-save"
+                  onClick={() => download(t)}
+                  aria-label={`Download ${t.set.label} SVG`}
+                  title={`Download ${t.set.label} SVG`}
+                >
+                  <img className="emd-style-img" src={t.src} alt="" width="48" height="48" />
+                  <span className="emd-style-badge" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none">
+                      <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+              ) : (
+                <span className="emd-style-art"><img className="emd-style-img" src={t.src} alt="" width="48" height="48" /></span>
+              )}
               <span className="emd-style-label">{t.set.label}</span>
             </li>
           )

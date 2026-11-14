@@ -26,6 +26,7 @@
 //     names touch gestures" fails.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
+import { openGroup } from './converter-rail-helpers.js'
 
 const ROUTE = '/create/file-converter'
 // A 32×24 two-colour GIF: the Custom crop box needs a picture of at least 2×2 pixels.
@@ -51,7 +52,8 @@ async function openVideoTab(page) {
   await page.getByRole('tab', { name: 'Video' }).click()
   await page.locator('.fc-drop input[type="file"]').setInputFiles(GIF)
   await expect(page.locator('.fc-editbar')).toBeVisible()
-  await expect(page.getByRole('radiogroup', { name: 'Turn' })).toBeVisible()
+  await expect(page.getByRole('tablist', { name: 'Edit tools' })).toBeVisible()
+  await openGroup(page, 'Crop') // the shapes live in the Crop group
   // The picture has to have said how big it is before the shapes unlock.
   await expect(page.getByRole('radio', { name: '1:1', exact: true })).not.toHaveAttribute('aria-disabled', 'true')
 }
@@ -64,9 +66,9 @@ const redoBtn = (page) => page.locator('.fc-editbar [data-edit="redo"]')
 // Two frames is long enough for it to catch up; a person is never that quick.
 const settled = (page) => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
 const edit = async (page, click) => { await click; await settled(page) }
-const turn90 = (page) => edit(page, page.getByRole('radiogroup', { name: 'Turn' }).getByRole('radio', { name: '90° right' }).click())
-const flipH = (page) => edit(page, page.getByRole('button', { name: 'Flip horizontal' }).click())
-const double = (page) => edit(page, page.getByRole('radio', { name: 'Double speed' }).click())
+const turn90 = async (page) => { await openGroup(page, 'Turn'); await edit(page, page.getByRole('radiogroup', { name: 'Turn' }).getByRole('radio', { name: '90° right' }).click()) }
+const flipH = async (page) => { await openGroup(page, 'Turn'); await edit(page, page.getByRole('button', { name: 'Flip horizontal' }).click()) }
+const double = async (page) => { await openGroup(page, 'Time'); await edit(page, page.getByRole('radio', { name: 'Double speed' }).click()) }
 
 test.describe('Undo and Redo on the Video tab', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
@@ -87,6 +89,7 @@ test.describe('Undo and Redo on the Video tab', () => {
     await expect(line(page)).not.toContainText('Double speed')
     await expect(page.getByRole('radio', { name: 'Normal speed' })).toHaveAttribute('aria-checked', 'true')
     await undoBtn(page).click()
+    await openGroup(page, 'Turn')
     await expect(page.getByRole('button', { name: 'Flip horizontal' })).toHaveAttribute('aria-pressed', 'false')
     await expect(line(page)).toContainText('Turned 90° right')
     await undoBtn(page).click()
@@ -130,6 +133,7 @@ test.describe('Undo and Redo on the Video tab', () => {
     await double(page)
     await undoBtn(page).click()
     await expect(redoBtn(page)).toHaveAttribute('aria-disabled', 'false')
+    await openGroup(page, 'Turn')
     await edit(page, page.getByRole('button', { name: 'Flip vertical' }).click())
     await expect(redoBtn(page)).toHaveAttribute('aria-disabled', 'true')
     await expect(line(page)).toContainText('Flipped vertically')
@@ -139,12 +143,14 @@ test.describe('Undo and Redo on the Video tab', () => {
   test('shortcuts do nothing while a number field has the focus', async ({ page }) => {
     await openVideoTab(page)
     await turn90(page)
+    await openGroup(page, 'Crop')
     await edit(page, page.getByRole('radio', { name: 'Custom', exact: true }).click())
     await flipH(page)
     await expect(line(page)).toContainText('Custom crop · Turned 90° right · Flipped horizontally')
     // One step back, so a Redo is waiting for the shortcuts to (wrongly) use.
     await undoBtn(page).click()
     await expect(redoBtn(page)).toHaveAttribute('aria-disabled', 'false')
+    await openGroup(page, 'Crop')
     const field = page.locator('#fc-vid-box-x')
     await field.focus()
     await page.keyboard.press('Control+z')

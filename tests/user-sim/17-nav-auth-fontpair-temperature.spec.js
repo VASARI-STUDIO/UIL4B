@@ -40,7 +40,7 @@ test.describe('nav auth opens over the page you are on', () => {
     expect(scrolledTo, 'the visitor is well down the library').toBeGreaterThan(400)
 
     await menu.click()
-    await page.getByRole('button', { name: 'Create a free account' }).click()
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Create a free account' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     // THE BUG, stated: opening auth is not a navigation.
@@ -111,7 +111,7 @@ test.describe('nav auth opens over the page you are on', () => {
     await go(page, '/discover/palettes')
 
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
-    await page.getByRole('button', { name: 'Create a free account' }).click()
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Create a free account' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await resumeTarget(page), 'onboarding will return them to the library').toBe('/discover/palettes')
 

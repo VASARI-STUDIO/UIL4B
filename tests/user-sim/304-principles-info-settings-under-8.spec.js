@@ -25,7 +25,7 @@ async function open(browser, width, route, touch = false) {
 const WIDTHS = [320, 390, 768, 1440]
 
 test.describe('/learn/principles', () => {
-  test('the contrast demo is one surface: no box inside the panel', async ({ browser }) => {
+  test('the contrast demo is two tiles and nothing boxed inside them', async ({ browser }) => {
     const { ctx, page } = await open(browser, 768, '/learn/principles')
     const fig = page.locator('.prn-cx')
     await expect(fig).toBeVisible()
@@ -37,30 +37,30 @@ test.describe('/learn/principles', () => {
         return p.length > 3 ? Number(p[3]) : 1
       }
       const side = (cs, s) => parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== 'none'
-      const own = getComputedStyle(root)
       const boxes = []
+      const cells = []
       for (const el of root.querySelectorAll('*')) {
         const cs = getComputedStyle(el)
         const filled = alpha(cs.backgroundColor) > 0 || cs.backgroundImage !== 'none'
         // A hairline (one or two sides) is a divider; a box is three or more sides.
         const sides = ['Top', 'Right', 'Bottom', 'Left'].filter((s) => side(cs, s)).length
+        if (el.classList.contains('prn-cx-cell')) { cells.push({ filled, sides }); continue }
         if (filled || sides >= 3) boxes.push(`${el.className || el.tagName}: filled=${filled} sides=${sides}`)
       }
-      return { boxes, surface: alpha(own.backgroundColor) > 0 && parseFloat(own.borderTopWidth) > 0 }
+      return { boxes, cells }
     })
     // MUTATION: put `background` back on `.prn-cx-sample` (inline or in principles.css)
     // or give it `border-width: 2px` all round, and this lists it.
-    expect(found.boxes, 'a filled or fully bordered box inside the contrast panel').toEqual([])
-    expect(found.surface, 'the panel itself is the one surface').toBe(true)
-    // Both specimens still show what they are measured as.
-    const samples = await page.locator('.prn-cx-sample').evaluateAll((els) => els.map((el) => {
-      const cs = getComputedStyle(el)
-      return { color: cs.color, bottom: cs.borderBottomColor, bottomW: parseFloat(cs.borderBottomWidth) }
-    }))
-    expect(samples).toHaveLength(2)
-    expect(samples[0].color, 'the text specimen is set in the link blue').toBe('rgb(31, 79, 216)')
-    expect(samples[1].bottomW, 'the boundary specimen carries its one rule').toBeGreaterThanOrEqual(2)
-    expect(samples[1].bottom).toBe('rgb(15, 111, 255)')
+    expect(found.boxes, 'a filled or fully bordered box inside a contrast tile').toEqual([])
+    // The board draws the proof as two tiles (.prn-cx-cell, a card fill; framed on phone): they are the only surface, a tile never holds a second box.
+    expect(found.cells, 'two tiles, one per ink strength').toHaveLength(2)
+    for (const c of found.cells) expect(c.filled, 'each tile is a filled surface').toBe(true)
+    // Both specimens are text painted in the ink they measure (light theme, hand-checked):
+    // the tertiary ink #66665F that clears the floor, and the primary ink at 40% on #F5F5F2 that does not.
+    const samples = await page.locator('.prn-cx-sample').evaluateAll((els) => els.map((el) => getComputedStyle(el).color))
+    expect(samples).toEqual(["rgb(102, 102, 95)", "rgb(153, 153, 152)"])
+    const verdicts = await page.locator('.prn-cx-verdict').allTextContents()
+    expect(verdicts, "the quiet ink passes and the faint one fails").toEqual(["Passes AA", "Fails AA"])
     await ctx.close()
   })
 
@@ -186,9 +186,10 @@ test.describe('/settings (signed out)', () => {
         gap: el.getBoundingClientRect().top - grid.bottom,
       }
     })
-    // MUTATION: put `text-align: center` back on `.stg .stg-credit`.
+    // MUTATION: put `text-align: center` back on `.stg .stg-credit`, or a `border-top` on `.stg.stg .stg-credit`.
     expect(info.align, 'not centred').not.toBe('center')
-    expect(info.hair, 'a hairline marks the end of the content').toBeGreaterThan(0)
+    // The board draws no rule over the credit; the space above it is what sets it off.
+    expect(info.hair, 'a hairline is drawn over the credit').toBe(0)
     expect(info.last, 'last thing on the page').toBe(true)
     expect(info.gap, 'set off from the panels above').toBeGreaterThanOrEqual(32)
     await ctx.close()

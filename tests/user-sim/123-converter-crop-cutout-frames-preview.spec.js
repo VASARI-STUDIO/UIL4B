@@ -29,7 +29,7 @@ async function openVideoWithClip(page) {
     return Array.from(new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer()))
   })
   await page.locator('.fc-drop input[type="file"]').setInputFiles({ name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from(clip) })
-  await expect(page.getByLabel('Width (px)'), 'the clip never loaded').toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('tablist', { name: 'Edit tools' }), 'the clip never loaded').toBeVisible({ timeout: 15000 })
 }
 
 const shape = (page, name) => page.getByRole('radiogroup', { name: 'Shape' }).getByRole('radio', { name, exact: true })

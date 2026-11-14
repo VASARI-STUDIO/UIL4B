@@ -35,11 +35,19 @@ const PRO = () => [LEAD(), half(), ...many(5)]
 const sheetOf = (page, name) => page.getByRole('region', { name })
 const shelfOf = (page) => page.getByRole('region', { name: 'Tools and library' })
 
-/** Boxes in document coordinates, rounded to whole pixels. */
-const boxes = (locator) => locator.evaluateAll((els) => els.map((el) => {
-  const r = el.getBoundingClientRect()
-  return { x: Math.round(r.left), y: Math.round(r.top + scrollY), w: Math.round(r.width), h: Math.round(r.height) }
-}))
+/**
+ * Boxes in document coordinates, rounded to whole pixels. evaluateAll does not wait, and the dashboard shows
+ * its "Loading your projects" skeleton until the projects arrive (that passes expectRendered), so wait for the
+ * first match to be in the page before measuring. A locator that never matches still gives [] after the wait,
+ * so a missing part still fails its own length or [0] check.
+ */
+const boxes = async (locator) => {
+  await locator.first().waitFor({ state: 'attached', timeout: 10_000 }).catch(() => {})
+  return locator.evaluateAll((els) => els.map((el) => {
+    const r = el.getBoundingClientRect()
+    return { x: Math.round(r.left), y: Math.round(r.top + scrollY), w: Math.round(r.width), h: Math.round(r.height) }
+  }))
+}
 const distinct = (list) => new Set(list).size
 const overflowOf = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 

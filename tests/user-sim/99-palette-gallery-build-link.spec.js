@@ -29,7 +29,20 @@ async function colours(link) {
     }
     ground = ground || getComputedStyle(document.body).backgroundColor
     const cs = getComputedStyle(el)
-    return { fill: toRgb(cs.backgroundColor), ink: toRgb(cs.color), ground: toRgb(ground) }
+    // A transparent fill paints nothing, so the label sits on the ground. (The
+    // canvas drops alpha, so transparent would otherwise read as black.)
+    const probe = document.createElement('canvas').getContext('2d')
+    probe.fillStyle = cs.backgroundColor
+    probe.fillRect(0, 0, 1, 1)
+    const clear = probe.getImageData(0, 0, 1, 1).data[3] === 0
+    const arrow = el.querySelector('.pgl-build-icon svg')
+    return {
+      fill: clear ? toRgb(ground) : toRgb(cs.backgroundColor),
+      clear,
+      ink: toRgb(cs.color),
+      ground: toRgb(ground),
+      arrow: arrow ? getComputedStyle(arrow).transform : null,
+    }
   })
 }
 
@@ -47,16 +60,23 @@ for (const theme of ['light', 'dark']) {
     await expect(link).toBeVisible()
     await expect(link).toHaveAttribute('href', '/create/palette')
 
+    // RETARGETED (V3 board LibraryR2A): the create button is now the outline
+    // pill (transparent fill, 1px edge, label in the ink colour, a 20px disc
+    // with an arrow) and its hover keeps the background; the arrow turns instead.
+    // So the protected property is "readable in both themes, at rest and on
+    // hover" measured on the ground the label really sits on, and "hover still
+    // answers" is the arrow's turn. The old "filled primary, fill changes on
+    // hover" is gone by design.
+    // Mutation: set the pill's colour to var(--v3-hl20) (or its ink to the ground)
+    // in library-v3.css and the label ratio falls under 4.5.
     const rest = await colours(link)
-    expect(ratio(rest.fill, rest.ground), `${theme}: the button fill against its ground ${rest.fill} on ${rest.ground}`).toBeGreaterThanOrEqual(3)
-    expect(ratio(rest.ink, rest.fill), `${theme}: the label on the fill`).toBeGreaterThanOrEqual(4.5)
+    expect(rest.clear, 'the board draws an outline pill, no fill').toBe(true)
+    expect(ratio(rest.ink, rest.fill), `${theme}: the label on its ground ${rest.ink} on ${rest.fill}`).toBeGreaterThanOrEqual(4.5)
 
     await link.hover()
-    await expect.poll(async () => JSON.stringify((await colours(link)).fill), { message: 'hover changed nothing' }).not.toBe(JSON.stringify(rest.fill))
-    // Let the transition finish before reading the hover state.
-    await page.waitForTimeout(400)
+    await expect.poll(async () => (await colours(link)).arrow, { message: 'hover did not turn the arrow' }).not.toBe(rest.arrow)
     const hover = await colours(link)
-    expect(ratio(hover.ink, hover.fill), `${theme}: the label on the hover fill ${hover.ink} on ${hover.fill}`).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hover.ink, hover.fill), `${theme}: the label on hover ${hover.ink} on ${hover.fill}`).toBeGreaterThanOrEqual(4.5)
     await ctx.close()
   })
 }
