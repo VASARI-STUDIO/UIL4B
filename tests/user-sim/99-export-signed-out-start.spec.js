@@ -1,7 +1,7 @@
 // A visitor with no account opens Export on a free file, can browse the formats and
 // the themes, and is asked to sign in only when they press Export, in the dialog's
 // own dock. After signing in the export they asked for goes ahead.
-import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
+import { chooseFormat, exportPanel, primaryButton, dockStatus, categoryRadio, fileGroup } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { mockThemeApi } from './export-theme-mock.js'
@@ -22,6 +22,29 @@ async function openFromHeader(page) {
   return panel
 }
 
+/** The theme in use: the checked row of the inline list, or the folded "Theme: <name> · <brand>" row on a phone or a
+    window under 1024 x 900. */
+async function expectTheme(panel, name) {
+  const toggle = panel.getByRole('button', { name: /^Theme:/ })
+  if (await toggle.count()) await expect(toggle).toHaveAccessibleName(new RegExp(`^Theme: ${name} · `))
+  else await expect(panel.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { checked: true }).locator('.xd-theme-opt-n')).toHaveText(name)
+}
+
+/** Pick a theme the way Flow B offers it: from the inline list, opening the folded "Theme:" row first where it is folded. */
+async function chooseTheme(page, panel, name) {
+  const toggle = panel.getByRole('button', { name: /^Theme:/ })
+  if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  const own = page.locator('.xd-theme-opt-n').getByText(name, { exact: true })
+  await panel.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio').filter({ has: own }).click()
+  await expectTheme(panel, name)
+}
+
+/** The free start: the brand guidelines as slides, PDF. */
+async function expectFreeStart(panel, why) {
+  await expect(categoryRadio(panel, 'Slides'), why).toHaveAttribute('aria-checked', 'true')
+  await expect(fileGroup(panel, 'Slides').getByRole('radio', { name: /^PDF/ }), why).toHaveAttribute('aria-checked', 'true')
+}
+
 const SIZES = [
   { width: 1440, height: 900 },
   { width: 768, height: 1024 },
@@ -33,16 +56,38 @@ for (const size of SIZES) {
   test.describe(`signed out at ${size.width}px`, () => {
     test.use({ viewport: size })
 
-    test('opens on the UI kit in Standards with the preview and Theme row in view', async ({ page }) => {
+    test('opens on the guidelines in Label, a file it may export, with the preview and the theme in view', async ({ page }) => {
       watch(page, 'a visitor opening Export before making an account')
       await go(page, BOARD)
       const panel = await openFromHeader(page)
-      await expect(panel.getByRole('radio', { name: /^UI kit/ }), 'the dialog opened on a Pro document').toHaveAttribute('aria-checked', 'true')
-      await expect(primaryButton(panel)).toHaveText('Export UI kit')
-      await expect(panel.getByRole('button', { name: 'Change theme, current Standards' })).toBeVisible()
+      await expectFreeStart(panel, 'the dialog did not open on the free guidelines')
+      await expect(primaryButton(panel)).toHaveText('Export PDF')
+      await expectTheme(panel, 'Label')
       await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
       await expect(dockStatus(panel)).toHaveText(/Free with an account\. Log in to export\. The file carries a small ‘Made with UI L4B’ mark\./)
       await expect(panel.locator('#ui-login-title'), 'the sign-in is not asked for until Export is pressed').toHaveCount(0)
+    })
+
+    test('can move between the free guidelines themes, and a Pro theme shows the lock and the way to Pro', async ({ page }) => {
+      watch(page, 'a visitor trying the guidelines themes before making an account')
+      await go(page, BOARD)
+      const panel = await openFromHeader(page)
+      await expectFreeStart(panel, 'the dialog did not open on the free guidelines')
+
+      // Label and Swiss Field are the free guidelines themes: either one exports free, with the mark.
+      for (const name of ['Swiss Field', 'Label']) {
+        await chooseTheme(page, panel, name)
+        await expect(primaryButton(panel), name).toHaveText('Export PDF')
+        await expect(dockStatus(panel), name).toHaveText(/Free with an account. Log in to export. The file carries a small ‘Made with UI L4B’ mark./)
+        await expect(panel.locator('.xd-theme-lock'), name).toHaveCount(0)
+      }
+
+      // A Pro theme is still listed, but its preview is locked and the button is the way to Pro, not a download.
+      await chooseTheme(page, panel, 'Presentation')
+      await expect(panel.locator('.xd-theme-stage')).toHaveClass(/is-locked/)
+      await expect(panel.locator('.xd-theme-lock')).toHaveText('Pro export')
+      await expect(dockStatus(panel)).toHaveText(/^Pro theme. The guidelines are free in Label and Swiss Field./)
+      await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
     })
 
     test('Export opens the sign-in inside the dialog; Escape closes only the panel and keeps the choices', async ({ page }) => {
@@ -62,7 +107,8 @@ for (const size of SIZES) {
       await expect(form).toHaveCount(0)
       await expect(panel, 'Escape closed the whole dialog').toBeVisible()
       await expect(primaryButton(panel), 'focus returns to Export').toBeFocused()
-      await expect(panel.getByRole('radio', { name: /^UI kit/ }), 'the choice is kept').toHaveAttribute('aria-checked', 'true')
+      await expectFreeStart(panel, 'the choice is kept')
+      await expectTheme(panel, 'Label')
     })
   })
 }
