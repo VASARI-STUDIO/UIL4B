@@ -465,7 +465,7 @@
     "loadingSignup": "アカウントを作成中…",
     "loadingReset": "送信中…",
     "loadingSwitch": "切り替え中…",
-    "legal": "続行すると、{terms}および{privacy}に同意したものとみなされます。アカウントの作成には16歳以上である必要があります。",
+    "legal": "続行すると、{terms}および{privacy}に同意したものとみなされます。アカウントの作成には18歳以上である必要があります。",
     "legalTerms": "利用規約",
     "legalPrivacy": "プライバシーポリシー",
     "noAccount": "アカウントをお持ちでない方",

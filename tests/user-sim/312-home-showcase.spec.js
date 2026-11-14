@@ -61,7 +61,7 @@
 //   styles/pages/home-showcase.css    `.hsc-open:hover` scale 1.05 or `transition: all` -> 6 "lifts"
 //   components/home/HomeShowcase.jsx  skip the prefersReducedMotion() guard in the reveal -> 6 "no rise"
 //   components/home/HomeShowcase.jsx  drop the `--reveal-delay` style               -> 6 "rise in as it scrolls"
-//   components/home/HomeShowcase.jsx  drop the `uiKitNote` sentence                 -> 7 footnote
+//   components/home/HomeShowcase.jsx  drop the `freeNote` sentence                 -> 7 footnote
 import { test, expect } from './base.js'
 import { go, homeSectionsLoaded, restingScrollY, watch } from './helpers.js'
 
@@ -842,7 +842,7 @@ test.describe('the footnote', () => {
     const note = (await page.locator('.hsc-footnote').textContent()).replace(/\s+/g, ' ').trim()
     expect(note).toContain('are sample brands')
     expect(note).toContain('are from Unsplash.')
-    expect(note.endsWith('The UI kit is free in two of the ten themes; every other export is Pro.'), `the footnote ends with the split (it reads: ${note})`).toBe(true)
+    expect(note.endsWith('Brand guidelines are free in two of the twelve themes, Label and Swiss Field, and the UI kit in Standards; every other export is Pro.'), `the footnote ends with the split (it reads: ${note})`).toBe(true)
     const line = (await page.locator('.hsc-note').textContent()).trim()
     expect(note.includes(line), 'and does not repeat the line under the picker').toBe(false)
     await ctx.close()

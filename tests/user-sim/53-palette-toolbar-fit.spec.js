@@ -104,8 +104,8 @@ test.describe('palette toolbar fits the row it is given', () => {
     for (const name of ['Open in Gradient', 'History', 'Reset palette']) {
       await expect(panel.getByRole('button', { name, exact: true })).toBeVisible()
     }
-    // Toolbar priorities: Undo, Randomise and Suggest 5; Seed and Redo 4; Preview and
-    // From image 3; Explore and Back 2; System 1; Vision 0. Under 768 Preview is an
+    // Toolbar priorities: Undo, Randomise and Suggest 5; Seed and Redo 4; Preview 3;
+    // Explore and Back 2; System 1; Vision 0. Under 768 Preview is an
     // Extra tools row only. Which of the rest have left depends on the room: Create
     // tool primaries sit in the phone dock below 768, so the row has the whole
     // width and Explore (2) and Back to all tools (2) fit at 662 (measured), where
@@ -125,13 +125,16 @@ test.describe('palette toolbar fits the row it is given', () => {
       expect(onRow + inPanel, `${key} is on the row (${onRow}) or in Extra tools (${inPanel}), exactly once`).toBe(1)
     }
     test.info().annotations.push({ type: 'placement at 662px', description: JSON.stringify(where) })
-    // And at 662 the row has handed over its lowest-priority controls too: the
-    // System and Vision selects (priority 0) are here, not on the row.
+    // And at 662 the row has handed over its lowest-priority control too: the
+    // Vision select (priority 0) is here, not on the row. With From image off the
+    // row, the System select (also 0) fits at 662 (measured), so it is pinned to
+    // exactly one place.
     const bar = page.locator(BAR)
-    for (const name of ['Colour system', 'Colour vision check']) {
-      await expect(bar.getByRole('button', { name }), `${name} left the row`).toHaveCount(0)
-      await expect(panel.getByRole('button', { name }), `${name} is in Extra tools`).toBeVisible()
-    }
+    await expect(bar.getByRole('button', { name: 'Colour vision check' }), 'Colour vision check left the row').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Colour vision check' }), 'Colour vision check is in Extra tools').toBeVisible()
+    const sysRow = await bar.getByRole('button', { name: 'Colour system' }).count()
+    const sysPanel = await panel.getByRole('button', { name: 'Colour system' }).count()
+    expect(sysRow + sysPanel, `Colour system is on the row (${sysRow}) or in Extra tools (${sysPanel}), exactly once`).toBe(1)
     // What is in Extra tools does something: Open in Gradient hands the palette on.
     await panel.getByRole('button', { name: 'Open in Gradient', exact: true }).click()
     await expect(page).toHaveURL(/\/create\/gradient/)
@@ -139,10 +142,11 @@ test.describe('palette toolbar fits the row it is given', () => {
 
   test('Explore and Preview are on the row where it has room, and in Extra tools where it has not', async ({ page }) => {
     // Explore (2) and Preview (3) are among the first to leave, so Undo, Redo,
-    // Randomise and Suggest stay. Measured: Preview joins the row from about
-    // 1050px and Explore from about 1240px. At 768 and 1024 both live in Extra
-    // tools (Explore opens from there). At 1280 and 1440 both are buttons on the
-    // row and Extra tools no longer lists them.
+    // Randomise and Suggest stay. Measured with From image off the row: Preview
+    // joins the row from about 860px and Explore from about 1080px. At 768 both
+    // live in Extra tools (Explore opens from there). At 1024 Preview is on the row
+    // and Explore is in Extra tools. At 1280 and 1440 both are buttons on the row
+    // and Extra tools no longer lists them.
     const bar = page.locator(BAR)
     const onRow = (name) => bar.getByRole('button', { name, exact: true })
     const panel = page.getByRole('dialog', { name: 'Extra tools' })
@@ -150,15 +154,16 @@ test.describe('palette toolbar fits the row it is given', () => {
     await go(page, '/create/palette')
 
     for (const width of [768, 1024]) {
+      const previewOnRow = width === 1024
       await page.setViewportSize({ width, height: 900 })
       await settle(page)
       await expect(onRow('Explore palettes and brands'), `${width}px: Explore left the row`).toHaveCount(0)
       // What does not leave first is still there.
       for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) await expect(onRow(name), `${width}px: ${name} stays on the row`).toBeVisible()
-      await expect(onRow('Preview'), `${width}px: Preview left the row`).toHaveCount(0)
+      await expect(onRow('Preview'), `${width}px: Preview ${previewOnRow ? 'is on' : 'left'} the row`).toHaveCount(previewOnRow ? 1 : 0)
       await bar.getByRole('button', { name: 'Extra tools' }).click()
       await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }), `${width}px: Explore is in Extra tools`).toBeVisible()
-      await expect(panel.getByRole('button', { name: 'Preview', exact: true }), `${width}px: Preview is in Extra tools`).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Preview', exact: true }), `${width}px: Preview is in Extra tools only when off the row`).toHaveCount(previewOnRow ? 0 : 1)
       if (width === 768) {
         await panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
         await expect(page.getByRole('dialog', { name: 'Explore palettes and brands' })).toBeVisible()

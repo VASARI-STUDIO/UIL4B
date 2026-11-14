@@ -264,11 +264,11 @@ test('the book print edition leaves out the downloads section; the site zip keep
   assert.match(index, /<script>/)
 })
 
-test('the data table matches the themes: ids, names and the free tier', async () => {
+// The engine's own meta.tier is the engine's old default and nothing reads it: the gate is src/data/exportThemes.js alone.
+test('the data table matches the themes: ids and names', async () => {
   for (const t of EXPORT_THEMES) {
     const meta = (await import(`../../api/_lib/exportThemes/themes/${t.id}/index.js`)).meta
     assert.equal(meta.id, t.id)
     assert.equal(meta.name, t.name)
-    assert.equal(meta.tier === 'Free', FREE_UI_KIT_THEMES.includes(t.id) || Boolean(t.free), `${t.id} tier`)
   }
 })

@@ -43,11 +43,13 @@ test('with the themes live, card 2 has the exports a theme offers, in the config
   for (const row of rows) {
     const exp = EXPORT_THEME_EXPORTS.find((e) => e.id === row.id)
     assert.equal(row.name, exp.name, `${row.id} is not named as the config names it`)
-    assert.equal(row.tag, exp.proOnly ? 'Pro' : THEME_FACTS.freeTag, `${row.id} carries the wrong tier tag`)
+    if (exp.proOnly) assert.equal(row.tag, 'Pro', `${row.id} carries the wrong tier tag`)
   }
-  // The only free export says in how many themes, from the theme data.
-  assert.equal(rows.filter((r) => r.tag !== 'Pro').length, 1)
-  assert.equal(rows.find((r) => r.id === 'ui-kit').tag, `Free in ${THEME_FACTS.freeCount} themes`)
+  // Each free export counts its own themes, from the theme data: the guidelines in the Free pair, the UI kit (for now) in Standards.
+  assert.equal(rows.find((r) => r.id === 'brand-guidelines').tag, THEME_FACTS.freeTag)
+  assert.equal(rows.find((r) => r.id === 'brand-guidelines').tag, `Free in ${THEME_FACTS.freeCount} themes`)
+  assert.equal(rows.find((r) => r.id === 'ui-kit').tag, 'Free in Standards')
+  assert.equal(rows.find((r) => r.id === 'brand-book').tag, 'Pro')
 })
 
 test('the guidelines row states the page count the config holds', () => {
@@ -108,7 +110,7 @@ test('with the themes live the copy takes its counts from the theme facts', () =
   const { body, note } = exportCopy(true)
   assert.ok(body.includes(`leave as ${THEME_FACTS.exportsPerThemeWord} exports`), body)
   assert.ok(body.includes(`Choose from ${THEME_FACTS.countWord} themes`), body)
-  assert.equal(note, `${THEME_FACTS.uiKitNote}. Everything else is Pro.`)
+  assert.equal(note, `${THEME_FACTS.freeThemesLine}.`)
 })
 
 test('with the themes off the copy lists the panel exports and says nothing of themes', () => {
@@ -204,6 +206,6 @@ test('the counts come from the config files', () => {
   assert.match(CODE.data, /from '\.\.\/\.\.\/config\/planFacts\.js'/)
   assert.match(CODE.data, /from '\.\.\/\.\.\/config\/plans\.js'/)
   assert.match(CODE.data, /FREE_SAVE_LIMITS\.projects/)
-  assert.match(CODE.data, /THEME_FACTS\.(?:exportsPerThemeWord|countWord|uiKitNote)/)
+  assert.match(CODE.data, /THEME_FACTS\.(?:exportsPerThemeWord|countWord|freeNote)/)
   assert.match(CODE.data, /guidelinesPages/)
 })
