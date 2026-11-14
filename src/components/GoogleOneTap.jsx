@@ -28,6 +28,21 @@ function loadGis() {
   return gisPromise
 }
 
+// Google puts this value in the ID token's `nonce` claim, so a token minted for
+// another page load carries a different one. It is generated once per page load
+// and kept in memory only. Firebase's GoogleAuthProvider.credential() has no
+// raw-nonce parameter, so Firebase does not check it for Google; the claim is
+// there for anything that inspects the token.
+let sessionNonce = null
+function getSessionNonce() {
+  if (!sessionNonce) {
+    const bytes = new Uint8Array(16)
+    crypto.getRandomValues(bytes)
+    sessionNonce = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  }
+  return sessionNonce
+}
+
 // Renders Google One Tap when the user is signed out. On credential, feeds the
 // returned ID token into Firebase via signInWithCredential. Modern replacement
 // for the deprecated gapi.auth2 Google Sign-In library.
@@ -72,6 +87,7 @@ export default function GoogleOneTap() {
           auto_select: returning,
           cancel_on_tap_outside: true,
           context: 'signin',
+          nonce: getSessionNonce(),
           use_fedcm_for_prompt: true,
         })
         initialised.current = true

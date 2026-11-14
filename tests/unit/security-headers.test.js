@@ -5,9 +5,9 @@
 // THE CSP lists what the code actually loads (found by grepping src/ for the
 // hosts below, not guessed).
 //
-// FRAMING: DENY everywhere except /previews/, because the Prompt Library frames
-// its own /previews/prompts/<id>.html (src/components/prompt/PromptModal.jsx),
-// and DENY there would blank every live preview.
+// FRAMING: SAMEORIGIN everywhere, matching CSP frame-ancestors 'self'. The Prompt
+// Library frames its own /previews/prompts/<id>.html (src/components/prompt/PromptModal.jsx),
+// so DENY would blank every live preview.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -66,10 +66,25 @@ test('Cross-Origin-Opener-Policy is same-origin-allow-popups on every response, 
 })
 
 test('pages cannot be framed by another site, and the prompt previews can still be framed by ours', () => {
-  for (const p of PAGES) assert.equal(headersFor(p)['x-frame-options'], 'DENY', p)
-  assert.equal(headersFor('/previews/prompts/c-1.html')['x-frame-options'], 'SAMEORIGIN')
-  // The reason for the exception, so it cannot outlive the thing it exists for.
+  // SAMEORIGIN is the legacy twin of the CSP `frame-ancestors 'self'`; the two
+  // must say the same thing or a browser that reads only one gets a different policy.
+  for (const p of [...PAGES, '/previews/prompts/c-1.html']) assert.equal(headersFor(p)['x-frame-options'], 'SAMEORIGIN', p)
+  assert.deepEqual(csp()['frame-ancestors'], ["'self'"])
+  // The reason framing by ourselves must stay possible.
   assert.match(read('src/data/promptPreviewAssets.js'), /\/previews\/prompts\//)
+})
+
+test('CSP violations are reported to the collector, through both the report-uri and report-to paths', () => {
+  const d = csp()
+  assert.deepEqual(d['report-uri'], ['/api/support?report=csp'])
+  assert.deepEqual(d['report-to'], ['csp-endpoint'])
+  for (const p of PAGES) {
+    assert.equal(headersFor(p)['reporting-endpoints'], 'csp-endpoint="/api/support?report=csp"', p)
+  }
+})
+
+test('Strict-Transport-Security does not ask for preloading', () => {
+  for (const p of PAGES) assert.doesNotMatch(headersFor(p)['strict-transport-security'], /preload/i, p)
 })
 
 test('the Content-Security-Policy is report-only, never enforcing, for now', () => {

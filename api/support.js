@@ -3,6 +3,7 @@ import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
 import { NOTIFY_TYPES, handleCommunityNotify } from './_lib/communityNotify.js'
+import { handleCspReport } from './_lib/cspReport.js'
 import { waitUntil } from '@vercel/functions'
 
 // The Admin SDK is initialised by api/_lib/firebase-admin.js, shared with every
@@ -218,6 +219,9 @@ function isAlreadyExists(err) {
 const OUTBOUND_TIMEOUT_MS = 5000
 
 export default function handler(req, res) {
+  // CSP violation reports share this function (see api/_lib/cspReport.js); the
+  // support form never sends this query key.
+  if (req.query?.report === 'csp') return handleCspReport(req, res)
   return handleSupport(req, res)
 }
 

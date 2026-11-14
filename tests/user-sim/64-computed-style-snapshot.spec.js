@@ -471,6 +471,29 @@ async function openSettled(browser, route, width, selectors) {
  * swatch's own padding are still compared. */
 const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools': ['margin-bottom'] }
 
+/* `.hpl-freefoot` IS THE SAME LEFTOVER, BUT AT PHONE WIDTHS IT IS AN AUTHORED 24px, SO IT IS TOLERATED, NOT SKIPPED.
+ *
+ * From 768px up it is `margin-top: auto` in the Free card's flex column, so the computed value is
+ * the height the card's text left over: 204.125px in the baseline and 204.875px on Windows, on an
+ * unchanged stylesheet. Windows lays the card's text out three-quarters of a pixel differently and
+ * the leftover absorbs it. Below 768px the same property is the authored 24px, which must stay
+ * exact, so it is compared with a tolerance rather than excluded: 1.5px covers the rasteriser's
+ * sub-pixel steps and still fails when the rule changes (`auto` -> `24px` moves the 1440 value by
+ * ~180px). The tolerance applies only when the baseline value is fractional, i.e. a leftover; a
+ * whole-pixel baseline such as the 24px is an authored number and is compared exactly. */
+const FONT_JITTER_PX = 1.5
+const TOLERATED_PX = { '.hpl-freefoot': ['margin-top'] }
+const pxOf = (v) => (typeof v === 'string' && /^-?\d+(\.\d+)?px$/.test(v) ? parseFloat(v) : null)
+function sameValue(selector, prop, was, now) {
+  if (now === was) return true
+  if (!TOLERATED_PX[selector]?.includes(prop)) return false
+  const a = pxOf(was)
+  const b = pxOf(now)
+  // A whole-pixel baseline is an authored number (24px at phone widths) and is exact; only an `auto`'s fractional leftover is fuzzy.
+  if (a === null || b === null || Number.isInteger(a)) return false
+  return Math.abs(a - b) <= FONT_JITTER_PX
+}
+
 const updated = {}
 
 for (const route of routeNames) {
@@ -495,7 +518,7 @@ for (const route of routeNames) {
       for (const s of selectors) {
         for (const p of Object.keys(expected[s])) {
           if (AUTO_VERTICAL_MARGIN[s]?.includes(p)) continue
-          if (actual[s][p] !== expected[s][p]) moved.push(`${s} { ${p}: ${expected[s][p]} -> ${actual[s][p]} }`)
+          if (!sameValue(s, p, expected[s][p], actual[s][p])) moved.push(`${s} { ${p}: ${expected[s][p]} -> ${actual[s][p]} }`)
         }
       }
       expect(moved, `${route} @${width}: ${moved.length} computed value(s) moved`).toEqual([])
