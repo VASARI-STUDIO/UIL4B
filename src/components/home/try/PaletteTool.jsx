@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { route } from '../../spectrum/spectrumFacts'
+import MenuSelect from '../../tool/MenuSelect'
 import { ratio } from '../../spectrum/spectrumKit'
 import { Radios, ToolLink } from './tryParts'
 import { useNear } from './useNear'
@@ -13,7 +14,6 @@ import { ADJ, KB_NAMES, ROLES, SAMPLE, TEMP, VISIONS, build, mix, snap, statusLi
 
 const LOCK_OPEN = 'M208 80H96V56a32 32 0 0 1 32-32c15.37 0 29.2 11 32.16 25.59a8 8 0 0 0 15.68-3.18C171.32 24.15 151.2 8 128 8a48.05 48.05 0 0 0-48 48v24H48a16 16 0 0 0-16 16v112a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V96a16 16 0 0 0-16-16m0 128H48V96h160z'
 const LOCK_FILL = 'M208 80h-32V56a48 48 0 0 0-96 0v24H48a16 16 0 0 0-16 16v112a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16V96a16 16 0 0 0-16-16M96 56a32 32 0 0 1 64 0v24H96Z'
-const CHEVRON = 'M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32'
 const ZERO = { h: 0, s: 0, b: 0, temp: 0 }
 const RAMP_TONES = [30, 45, 60, 75, 90]
 const PHONE_MODES = ['Locks', 'Temperature', 'Vision']
@@ -147,13 +147,8 @@ export default function PaletteTool() {
     />
   )
   const visionSelect = (id) => (
-    <span className="ht-selw">
-      <label htmlFor={id}>Vision</label>
-      <select id={id} className="ht-sel" value={vis} onChange={(e) => onVis(e.target.value)}>
-        {VISIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select>
-      <svg className="ht-chev" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d={CHEVRON} /></svg>
-    </span>
+    <MenuSelect toolbar id={id} className="ht-msel" label="Vision" value={vis}
+      options={VISIONS.map(([key, label]) => ({ value: key, label }))} onChange={onVis} />
   )
 
   return (

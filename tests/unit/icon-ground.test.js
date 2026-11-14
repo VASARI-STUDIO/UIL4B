@@ -86,7 +86,7 @@ const themeVars = (theme) => {
   const body = css.slice(at + head.length, css.indexOf('}', at))
   return Object.fromEntries([...body.matchAll(/(--ied-[a-z0-9-]+) ?: ?([^;]+);/g)].map((m) => [m[1], m[2].trim()]))
 }
-// A var(--bg-2,#F6F5F1) is read as its fallback; the app's own token is that colour.
+// A var(--token,#hex) is read as its fallback hex.
 const hexOf = (v) => (v.match(/#[0-9a-f]{6}/i) || [])[0]
 
 test('the ground hexes the contrast note measures are the ones the stage paints, in both themes', () => {
@@ -100,7 +100,7 @@ test('the ground hexes the contrast note measures are the ones the stage paints,
     assert.equal(vars['--ied-g-light'], undefined, `${theme}: Light plate is declared in the stylesheet as well`)
     assert.equal(vars['--ied-g-dark'], undefined, `${theme}: Dark plate is declared in the stylesheet as well`)
     assert.deepEqual(groundVars(theme), { '--ied-g-light': groundHex('light', theme), '--ied-g-dark': groundHex('dark', theme) })
-    // Page is the stage's own colour. The light stage is the app's --bg-2.
+    // Page is the stage's own colour.
     assert.equal(hexOf(vars['--ied-g-page'])?.toLowerCase(), groundHex('page', theme).toLowerCase(), `page ground in the ${theme} theme`)
     assert.equal(hexOf(vars['--ied-stage'])?.toLowerCase(), groundHex('page', theme).toLowerCase(), `stage in the ${theme} theme`)
   }
@@ -121,10 +121,9 @@ test('the checker the stylesheet paints has the squares the note measures, in bo
   }
 })
 
-// Known and left as the board draws it: the plate is a quieter step from the stage than the
-// old 1.2:1 guarantee (about 1.14:1 Dark on the dark stage, 1.09:1 Light on the light stage).
-// Whether to widen it is a question for the pull request, so this stays a todo, not a pass or a block.
-test('the matching fixed ground is a clear step from the stage it sits on, in both themes', { todo: 'the board\'s own values are a smaller step; PR question' }, () => {
+// A chosen Light or Dark plate reads as a step off the stage: at least 1.2:1 in both themes.
+// Mutation: set the dark theme's Dark ground back to #18181B (1.14:1) or the light stage to #F6F5F1 (1.09:1) and this fails.
+test('the matching fixed ground is a clear step from the stage it sits on, in both themes', () => {
   for (const theme of ['light', 'dark']) {
     const stage = groundHex('page', theme)
     for (const g of ['light', 'dark']) {
