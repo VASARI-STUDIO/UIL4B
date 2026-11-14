@@ -11,7 +11,7 @@ export const MOTION_SETTINGS = [
   { name: 'the app’s setting', apply: (page) => page.addInitScript(() => localStorage.setItem('vs-appearance', JSON.stringify({ reducedMotion: true }))) },
 ]
 
-/** The widths the Theme list is checked at: a popover on a wide window, a sheet on a phone. */
+/** The widths the Theme list is checked at: it is the same inline list on a wide window and on a phone. */
 export const MOTION_WIDTHS = [
   { name: 'wide', size: { width: 1440, height: 900 } },
   { name: 'phone', size: { width: 390, height: 844 } },
@@ -24,26 +24,18 @@ export const motionState = (page) => page.evaluate(() => ({
 }))
 
 /**
- * Choose a theme from the keyboard, starting on Change with the dialog on the free account's default theme (Standards):
- * Enter opens the list and it has focus, ArrowDown moves to the next theme, Enter chooses it and focus goes back to Change.
+ * Choose a theme from the keyboard, with the dialog on the free account's default theme (Standards, the first row of the Free
+ * group): focus the chosen row, ArrowDown chooses the next row (the first of the In Pro group, Presentation) and takes focus.
  */
 export async function chooseThemeWithKeys(page, panel) {
-  const change = panel.getByRole('button', { name: /^Change theme, current / })
-  const list = page.getByRole('listbox', { name: 'Theme' })
-  const active = () => list.evaluate((el) => document.getElementById(el.getAttribute('aria-activedescendant'))?.querySelector('.xd-theme-opt-n')?.textContent)
+  const group = panel.getByRole('radiogroup', { name: 'Theme' })
+  const chosen = group.getByRole('radio', { checked: true })
 
-  await change.focus()
-  await expect(change).toBeFocused()
-  await page.keyboard.press('Enter')
-  await expect(list).toBeVisible()
-  await expect(list, 'the open list has keyboard focus').toBeFocused()
-  expect(await active(), 'it opens on the chosen theme').toBe('Standards')
+  await expect(chosen, 'a free account starts on Standards').toHaveText(/^Standards/)
+  await chosen.focus()
+  await expect(chosen).toBeFocused()
 
   await page.keyboard.press('ArrowDown')
-  expect(await active(), 'ArrowDown moves to the next theme').toBe('Catalogue')
-
-  await page.keyboard.press('Enter')
-  await expect(list, 'Enter chooses and closes the list').toHaveCount(0)
-  await expect(panel.locator('.xd-theme-name > span:first-child')).toHaveText('Catalogue')
-  await expect(change, 'focus goes back to Change').toBeFocused()
+  await expect(chosen, 'ArrowDown chooses the next theme').toHaveText(/^Presentation/)
+  await expect(chosen, 'focus goes with the choice').toBeFocused()
 }
