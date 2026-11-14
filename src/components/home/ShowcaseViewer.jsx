@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useReducer, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { EXPORT_THEMES } from '../../config/exportFormats'
+import { SHOWCASE_THEMES } from '../../config/exportFormats'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
@@ -106,7 +106,7 @@ export default function ShowcaseViewer({ themeIndex, kindId, onClose }) {
   const touch = useRef(null)
 
   const { index, under, phase, failed, steps, dir } = state
-  const theme = EXPORT_THEMES[themeIndex]
+  const theme = SHOWCASE_THEMES[themeIndex]
   const pageKind = kinds[index]
   const pageLabel = kindName(pageKind).toLowerCase()
   // Said after each step. The first page is not announced: the dialog's name covers it.

@@ -9,8 +9,10 @@ import { THEME_FACTS, numberWord } from '../../config/planFacts.js'
 import {
   EXPORT_GROUPS,
   EXPORT_THEMES_LIVE,
+  EXPORT_THEMES,
   EXPORT_THEME_EXPORTS,
   isGroupPro,
+  themeExports,
 } from '../../config/exportFormats.js'
 import { ratio } from '../spectrum/spectrumKit.js'
 
@@ -44,6 +46,14 @@ export function kerbsideRamp(seed = SIGNAL) {
 }
 
 // ships with the export themes
+// A row's tag: the themes an export is free in, as "Free in 2 themes", or the theme's name when it is one; "Pro" in none.
+export function freeTagFor(exportId) {
+  const free = EXPORT_THEMES.filter((t) => themeExports(t.id).some((e) => e.id === exportId && !e.pro))
+  if (!free.length) return 'Pro'
+  return free.length === 1 ? `Free in ${free[0].name}` : `Free in ${free.length} themes`
+}
+
+// ships with the export themes
 // Card 2's rows. With the themes live they are the exports a theme offers, in
 // the order the card brings them forward (the brand kit is inside the brand book); otherwise they are what the export
 // panel makes today (the guidelines deck, the design system book, the UI kit),
@@ -62,7 +72,7 @@ export function exportRows(live = EXPORT_THEMES_LIVE) {
       art: id,
       name: byId[id].name,
       sub: sub[id],
-      tag: byId[id].proOnly ? 'Pro' : THEME_FACTS.freeTag,
+      tag: freeTagFor(id),
     }))
   }
   const group = (id) => EXPORT_GROUPS.find((g) => g.id === id)
@@ -81,7 +91,8 @@ export function exportCopy(live = EXPORT_THEMES_LIVE) {
   if (live) {
     return {
       body: `Your colour, type and spacing leave as ${THEME_FACTS.exportsPerThemeWord} exports: brand guidelines, an HTML brand book with the brand kit inside, and a UI kit. Choose from ${THEME_FACTS.countWord} themes, each with its own design language.`,
-      note: `${THEME_FACTS.uiKitNote}. Everything else is Pro.`,
+      // The card has a fixed height, so its note is one line and the row tags say what is free in which theme.
+      note: `${THEME_FACTS.freeThemesLine}.`,
     }
   }
   const rows = exportRows(false)

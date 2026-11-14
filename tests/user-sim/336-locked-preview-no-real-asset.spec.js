@@ -49,6 +49,8 @@ test.describe('export dialog theme previews', () => {
       watch(page, `a free account previewing the ${file} in a Pro theme, with requests captured`)
       const urls = capture(page)
       const panel = await openExport(page, 'free', file)
+      // The guidelines open on Label, a Free theme whose real pictures a free account may load. Count requests from the Pro theme on.
+      urls.length = 0
       await chooseTheme(page, panel, 'Studio')
       const stage = panel.locator('.xd-theme-stage')
       await expect(stage).toHaveClass(/is-locked/)

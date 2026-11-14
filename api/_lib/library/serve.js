@@ -18,16 +18,11 @@
 // `deps` is injected so the unit test can fake the token and the user document.
 // Nothing under src/ is imported here: the function carries only api/ files.
 
-import { planForUser } from '../plans.js'
-import { LIBRARY_PALETTES } from './paletteLibrary.js'
-import { GALLERY_GRADIENTS } from './gradientGallery.js'
-import { COMMUNITY_PROMPTS } from './communityPrompts.js'
+// The data is loaded per request through ./load.js (fetched Pro data, in-tree
+// copies, or fixtures outside production). With none present: 503, no values.
 
-export const LIBRARIES = Object.freeze({
-  palettes: LIBRARY_PALETTES,
-  gradients: GALLERY_GRADIENTS,
-  prompts: COMMUNITY_PROMPTS,
-})
+import { planForUser } from '../plans.js'
+import { loadLibrary } from './load.js'
 
 /**
  * The Pro check, shared by every Pro-only GET this function hosts (the libraries
@@ -85,15 +80,21 @@ export async function requireProUser(req, res, { verifyIdToken, readUser }) {
 /**
  * @param req   needs headers.authorization and query.library
  * @param res   a Vercel/Express-style response
- * @param deps  { verifyIdToken(token, checkRevoked) -> decoded, readUser(uid) -> user doc data }
+ * @param deps  { verifyIdToken(token, checkRevoked) -> decoded, readUser(uid) -> user doc data,
+ *                loadLibrary?() -> the library (defaults to ./load.js) }
  */
 export async function serveLibrary(req, res, deps) {
   if (!(await requireProUser(req, res, deps))) return
 
-  const kind = req.query?.library
-  if (!Object.hasOwn(LIBRARIES, kind)) {
-    return res.status(400).json({ error: `Unknown library — expected one of: ${Object.keys(LIBRARIES).join(', ')}` })
+  const lib = await (deps.loadLibrary ?? loadLibrary)()
+  if (lib.source === 'missing') {
+    console.error('library: no library data in this deployment')
+    return res.status(503).json({ error: 'Library unavailable' })
   }
-  const items = LIBRARIES[kind]
+  const kind = req.query?.library
+  if (!Object.hasOwn(lib.LIBRARIES, kind)) {
+    return res.status(400).json({ error: `Unknown library — expected one of: ${Object.keys(lib.LIBRARIES).join(', ')}` })
+  }
+  const items = lib.LIBRARIES[kind]
   return res.status(200).json({ kind, total: items.length, items })
 }

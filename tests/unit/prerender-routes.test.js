@@ -37,6 +37,8 @@ import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/d
 import { CREATE_GROUPS, resolveTool } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 import { canonicalUrl, robotsFor } from '../../src/utils/routeMeta.js'
+import { articleFor } from '../../scripts/route-schema.mjs'
+import { DEFAULT_CARD, cardFor } from '../../scripts/share-cards.mjs'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -386,6 +388,39 @@ test('classifyRoute gives the FIRST true reason, not just any true one', () => {
   assert.equal(classifyRoute('/create/palette').prerender, true)
   // Trailing slashes and casing must not create a second answer.
   assert.equal(classifyRoute('/Create/Palette/').prerender, true)
+})
+
+test('every shell says og:locale en_AU, once, and a guide says it is written in en-AU', () => {
+  const shell = applyPricingHtml(read('index.html'))
+  for (const route of ['/create/palette', '/learn/help']) {
+    const { html, misses } = rewriteHead(shell, {
+      title: PAGE_TITLES[route],
+      description: PAGE_DESCRIPTIONS[route],
+      robots: robotsFor(route),
+      canonical: canonicalUrl(route),
+      card: cardFor(route),
+    })
+    assert.deepEqual(misses, [])
+    assert.equal(html.match(/<meta property="og:locale"/g)?.length, 1, `${route}: og:locale is not there exactly once`)
+    assert.ok(html.includes('<meta property="og:locale" content="en_AU" />'))
+  }
+  const guide = articleFor(LEARN_ARTICLE_ROUTES[0], ORIGIN)
+  assert.ok(guide, 'no guide to check')
+  assert.equal(guide.inLanguage, 'en-AU')
+})
+
+test('the four routes that unfurled as the logo card each get a section card', () => {
+  for (const [route, id] of [
+    ['/create/icons/groups', 'icons'],
+    ['/discover/buttons', 'discover'],
+    ['/learn/help', 'learn'],
+    ['/learn/principles', 'learn'],
+  ]) {
+    const card = cardFor(route)
+    assert.equal(card.id, id, `${route} unfurls as ${card.id}`)
+    assert.notEqual(card.id, DEFAULT_CARD.id)
+    assert.ok(fs.existsSync(path.join(process.cwd(), 'public/previews', card.file)), `${card.file} is not committed`)
+  }
 })
 
 test('prerender writes noindex for hidden tools and index for listed tools', () => {

@@ -8,8 +8,9 @@
 // and an error message and NO library values, whatever else goes wrong.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { serveLibrary, LIBRARIES } from '../../api/_lib/library/serve.js'
-import { freeSplit } from '../../scripts/library/clientRows.js'
+import { serveLibrary } from '../../api/_lib/library/serve.js'
+import { LIBRARIES } from '../../api/_lib/library/data.js'
+import { freeSplit, LIBRARIES as BROWSER_LIBRARIES } from '../../scripts/library/clientRows.js'
 
 function fakeRes() {
   const res = {
@@ -41,12 +42,13 @@ const docs = {
   'liar-1': { plan: 'pro', isPro: true, subscription: { status: 'canceled' } },
 }
 
-/** Values only a Pro account may receive: every row outside the free set. */
+/** Values only a Pro account may receive: every row outside the free set. A library the browser holds no copy
+ *  of (the Pro icon groups) has no free set, so every row is Pro. */
 function proNeedles(kind) {
-  const free = new Set(freeSplit(kind).open.map((item) => item.id))
+  const free = new Set(kind in BROWSER_LIBRARIES ? freeSplit(kind).open.map((item) => item.id) : [])
   return LIBRARIES[kind]
     .filter((item) => !free.has(item.id))
-    .map((item) => JSON.stringify(item.colors ?? item.stops ?? item.text))
+    .map((item) => JSON.stringify(item.colors ?? item.stops ?? item.text ?? item.icons))
 }
 
 function assertNoProValues(res, kind) {
