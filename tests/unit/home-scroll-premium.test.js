@@ -12,6 +12,7 @@
 //
 // MUTATIONS (each turns a test red):
 //   - add `transform: scale(...)`, `filter` or `box-shadow` to .hx-card, or an `::after` on it -> "the covered card stays as it was".
+//   - add `transform: scale(...)` or `filter: brightness(...)` to a picture not in front -> "the pictures behind are not scaled or dimmed".
 //   - move `position: sticky` out of the 1024x688 media query -> "the stack sits behind a size query".
 //   - add `width` or `top` to a @keyframes in either sheet -> "keyframes move transform and opacity only".
 //   - add a gradient, will-change or `transition: all` to either sheet -> "no banned effect".
@@ -41,6 +42,15 @@ test('exports: the covered card stays as it was (no scale, dim, filter, shadow o
   assert.ok(!/transform|filter|box-shadow|opacity|animation/.test(card), '.hx-card changes how a covered card looks')
   assert.ok(!/\.hx-card[^{]*::(after|before)/.test(EXPORTS), 'a layer over the card is back')
   assert.ok(!/@keyframes|animation-timeline|view-timeline|animation-name/.test(EXPORTS), 'the exports sheet animates something')
+})
+
+test('exports: the pictures behind are not scaled or dimmed; the one in front comes forward by stacking order', () => {
+  const front = rule(EXPORTS, '.hx-obj[data-front="true"]')
+  assert.match(front, /z-index:\s*5/, 'the picture in front no longer stacks above the others')
+  assert.ok(!/\[data-front="false"\]/.test(EXPORTS), 'a rule styles the pictures behind again')
+  for (const selector of ['.hx-obj', '.hx-gb', '.hx-gf']) {
+    assert.ok(!/scale\(|filter|brightness|opacity/.test(rule(EXPORTS, selector)), `${selector} scales or dims a picture`)
+  }
 })
 
 test('exports: the stack sits behind a size query, so a small or short window gets the plain column', () => {
