@@ -6,9 +6,9 @@
 // (`inline: false`), so a phone's row is Undo, Randomise, Suggest and More; Save
 // or share has moved to the dock at the foot of the screen (`[data-tl-dock]`).
 //
-// Measured with the Switzer build at 900px tall: Preview joins the row from about
-// 1050px and Explore from about 1240px, so Preview is in Extra tools at 768 and
-// 1024, and a labelled button on the row at 1280 and 1440. Undo, Redo, Randomise
+// Measured with the Switzer build at 900px tall, with From image off the row:
+// Preview joins the row from about 860px and Explore from about 1080px, so Preview
+// is in Extra tools at 768, and a labelled button on the row at 1024, 1280 and 1440. Undo, Redo, Randomise
 // and Suggest variations are on the row at every width from 768 up, and Preview
 // is in exactly one place at every width.
 //
@@ -23,6 +23,8 @@ import { paletteToolbar } from './palette-helpers.js'
 const PHONES = [320, 390, 640, 767]
 const TABLETS = [768, 1024]
 const LAPTOPS = [1280, 1440]
+// Where Preview has room on the row.
+const ON_ROW = [1024, ...LAPTOPS]
 const LAPTOP = 1440
 
 const settle = async (page) => {
@@ -53,7 +55,7 @@ test.describe('Preview is a main toolbar button', () => {
       const bar = paletteToolbar(page)
       const preview = bar.locator('.plb-preview-btn')
       const onRow = (await preview.count()) > 0
-      expect(onRow, `${width}px: Preview ${LAPTOPS.includes(width) ? 'is' : 'is not'} on the row`).toBe(LAPTOPS.includes(width))
+      expect(onRow, `${width}px: Preview ${ON_ROW.includes(width) ? 'is' : 'is not'} on the row`).toBe(ON_ROW.includes(width))
 
       // Never doubled: on the row, or in Extra tools.
       await bar.getByRole('button', { name: 'Extra tools' }).click()
@@ -109,7 +111,7 @@ test.describe('Preview is a main toolbar button', () => {
     await bar.getByRole('button', { name: 'Extra tools' }).click()
     const panel = page.getByRole('dialog', { name: 'Extra tools' })
     await expect(panel).toBeVisible()
-    // Explore and From image have left the row too, and Preview is named like its row.
+    // Explore has left the row too, and Preview is named like its row.
     await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true })).toBeVisible()
     await panel.getByRole('button', { name: 'Preview', exact: true }).click()
     await expect(page.locator('[role=dialog][aria-label="Palette preview"]')).toBeVisible()

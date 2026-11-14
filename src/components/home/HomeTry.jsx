@@ -60,7 +60,7 @@ const TOOLS = [
     name: 'Palette Builder',
     short: 'Palette',
     lead: 'Build a full palette from one colour, with tints, shades and accessible pairings.',
-    next: `Your five colours open in the full tool, ready to build on. Pull a palette from a photo, try ${numberWord(FREE_SYSTEMS)} colour systems free and ${numberWord(PRO_SYSTEMS)} more with Pro, and grow it further.`,
+    next: `Your five colours open in the full tool, ready to build on. Try ${numberWord(FREE_SYSTEMS)} colour systems free and ${numberWord(PRO_SYSTEMS)} more with Pro, and grow it further.`,
     body: <PaletteTool />,
   },
   {
