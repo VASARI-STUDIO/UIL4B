@@ -3,6 +3,7 @@
 // Copy comes from ctx.brand and is printed whole through esc(). Every number is computed from ctx.
 import { plateImg } from '../../engine/plate.js';
 import { A, v, h2, p, q, dl, two, rules, rgbOf, cap1, nWord, listAnd, WEIGHT, fitCap, cq, logoOn, logoModes, logoCw, slotFrame, glass, layoutWindows } from './lane-hg-lib.js';
+import { brandRules } from './helpers.js';
 import { shareFields } from './lane-bk-glass.js';
 import { SCENES, phoneScene, signScene, signLine, phoneArt, cardArt, panelArt } from './lane-hg-art.js';
 
@@ -359,7 +360,7 @@ const PAGES = {
   },
   // ---- Close ----
   summary(ctx) {
-    const B = ctx.brand, R = B.guideB.rules, cols = sorted(ctx), F = B.fonts;
+    const B = ctx.brand, R = brandRules(B), cols = sorted(ctx), F = B.fonts;
     return {
       l1: A(B.lines.primary), l2: `${cap1(nWord(R.length))} rules to remember.`, lead: A(B.description), note: 'In the glass, one window for each rule',
       big: `<div class="hg-bigl">${logoModes(ctx, 'colour', 360)}</div>`,

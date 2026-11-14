@@ -4,7 +4,7 @@
 // personality page, whose width is the value. Its head is a curve, and a curve is what reeds visibly bend (a flat field behind vertical reeds reads only
 // as stripes); the widest head on each page rises 48 px clear of the band, so it is seen flat, then reeded. Values are printed in the key row under the band.
 // Colours come from ctx roles and brand data only; no brand colour id, hex or name is written here.
-import { A, put, shell, rect, tokens, adv, fitSize, logoHtml, PW, FIELD_MIN } from './helpers.js';
+import { A, put, shell, rect, tokens, adv, fitSize, logoHtml, PW, FIELD_MIN, brandRules } from './helpers.js';
 import { paletteCols, warpPath } from './glass.js';
 import { UIKIT_PAGES } from '../../engine/pages.js';
 
@@ -182,7 +182,7 @@ function summary(ctx) {
   const stack = put(ctx, { x: 427, y: 96, w: 589, cls: 'disp', html: lines.map((l, i) => `<div style="font-size:${LS}px;line-height:${Math.round(LS * 1.15)}px;color:var(${i ? '--quiet' : '--ink'})">${A(l)}</div>`).join('') });
   const faces = put(ctx, { x: 427, y: 96 + lines.length * Math.round(LS * 1.15) + 24, w: 589, cls: 'k', style: 'white-space:normal',
     html: `<span class="kn">${A(f.display.family)}</span> ${A(f.display.weights.join(', '))} for display. <span class="kn">${A(f.body.family)}</span> ${A(f.body.weights.join(', '))} for text.` });
-  const G = B.guideB.rules, k = G.length, CW = Math.floor((952 - 24 * (k - 1)) / k), cx = (i) => 64 + i * (CW + 24);
+  const G = brandRules(B), k = G.length, CW = Math.floor((952 - 24 * (k - 1)) / k), cx = (i) => 64 + i * (CW + 24);
   const tl = Math.max(...G.map((r) => lineCount(ctx, 'display', r.title, 24, CW, W.heading, 2)));
   const xl = Math.max(...G.map((r) => lineCount(ctx, 'body', r.text, 16, CW, W.regular, 2)));
   const rY = LIP - 40 - xl * 25 - 12 - tl * 28;

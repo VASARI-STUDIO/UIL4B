@@ -123,3 +123,8 @@ export function facetCut(ctx, T, fg, r) {
   const bad = [1, -1, ...(T.light ? [] : [2])].some((d) => ctx.ratio(fg, glassTone(ctx, T.ground, d)) < 4.5);
   return bad ? r : null;
 }
+
+// A brand's rules as { title, text }: a brand may keep them as { title, text }, { title, body } or plain sentences.
+export const brandRules = (B) => ((B.guideB && B.guideB.rules) || []).map((r, i) => (typeof r === 'string'
+  ? { title: `Rule ${i + 1}`, text: r }
+  : { title: r.title || `Rule ${i + 1}`, text: r.text ?? r.body ?? '' }));

@@ -137,7 +137,7 @@ function mailPanel(ctx, T, { w, h, k = 1, border = false, slotFs = TXT }) {
     + row(84, 'From', `${A(e.person)}, ${A(c.contact)}`) + row(108, 'To', A(g.to))
     + `<div style="position:absolute;right:${pad}px;top:84px;font:${W.regular} 15px/20px var(--dm);color:${RL.quiet}" class="num">${A(g.time)}</div>`
     + `<div style="position:absolute;left:${pad}px;top:148px;width:${w - 2 * pad}px;height:1px;background:${RL.divider}"></div>`;
-  const body = g.body.map((t) => `<p style="margin:0 0 16px;font:${W.regular} 16px/25px var(--body);color:${RL.text}">${A(t)}</p>`).join('');
+  const body = (Array.isArray(g.body) ? g.body : [g.body].filter(Boolean)).map((t) => `<p style="margin:0 0 16px;font:${W.regular} 16px/25px var(--body);color:${RL.text}">${A(t)}</p>`).join('');
   const sig = `<div style="margin-top:32px">${logoHtml(ctx, T, 'horizontal', { width: 160, colourway: cwOn(ctx, RL.surface), label: 'Your logo here', fs: slotFs, color: RL.quiet })}</div>`
     + `<div class="disp" style="margin-top:16px;font-size:18px;line-height:24px;letter-spacing:0;color:${RL.text}">${A(e.person)}</div>`
     + `<div style="${lbl}">${A(e.role)}</div>`

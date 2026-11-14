@@ -256,7 +256,8 @@ export const guidelines = {
     const P = placePhoto(ctx, id, { 'screen-phone': artDoc(ctx, phoneScreen(ctx, q.aspect)) }, box, { focus: cr ? [560, 520] : [760, 560], alt: cr ? `${B.name} on a phone, held at a city crossing` : `${B.name} on a phone on a kitchen bench at dusk` });
     // the logo on the dark stone, right of the phone and below the keys: the quietest dark part of the picture
     const i = inkOf(ctx, mlKey), k = cr ? fitK(ctx, mlKey, 190, 70) : fitK(ctx, mlKey, 300, 96), a = P.map(cr ? [735, 500] : [880, 880]);
-    const W = logoAt(ctx, mlKey, k, a[0], a[1], { colourway: mlKey, color: ml.name, label: 'Logo' });
+    // in the slot edition the photograph is an empty light frame, so the logo slot is drawn in ink
+    const W = logoAt(ctx, mlKey, k, a[0], a[1], { colourway: mlKey, color: ctx.edition === 'slot' ? 'var(--ink)' : ml.name, label: 'Logo' });
     let html = P.html + W.html;
     html += `<div class="a g2-film" style="left:64px;bottom:176px;width:360px"><h3 class="c-head">On a photograph</h3><p class="c-note">${A(L.labels[mlKey])}. ${A(B.logo.when[mlKey] || '')}</p></div>`;
     // the fields: one per ground, stacked to the frame

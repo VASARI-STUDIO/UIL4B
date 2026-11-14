@@ -140,13 +140,14 @@ function contrast(ctx) {
   const xn = x + P;
   x = xn; unused.forEach((p) => { win(p, x, wn); x += (wn + 1) * P; });
   const line = (r) => rect(0, Math.round(BB - r * k), 1080, 1, T.quiet);
-  const keyU = keyAt(ctx, 64, 220, `In use, ${nu} pairs`, KEY, 'kn');
   // the pairs not used, at the right under their windows: one line a pair (text colour, its ground, ratio), three lines a table, so the list stays clear of the folio
   // however many pairs there are. The block is anchored at its right edge (x 1016) and the browser sets every width, so no brand string is measured.
   const groups = [];
   for (let i = 0; i < nn; i += 3) groups.push(unused.slice(i, i + 3));
-  const keyN = nn ? `<div class="a" style="right:64px;top:${KEY}px"><div class="kn">Not used for text</div><div style="display:flex;column-gap:40px;margin-top:2px">${groups.map((g) => `<div style="display:grid;grid-template-columns:auto auto auto;column-gap:12px">${g.map((p) => `<span class="k">${A(fgName(ctx, p))}</span><span class="k">on ${A(nameOf(ctx, p.bg))}</span><span class="v num" style="text-align:right">${A(p.ratioText)}</span>`).join('')}</div>`).join('')}</div></div>` : '';
-  return page(ctx, 'contrast', T, ms, head + lead + hdr + table + keyU + keyN, line(4.5) + line(3));
+  const keyN = nn ? `<div><div class="kn">Not used for text</div><div style="display:flex;column-gap:40px;margin-top:2px">${groups.map((g) => `<div style="display:grid;grid-template-columns:auto auto auto;column-gap:12px">${g.map((p) => `<span class="k">${A(fgName(ctx, p))}</span><span class="k">on ${A(nameOf(ctx, p.bg))}</span><span class="v num" style="text-align:right">${A(p.ratioText)}</span>`).join('')}</div>`).join('')}</div></div>` : '';
+  // both keys in one row the width of the type area: the browser sets them apart, and wraps the second under the first when they cannot share the line
+  const keys = `<div class="a" style="left:64px;top:${KEY}px;width:952px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px 40px;white-space:normal"><div class="kn">In use, ${nu} pairs</div>${keyN}</div>`;
+  return page(ctx, 'contrast', T, ms, head + lead + hdr + table + keys, line(4.5) + line(3));
 }
 
 // ---- colour values: each colour's name and values above, its ramp inside its window in the band, light to dark ----
@@ -168,7 +169,7 @@ function colourValues(ctx) {
     if (tint) steps.forEach((s, j) => ms.push(region(underArc(x + j * sw, x + (j + 1) * sw, cx(x), cy, w / 2), fillP(c.ramp[s]), rect(Math.round(x + j * sw), Math.round(cy), Math.round(sw), BB - Math.round(cy), c.ramp[s]))));
     else ms.push(windowMark(x, w, top, lo(c.hex) === lo(T.ground) ? { stroke: T.ink } : { fill: c.hex }));
     cols += hang(x + 4, LIP - 32, w - 8, `<div class="disp" style="font-size:28px;line-height:32px;color:var(--ink)">${A(c.name)}</div>`
-      + `<div class="v num" style="margin-top:8px;white-space:nowrap;color:var(--soft)">${A(c.hex.toUpperCase())}<br>${A(c.rgb)}<br>${A(c.oklch)}${ctx.C.cmykOf(c) ? `<br>${A(ctx.C.cmykOf(c))}` : ''}</div>`);
+      + `<div class="v num" style="margin-top:8px;white-space:normal;color:var(--soft)">${A(c.hex.toUpperCase())}<br>${A(c.rgb)}<br>${A(c.oklch)}${ctx.C.cmykOf(c) ? `<br>${A(ctx.C.cmykOf(c))}` : ''}</div>`);
     keys += keyAt(ctx, x + 4, w - 8, tint ? `Steps ${A(steps[0])} to ${A(steps[steps.length - 1])}` : 'No tints', KEY, 'kn')
       + (tint ? keyAt(ctx, x + 4, w - 8, `The colour is <span class="v num">${A(String(c.rampBase))}</span>`, KEY + 22) : '');
   });
