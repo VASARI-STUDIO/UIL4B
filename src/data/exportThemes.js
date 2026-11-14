@@ -14,7 +14,11 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '09-blueprint', name: 'Blueprint' }),
   Object.freeze({ id: '10-inuse', name: 'In use' }),
   // Pro themes with all three rows. Named apart from 04 Standards so the picker shows two different names.
+  Object.freeze({ id: '21-presentation', name: 'Keynote' }),
+  Object.freeze({ id: '22-ticket', name: 'Stub' }),
   Object.freeze({ id: '24-standards', name: 'Standards Plate' }),
+  Object.freeze({ id: '26-notebook', name: 'Notebook' }),
+  Object.freeze({ id: '28-riso', name: 'Print Shop' }),
   Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet' }),
   Object.freeze({ id: '30-fluted', name: 'Fluted' }),
   Object.freeze({ id: '32-dieline', name: 'Dieline' }),
