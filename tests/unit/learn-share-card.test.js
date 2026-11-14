@@ -41,12 +41,13 @@ test('THE ONE THAT MATTERS: /learn and every guide unfurl as the Learn card, not
   }
   // Reference and support pages retain their existing card selection.
   assert.equal(cardFor('/discover').id, 'discover')
-  assert.equal(cardFor('/learn/help').id, DEFAULT_CARD.id)
-  assert.equal(cardFor('/learn/principles').id, DEFAULT_CARD.id)
+  // Help and Principles are not guides but sit under /learn, so they unfurl as it.
+  assert.equal(cardFor('/learn/help').id, 'learn')
+  assert.equal(cardFor('/learn/principles').id, 'learn')
 })
 
 test('the routes, the guide names and the count are derived from the registry, not typed', () => {
-  assert.deepEqual([...learn.routes], ['/learn', ...LEARN_ARTICLE_ROUTES],
+  assert.deepEqual([...learn.routes], ['/learn', ...LEARN_ARTICLE_ROUTES, '/learn/help', '/learn/principles'],
     'the Learn section claims a different set of routes than the registry publishes')
   assert.deepEqual(toolNamesFor(learn), LEARN_ARTICLES.map((a) => a.navLabel),
     'the guide names on the card are not every published guide, in order')
