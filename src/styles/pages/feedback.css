@@ -143,8 +143,8 @@
   line-height: 1.5;
   color: var(--v3-sec);
 }
-.fb-page .fb-mono {
-  font-family: var(--mono);
+.fb-page .fb-acct {
+  font-family: var(--font);
   font-size: 14px;
   color: var(--v3-ink);
   overflow-wrap: anywhere;

@@ -319,7 +319,7 @@ export default function Feedback({ toast }) {
               {/* The return address. Signed in, the account's address is what
                   goes up and always has; signed out, the Email field is the
                   only way one can. */}
-              {accountEmail && <p className="fb-sending-as">Sending as <span className="fb-mono">{accountEmail}</span></p>}
+              {accountEmail && <p className="fb-sending-as">Sending as <span className="fb-acct">{accountEmail}</span></p>}
             </div>
           )}
         </div>
