@@ -9,7 +9,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { standinJobs, STANDIN_DIR, STANDIN_MAX_W } from '../../scripts/library/lockedStandins.mjs'
+import { standinJobs, STANDIN_DIR, STANDIN_MAX_W, POSTER_DIRS } from '../../scripts/library/lockedStandins.mjs'
+import { PRO_PREVIEW_IDS } from '../../src/data/proPreviewIds.js'
 import { promptStandinSrc, themeStandinSrc, themeStandinShots } from '../../src/utils/lockedStandin.js'
 import { themeShots, pickerTheme } from '../../src/config/exportThemePicker.js'
 
@@ -30,9 +31,14 @@ const files = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => n
 
 test('every source picture has a stand-in, and the folder holds nothing else', () => {
   const jobs = standinJobs()
-  assert.ok(jobs.length >= 50, 'the 20 prompt posters and the 30 theme book and guidelines pictures')
+  // The locked posters come with the fetched Pro data. Without it (CI, no
+  // PRO_DATA_TOKEN) their stand-ins are committed with no local source.
+  const proFetched = fs.existsSync(POSTER_DIRS[1])
+  const unsourced = proFetched ? [] : PRO_PREVIEW_IDS.map((id) => `${STANDIN_DIR}/prompts/${id}.webp`)
+  assert.ok(jobs.length + unsourced.length >= 50, 'the 20 prompt posters and the 30 theme book and guidelines pictures')
   for (const job of jobs) assert.ok(fs.existsSync(job.to), `${job.to} is missing: run node scripts/library/lockedStandins.mjs`)
-  const expected = new Set(jobs.map((j) => path.posix.normalize(j.to)))
+  for (const to of unsourced) assert.ok(fs.existsSync(to), `${to} is missing`)
+  const expected = new Set([...jobs.map((j) => path.posix.normalize(j.to)), ...unsourced])
   for (const sub of ['prompts', 'export-themes']) {
     for (const name of files(`${STANDIN_DIR}/${sub}`)) assert.ok(expected.has(`${STANDIN_DIR}/${sub}/${name}`), `${sub}/${name} has no source`)
   }
