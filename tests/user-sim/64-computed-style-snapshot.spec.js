@@ -468,8 +468,20 @@ async function openSettled(browser, route, width, selectors) {
  * it to the top and leaves the name and contrast badge anchored at the bottom.
  * The computed value (270.312px here) is the height the column's text left
  * over, not a number anyone wrote. Its `position`, `display`, `gap` and the
- * swatch's own padding are still compared. */
-const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools': ['margin-bottom'] }
+ * swatch's own padding are still compared.
+ *
+ * `.hpl-freefoot` is the same case again: the Free card's footnote on /plans is
+ * `margin-top: auto` in the card's flex column (home-plans.css), so its computed
+ * margin is the height the Free list left over beside the taller Pro list. One
+ * build of main measured 204.125px on the Linux runner and 204.875px on Windows:
+ * the gap is how each platform wraps and measures the list text, not a change to
+ * the page. Its `display`, `gap`, `min-height` and `align-items` are still
+ * compared. */
+const AUTO_VERTICAL_MARGIN = {
+  '.fpr-card-foot': ['margin-top'],
+  '.hpl-freefoot': ['margin-top'],
+  '.plb-col-tools': ['margin-bottom'],
+}
 
 const updated = {}
 
