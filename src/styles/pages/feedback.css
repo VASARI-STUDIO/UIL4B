@@ -192,7 +192,7 @@
   width: 100%;
   margin: 0;
   background: var(--v3-l2);
-  border: 0;
+  border: 0 solid transparent;
   border-radius: 12px;
   font-family: var(--font);
   font-size: 15px;
@@ -344,7 +344,7 @@
 
 /* ── One column (under 900px) ────────────────────────────────────────────── */
 @media (max-width: 899px) {
-  .fb-page { max-width: 640px; }
+  .fb-page { max-width: 640px; margin-inline: auto; }
   .fb-page .fb-top h1 { font-size: 48px; }
   .fb-page .fb-lead { font-size: 17px; }
   .fb-page .fb-cols { display: block; margin-top: 32px; }

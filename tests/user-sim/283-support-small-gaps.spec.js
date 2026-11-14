@@ -42,7 +42,7 @@ for (const height of [844, 640]) {
       await page.route('**/api/support', (route) => route.abort())
       await go(page, '/feedback?type=help')
       const message = page.getByLabel('Message')
-      const send = page.locator('.fb-page .fb-submit')
+      const send = page.locator('.fb-page .fb-send')
       await message.tap()
       await message.pressSequentially(LINES)
 

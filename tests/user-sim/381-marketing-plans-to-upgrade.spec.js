@@ -71,7 +71,8 @@ test.describe('the upgrade button, reached from a marketing page', () => {
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=yearly')
     await proCta(page).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
-    await expect(page).toHaveURL(/\/plans$/)
+    // The Pro sign-up layer keeps its step in the URL.
+    await expect(page).toHaveURL(/\/plans\?up=1$/)
     expect(
       await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')),
       'a new account would not come back to the checkout it chose',
