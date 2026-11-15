@@ -4,6 +4,8 @@
 // The stored value is one of the ids below. An unknown stored value (a format
 // that a later build removed, or a hand-edited cache) falls back to SVG.
 
+import { isAnimatedPack } from '../data/iconPackTiers.js'
+
 /** localStorage key; follows the account (see utils/accountSync.js). */
 export const DOWNLOAD_FORMAT_KEY = 'vs-icon-download-format'
 
@@ -80,6 +82,27 @@ export function effectiveFormat(id, size) {
 export function downloadFileName(iconName, format) {
   const base = (iconName || 'icon').replace(/[^\w.-]+/g, '-')
   return format.kind === 'svg' ? `${base}.svg` : `${base}-${format.px}px.png`
+}
+
+/**
+ * The animated download: the markup an animated set serves, as it was served.
+ * Offered on animated sets only, and only to a Pro viewer (the set's data never
+ * reaches anyone else; this is the same rule where the button is drawn).
+ */
+export const ANIMATED_DOWNLOAD = Object.freeze({ id: 'animated-svg', label: 'Animated SVG', mime: 'image/svg+xml' })
+
+export function offersAnimatedDownload(pack, isPro) {
+  return isPro === true && isAnimatedPack(pack)
+}
+
+/** `<name>-animated.svg`; the name is cleaned the way downloadFileName cleans it. */
+export function animatedDownloadFileName(iconName) {
+  return `${(iconName || 'icon').replace(/[^\w.-]+/g, '-')}-animated.svg`
+}
+
+/** The animated file as a Blob, or null when the markup is not there. */
+export function animatedDownloadBlob(svgText) {
+  return typeof svgText === 'string' && svgText.trim() ? new Blob([svgText], { type: ANIMATED_DOWNLOAD.mime }) : null
 }
 
 /**
