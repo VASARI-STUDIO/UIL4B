@@ -111,8 +111,9 @@ test('the hex list is the stops in position order, upper-case', () => {
 test('fitHexes keeps what fits and counts the rest as +N', () => {
   const six = ['#000001', '#000002', '#000003', '#000004', '#000005', '#000006']
   assert.deepEqual(fitHexes(six.slice(0, 4)), six.slice(0, 4))
-  assert.deepEqual(fitHexes(six), ['#000001', '#000002', '#000003', '+3'])
-  assert.deepEqual(fitHexes(six.slice(0, 5)), ['#000001', '#000002', '#000003', '+2'])
+  assert.deepEqual(fitHexes(six), ['#000001', '#000002', '#000003', '#000004', '+2'])
+  assert.deepEqual(fitHexes(six.slice(0, 5)), six.slice(0, 5), 'five stops show every hex before the line is measured')
+  assert.deepEqual(fitHexes(six.slice(0, 5), 4), ['#000001', '#000002', '#000003', '+2'], 'a measured room of four still counts the rest')
 })
 
 test('specTypeLine says the type, its angle where it has one, and the space', () => {

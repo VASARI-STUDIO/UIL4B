@@ -16,7 +16,7 @@ import '../styles/pages/checkout.css'
 const SETTLE_RETRY_MS = 4000
 const SETTLE_RETRIES = 15
 
-const formatDate = ms => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+const formatDate = ms => new Date(ms).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
 
 function GoArrow() {
   return (

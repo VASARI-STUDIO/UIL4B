@@ -6,7 +6,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useClipboard } from '../hooks/useClipboard'
 import { buildCSSVars } from '../utils/exportBuilder'
-import { activeColour, deriveTints } from '../utils/projectTints'
+import { activeColour, tintScaleOf } from '../utils/projectTints'
+import { SEMANTIC_LABELS, SEMANTIC_ROLES, semanticShades } from '../data/semanticPresets'
 import { savedColoursOf } from '../utils/savedColours'
 import { loadFont } from '../utils/googleFonts'
 import Glyph from '../components/userhome/Glyph'
@@ -44,7 +45,7 @@ const BANDS = [
   { id: 'palette', label: 'Palette', openIn: 'Palette Builder' },
   { id: 'type-scale', label: 'Type scale', openIn: 'Type Scale' },
   { id: 'fonts', label: 'Font pair', openIn: 'Font Pair' },
-  { id: 'tints', label: 'Tints', openIn: 'Tint' },
+  { id: 'semantic', label: 'Semantic colours', openIn: 'Semantic Colour' },
 ]
 
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c)
@@ -211,7 +212,7 @@ function ProjectDetail({ id, toast }) {
         ? buildCSSVars({ fonts: design.fonts })
         : bandId === 'type-scale'
           ? buildCSSVars({ typeScale: design.typeScale })
-          : buildCSSVars({ tints: design.tints })
+          : buildCSSVars({ stateShades: semanticShades(design.states) })
     copy(text).then((ok) => {
       if (!ok) return
       setCopied(bandId)
@@ -294,7 +295,7 @@ function ProjectDetail({ id, toast }) {
     if (b.id === 'palette') return String(digest.colourCount)
     if (b.id === 'type-scale') return digest.scaleRatio.toFixed(3)
     if (b.id === 'fonts') return digest.heading
-    return String(digest.tintCount)
+    return String(SEMANTIC_ROLES.length)
   }
   const bandMeta = (b) => {
     const slot = slotById[b.id]
@@ -323,10 +324,32 @@ function ProjectDetail({ id, toast }) {
     if (b.id === 'palette') {
       if (!slot.done) return emptyBody(b, slot.emptyNote)
       const colours = slot.ramp
+      // Tints are not a part: the ramp is derived from the active colour, so it is shown here, under
+      // the colours it comes from, with no step of its own to finish.
+      const tints = slotById.tints?.ramp || []
+      const from = activeColour(design)
+      const at = from ? tints.findIndex((c) => c.toLowerCase() === from.toLowerCase()) : -1
       return (
-        <div className="pjv-pal" role="img" aria-label={`Palette: ${colours.join(', ')}`}>
-          {colours.map((c, i) => <span key={`${c}-${i}`} className="pjv-stop" style={{ background: c, color: readableOn(c) }}>{c.toUpperCase()}</span>)}
-        </div>
+        <>
+          <div className="pjv-pal" role="img" aria-label={`Palette: ${colours.join(', ')}`}>
+            {colours.map((c, i) => <span key={`${c}-${i}`} className="pjv-stop" style={{ background: c, color: readableOn(c) }}>{c.toUpperCase()}</span>)}
+          </div>
+          {tints.length > 0 && from && (
+            <>
+              <p className="pjv-pvl">Tints, made from <span className="pjv-mono">{from.toUpperCase()}</span>.</p>
+              <div className="pjv-tn" role="img" aria-label={`${tints.length} tint steps`}>
+                {tints.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}
+              </div>
+              <div className="pjv-tm">
+                {at >= 0 && (
+                  <span className="pjv-tmk" style={{ left: `${((at + 0.5) / tints.length) * 100}%` }}>
+                    <span>{from.toUpperCase()}</span>
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </>
       )
     }
     if (b.id === 'type-scale') {
@@ -363,42 +386,18 @@ function ProjectDetail({ id, toast }) {
         </div>
       )
     }
-    // Tints
-    if (slot.done) {
-      const scale = slot.ramp
-      const from = activeColour(design)
-      const at = from ? scale.findIndex((c) => c.toLowerCase() === from.toLowerCase()) : -1
-      return (
-        <>
-          <div className="pjv-tn" role="img" aria-label={`${scale.length} tint steps`}>
-            {scale.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}
-          </div>
-          <div className="pjv-tm">
-            {at >= 0 && (
-              <span className="pjv-tmk" style={{ left: `${((at + 0.5) / scale.length) * 100}%` }}>
-                <span>{from.toUpperCase()}</span>
-              </span>
-            )}
-          </div>
-        </>
-      )
-    }
-    const preview = deriveTints(design)
-    const previewFrom = activeColour(design)
-    if (!preview || !previewFrom) return emptyBody(b, 'Needs a palette first.')
+    // Semantic colours
+    if (!slot.done) return emptyBody(b, slot.emptyNote)
+    const shades = semanticShades(design.states)
+    const roles = SEMANTIC_ROLES.map((role) => ({ role, label: SEMANTIC_LABELS[role], c: shades[role][5] }))
     return (
-      <>
-        <p className="pjv-pvl">Preview: {preview.scale.length} steps from <span className="pjv-mono">{previewFrom.toUpperCase()}</span>.</p>
-        <div className="pjv-tn" aria-hidden="true">
-          {preview.scale.map((c, i) => <span key={`${c}-${i}`} style={{ background: c }} />)}
-        </div>
-        <div className="pjv-pv">
-          <Link className="pjv-ghost" to={slot.tool} onClick={() => loadProject(project.id)} style={{ width: 'fit-content' }}>
-            <Glyph name="plus" size={13} />
-            <span>{slot.emptyCta}</span>
-          </Link>
-        </div>
-      </>
+      <div className="pjv-pal sem" role="img" aria-label={`Semantic colours: ${roles.map((r) => `${r.label} ${r.c}`).join(', ')}`}>
+        {roles.map((r) => (
+          <span key={r.role} className="pjv-stop" style={{ background: r.c, color: readableOn(r.c) }}>
+            <span>{r.label}<br />{r.c.toUpperCase()}</span>
+          </span>
+        ))}
+      </div>
     )
   }
 
@@ -469,7 +468,7 @@ function ProjectDetail({ id, toast }) {
                 onOpenIn={(pid, route) => openIn(route)}
                 onDuplicate={onDuplicate}
                 onRename={() => { setName(project.name); setRenameError(''); setRenaming(true) }}
-                onExportCss={() => copy(buildCSSVars({ palette: design.palette, tints: design.tints, fonts: design.fonts, typeScale: design.typeScale })).then((ok) => ok && toast('Copied'))}
+                onExportCss={() => copy(buildCSSVars({ palette: design.palette, tints: { scale: tintScaleOf(design) }, stateShades: semanticShades(design.states), fonts: design.fonts, typeScale: design.typeScale })).then((ok) => ok && toast('Copied'))}
                 onOverwrite={onSave}
                 onArchive={onArchive}
                 onDelete={() => setConfirmDelete(true)}

@@ -238,8 +238,8 @@ test.describe('Pro marks and the focus ring', () => {
     await ctx.close()
   })
 
-  // MUTATION: in global.css put `var(--accent)` back on `.menu-select-trigger:focus-visible`.
-  test('the closed trigger ring is the link colour, like the toolbar', async ({ browser }) => {
+  // MUTATION: in tool-layout.css set `--tl-focus` back to `var(--accent)`.
+  test('the closed trigger ring is the tool frame focus ink, like the toolbar', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440, { path: '/create/type-scale' })
     await page.getByRole('button', { name: 'Fine tuning' }).click()
     const trigger = page.locator('#tsc-round')
@@ -249,8 +249,8 @@ test.describe('Pro marks and the focus ring', () => {
     await expect(trigger).toBeFocused()
     const ring = await trigger.evaluate((el) => {
       const probe = document.createElement('span')
-      probe.style.color = 'var(--link)'
-      document.body.append(probe)
+      probe.style.color = 'var(--tl-focus)'
+      el.closest('.tl').append(probe)
       const link = getComputedStyle(probe).color
       probe.remove()
       const cs = getComputedStyle(el)

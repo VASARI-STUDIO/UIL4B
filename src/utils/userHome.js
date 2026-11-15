@@ -45,12 +45,16 @@
 // be testable without a browser.
 
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
+import { SEMANTIC_ROLES, readSemanticStates } from '../data/semanticPresets.js'
+import { tintScaleOf } from './projectTints.js'
 
 /**
  * The four parts a design system is made of in this product, in the order the
  * work actually happens: colour first, because everything else is chosen
- * against it; then the scale; then the faces; then the tints derived from the
- * colour.
+ * against it; then the scale; then the faces; then the semantic colours.
+ *
+ * Tints are not a part: the ramp is derived from the active colour wherever it
+ * is needed (utils/projectTints.js), so nobody is asked to make one.
  *
  * `tool` is the live Create route that BUILDS that part. tests/unit/user-home.test.js
  * checks each one against liveToolRoutes() in src/data/toolTree.js, exactly the
@@ -61,7 +65,7 @@ export const SYSTEM_PARTS = Object.freeze([
   Object.freeze({ id: 'palette', label: 'Palette', tool: '/create/palette', action: 'Build the palette' }),
   Object.freeze({ id: 'type-scale', label: 'Type scale', tool: '/create/type-scale', action: 'Set the type scale' }),
   Object.freeze({ id: 'fonts', label: 'Fonts', tool: '/create/font-pair', action: 'Pair the fonts' }),
-  Object.freeze({ id: 'tints', label: 'Tints', tool: '/create/tint', action: 'Generate the tints' }),
+  Object.freeze({ id: 'semantic', label: 'Semantic colours', tool: '/create/semantic-color', action: 'Set the semantic colours' }),
 ])
 
 const norm = (value) => String(value == null ? '' : value).trim().toLowerCase()
@@ -91,7 +95,10 @@ export function partsPresent(design, defaults = DEFAULT_DESIGN) {
   const typeScale = (Number.isFinite(scaleBase) && scaleBase !== Number(base.typeScale?.base))
     || (Number.isFinite(scaleRatio) && scaleRatio !== Number(base.typeScale?.ratio))
 
-  const tints = Array.isArray(d.tints?.scale) && d.tints.scale.length > 0
+  const states = readSemanticStates(d.states)
+  const baseStates = readSemanticStates(base.states)
+  const semantic = states.infoHue !== baseStates.infoHue
+    || SEMANTIC_ROLES.some((role) => JSON.stringify(states.roles[role]) !== JSON.stringify(baseStates.roles[role]))
 
   // A part kept as it was is a choice too: the Brand kit walkthrough records
   // the parts the person moved past with Next (`design.chosen`), because a
@@ -103,7 +110,7 @@ export function partsPresent(design, defaults = DEFAULT_DESIGN) {
     palette: palette || chosen.palette === true,
     'type-scale': typeScale || chosen['type-scale'] === true,
     fonts: fonts || chosen.fonts === true,
-    tints: tints || chosen.tints === true,
+    semantic: semantic || chosen.semantic === true,
   }
 }
 
@@ -132,7 +139,7 @@ export function projectDigest(project, defaults = DEFAULT_DESIGN) {
     body: design.fonts?.body?.family || DEFAULT_DESIGN.fonts.body.family,
     scaleBase: Number(design.typeScale?.base) || DEFAULT_DESIGN.typeScale.base,
     scaleRatio: Number(design.typeScale?.ratio) || DEFAULT_DESIGN.typeScale.ratio,
-    tintCount: Array.isArray(design.tints?.scale) ? design.tints.scale.length : 0,
+    tintCount: tintScaleOf(design).length,
     parts,
     done: parts.length - missing.length,
     total: parts.length,

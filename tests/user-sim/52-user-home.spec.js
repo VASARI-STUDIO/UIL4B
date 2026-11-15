@@ -2,7 +2,7 @@
 //
 // The workspace is the dashboard design: a status line (the greeting, or the offline note), the title "Your
 // workspace" with New project, one line for today, then the KIT SHEET: one project's four parts (Palette,
-// Type scale, Font pair, Tints), each plate with its own "Open in" link, and the next step as a pill. Below it
+// Type scale, Font pair, Semantic colours), each plate with its own "Open in" link, and the next step as a pill. Below it
 // the other projects as minis (with Find and Show all past four), the Tools and library shelf, and the plan line.
 //
 //   ROUTING is tested from the localStorage session hint, which is what the decision is made from
@@ -23,7 +23,7 @@ import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { createTools } from '../../src/data/toolTree.js'
 import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
 import { exportPanel } from './export-rows.js'
-import { COMPLETE_COLOURS, HALF_COLOURS, DAY, HOUR, ago, archived, blank, complete, half, many, noTints } from './fixtures/dashboard-projects.js'
+import { COMPLETE_COLOURS, HALF_COLOURS, DAY, HOUR, ago, archived, blank, complete, half, many, noSemantic } from './fixtures/dashboard-projects.js'
 
 const SESSION_HINT = 'vs-session'
 
@@ -53,7 +53,7 @@ const PART_LINKS = [
   ['Open in Palette Builder', '/create/palette'],
   ['Open in Type Scale', '/create/type-scale'],
   ['Open in Font Pair', '/create/font-pair'],
-  ['Open in Tint', '/create/tint'],
+  ['Open in Semantic Colour', '/create/semantic-color'],
 ]
 
 /** The four parts' links inside a sheet go where the labels say. */
@@ -146,7 +146,7 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
     await expect(sheet, 'it says it is an example, and that no account is needed').toContainText('This one is an example: Kerbside, a sample bike courier. No account needed to start.')
 
     // The four parts in the app's next-step order, each with its caption and its own way in.
-    await expect(sheet.getByText(/^(Palette|Type scale|Font pair|Tints)$/)).toHaveText(['Palette', 'Type scale', 'Font pair', 'Tints'])
+    await expect(sheet.getByText(/^(Palette|Type scale|Font pair|Semantic colours)$/)).toHaveText(['Palette', 'Type scale', 'Font pair', 'Semantic colours'])
     await expectPartLinks(sheet)
     // Kerbside's palette is drawn from its four real colours.
     await expect(sheet.getByRole('img', { name: 'Palette: #FF5A1F, #1A1A1A, #E6E4DE, #FFFFFF' })).toBeVisible()
@@ -166,7 +166,7 @@ test.describe('a signed-out visitor gets a workspace they can use', () => {
 
   for (const [name, path] of [
     ['Open in Palette Builder', '/create/palette'], ['Open in Type Scale', '/create/type-scale'],
-    ['Open in Font Pair', '/create/font-pair'], ['Open in Tint', '/create/tint'],
+    ['Open in Font Pair', '/create/font-pair'], ['Open in Semantic Colour', '/create/semantic-color'],
   ]) {
     test(`${name} opens ${path} with no sign-in asked`, async ({ page }) => {
       watch(page, `a signed-out visitor choosing "${name}" on the example kit`)
@@ -306,7 +306,7 @@ test.describe('"All … tools" opens the Create menu', () => {
 /* ── The lead project: the kit sheet ──────────────────────────────────────── */
 
 test.describe('the kit sheet is read off the newest project', () => {
-  test('a finished project: its five colours, scale, fonts and tints, and the contrast check as the next step', async ({ page }) => {
+  test('a finished project: its five colours, scale, fonts and semantic colours, and the contrast check as the next step', async ({ page }) => {
     watch(page, 'a returning designer scanning their newest work')
     await signIn(page, { plan: 'free', projects: [half(), complete(), archived(half('p-old', 'Old Harbour', ago(30 * 60_000)))] })
     await go(page, '/projects')
@@ -320,7 +320,9 @@ test.describe('the kit sheet is read off the newest project', () => {
     await expect(sheet).toContainText('5 colours')
     await expect(sheet).toContainText('17 to 40px')
     await expect(sheet).toContainText('Fraunces over Manrope')
-    await expect(sheet).toContainText('6 steps')
+    await expect(sheet).toContainText('4 roles')
+    await expect(sheet.getByRole('img', { name: /^Semantic colours: Success #[0-9a-f]{6}, Warning #[0-9a-f]{6}, Error #[0-9a-f]{6}, Information #[0-9a-f]{6}$/i }), 'the semantic plate shows the four roles').toBeVisible()
+    await expect(sheet.getByText(/steps/), 'tints are derived, so the sheet has no tints plate').toHaveCount(0)
     await expect(sheet.getByText('Not set'), 'all four parts are set').toHaveCount(0)
 
     await expectPartLinks(sheet)
@@ -342,14 +344,15 @@ test.describe('the kit sheet is read off the newest project', () => {
     // What each empty part says, so the person knows what it needs.
     await expect(sheet).toContainText("Pick a ratio and Harbour Rebrand's sizes run from body text to display.")
     await expect(sheet).toContainText('No fonts paired yet.')
-    await expect(sheet.getByText(/Preview: \d+ steps from #0B2A45\./).first(), 'tints can be previewed from the palette').toBeVisible()
+    await expect(sheet).toContainText('Set success, warning, error and info.')
+    await expect(sheet.getByText(/Preview:/), 'tints are derived and not previewed as a part').toHaveCount(0)
 
     const next = sheet.getByRole('link', { name: /^Continue: set the type scale/ })
     await expect(next).toHaveAttribute('href', '/create/type-scale')
     await expectPartLinks(sheet)
   })
 
-  test('with no palette yet, Tints says it needs one and the pill asks for the palette', async ({ page }) => {
+  test('with no palette yet, every part says Not set and the pill asks for the palette', async ({ page }) => {
     watch(page, 'a designer with a project they have not started')
     await signIn(page, { plan: 'free', projects: [blank('p-new', 'Fresh Start', ago(HOUR))] })
     await go(page, '/projects')
@@ -357,7 +360,7 @@ test.describe('the kit sheet is read off the newest project', () => {
     const sheet = sheetOf(page, 'Fresh Start, latest project')
     await expect(sheet.getByText('0 of 4 parts set. Edited 1 hour ago.')).toBeVisible()
     await expect(sheet.getByText('Not set')).toHaveCount(4)
-    await expect(sheet).toContainText('Needs a palette first.')
+    await expect(sheet).toContainText('Set success, warning, error and info.')
     await expect(sheet.getByRole('link', { name: /^Continue: build the palette/ })).toHaveAttribute('href', '/create/palette')
   })
 
@@ -478,44 +481,36 @@ test.describe('the kit sheet is read off the newest project', () => {
   })
 })
 
-/* ── The Tints part: the page's one motion ────────────────────────────────── */
+/* ── The semantic part: the next step when it is the one missing ──────────── */
 
-test.describe('the Tints part shows a dimmed preview until the person reaches for it', () => {
-  // The preview ramp rests at 0.65 opacity under "Not set"; the full-strength ramp unrolls over it when the
-  // Continue pill (when Tints is the next step) or the Tints part is hovered or focused, and holds.
-  const fullRamp = (page) => sheetOf(page, 'Offcut, latest project').locator('.db-ramp:not(.rest)')
-
-  test('hovering the Continue pill (Tints is next) unrolls the ramp once and holds it while it is reached for', async ({ page }) => {
-    watch(page, 'a designer about to generate their tints')
-    await signIn(page, { plan: 'free', projects: [noTints()] })
+test.describe('a project with everything but the semantic colours', () => {
+  test('the sheet says Semantic colours are not set, and the Continue pill opens the semantic step', async ({ page }) => {
+    watch(page, 'a designer about to set their semantic colours')
+    await signIn(page, { plan: 'free', projects: [noSemantic()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
     const sheet = sheetOf(page, 'Offcut, latest project')
+    await expect(sheet.getByText('3 of 4 parts set. Edited 2 hours ago.')).toBeVisible()
     await expect(sheet.getByText('Not set')).toHaveCount(1)
-    const clip = () => fullRamp(page).evaluate((el) => getComputedStyle(el).clipPath)
-    const running = () => fullRamp(page).evaluate((el) => el.getAnimations().length)
-    const UNROLLED = /inset\(0px\)|inset\(0%\)|none/
-    expect(await clip(), 'at rest the full-strength ramp is rolled up').toMatch(/inset\(0px 0px 100%/)
+    await expect(sheet).toContainText('Set success, warning, error and info.')
+    await expect(sheet.getByRole('img', { name: /^Semantic colours:/ }), 'an unset part draws no plate').toHaveCount(0)
 
-    await sheet.getByRole('link', { name: /^Continue: generate the tints/ }).hover()
-    await expect.poll(clip, { message: 'hovering the pill must unroll the ramp' }).toMatch(UNROLLED)
-    await expect.poll(running, { message: 'the unroll finishes (it plays once)' }).toBe(0)
-    expect(await clip(), 'with the animation done and the pointer still on the pill, the ramp holds').toMatch(UNROLLED)
-    await expect(sheet.getByText('Not set'), '"Not set" stays visible while the ramp shows').toBeVisible()
-
-    await page.mouse.move(5, 5)
-    await expect.poll(clip, { message: 'moving away puts the ramp back at rest' }).toMatch(/inset\(0px 0px 100%/)
+    const next = sheet.getByRole('link', { name: /^Continue: set the semantic colours/ })
+    await expect(next).toHaveAttribute('href', '/create/semantic-color')
+    await expect(sheet.getByRole('link', { name: 'Open in Semantic Colour' })).toHaveAttribute('href', '/create/semantic-color')
+    await expect(sheet.getByText(/generate the tints|Open in Tint$/i), 'tints are not a step').toHaveCount(0)
   })
 
-  test('keyboard focus on the Open in Tint link unrolls it too', async ({ page }) => {
-    watch(page, 'a keyboard user reaching the Tints part')
-    await signIn(page, { plan: 'free', projects: [noTints()] })
+  test('its project page lists Semantic colours as the open band and offers to set them', async ({ page }) => {
+    watch(page, 'a designer opening a project that still needs its semantic colours')
+    await signIn(page, { plan: 'free', projects: [noSemantic()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    const sheet = sheetOf(page, 'Offcut, latest project')
-    await sheet.getByRole('link', { name: 'Open in Tint' }).focus()
-    await expect.poll(() => fullRamp(page).evaluate((el) => getComputedStyle(el).clipPath), { message: 'focus must unroll the ramp' })
-      .toMatch(/inset\(0px\)|inset\(0%\)|none/)
+    await page.getByRole('link', { name: 'Open project, Offcut' }).click()
+    await expect(page).toHaveURL(/\/projects\/p-nosemantic$/)
+    await expect(page.locator('#pjv-semantic .pjv-bm')).toHaveText('Not set')
+    await expect(page.locator('#pjv-semantic').getByRole('link', { name: 'Set the semantic colours' })).toHaveAttribute('href', '/create/semantic-color')
+    await expect(page.locator('#pjv-semantic').getByRole('link', { name: 'Open in Semantic Colour' })).toHaveAttribute('href', '/create/semantic-color')
   })
 })
 
@@ -1037,7 +1032,8 @@ test.describe('a project’s own page', () => {
     await expect(meta('fonts')).toHaveText('Fraunces over Manrope')
     await expect(meta('type-scale')).toHaveText('1.333')
     await expect(page.locator('#pjv-type-scale .pjv-note')).toHaveText('Perfect fourth, 1.333, six steps from 17 px')
-    await expect(meta('tints')).toHaveText('6 steps')
+    await expect(meta('semantic')).toHaveText('Success, warning, error and info')
+    await expect(page.locator('#pjv-tints'), 'tints are derived, not a band of their own').toHaveCount(0)
     await expect(page.locator('.pjv-band .pjv-copy')).toHaveCount(4)
 
     // THE EXPORT BAR TELLS THE TRUTH: CSS, JSON and Tailwind export are not built.
