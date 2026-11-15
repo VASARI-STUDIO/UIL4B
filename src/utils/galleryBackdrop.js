@@ -5,9 +5,9 @@
 // A family picks one from its kind, then from the sum of its name's character
 // codes, so the same family always gets the same strip.
 //
-// Each strip ships four files: `<name>.avif` and `<name>.webp` at 1536 x 460
-// (the widest a band is painted; a retina screen is not asked for more), and
-// `<name>-m.avif` and `<name>-m.webp` at 768 x 230 for a phone, where the band is
+// Each strip ships four files: `<name>.avif` and `<name>.webp` at 2048 x 613
+// (sharp on a retina screen at the widest a band is painted), and
+// `<name>-m.avif` and `<name>-m.webp` at 1024 x 307 for a phone, where the band is
 // 390 wide. A strip is named by its `<name>.webp` url, and every other file is
 // worked out from that.
 
