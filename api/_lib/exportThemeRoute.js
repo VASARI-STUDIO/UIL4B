@@ -19,8 +19,9 @@
 import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeExportPro, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
 
 export const MAX_THEME_BODY_CHARS = 256 * 1024
-// First in the head of every print document. Inline styles and data: fonts and images are all a print document holds.
-export const PRINT_CSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
+// First in the head of every print document. Inline styles and data: fonts and images are all a print document holds. base-uri and
+// form-action are not covered by default-src, so they are named: no <base> can redirect a relative URL, and nothing can submit.
+export const PRINT_CSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
 // One account's themed exports in a window. A render takes tens of milliseconds, so this bounds abuse and not honest use.
 export const THEME_EXPORT_LIMIT = Object.freeze({ bucket: 'export-theme', limit: 30, windowMs: 10 * 60 * 1000 })
 
@@ -64,10 +65,12 @@ async function loadEngine() {
 const dataUrl = (E) => (f) => `data:font/woff2;base64,${Buffer.from(E.loaders.fontFile(f.stem, 'woff2')).toString('base64')}`
 
 // Puts the CSP meta at the top of the head. The document is the engine's own, so its first `<head>` is the real one and sits near
-// the start; anything else is a fault.
+// the start; anything else is a fault. A print document holds no script and no form, so one that does is refused here, before it
+// can reach a window (the CSP would stop them running; this keeps them from being written at all).
 function withCsp(html) {
   const at = typeof html === 'string' ? html.indexOf('<head>') : -1
   if (at < 0 || at > 200) throw new Error('print document has no head')
+  if (/<script[\s>/]/i.test(html) || /<form[\s>/]/i.test(html)) throw new Error('print document holds a script or a form')
   const end = at + '<head>'.length
   return `${html.slice(0, end)}<meta http-equiv="Content-Security-Policy" content="${PRINT_CSP}">${html.slice(end)}`
 }
@@ -168,8 +171,10 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
 
   try {
     if (typeof consume !== 'function') throw new Error('no rate limiter')
-    const verdict = await consume({ ...THEME_EXPORT_LIMIT, key: decoded.uid })
-    if (!verdict.allowed) {
+    // failOpen: false, so a counter that cannot be read or written refuses (429) and does not let the export through uncounted.
+    // A verdict that says `degraded` is a limiter that did not count, so it is refused here too.
+    const verdict = await consume({ ...THEME_EXPORT_LIMIT, key: decoded.uid, failOpen: false })
+    if (!verdict.allowed || verdict.degraded) {
       res.setHeader('Retry-After', String(verdict.retryAfter || 1))
       return res.status(429).json({ error: 'Too many exports. Try again shortly.', code: 'rate_limited' })
     }

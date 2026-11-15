@@ -20,7 +20,7 @@
 import fs from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { mockThemeApi, cleanHtml } from './export-theme-mock.js'
+import { mockThemeApi, cleanHtml, printedDoc } from './export-theme-mock.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import {
@@ -670,7 +670,7 @@ test.describe('a Pro account', () => {
     const panel = await openFromHeader(page)
     await expect(primaryButton(panel)).toBeEnabled()
     const [doc] = await Promise.all([page.context().waitForEvent('page'), primaryButton(panel).click()])
-    await expect(doc.locator('#printed-doc')).toHaveText('Stub book')
+    await expect(printedDoc(doc).locator('#printed-doc')).toHaveText('Stub book')
     expect(asked, 'the popup asks the server exactly once').toHaveLength(1)
     expect(asked[0].method).toBe('POST')
     expect(asked[0].auth).toMatch(/^Bearer .+/)

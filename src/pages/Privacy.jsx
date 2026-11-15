@@ -6,8 +6,8 @@
 // in the right voice.
 //
 // Each clause is a function in SECTIONS. The same list builds the contents
-// (LegalContents: the sticky rail, or the "On this page" disclosure on narrow
-// screens) and the document, so a clause cannot exist in one and not the other.
+// (LegalContents: an open list under the title, or the "Contents" disclosure
+// on a phone) and the document, so a clause cannot exist in one and not the other.
 // Each clause ends with a BackToContents link, which is drawn only where the
 // contents is the disclosure. Ids are fixed (`privacy-…`) so a deep link
 // survives a change of heading.
@@ -29,8 +29,8 @@ import { Link } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import LegalContents, { BackToContents } from '../components/legal/LegalContents'
 import { KEY_PURPOSES } from '../utils/dataExport'
-import '../styles/pages/content.css'
 import '../styles/pages/legal.css'
+import '../styles/pages/plain-v3.css'
 
 const SUPPORT = 'support@uil4b.com'
 
@@ -399,27 +399,25 @@ export default function Privacy() {
   const textLang = lang.startsWith('en') ? undefined : 'en'
 
   return (
-    <div className="sec cpg lgl" lang={textLang}>
+    <div className="pv3 lgl" lang={textLang}>
       <header className="lgl-head">
-        <h1 className="cpg-h1">Privacy &amp; data.</h1>
-        <p className="cpg-cap lgl-updated">Last updated: 4 November 2026</p>
+        <h1 className="cpg-h1 pv-h1">Privacy &amp; data.</h1>
+        <p className="lgl-updated">Last updated: 4 November 2026</p>
       </header>
 
-      <div className="cpg-split">
-        <LegalContents items={SECTIONS.map((s) => ({ id: s.id, label: s.heading }))} />
+      <LegalContents items={SECTIONS.map((s) => ({ id: s.id, label: s.heading }))} />
 
-        <div className="legal-card lgl-doc">
-          {SECTIONS.map((s) => {
-            const Body = s.render
-            return (
-              <section className="lgl-sec" id={s.id} key={s.id}>
-                <h2 className="legal-h lgl-h" tabIndex={-1}>{s.heading}</h2>
-                <Body />
-                <BackToContents />
-              </section>
-            )
-          })}
-        </div>
+      <div className="legal-card lgl-doc">
+        {SECTIONS.map((s) => {
+          const Body = s.render
+          return (
+            <section className="lgl-sec" id={s.id} key={s.id}>
+              <h2 className="legal-h lgl-h" tabIndex={-1}>{s.heading}</h2>
+              <Body />
+              <BackToContents />
+            </section>
+          )
+        })}
       </div>
     </div>
   )

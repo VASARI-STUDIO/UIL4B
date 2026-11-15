@@ -20,7 +20,8 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import SplitDownload from '../components/library/SplitDownload'
 import FooterGlyph from '../components/library/FooterGlyph'
 import {
-  downloadFileName, effectiveFormat, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
+  ANIMATED_DOWNLOAD, animatedDownloadBlob, animatedDownloadFileName, downloadFileName, effectiveFormat,
+  offersAnimatedDownload, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
 import useBuiltinIcons from '../hooks/useBuiltinIcons'
 import { builtinIcons, loadBuiltinIcons } from '../utils/iconsBuiltin'
@@ -2156,6 +2157,30 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
   }
   const pickDownloadFormat = (id) => { setDlFormat(id); writeDownloadFormat(id) }
 
+  // The animated file is the markup the Pro-checked route served, untouched. The
+  // customiser's own markup has been through the sanitiser, which drops the
+  // animation, so this asks the glyph store for the original instead.
+  const showAnimatedDownload = offersAnimatedDownload(activeIcon?.pack, isPro)
+  const [animDl, setAnimDl] = useState('idle')
+  const animDlTimer = useRef(0)
+  useEffect(() => () => clearTimeout(animDlTimer.current), [])
+  const handleAnimatedDownload = async () => {
+    if (!showAnimatedDownload || animDl === 'building') return
+    if (!(await requireExportAccount('download this animated icon'))) return
+    clearTimeout(animDlTimer.current)
+    setAnimDl('building')
+    let next = 'failed'
+    try {
+      const blob = animatedDownloadBlob(await fetchSvgText(activeIcon.pack, activeIcon.name))
+      if (blob) {
+        saveBlobAs(blob, animatedDownloadFileName(activeIcon.name))
+        next = 'done'
+      }
+    } catch { /* shown as failed below */ }
+    setAnimDl(next)
+    animDlTimer.current = setTimeout(() => setAnimDl('idle'), next === 'done' ? 1600 : 4000)
+  }
+
   // Saving is a two-step flow: pick a project, then write. Signed-out users are
   // gated to login first — projects are account-scoped, so the per-project save
   // cap can't be enforced without one.
@@ -3042,6 +3067,24 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
               {savedState === 'saved' && (
                 <p className="ied-fe-sv"><FooterGlyph name="check" />{saveLabel.full}</p>
               )}
+              {showAnimatedDownload && (
+                <button
+                  type="button"
+                  className="ied-tn ied-anim"
+                  style={{ flex: '1 1 100%', width: '100%', marginBottom: 8 }}
+                  onClick={handleAnimatedDownload}
+                  aria-disabled={animDl === 'building' || undefined}
+                  aria-busy={animDl === 'building' || undefined}
+                >
+                  <FooterGlyph name="download" />
+                  <span>{animDl === 'done' ? 'Downloaded' : animDl === 'failed' ? 'Couldn’t download. Try again' : ANIMATED_DOWNLOAD.label}</span>
+                </button>
+              )}
+              {showAnimatedDownload && (
+                <span className="sr-only" role="status">
+                  {animDl === 'done' ? `Downloaded ${animatedDownloadFileName(activeIcon?.name)}` : animDl === 'failed' ? 'Couldn’t make the animated file. Try again.' : ''}
+                </span>
+              )}
               <div className="ied-foot-row" data-sv={savedState === 'saved' ? 'true' : undefined}>
                 <SplitDownload
                   format={dlFormat}
@@ -3335,11 +3378,31 @@ function IconWeightSeg({ value, stateOf, onChange }) {
   const states = ICON_WEIGHTS.map((w) => ({ ...w, ...stateOf(w.id) }))
   const singleStyle = states.every((w) => !w.ok)
   const reason = states[0].why
+  // The chip whose reason is on show: set by a tap or by focus on a chip the scope
+  // cannot honour, so the reason is text on the page and not only a tooltip.
+  const [hintId, setHintId] = useState(null)
+  const hintTimer = useRef(0)
+  useEffect(() => () => clearTimeout(hintTimer.current), [])
+  const hinted = singleStyle ? null : states.find((w) => w.id === hintId && !w.ok) || null
+  const showHint = (id, { timed }) => {
+    clearTimeout(hintTimer.current)
+    setHintId(id)
+    if (timed) hintTimer.current = setTimeout(() => setHintId(null), 5000)
+  }
+  const hideHint = () => { clearTimeout(hintTimer.current); setHintId(null) }
+  const status = singleStyle ? reason : hinted ? (hinted.say || hinted.why) : ''
   return (
-    <div className={singleStyle ? 'ig-weight ig-weight--single' : 'ig-weight'} role="group" aria-label="Icon weight">
+    <div
+      className={singleStyle || hinted ? 'ig-weight ig-weight--single' : 'ig-weight'}
+      role="group"
+      aria-label="Icon weight"
+      onKeyDown={(e) => { if (e.key === 'Escape' && hinted) hideHint() }}
+    >
       {/* Always mounted, so a screen reader hears the reason when a group change
-          brings it in; empty and click-through while the buttons are showing. */}
-      <span className="ig-weight-status" role="status" title={singleStyle ? reason : undefined}>{singleStyle ? reason : ''}</span>
+          brings it in; empty and click-through while the buttons are showing.
+          The line is laid over the whole track, so while it carries a hint the
+          chips give up their labels and ground to it. */}
+      <span className="ig-weight-status" role="status" title={singleStyle ? reason : undefined}>{status}</span>
       {singleStyle ? (
         // Noninteractive labels preserve the four-button track's intrinsic width.
         <span className="ig-weight-measure" aria-hidden="true">
@@ -3354,7 +3417,14 @@ function IconWeightSeg({ value, stateOf, onChange }) {
           aria-disabled={!w.ok || undefined}
           aria-label={w.ok ? w.label : `${w.label} — ${w.why}`}
           title={w.why || undefined}
-          onClick={() => { if (w.ok) onChange(w.id) }}
+          style={hinted ? { color: 'transparent', background: 'transparent', boxShadow: 'none' } : undefined}
+          onFocus={() => { if (w.ok) hideHint(); else showHint(w.id, { timed: false }) }}
+          onBlur={hideHint}
+          onClick={() => {
+            if (!w.ok) { showHint(w.id, { timed: true }); return }
+            if (hinted) { hideHint(); return }
+            onChange(w.id)
+          }}
         >
           {w.label}
         </button>
@@ -4410,7 +4480,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const drawn = weightPacks(w)
     const ok = scope.some((p) => drawn.includes(p))
     const who = drawn.map((p) => WEIGHT_PACK_NAMES[p]).join(', ')
-    return { ok, why: ok ? (pack ? '' : `Drawn by ${who}`) : `${ICON_WEIGHTS.find((x) => x.id === w).label} is drawn by ${who} only` }
+    const label = ICON_WEIGHTS.find((x) => x.id === w).label
+    // `say` is the visible line; `why` stays the chip's accessible name and tooltip.
+    const alone = !collection && pack && pack !== 'custom'
+    return {
+      ok,
+      why: ok ? (pack ? '' : `Drawn by ${who}`) : `${label} is drawn by ${who} only`,
+      say: ok ? '' : alone ? `This pack has no ${label} weight.` : `${label} is drawn by ${who} only.`,
+    }
   }
   const handleWeight = (w) => {
     if (w === weight || !weightState(w).ok) return
