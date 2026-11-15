@@ -108,7 +108,7 @@
 .pl-textarea{min-height:100px;resize:vertical;font-size:13px;line-height:1.7}
 .pl-add-row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
 .pl-add-field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
-.pl-add-field label{font-size:var(--fs-caption);font-weight:500;letter-spacing:normal;text-transform:none;color:var(--v3-sec)}
+.pl-add-field label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--v3-sec)}
 .pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 /* The locked tease continues the gallery, so its seam is the ROW GAP, not
    the 8px that separates the first grid from the toolbar. --pl-gap is read
@@ -250,7 +250,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* --t2, not --t3: at 10px on the --bg-3 chip --t3 measures 4.46:1 in light
    (#66665f on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
    dark clears either way. Same reasoning as .arc-ratio-card-use. */
-.emoji-section-count{font-size:var(--fs-caption);font-weight:500;color:var(--v3-sec);background:var(--v3-l2);padding:2px 8px;border-radius:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
+.emoji-section-count{font-size:var(--fs-caption);font-weight:560;color:var(--v3-sec);background:var(--v3-l2);padding:2px 8px;border-radius:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
 /* Recovery action inside the search empty/error states (Try again · Search all
    categories). 40px tall — comfortably over the 24px WCAG 2.5.8 floor, and it
    matches .emoji-tone-btn so the two controls on this surface agree. */
@@ -665,7 +665,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lib-switch-btn.is-active>svg{color:#F7F7F4}
 .lib-surface .lib-switch-emoji{font-size:15px}
 .lib-surface .lib-switch-btn>span:last-child{flex-direction:row;gap:0}
-.lib-surface .lib-switch-btn strong{font-size:13.5px;font-weight:500;white-space:nowrap}
+.lib-surface .lib-switch-btn strong{font-size:13.5px;font-weight:560;white-space:nowrap}
 .lib-surface .lib-switch-btn small{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
   clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
@@ -719,7 +719,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
   min-height:40px;padding:9px 15px;
   border:1px solid var(--v3-hl20);border-radius:var(--radius-pill);
   background:transparent;color:color-mix(in srgb,var(--v3-ink) 86%,transparent);
-  font-size:12.5px;font-weight:500;
+  font-size:12.5px;font-weight:560;
   transition:
     color var(--dur-2) var(--ease-standard),
     background var(--dur-1) var(--ease-standard),
@@ -758,7 +758,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lbry-filtertrig{
   min-height:40px;padding:0 14px;
   border:1px solid var(--v3-hl20);border-radius:var(--radius-pill);
-  background:transparent;color:color-mix(in srgb,var(--v3-ink) 86%,transparent);font-size:12.5px;font-weight:500;
+  background:transparent;color:color-mix(in srgb,var(--v3-ink) 86%,transparent);font-size:12.5px;font-weight:560;
 }
 .lib-surface .lbry-filtertrig:hover{color:var(--v3-ink);border-color:var(--v3-hl20);background:var(--v3-rowh)}
 .lib-surface .lbry-filtertrig[aria-expanded="true"],
@@ -851,7 +851,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
 .lib-surface .lbry-select{
   height:40px;padding:0 12px;
   border-radius:var(--radius);background:transparent;
-  color:color-mix(in srgb,var(--v3-ink) 86%,transparent);font-size:12.5px;font-weight:500;
+  color:color-mix(in srgb,var(--v3-ink) 86%,transparent);font-size:12.5px;font-weight:560;
 }
 .lib-surface .lbry-select:hover{color:var(--v3-ink);border-color:var(--v3-hl20)}
 @media(pointer:coarse){.lib-surface .lbry-select{height:44px}}
@@ -907,7 +907,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
   min-height:44px;padding:0 14px;
   border:1px solid var(--v3-hl20);border-radius:var(--radius-pill);
   background:transparent;color:color-mix(in srgb,var(--v3-ink) 86%,transparent);
-  font-family:var(--font);font-size:12.5px;font-weight:500;white-space:nowrap;cursor:pointer;
+  font-family:var(--font);font-size:12.5px;font-weight:560;white-space:nowrap;cursor:pointer;
 }
 .lib-surface .lbry-filtersbtn:hover{color:var(--v3-ink);background:var(--v3-rowh)}
 .lib-surface .lbry-filtersbtn[aria-expanded="true"],
@@ -967,11 +967,11 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:14px 16px 10px;border-bottom:1px solid var(--v3-hair);
 }
-.lbry-sheet-title{margin:0;font-family:var(--font);font-size:15px;font-weight:500;color:var(--v3-ink)}
+.lbry-sheet-title{margin:0;font-family:var(--font);font-size:15px;font-weight:560;color:var(--v3-ink)}
 .lbry-sheet-done{
   min-height:44px;padding:0 16px;border:0;border-radius:var(--radius-pill);
   background:var(--v3-ink);color:var(--v3-on-ink);
-  font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;
+  font-family:var(--font);font-size:13px;font-weight:560;cursor:pointer;
 }
 .lbry-sheet-done:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
 .lbry-sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:16px}
@@ -995,7 +995,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
    560, and a 10px mono count against a 13px one. */
 .lib-surface .drh-head{padding-bottom:14px;margin:0 0 18px}
 .lib-surface .drh-head h2{
-  font-size:clamp(19px,2.6vw,30px);font-weight:500;letter-spacing:-.03em;
+  font-size:clamp(19px,2.6vw,30px);font-weight:560;letter-spacing:-.03em;
 }
 .lib-surface .drh-head p{font-family:var(--font);font-size:13px;color:var(--v3-sec)}
 
@@ -1067,7 +1067,7 @@ html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
 .lib-surface .lbry-card .lbry-card-foot{padding:16px 18px 18px;flex-wrap:wrap}
 .lib-surface .lbry-card .lbry-card-id{flex:1 1 128px}
 .lib-surface .lbry-card .lbry-card-name{
-  font-size:16px;font-weight:500;
+  font-size:16px;font-weight:540;
   white-space:normal;overflow-wrap:break-word;
 }
 .lib-surface .lbry-card .lbry-card-meta{font-size:12.5px}
@@ -1266,7 +1266,7 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
   min-height:40px;padding:0 16px;
   border:1px solid var(--v3-hl20);border-radius:var(--btn-radius);
   background:transparent;color:var(--v3-ink);
-  font-family:var(--font);font-size:13px;font-weight:500;line-height:1.2;white-space:nowrap;
+  font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
   cursor:pointer;text-decoration:none;
   transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard);
 }
@@ -1417,13 +1417,13 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 .lib-surface .lockt-card--thumb .lockt-stripes::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--v3-raised) 40%,transparent)}
 [data-theme="dark"] .lib-surface .lockt-card--thumb .lockt-stripes::after{background:color-mix(in srgb,var(--v3-raised) 45%,transparent)}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--v3-raised)}
-.lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:500;color:var(--v3-ink)}
+.lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--v3-ink)}
 .lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(4px)}
 .lib-surface .lockt-upgrade{
   position:absolute;left:50%;top:calc(50% - 30px);z-index:2;transform:translate(-50%,-50%);
   display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;
   border-radius:var(--radius-pill);background:var(--v3-ink);color:var(--v3-on-ink);
-  font-family:var(--font);font-size:13px;font-weight:500;white-space:nowrap;text-decoration:none;
+  font-family:var(--font);font-size:13px;font-weight:560;white-space:nowrap;text-decoration:none;
   box-shadow:0 0 0 2px var(--v3-raised);
   opacity:0;
 }
@@ -1487,13 +1487,13 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig-k{
   font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--v3-sec);
 }
-.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig-v{font-size:13.5px;font-weight:500;color:var(--v3-ink)}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filtertrig-v{font-size:13.5px;font-weight:540;color:var(--v3-ink)}
 /* "Create a palette" (line 247): ink pill, 8px 9px 8px 20px, 13.5/560, with
    the arrow in a 28px circle at a 10% page wash. The data-cta-icon arrow
    turns on hover — the file's one piece of motion on this bar. */
 .lib-surface.pgl-page .pgl-build-link{
   gap:10px;min-height:44px;padding:8px 9px 8px 20px;border-radius:var(--radius-pill);
-  background:var(--v3-ink);color:var(--v3-on-ink);font-size:13.5px;font-weight:500;
+  background:var(--v3-ink);color:var(--v3-on-ink);font-size:13.5px;font-weight:560;
 }
 .lib-surface.pgl-page .pgl-build-icon{
   display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-pill);

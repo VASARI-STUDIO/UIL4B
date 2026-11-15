@@ -67,7 +67,7 @@
   padding: 0 14px;
   font-family: var(--font);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 450;
   white-space: nowrap;
   color: var(--tl-dim);
   background: transparent;
@@ -97,7 +97,7 @@
   padding: 0 14px;
   font-family: var(--font);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 540;
   line-height: 1.2;
   color: var(--tl-ink);
   background: transparent;
@@ -123,7 +123,7 @@
 
 .seo-page .seo-field { display: flex; flex-direction: column; gap: 7px; }
 
-.seo-page .seo-field-label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 500; color: var(--tl-soft); }
+.seo-page .seo-field-label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 560; color: var(--tl-soft); }
 
 .seo-page .seo-field-label em { font-family: var(--font); font-size: var(--fs-caption); font-style: normal; font-weight: 500; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
@@ -198,7 +198,7 @@
   padding: 3px 12px;
   font-family: var(--font);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 540;
   letter-spacing: 0;
   text-transform: none;
   color: var(--tl-dim);
@@ -285,7 +285,7 @@
   border-radius: 50%;
 }
 
-.seo-page .seo-check-label { margin-bottom: 2px; font-size: 13px; font-weight: 500; color: var(--tl-ink); }
+.seo-page .seo-check-label { margin-bottom: 2px; font-size: 13px; font-weight: 560; color: var(--tl-ink); }
 
 .seo-page .seo-check-detail { font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
 
@@ -348,7 +348,7 @@
 
 .seo-page .seo-ca-kw { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--tl-card2); border: 1px solid var(--tl-line); border-radius: 8px; }
 
-.seo-page .seo-ca-kw-word { overflow: hidden; font-size: 12.5px; font-weight: 500; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
+.seo-page .seo-ca-kw-word { overflow: hidden; font-size: 12.5px; font-weight: 560; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
 
 .seo-page .seo-ca-kw-meta { flex-shrink: 0; font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
