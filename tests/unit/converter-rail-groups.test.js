@@ -90,3 +90,10 @@ test('a button and its panel point at each other by id', () => {
   assert.equal(railTabId('fc-vid', 'crop'), 'fc-vid-tab-crop')
   assert.equal(railPanelId('fc-vid', 'crop'), 'fc-vid-panel-crop')
 })
+
+test('a sound-only output keeps just the trim and the speed', () => {
+  assert.deepEqual(ids(presentGroups({ hasDuration: true, audioOnly: true })), ['clip', 'time'])
+  assert.deepEqual(ids(presentGroups({ hasDuration: false, audioOnly: true })), ['time'])
+  // the open group falls back to one that is still there
+  assert.equal(activeOf(presentGroups({ hasDuration: true, audioOnly: true }), 'crop').id, 'clip')
+})

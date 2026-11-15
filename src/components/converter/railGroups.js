@@ -19,7 +19,10 @@ export const RAIL_GROUPS = [
 ]
 
 // The groups that have controls today. `clip` needs a known length to trim.
-export function presentGroups({ hasDuration }) {
+// A sound-only output (MP3) has no picture to crop, turn or size, so it keeps
+// just the trim and the speed.
+export function presentGroups({ hasDuration, audioOnly = false }) {
+  if (audioOnly) return RAIL_GROUPS.filter(g => (g.id === 'clip' && hasDuration) || g.id === 'time')
   const hasControls = { clip: !!hasDuration, crop: true, turn: true, time: true, look: false, add: false, size: true }
   return RAIL_GROUPS.filter(g => hasControls[g.id])
 }

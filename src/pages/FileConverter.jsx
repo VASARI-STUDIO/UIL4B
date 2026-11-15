@@ -34,11 +34,12 @@ import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from 
 import CropBox from '../components/converter/CropBox'
 import ResultPreview from '../components/converter/ResultPreview'
 import {
-  ANIMATION_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
+  ANIMATION_FORMATS, AUDIO_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
   FPS_MAX, FPS_MIN, FRAME_EXPORTS, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
   MAX_ANIMATION_SIDE, MAX_FRAMES as ENGINE_MAX_FRAMES, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TRANSPARENT, TURNS,
   animatedImageSeconds, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
-  outputFrames, outputSize, resolveFill, reverseFits, spriteFits, spriteLayout, splitPngStream, videoToAnimationArgs,
+  fileHasSound, outputFrames, outputSize, resolveFill, reverseFits, soundState, spriteFits, spriteLayout, splitPngStream,
+  VIDEO_FILE_FORMATS, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
 import {
@@ -921,11 +922,11 @@ const READ_TIMEOUT_MS = 5000
 // ── Mode 3: Video → an animated file ─────────────────────────────────────────
 // This was "Video → GIF". The engine it already loaded writes four more
 // formats for the cost of a different argument list (utils/mediaEncode.js), so
-// the same panel now offers GIF, animated WebP, APNG, MP4 and WebM. GIF stays
-// the default and its command is unchanged for the default settings, which
-// tests/unit/media-encode.test.js pins. Sound is dropped in every format:
-// these are loops for a page, and saying so is better than a silent track
-// that sometimes survives.
+// the same panel now offers GIF, animated WebP, APNG, MP4, WebM, MOV and MKV,
+// plus the sound alone as MP3. GIF stays the default and its command is
+// unchanged for the default settings, which tests/unit/media-encode.test.js
+// pins. Sound is kept in the video files when "Keep sound" is on (AAC in MP4,
+// MOV and MKV, Opus in WebM); GIF, WebP and APNG cannot hold it, and say so.
 //
 // It is also a small editor: crop to a shape, turn and flip, change speed, play
 // forward, backward or as a boomerang, and (for GIF) choose colours and
@@ -962,6 +963,8 @@ function VideoConvert({ toast }) {
   const [flipV, setFlipV] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [direction, setDirection] = useState('forward')
+  const [sound, setSound] = useState(true) // keep the clip's sound where the format can hold it
+  const [soundProbe, setSoundProbe] = useState({ file: null, has: null }) // what the file's header says about sound
   const [colours, setColours] = useState(SIZE_DEFAULTS.colours)
   const [dither, setDither] = useState(SIZE_DEFAULTS.dither)
   // The tool rail: which group of controls is open, and where the rail sits.
@@ -1055,6 +1058,15 @@ function VideoConvert({ toast }) {
     return () => { live = false }
   }, [file, isImage])
 
+  // Whether the file has a sound track: read from the container's header, as a
+  // browser will not say. null (could not tell) leaves the toggle on.
+  useEffect(() => {
+    if (!file || isImage) return undefined
+    let live = true
+    fileHasSound(file).catch(() => null).then(has => { if (live) setSoundProbe({ file, has }) })
+    return () => { live = false }
+  }, [file, isImage])
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -1122,7 +1134,8 @@ function VideoConvert({ toast }) {
       : secs <= 0 || !outSize ? 'unknown'
         : reverseFits(forwardFrames, outSize.w, outSize.h) ? null : 'long'
   const reverseOk = reverseWhy === null
-  const dir = reverseOk ? direction : 'forward'
+  const isAudio = fmt.kind === 'audio'
+  const dir = reverseOk && !isAudio ? direction : 'forward'
   // A direction that no longer fits falls back to Forward (adjusted during
   // render, the supported way to derive state from a change in other state).
   if (!reverseOk && direction !== 'forward') setDirection('forward')
@@ -1132,6 +1145,11 @@ function VideoConvert({ toast }) {
   const isFramesOut = fmt.id === 'frames'
   const isSprite = fmt.id === 'sprite'
   const isFrameExport = isFramesOut || isSprite
+  // Sound: true or false when the file's header said, null when it did not. A GIF
+  // or WebP has none to keep.
+  const hasSound = isImage ? false : soundProbe.file === file ? soundProbe.has : null
+  const snd = soundState(fmt, { hasSound, direction: dir })
+  const soundOn = isAudio || (sound && snd.ok)
   // The sheet's grid, from how many frames the edits make (the engine writes at
   // most ENGINE_MAX_FRAMES). Not known while the clip's length is not.
   const sheet = isSprite && frames > 0 && outSize ? spriteLayout(Math.min(frames, ENGINE_MAX_FRAMES), outSize.w, outSize.h) : null
@@ -1142,6 +1160,7 @@ function VideoConvert({ toast }) {
   const sig = JSON.stringify([
     format, fps, width, isGif || isFrameExport ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir,
     isGif ? colours : 0, isGif ? dither : 0, shape === 'custom' ? box : 0, shape === 'original' ? 0 : fit, cut, cut === 'rounded' ? radius : 0, outsideShown ? outside : 0,
+    soundOn,
   ])
 
   const convert = useCallback(async () => {
@@ -1193,7 +1212,7 @@ function VideoConvert({ toast }) {
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
-          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither,
+          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn,
           fill: outside.transparent ? TRANSPARENT : outside.colour, cut, radius, sheet, maxFrames: ENGINE_MAX_FRAMES,
         }),
         output: `output.${target.engineExt || target.ext}`,
@@ -1217,7 +1236,7 @@ function VideoConvert({ toast }) {
         blob = new Blob([bytes], { type: target.mime })
       }
       revealNext.current = true
-      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sound: soundOn && !isAudio, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
       setJob(null)
       toast(`${target.label} ready`)
     } catch (err) {
@@ -1229,7 +1248,7 @@ function VideoConvert({ toast }) {
           ? UNREADABLE_VIDEO_NOTE
           : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, toast])
 
   const cancel = () => {
     runRef.current++
@@ -1277,7 +1296,7 @@ function VideoConvert({ toast }) {
     setView(v)
     if (v === 'after') videoRef.current?.pause()
   }
-  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable
+  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable && !isAudio
   const speedOptions = SPEEDS.map(s => ({ id: s.id, label: s.label, name: s.name }))
   const flipBtn = (axis, on, set) => (
     <button
@@ -1294,12 +1313,14 @@ function VideoConvert({ toast }) {
 
   const consequence = !srcSize
     ? (unreadable ? NO_PREVIEW_NOTE : 'Reading the file…')
-    : isSprite && sheet
+    : isAudio
+      ? (hasSound === false ? 'This file has no sound to save' : `MP3 · sound only${frames > 0 ? ` · ${outSeconds.toFixed(1)} s` : ''}`)
+      : isSprite && sheet
       ? `${sheet.cols} × ${sheet.rows} sheet · ${sheet.w} × ${sheet.h} px`
       : isFramesOut && frames > 0
         ? `${Math.min(frames, ENGINE_MAX_FRAMES)} PNG${frames === 1 ? '' : 's'} · ${outSize.w} × ${outSize.h} px each`
-        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
-  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : `Convert to ${fmt.label}`
+        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '') + (soundOn ? ' · with sound' : '')
+  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : isAudio ? 'Save sound as MP3' : `Convert to ${fmt.label}`
   const resultName = result?.format === 'frames' ? `${base}-frames.zip` : result?.format === 'sprite' ? `${base}-sprite.png` : `${base}.${resultFmt?.ext}`
   const resultNoun = FRAME_NOUN[result?.format] || resultFmt?.label
 
@@ -1307,7 +1328,7 @@ function VideoConvert({ toast }) {
   // fields and their state), so nothing is lost by closing a group; the open
   // one is the only one shown. A group with no controls is left out: the Clip
   // group only exists once the length is known.
-  const groups = presentGroups({ hasDuration: duration > 0 })
+  const groups = presentGroups({ hasDuration: duration > 0, audioOnly: isAudio })
   const openGroup = activeOf(groups, group)?.id
   const marks = groupMarks({
     trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction,
@@ -1359,7 +1380,7 @@ function VideoConvert({ toast }) {
           accept={ACCEPT_VIDEO}
           onFiles={onFiles}
           hint="Drop a video or GIF to edit and convert"
-          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4 or WebM."
+          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4, WebM, MOV or MKV, or keep just the sound as MP3."
         />
       ) : (
         <div className="fc-bench fc-bench--rail">
@@ -1369,7 +1390,7 @@ function VideoConvert({ toast }) {
               srcUrl={srcUrl}
               videoRef={videoRef}
               imgRef={imgRef}
-              toggle={srcSize && !unreadable ? (
+              toggle={srcSize && !unreadable && !isAudio ? (
                 <Segmented id="fc-vid-view" label="Preview" options={VIEW_MODES} value={view} onChange={switchView} className="fc-seg--view" />
               ) : null}
               after={previewReady ? (
@@ -1393,7 +1414,7 @@ function VideoConvert({ toast }) {
                 isImage,
                 size: srcSize,
                 crop,
-                box: shape === 'custom' ? box : null,
+                box: shape === 'custom' && !isAudio ? box : null,
                 onBox: setBox,
                 disabled: working,
                 hidden: previewReady,
@@ -1412,7 +1433,9 @@ function VideoConvert({ toast }) {
               <section className="fc-result" aria-label="Result" ref={resultRef}>
                 <h2 className="fc-eyebrow">Result</h2>
                 {resultFmt.kind === 'video' ? (
-                  <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
+                  <video className="fc-result-media" src={result.url} controls loop muted={!result.sound} playsInline aria-label={`${resultFmt.label} result`} />
+                ) : resultFmt.kind === 'audio' ? (
+                  <audio className="fc-result-media" src={result.url} controls aria-label={`${resultFmt.label} result`} />
                 ) : resultFmt.kind === 'frames' ? null : (
                   <img className="fc-result-media" src={result.url} alt={`${resultFmt.label} result`} />
                 )}
@@ -1420,6 +1443,9 @@ function VideoConvert({ toast }) {
                   {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
                   {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
                 </p>
+                {(result.format === 'mov' || result.format === 'mkv') && (
+                  <p className="fc-note">Some browsers can’t play {resultFmt.label.slice(0, 3)} here. The file is fine; open it in a video player.</p>
+                )}
                 {result.format === 'frames' && result.size && (
                   <p className="fc-note">{result.count} numbered PNG file{result.count === 1 ? '' : 's'}, {result.size.w} × {result.size.h} px each.</p>
                 )}
@@ -1447,6 +1473,12 @@ function VideoConvert({ toast }) {
                 <optgroup label="Animation">
                   {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </optgroup>
+                <optgroup label="Video file">
+                  {VIDEO_FILE_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
+                <optgroup label="Sound">
+                  {AUDIO_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
                 <optgroup label="Frames">
                   {FRAME_EXPORTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </optgroup>
@@ -1460,7 +1492,21 @@ function VideoConvert({ toast }) {
                         : 'Every frame the edits make, tiled in one PNG.'}
                 </p>
               )}
-              {!isFrameExport && <p className="fc-note">Sound is removed</p>}
+              {isAudio ? (
+                <p className="fc-note">{hasSound === false ? 'This file has no sound, so there is nothing to save as MP3.' : 'Saves the sound only, with no picture.'}</p>
+              ) : !isFrameExport && (
+                <>
+                  <button
+                    type="button" id="fc-vid-sound" className="fc-btn fc-toggle" aria-pressed={soundOn}
+                    disabled={working || !snd.ok} onClick={() => setSound(!sound)}
+                  >
+                    Keep sound
+                  </button>
+                  <p className="fc-note">
+                    {!snd.ok ? `${snd.why}.` : sound ? `Sound is kept as ${fmt.sound}.` : 'Sound is removed.'}
+                  </p>
+                </>
+              )}
             </div>
             {duration > 0 && panel('clip', (
               <div className="fc-insp-sec">
@@ -1576,16 +1622,18 @@ function VideoConvert({ toast }) {
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-speed" label="Speed" options={speedOptions} value={speed} onChange={setSpeed} disabled={working} className="fc-seg--speed" />
               <p className="fc-note">{isImage ? 'Speed shows in the result.' : 'The preview plays at this speed.'}</p>
+              {!isAudio && (
               <Segmented
                 id="fc-vid-direction" label="Direction" options={DIRECTIONS} value={dir} onChange={setDirection} disabled={working}
                 isOptionDisabled={o => o.id !== 'forward' && !reverseOk}
               />
-              {reverseWhy === 'long' ? (
+              )}
+              {isAudio ? null : reverseWhy === 'long' ? (
                 <p className="fc-note">{REVERSE_OFF_NOTE}</p>
               ) : reverseWhy === 'unknown' ? (
                 <p className="fc-note">{REVERSE_UNKNOWN_NOTE}</p>
               ) : dir !== 'forward' ? (
-                <p className="fc-note">Shows in the result, not the preview.</p>
+                <p className="fc-note">Shows in the result, not the preview. The sound is removed.</p>
               ) : null}
             </div>
             ))}
@@ -1658,7 +1706,7 @@ function VideoConvert({ toast }) {
           {railLayout === 'bar' && rail}
           <div className="fc-actionbar fc-actions">
             <p className="fc-note fc-consequence" aria-live="polite">{consequence}</p>
-            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy))}>
+            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy)) || (isAudio && hasSound === false)}>
               {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : actionLabel}
             </button>
             <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />

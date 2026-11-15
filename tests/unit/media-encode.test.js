@@ -18,7 +18,7 @@ import {
   REVERSE_MAX_PIXELS, animatedImageSeconds,
   scaleFilter, clampBox, freeCrop, padRect, cropPlan, resolveFill, padFilters, cutoutFilter,
   loopSeconds, previewSourceTime, spriteLayout, splitPngStream, findVideoFormat, TRANSPARENT,
-  dragBox, spriteFits,
+  dragBox, spriteFits, VIDEO_FORMATS, atempoFilter, soundState, soundInHeader,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -498,4 +498,129 @@ test('sprite sheets over the size limit are refused before the engine is asked f
   assert.equal(spriteFits(spriteLayout(24, 480, 270)), true)
   assert.equal(spriteFits(spriteLayout(300, 1920, 1080)), false)
   assert.equal(spriteFits({ cols: 1, rows: 40, w: 100, h: 20000 }), false)
+})
+
+// ── Q046: sound, MOV, MKV and MP3 ────────────────────────────────────────────
+const clip = (format, more = {}) => videoToAnimationArgs({ format, input: 'in.mp4', fps: 10, width: 480, ...more })
+
+test('sound: off by default, so every existing video list still ends in -an', () => {
+  for (const id of ['mp4', 'webm', 'mov', 'mkv']) {
+    const a = clip(id)
+    assert.ok(a.includes('-an'), `${id} lost -an`)
+    assert.ok(!a.includes('-c:a'), `${id} carried an audio codec without being asked`)
+  }
+})
+
+test('sound: MP4, MOV and MKV keep it as AAC; WebM as Opus', () => {
+  for (const id of ['mp4', 'mov', 'mkv']) {
+    const a = clip(id, { sound: true })
+    assert.equal(after(a, '-c:a'), 'aac', id)
+    assert.equal(after(a, '-b:a'), '128k', id)
+    assert.ok(!a.includes('-an'), `${id} still said -an`)
+    assert.equal(a.at(-1), `output.${id}`)
+  }
+  const w = clip('webm', { sound: true })
+  assert.equal(after(w, '-c:a'), 'libopus')
+  assert.equal(after(w, '-b:a'), '96k')
+  assert.ok(!w.includes('-an'))
+})
+
+test('sound: the bit rate follows Quality', () => {
+  assert.equal(after(clip('mp4', { sound: true, quality: 'low' }), '-b:a'), '96k')
+  assert.equal(after(clip('mp4', { sound: true, quality: 'high' }), '-b:a'), '192k')
+  assert.equal(after(clip('webm', { sound: true, quality: 'low' }), '-b:a'), '64k')
+})
+
+test('MOV keeps +faststart, MKV has no such flag, and both are H.264 in yuv420p', () => {
+  const mov = clip('mov')
+  assert.equal(after(mov, '-c:v'), 'libx264')
+  assert.equal(after(mov, '-pix_fmt'), 'yuv420p')
+  assert.equal(after(mov, '-movflags'), '+faststart')
+  const mkv = clip('mkv')
+  assert.equal(after(mkv, '-c:v'), 'libx264')
+  assert.ok(!mkv.includes('-movflags'))
+})
+
+test('MOV and MKV cannot carry transparency, so the Outside colour is a solid', () => {
+  for (const id of ['mov', 'mkv']) {
+    assert.equal(resolveFill(findVideoFormat(id), TRANSPARENT).transparent, false, id)
+  }
+})
+
+test('sound: a speed change retimes it with atempo, in steps atempo can take', () => {
+  assert.equal(atempoFilter(1), '')
+  assert.equal(atempoFilter(2), 'atempo=2')
+  assert.equal(atempoFilter(1.5), 'atempo=1.5')
+  assert.equal(atempoFilter(0.5), 'atempo=0.5')
+  assert.equal(atempoFilter(0.25), 'atempo=0.5,atempo=0.5')
+  assert.equal(atempoFilter(4), 'atempo=2,atempo=2')
+  assert.equal(after(clip('mp4', { sound: true, speed: 2 }), '-af'), 'atempo=2')
+  assert.equal(after(clip('webm', { sound: true, speed: 0.25 }), '-af'), 'atempo=0.5,atempo=0.5')
+  assert.ok(!clip('mp4', { sound: true }).includes('-af'), 'normal speed needs no tempo filter')
+})
+
+test('sound: -af sits before the audio codec, and the video filters are untouched by it', () => {
+  const a = clip('mp4', { sound: true, speed: 2 })
+  assert.ok(a.indexOf('-af') < a.indexOf('-c:a'))
+  assert.equal(after(a, '-vf'), after(clip('mp4', { speed: 2 }), '-vf'))
+})
+
+test('sound: formats that cannot hold it never get an audio flag, even when asked', () => {
+  for (const id of ['gif', 'webp', 'apng', 'frames', 'sprite']) {
+    const a = clip(id, { sound: true })
+    assert.deepEqual(a, clip(id), id)
+    assert.ok(!a.includes('-c:a') && !a.includes('-af'), id)
+  }
+})
+
+test('sound: reverse and boomerang drop it', () => {
+  for (const direction of ['reverse', 'boomerang']) {
+    const a = clip('mp4', { sound: true, direction })
+    assert.ok(a.includes('-an'), direction)
+    assert.ok(!a.includes('-c:a'), direction)
+  }
+})
+
+test('MP3: sound only, no video filter, the trim before the input', () => {
+  const a = clip('mp3', { start: 1.5, length: 4, turn: 90 })
+  assert.deepEqual(a, ['-ss', '1.5', '-t', '4', '-i', 'in.mp4', '-vn', '-c:a', 'libmp3lame', '-q:a', '4', 'output.mp3'])
+  assert.equal(after(clip('mp3', { quality: 'high' }), '-q:a'), '2')
+  assert.equal(after(clip('mp3', { speed: 2 }), '-af'), 'atempo=2')
+  assert.ok(!clip('mp3').some((x) => x === '-vf' || x === '-filter_complex'))
+})
+
+test('the new formats are listed for the Video tab only', () => {
+  const ids = VIDEO_FORMATS.map((f) => f.id)
+  for (const id of ['mov', 'mkv', 'mp3']) {
+    assert.ok(ids.includes(id), id)
+    assert.ok(!ANIMATION_FORMATS.some((f) => f.id === id), `${id} leaked into the animation builder`)
+  }
+  assert.equal(findVideoFormat('mp3').kind, 'audio')
+  assert.equal(findVideoFormat('mkv').mime, 'video/x-matroska')
+})
+
+test('soundState: says why a format or a file cannot keep sound', () => {
+  assert.deepEqual(soundState(findVideoFormat('mp4'), { hasSound: true }), { ok: true, why: '' })
+  assert.deepEqual(soundState(findVideoFormat('mp4'), { hasSound: null }), { ok: true, why: '' })
+  assert.equal(soundState(findVideoFormat('mp4'), { hasSound: false }).why, 'This file has no sound')
+  assert.match(soundState(findVideoFormat('gif'), { hasSound: true }).why, /can’t hold sound/)
+  assert.match(soundState(findVideoFormat('webp'), {}).why, /can’t hold sound/)
+  assert.equal(soundState(findVideoFormat('mkv'), { direction: 'boomerang' }).ok, false)
+  assert.equal(soundState(findVideoFormat('mp3'), { direction: 'reverse' }).ok, true)
+})
+
+test('soundInHeader: reads the track list of an MP4, a WebM and an AVI', () => {
+  const bytes = (s) => Uint8Array.from(s, (c) => c.charCodeAt(0))
+  const mp4 = (kind) => bytes(`\0\0\0\x18ftypisom\0\0\0\0isomiso2moov....hdlr\0\0\0\0\0\0\0\0${kind}`)
+  assert.equal(soundInHeader(mp4('soun')), true)
+  assert.equal(soundInHeader(mp4('vide'), new Uint8Array(0), true), false)
+  // a clip whose moov box was not in the part that was read says nothing
+  assert.equal(soundInHeader(bytes('\0\0\0\x18ftypisom\0\0\0\0isomiso2free'), new Uint8Array(0), false), null)
+  // the moov box at the far end of a big file counts
+  assert.equal(soundInHeader(bytes('\0\0\0\x18ftypisom\0\0\0\0isomiso2free'), mp4('soun')), true)
+  assert.equal(soundInHeader(bytes('\x1a\x45\xdf\xa3....V_VP8....A_OPUS')), true)
+  assert.equal(soundInHeader(bytes('\x1a\x45\xdf\xa3....V_VP8')), false)
+  assert.equal(soundInHeader(bytes('RIFF\0\0\0\0AVI LIST....strh\0\0\0\0auds')), true)
+  assert.equal(soundInHeader(bytes('RIFF\0\0\0\0AVI LIST....strh\0\0\0\0vids')), false)
+  assert.equal(soundInHeader(bytes('GIF89a')), null)
 })

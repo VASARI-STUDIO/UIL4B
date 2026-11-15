@@ -40,8 +40,24 @@ export const ANIMATION_FORMATS = [
   { id: 'gif', label: 'GIF', ext: 'gif', mime: 'image/gif', kind: 'image', loops: true, alpha: true, alphaNote: '1-bit' },
   { id: 'webp', label: 'Animated WebP', ext: 'webp', mime: 'image/webp', kind: 'image', loops: true, alpha: true },
   { id: 'apng', label: 'APNG', ext: 'png', mime: 'image/apng', kind: 'image', loops: true, alpha: true },
-  { id: 'mp4', label: 'MP4 (H.264)', ext: 'mp4', mime: 'video/mp4', kind: 'video', loops: false, alpha: false, evenDims: true },
-  { id: 'webm', label: 'WebM (VP8)', ext: 'webm', mime: 'video/webm', kind: 'video', loops: false, alpha: true },
+  { id: 'mp4', label: 'MP4 (H.264)', ext: 'mp4', mime: 'video/mp4', kind: 'video', loops: false, alpha: false, evenDims: true, sound: 'AAC' },
+  { id: 'webm', label: 'WebM (VP8)', ext: 'webm', mime: 'video/webm', kind: 'video', loops: false, alpha: true, sound: 'Opus' },
+]
+
+/**
+ * Two more video containers and one sound-only file, for the Video tab only
+ * (the animation builder has no sound to keep, so it never lists them). Measured
+ * 2026-11-15 against the same pinned core: libx264 with the native AAC encoder
+ * writes MOV and MKV, libopus writes WebM audio, and libmp3lame writes MP3; all
+ * four ran. `sound` names the audio codec a format carries; a format without it
+ * (GIF, WebP, APNG, the frame exports) cannot hold sound at all.
+ */
+export const VIDEO_FILE_FORMATS = [
+  { id: 'mov', label: 'MOV (H.264)', ext: 'mov', mime: 'video/quicktime', kind: 'video', loops: false, alpha: false, evenDims: true, sound: 'AAC' },
+  { id: 'mkv', label: 'MKV (H.264)', ext: 'mkv', mime: 'video/x-matroska', kind: 'video', loops: false, alpha: false, evenDims: true, sound: 'AAC' },
+]
+export const AUDIO_FORMATS = [
+  { id: 'mp3', label: 'MP3 (sound only)', ext: 'mp3', mime: 'audio/mpeg', kind: 'audio', loops: false, alpha: false, sound: 'MP3' },
 ]
 
 export const findFormat = (id) => ANIMATION_FORMATS.find((f) => f.id === id) || ANIMATION_FORMATS[0]
@@ -57,7 +73,7 @@ export const FRAME_EXPORTS = [
   { id: 'frames', label: 'Frames (ZIP of PNGs)', ext: 'zip', engineExt: 'pngs', mime: 'application/zip', kind: 'frames', loops: false, alpha: true },
   { id: 'sprite', label: 'Sprite sheet (PNG)', ext: 'png', mime: 'image/png', kind: 'image', loops: false, alpha: true },
 ]
-export const VIDEO_FORMATS = [...ANIMATION_FORMATS, ...FRAME_EXPORTS]
+export const VIDEO_FORMATS = [...ANIMATION_FORMATS, ...VIDEO_FILE_FORMATS, ...AUDIO_FORMATS, ...FRAME_EXPORTS]
 export const findVideoFormat = (id) => VIDEO_FORMATS.find((f) => f.id === id) || ANIMATION_FORMATS[0]
 
 /** "How many times it plays", as the control offers it. 0 = forever. */
@@ -473,15 +489,97 @@ const GIF_DITHER = { low: 'none', medium: 'bayer:bayer_scale=2', high: 'sierra2_
 const WEBP_QUALITY = { low: 50, medium: 75, high: 90 }
 const X264_CRF = { low: 30, medium: 23, high: 18 }
 const VP8_CRF = { low: 40, medium: 24, high: 10 }
+// Sound bit rates by Quality: AAC (MP4, MOV, MKV), Opus (WebM), and MP3's VBR
+// quality scale, where a lower number is better.
+const AAC_RATE = { low: '96k', medium: '128k', high: '192k' }
+const OPUS_RATE = { low: '64k', medium: '96k', high: '128k' }
+const MP3_VBR = { low: '6', medium: '4', high: '2' }
+
+// ── Does the file have a sound track? ────────────────────────────────────────
+// A browser will not say: Chrome has no audio-track list on a <video> and only
+// counts decoded sound bytes once it has played. So the container's header is
+// read instead, for the three families the Video tab accepts. MP4 and MOV name
+// each track's kind in an `hdlr` box ('soun' for sound); Matroska and WebM name
+// each track's codec ('A_OPUS', 'A_AAC'...); AVI marks a sound stream 'auds'.
+// The answer is true, false, or null when the file is not one of those or its
+// header lies outside the part that was read; null means "do not say there is
+// none", and the encoder is happy with either (measured: sound flags on a
+// silent file are ignored).
+const SOUND_HEAD_BYTES = 2 * 1024 * 1024
+const SOUND_TAIL_BYTES = 8 * 1024 * 1024
+
+const latin1 = (bytes) => {
+  let out = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000))
+  return out
+}
+
+/** `head` and `tail` are the first and last bytes of a file; `whole` says they cover all of it. */
+export function soundInHeader(head, tail = new Uint8Array(0), whole = false) {
+  const h = latin1(head)
+  const t = tail.length ? latin1(tail) : ''
+  const both = (re) => re.test(h) || (t !== '' && re.test(t))
+  if (h.slice(4, 8) === 'ftyp') {
+    // The track list is in `moov`, at either end of the file. Not finding a
+    // sound track only means something once the moov box itself has been read.
+    if (both(/hdlr[\s\S]{8}soun/)) return true
+    return whole || both(/moov/) ? false : null
+  }
+  // Matroska and AVI list their tracks in the first few kilobytes.
+  if (h.startsWith('\x1a\x45\xdf\xa3')) return /A_(OPUS|VORBIS|AAC|MPEG|AC3|EAC3|FLAC|PCM|DTS|ALAC|TTA|WAVPACK)/.test(h)
+  if (h.startsWith('RIFF') && h.slice(8, 12) === 'AVI ') return /strh[\s\S]{4}auds/.test(h)
+  return null
+}
+
+/** Reads the ends of a File or Blob (the middle is media data) and asks soundInHeader. */
+export async function fileHasSound(blob) {
+  const size = blob.size || 0
+  if (!size) return null
+  const whole = size <= SOUND_HEAD_BYTES + SOUND_TAIL_BYTES
+  const head = new Uint8Array(await blob.slice(0, whole ? size : SOUND_HEAD_BYTES).arrayBuffer())
+  const tail = whole ? new Uint8Array(0) : new Uint8Array(await blob.slice(size - SOUND_TAIL_BYTES).arrayBuffer())
+  return soundInHeader(head, tail, whole)
+}
+
+/**
+ * The tempo filter for a speed change. atempo only takes 0.5 to 2 in one step,
+ * so a quarter speed is two halves and 4x is two doublings. '' at normal speed.
+ */
+export function atempoFilter(speed) {
+  let s = Number(speed)
+  if (!s || s === 1 || s < 0 || !Number.isFinite(s)) return ''
+  const steps = []
+  while (s < 0.5) { steps.push(0.5); s /= 0.5 }
+  while (s > 2) { steps.push(2); s /= 2 }
+  if (Math.abs(s - 1) > 1e-9) steps.push(+s.toFixed(4))
+  return steps.map((t) => `atempo=${t}`).join(',')
+}
+
+/**
+ * Whether a format can carry the clip's sound on this edit, and if not why in
+ * a few words. Reverse and boomerang drop it: a reversed or doubled-back
+ * soundtrack is not something anyone asked for, and the boomerang graph is
+ * video only. `hasSound` is true, false, or null when the file would not say.
+ */
+export function soundState(fmt, { hasSound = null, direction = 'forward' } = {}) {
+  if (!fmt?.sound) return { ok: false, why: `${fmt?.label || 'This format'} can’t hold sound` }
+  if (hasSound === false) return { ok: false, why: 'This file has no sound' }
+  if (direction !== 'forward' && fmt.kind !== 'audio') return { ok: false, why: 'Reverse and boomerang remove the sound' }
+  return { ok: true, why: '' }
+}
 
 /**
  * The encoder half of the argument list: codec, quality and container flags,
  * then the output name. `palette` is the GIF palette chain appended to any
  * filter that came before it.
  */
-function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transparentGif = false, gif = null, maxFrames = MAX_FRAMES }) {
+function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transparentGif = false, gif = null, maxFrames = MAX_FRAMES, audio = null }) {
   const q = QUALITY_LEVELS.some((l) => l.id === quality) ? quality : 'medium'
   const out = `output.${fmt.engineExt || fmt.ext}`
+  // `audio` is null (no sound) or { filter }: the tempo filter that matches the
+  // video's speed, '' at normal speed.
+  const af = audio?.filter ? ['-af', audio.filter] : []
+  if (fmt.id === 'mp3') return ['-vn', ...af, '-c:a', 'libmp3lame', '-q:a', MP3_VBR[q], out]
   if (fmt.id === 'frames') {
     const vf = filters.length ? ['-vf', filters.join(',')] : []
     return [...vf, '-frames:v', String(maxFrames), '-c:v', 'png', '-f', 'image2pipe', out]
@@ -514,14 +612,18 @@ function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transpa
   if (fmt.id === 'apng') {
     return [...vf, '-pix_fmt', 'rgba', ...loopArgs('apng', plays), '-f', 'apng', out]
   }
-  if (fmt.id === 'mp4') {
+  if (fmt.id === 'mp4' || fmt.id === 'mov' || fmt.id === 'mkv') {
     // yuv420p is what every player decodes; +faststart puts the index first so
-    // a browser can start playing before the whole file has arrived.
-    return [...vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(X264_CRF[q]), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', out]
+    // a browser can start playing before the whole file has arrived (MKV has
+    // no such flag).
+    const sound = audio ? [...af, '-c:a', 'aac', '-b:a', AAC_RATE[q]] : ['-an']
+    const fast = fmt.id === 'mkv' ? [] : ['-movflags', '+faststart']
+    return [...vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(X264_CRF[q]), '-pix_fmt', 'yuv420p', ...fast, ...sound, out]
   }
   // WebM / VP8. yuva420p carries the alpha channel; alt-ref frames must be off
   // for VP8 to encode alpha at all.
-  return [...vf, '-c:v', 'libvpx', '-b:v', '0', '-crf', String(VP8_CRF[q]), '-auto-alt-ref', '0', '-pix_fmt', 'yuva420p', '-an', out]
+  const sound = audio ? [...af, '-c:a', 'libopus', '-b:a', OPUS_RATE[q]] : ['-an']
+  return [...vf, '-c:v', 'libvpx', '-b:v', '0', '-crf', String(VP8_CRF[q]), '-auto-alt-ref', '0', '-pix_fmt', 'yuva420p', ...sound, out]
 }
 
 /**
@@ -561,6 +663,7 @@ export function videoToAnimationArgs({
   crop = null, pad = null, turn = 0, flipH = false, flipV = false, speed = 1, direction = 'forward',
   colours = GIF_COLOURS_MAX, dither = 'pattern',
   fill = TRANSPARENT, cut = 'none', radius = CORNER_DEFAULT, sheet = null, maxFrames = MAX_FRAMES,
+  sound = false,
 }) {
   const fmt = findVideoFormat(format)
   const w = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
@@ -568,6 +671,13 @@ export function videoToAnimationArgs({
   if (start > 0) args.push('-ss', String(start))
   if (length > 0) args.push('-t', String(length))
   args.push('-i', input)
+  // Sound is kept only on request, only where the format can hold it, and only
+  // on a forward run; a source with no sound track simply gives the encoder
+  // nothing to carry (measured: the audio flags are ignored then). MP3 is all
+  // sound, so it always has it.
+  const keep = fmt.kind === 'audio' || (!!sound && !!fmt.sound && direction === 'forward')
+  const audio = keep ? { filter: atempoFilter(speed) } : null
+  if (fmt.kind === 'audio') return [...args, ...encoderArgs(fmt, { quality, audio })]
   const filters = []
   if (speed && speed !== 1) filters.push(`setpts=PTS/${speed}`)
   filters.push(`fps=${clampFps(fps)}`)
@@ -586,7 +696,7 @@ export function videoToAnimationArgs({
   // Transparency in a GIF is one palette slot, reserved only when something
   // in the picture is actually transparent.
   const transparentGif = outside.transparent && (!!pad || cut !== 'none')
-  return [...args, ...encoderArgs(fmt, { quality, plays, filters, transparentGif, maxFrames, gif: fmt.id === 'gif' ? { colours, dither } : null })]
+  return [...args, ...encoderArgs(fmt, { quality, plays, filters, transparentGif, maxFrames, audio, gif: fmt.id === 'gif' ? { colours, dither } : null })]
 }
 
 /**
