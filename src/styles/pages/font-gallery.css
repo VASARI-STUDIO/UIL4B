@@ -479,8 +479,9 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 }
 .fg-page .fg-card-skeleton--sample { width: min(48%, 520px); height: calc(var(--fg-name, 96px) * .7); }
 
-/* The meta line is as wide as its text, so the tint behind it (see the open band
-   below) covers the text and no more. */
+/* The meta line sits straight on the strip, with no ground of its own: at the
+   brightest 0.1% of pixels under it, every dark strip still gives the dim ink
+   4.8:1 or better. */
 .fg-page .fg-card-meta {
   position: absolute;
   left: var(--fg-padl);
@@ -493,9 +494,8 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   white-space: nowrap;
   overflow: hidden;
   color: var(--fg-ink-2);
-  background-color: var(--fg-meta-ground);
   font-variant-numeric: tabular-nums;
-  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard);
+  transition: color var(--dur-1) var(--ease-standard);
 }
 
 /* The pick button: a 36px tonal round on the band's right edge, centred on the
@@ -990,13 +990,6 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
    takes the AVIF and falls back to the WebP. */
 @media (max-width: 767px) { .fg-page .fg-card::before { background-image: var(--fg-bgimg-m, none); } }
 .fg-page .fg-card.is-open { --fg-ground: var(--fg-wake); }
-/* Behind the meta line, over a dark strip: the band's own ground at 75%. It dims
-   the strip's brightest specks under the text (3.1:1 at the worst pixel) to 4.5:1
-   or better, and is flat, so the ink keeps its dim value. A light strip already
-   clears 4.5:1 with the darker ink above. */
-.fg-page .fg-card { --fg-meta-ground: transparent; }
-.fg-page .fg-card.is-open.has-backdrop { --fg-meta-ground: color-mix(in srgb, var(--fg-ground) 75%, transparent); }
-[data-theme="light"] .fg-page .fg-card.is-open.has-backdrop { --fg-meta-ground: transparent; }
 .fg-page .fg-card--comparing, .fg-page .fg-card--comparing.is-open { --fg-ground: var(--fg-sel); }
 .fg-page .fg-card.is-open.has-backdrop::before { opacity: 1; transition: opacity 320ms var(--fg-ease); }
 .fg-page .fg-card.is-open.has-seen::before { transition: none; }
