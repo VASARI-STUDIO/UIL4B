@@ -848,10 +848,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .toast-ico svg{width:15px;height:15px}
 .toast-msg{font-size:13px;font-weight:500;line-height:1.35;color:var(--t0);letter-spacing:-.005em}
-.toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
-.toast-info .toast-ico{background:var(--accent-bg);color:var(--accent-mid)}
-.toast-warning .toast-ico{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 /* The dismiss control. The toast itself stays pointer-events:none — it must
    never block what is under it — so the one thing that is meant to be pressed
    opts back in. Negative margins keep the box the same height it was. */
@@ -871,16 +868,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast:not(.show) .toast-action{pointer-events:none}
 @media(pointer:coarse){.toast-action{min-height:44px;margin:-8px 0}}
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
-/* Success motion: the checkmark draws, which is the state ("done") being
-   said. The spring pop that scaled the tile from .5 went: it said nothing the
-   draw does not, and springy decoration is not used in this product. */
-.toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
-.toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-entrance) 90ms forwards}
-@keyframes toast-draw{to{stroke-dashoffset:0}}
-html[data-reduced-motion="true"] .toast-success .toast-ico svg path,html[data-reduced-motion="true"] .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
-@media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .toast-success .toast-ico svg path,html:not([data-reduced-motion="false"]) .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
-}
 
 /* ─── First-load skeleton system (sk-) + first-load motion (fl-) ─── */
 /* Base skeleton primitive: a flat surface tone (--bg-2) with one slow, quiet
