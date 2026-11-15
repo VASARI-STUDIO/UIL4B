@@ -39,7 +39,7 @@ for (const width of [390, 1440]) {
     test('the footer and /sitemap list no soon page', async ({ page }) => {
       watch(page, 'visitor looking for what is available')
       await go(page, '/sitemap')
-      await expect(page.locator('.spt-soon, [data-soon]')).toHaveCount(0)
+      await expect(page.locator('.mk-soon, [data-soon]')).toHaveCount(0)
       await expect(page.locator('li[data-route]').first()).toBeVisible()
       await expect(page.locator('.app-footer-soon-link, .sp-footer [data-soon]')).toHaveCount(0)
       for (const route of SOON_ROUTES) {
@@ -95,9 +95,9 @@ test.describe('admin', () => {
     const row = page.locator(`li[data-route="${SOON_TOOL.path}"]`)
     await expect(row).toHaveCount(1)
     await expect(row).toHaveAttribute('data-soon', 'true')
-    await expect(row.locator('.spt-soon')).toHaveText(/soon/i)
+    await expect(row.locator('.mk-soon')).toHaveText(/soon/i)
     await expect(row.locator('a')).toHaveCount(0)
-    await expect(row.locator('div.spt-row')).toHaveCount(1)
+    await expect(row.locator('div.mk-row')).toHaveCount(1)
 
     // No Soon row anywhere on the map is a link.
     await expect(page.locator('li[data-soon="true"]').first()).toBeVisible()

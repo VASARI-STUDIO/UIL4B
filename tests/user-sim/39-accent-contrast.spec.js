@@ -124,6 +124,14 @@ const INK_WALK = `(() => {
   ${HELPERS}
   const bad = [], seen = new Set()
   let measured = 0
+  // Text the route itself painted: inside <main>, so the nav and footer that
+  // arrive before any lazy chunk cannot stand in for the page.
+  const own = document.querySelector('main')
+  let walked = 0
+  if (own) {
+    const w = document.createTreeWalker(own, NodeFilter.SHOW_TEXT)
+    for (let t; (t = w.nextNode());) if ((t.nodeValue || '').trim()) walked++
+  }
   for (const n of textNodes()) {
     if (!isBlueInk(n.ink)) continue
     measured++
@@ -137,7 +145,7 @@ const INK_WALK = `(() => {
     bad.push({ cls: n.cls, text: n.text.slice(0, 30), fg: hex(n.ink), bg: hex(n.ground),
                size: n.size, weight: n.weight, floor, ratio: value })
   }
-  return { measured, bad }
+  return { measured, walked, bad }
 })()`
 
 // The mirror: LIGHT ink on an accent-family GROUND. Found by measurement, not
@@ -188,7 +196,7 @@ test.describe('accent-family text clears its AA floor', () => {
       await page.addInitScript((t) => {
         try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
       }, theme)
-      const failures = []
+      const failures = [], empty = []
       let measured = 0
       for (const route of ROUTES) {
         await go(page, route)
@@ -196,6 +204,7 @@ test.describe('accent-family text clears its AA floor', () => {
         await page.waitForTimeout(150)
         const res = await page.evaluate(INK_WALK)
         measured += res.measured
+        if (res.walked < 20) empty.push(`${route} (${res.walked} text nodes in main)`)
         if (res.bad.length) failures.push(report(route, theme, res.bad))
       }
       await ctx.close()
@@ -206,7 +215,12 @@ test.describe('accent-family text clears its AA floor', () => {
       // zero own content and 297 accent-ink nodes were never seen, and this assertion
       // stayed green throughout. go() closes the loading half; this closes the half
       // that let an empty sample look like a clean one.
-      expect(measured, `no accent-family text was found to measure in ${theme}`).toBeGreaterThan(30)
+      // The floor is on the text WALKED per route, not on blue ink found: the V3
+      // retoken takes blue ink off the site map and the marketing pages, so a low
+      // blue count is the goal, not a sign the route never arrived. A route with
+      // almost no text is still the empty case, and still fails here.
+      expect(empty.join('\n'), `routes with no text to walk in ${theme}`).toBe('')
+      test.info().annotations.push({ type: 'accent-ink nodes', description: `${theme}: ${measured}` })
       expect(failures.join('\n'), `accent text under AA in ${theme}`).toBe('')
     })
   }

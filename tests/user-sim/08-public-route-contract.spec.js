@@ -173,7 +173,7 @@ test.describe('public route contract', () => {
     // Every row on the map is a link to its own route, and no row carries a Soon badge.
     const rowTargets = await page.locator('li[data-route]').evaluateAll((items) => items.map((li) => ({
       route: li.getAttribute('data-route'),
-      hrefs: Array.from(li.querySelectorAll('a.spt-row')).map((a) => a.getAttribute('href')),
+      hrefs: Array.from(li.querySelectorAll('a.mk-row')).map((a) => a.getAttribute('href')),
       soon: li.hasAttribute('data-soon'),
     })))
     expect(rowTargets.length, 'the map should list its rows').toBeGreaterThan(30)
@@ -181,7 +181,7 @@ test.describe('public route contract', () => {
       expect(soon, `${route} is flagged Soon for a visitor`).toBe(false)
       expect(hrefs, `${route} must be one link to itself`).toEqual([route])
     }
-    await expect(page.locator('.spt-soon')).toHaveCount(0)
+    await expect(page.locator('.mk-soon')).toHaveCount(0)
 
     // Learn is now BOTH: published guides that are real links, and a topic
     // roadmap whose rows are still non-actionable. The column asserted zero
@@ -198,7 +198,7 @@ test.describe('public route contract', () => {
       const row = learn.locator(`li[data-route="/learn/${article.slug}"]`)
       await expect(row, `${article.slug} must be on the map exactly once`).toHaveCount(1)
       await expect(row).not.toHaveAttribute('data-soon', 'true')
-      await expect(row.locator('a.spt-row')).toHaveAttribute('href', `/learn/${article.slug}`)
+      await expect(row.locator('a.mk-row')).toHaveAttribute('href', `/learn/${article.slug}`)
     }
 
     // A Create tool still in the workshop is not on the map for a visitor…
@@ -209,7 +209,7 @@ test.describe('public route contract', () => {
       const live = page.locator(`li[data-route="${route}"]`).first()
       await expect(live, `${route} must be on the map`).toHaveCount(1)
       await expect(live).not.toHaveAttribute('data-soon', 'true')
-      await expect(live.locator('a.spt-row')).toHaveAttribute('href', route)
+      await expect(live.locator('a.mk-row')).toHaveAttribute('href', route)
     }
   })
 
