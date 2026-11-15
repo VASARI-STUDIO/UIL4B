@@ -361,7 +361,10 @@ test('Tailwind and the contrast pairs files are built and free, so they are not 
     assert.ok(freeFormats().some((x) => x.id === id), `${id} is in the free list /plans derives`)
     assert.ok(!unbuiltFormats().some((x) => x.id === id), `${id} is not named as on the way`)
   }
-  assert.deepEqual(unbuiltFormats().map((f) => f.id), ['assets'], 'only the asset bundle is still unbuilt')
+  assert.deepEqual(unbuiltFormats().map((f) => f.id), ['assets'], 'only the asset bundle is still unbuilt: the export dialog has no asset-bundle option')
+  // The formats the export dialog ships (Pro: design system book, brand guidelines, app-ready bundle; the rest Free).
+  assert.deepEqual(proOnlyFormats().map((f) => f.id), ['book', 'guidelines', 'app-bundle'], 'the Pro format list no longer matches what the dialog ships')
+  assert.deepEqual(freeFormats().map((f) => f.id), ['kit', 'html', 'md', 'png', 'jpeg', 'css', 'json', 'tailwind', 'contrast', 'contrast-json'], 'the Free format list no longer matches what the dialog ships')
 })
 
 
