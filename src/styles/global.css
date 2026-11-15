@@ -110,7 +110,7 @@
 /* Caveat: the handwritten annotation only. NOT preloaded — see the note above. */
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
-/* Literata and Big Shoulders Display: the mega menu's Font Gallery and Font Pair moments, and the
+/* Literata: the mega menu's Font Gallery and Font Pair moments. Both faces: the
    homepage font specimens. Declaring costs nothing; the files (86KB and 35KB) are fetched once by
    document.fonts.load in PillNav's menu, the first time the Create or Discover menu opens on a
    hover-capable device, or by the homepage when it draws text in them. Same declarations as spectrum.css. */
@@ -3178,13 +3178,13 @@ html.lenis{scroll-behavior:auto!important}
   .pnav-tool[data-moment="type-scale"][data-live] .t3{--mm-to:1.12;transform:scaleY(1.12);transition:transform 340ms var(--mm-ease) 120ms;animation:mm-grow 2280ms linear 120ms infinite backwards}
   /* 9 Icon Library: star, heart, bolt, bookmark, sun, round and round while the row is live.
      One keyframe serves all five glyphs: each runs it a step behind the one before (negative
-     delays of 1440 to 360ms in a 1800ms loop), so every step is 360ms, the Font Gallery's
+     delays of 2400 to 600ms in a 3000ms loop), so every step is 600ms, the Font Gallery's
      GALLERY_STEP_MS. Going quiet drops the animation and the glyph fades back to the star. */
-  .pnav-tool[data-moment="icons"][data-live] :is(.i1,.i2,.i3,.i4,.i5){animation:mm-icons 1800ms linear infinite}
-  .pnav-tool[data-moment="icons"][data-live] .i2{animation-delay:-1440ms}
-  .pnav-tool[data-moment="icons"][data-live] .i3{animation-delay:-1080ms}
-  .pnav-tool[data-moment="icons"][data-live] .i4{animation-delay:-720ms}
-  .pnav-tool[data-moment="icons"][data-live] .i5{animation-delay:-360ms}
+  .pnav-tool[data-moment="icons"][data-live] :is(.i1,.i2,.i3,.i4,.i5){animation:mm-icons 3000ms linear infinite}
+  .pnav-tool[data-moment="icons"][data-live] .i2{animation-delay:-2400ms}
+  .pnav-tool[data-moment="icons"][data-live] .i3{animation-delay:-1800ms}
+  .pnav-tool[data-moment="icons"][data-live] .i4{animation-delay:-1200ms}
+  .pnav-tool[data-moment="icons"][data-live] .i5{animation-delay:-600ms}
   /* 10 Emoji Library: the face tilts 20deg and the right eye closes once (dot out, lid in). */
   .pnav-tool[data-moment="emoji"][data-live] .face{transform:rotate(-20deg);transition:transform 300ms var(--mm-ease);animation:mm-tilt 2400ms linear infinite}
   .pnav-tool[data-moment="emoji"][data-live] .er{animation:mm-wink 2400ms linear infinite}
@@ -3253,11 +3253,6 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes mm-hop{0%{transform:translateY(0);animation-timing-function:cubic-bezier(.23,1,.32,1)}6%{transform:translateY(-2.4px);animation-timing-function:cubic-bezier(.23,1,.32,1)}12%{transform:translateY(0)}100%{transform:translateY(0)}}
 /* The star's slot: shown for 14% of the loop, then 6% of cross-fade into the next glyph, dark until the last 6% fades it back in. */
 @keyframes mm-icons{0%,14%{opacity:1}20%,94%{opacity:0}100%{opacity:1}}
-@keyframes mm-wink{0%,100%{opacity:1}18%,82%{opacity:0}}
-@keyframes mm-wink-lid{0%,100%{opacity:0}18%,82%{opacity:1}}
-@keyframes mm-run{0%,100%{transform:none}45%{transform:translateX(4px)}}
-@keyframes mm-run-back{0%{transform:none;opacity:1}45%{transform:translateX(-4px);opacity:.7}100%{transform:none;opacity:.4}}
-@keyframes mm-hop{0%,100%{transform:none}50%{transform:translateY(-2.4px)}}
 /* Reduced motion: no loop starts. The Icons row holds its resting glyph (the star); every other moment
    keeps the end-state rule it always had and shows it at once. The pair is the house guard: the site
    setting first, then the OS query unless the site setting says motion is on. The extra .pnav-menu

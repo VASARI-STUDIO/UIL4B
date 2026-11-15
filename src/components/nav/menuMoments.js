@@ -57,17 +57,16 @@ export function reducedMotion() {
 // is the one site face Font Pair and Font Gallery still have when Save-Data is on).
 // The `onPage` flag marks it, and `system` marks the stacks that are installed on
 // the device: neither is ever fetched, and a `system` one is not even loaded.
-// Literata and Big Shoulders Display are self-hosted (public/fonts, declared in
-// global.css) and are fetched ONCE, the first time the Create or Discover menu
+// Literata is self-hosted (public/fonts, declared in
+// global.css) and is fetched ONCE, the first time the Create or Discover menu
 // opens on a hover-capable device. Caveat is left out: with it
-// the warm set is 171KB against the 150KB budget; without it, 121KB. The system
+// the warm set is 136KB against the 150KB budget; without it, 86KB. The system
 // stacks add nothing to that, which is how the Font Gallery loop gets past
 // three faces. A stack whose font is not installed falls back to its generic
 // family, so a device may show two steps alike; none ever shows an unready face.
 export const FACES = [
   { key: 'mono', family: '"Geist Mono", monospace', weight: 500, probe: '500 14.5px "Geist Mono"', onPage: true },
   { key: 'literata', family: 'Literata, serif', weight: 500, probe: '500 14.5px Literata' },
-  { key: 'shoulders', family: '"Big Shoulders Display", sans-serif', weight: 700, probe: '700 14.5px "Big Shoulders Display"' },
   { key: 'georgia', family: 'Georgia, "Times New Roman", serif', weight: 400, probe: '400 14.5px Georgia', onPage: true, system: true },
   { key: 'courier', family: '"Courier New", Courier, monospace', weight: 700, probe: '700 14.5px "Courier New"', onPage: true, system: true },
   { key: 'ui', family: 'system-ui, sans-serif', weight: 600, probe: '600 14.5px system-ui', onPage: true, system: true },
@@ -90,7 +89,7 @@ export function readyFaces() {
   })
 }
 
-// "mono literata shoulders": the data-faces value on the menu root.
+// "mono literata georgia": the data-faces value on the menu root.
 export const facesAttr = () => readyFaces().map((f) => f.key).join(' ')
 
 // Starts the one-time load. Safe to call on every menu open: it returns the same
@@ -129,4 +128,4 @@ export function galleryRun() {
   return order
 }
 // A calm step, not a flicker. The Icons loop in global.css keeps the same pace.
-export const GALLERY_STEP_MS = 360
+export const GALLERY_STEP_MS = 600
