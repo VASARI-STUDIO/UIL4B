@@ -134,7 +134,7 @@ const ADDED_SELECTORS = {
   // The dashboard's own classes replace the old page's `.uh-*` hooks. Those the signed-out example
   // kit does not mount are skipped by the measure.
   '/projects': ['.db', '.db-wrap', '.db-main', '.db-head', '.db-title', '.db-today', '.db-greetw', '.db-col', '.db-sheet',
-    '.db-kit', '.db-plate', '.db-part', '.db-lbl', '.db-meta', '.db-stop', '.db-dstops', '.db-tstop', '.db-hexes', '.db-hex',
+    '.db-kit', '.db-plate', '.db-part', '.db-lbl', '.db-meta', '.db-stop', '.db-dstops', '.db-hexes', '.db-hex',
     '.db-ts', '.db-ratio', '.db-files', '.db-code', '.db-fm', '.db-fname', '.db-fsample', '.db-icons', '.db-go', '.db-ghost',
     '.db-link', '.db-open', '.db-opent', '.db-textbtn', '.db-tl', '.db-ring', '.db-bt', '.db-shelf', '.db-plan', '.db-perks',
     '.db-bar', '.db-end', '.db-status', '.db-sr', '.db-sch', '.db-circle', '.db-img', '.db-mono', '.db-group', '.db-minis',

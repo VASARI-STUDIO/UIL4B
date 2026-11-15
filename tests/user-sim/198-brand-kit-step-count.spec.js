@@ -1,17 +1,17 @@
 // The walkthrough bar says where the person is, at every width.
 //
-//   · The count reads "Step N of 4" on each of the four tools, at 390, 768 and
+//   · The count reads "Step N of 5" on each of the five tools, at 390, 768 and
 //     1440px. It is a position, not a tally: nothing about it depends on what
 //     has been built.
 //   · On a phone it is drawn inside the steps trigger, and from 1024px in the pill;
-//     both at least 13px. On a tablet (768 to 1023px) the four labels need the
+//     both at least 13px. On a tablet (768 to 1023px) the five labels need the
 //     width, so it is read out and not drawn.
 //   · The bar keeps one height (60px below 1024px), one x and one width across
-//     all four steps, and the count keeps its own x and width, so Next never
+//     all five steps, and the count keeps its own x and width, so Next never
 //     makes anything jump.
-//   · The card that opens on arrival is one sentence and one button; the four
+//   · The card that opens on arrival is one sentence and one button; the five
 //     steps are behind "What's this?". On a phone there is no arrival card: the
-//     steps panel opens itself, with the four steps and the help line in it.
+//     steps panel opens itself, with the five steps and the help line in it.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { kitRail, stepsTrigger, stepsPanel, helpTrigger } from './kit-bar.js'
@@ -23,9 +23,10 @@ const rail = kitRail
 
 const STEPS = [
   { route: '/create/palette', n: 1 },
-  { route: '/create/font-pair', n: 2 },
-  { route: '/create/type-scale', n: 3 },
-  { route: '/create/icons', n: 4 },
+  { route: '/create/semantic-color', n: 2 },
+  { route: '/create/font-pair', n: 3 },
+  { route: '/create/type-scale', n: 4 },
+  { route: '/create/icons', n: 5 },
 ]
 
 const WIDTHS = [
@@ -59,11 +60,11 @@ const measure = (page) => rail(page).evaluate((bar, phone) => {
 }, page.viewportSize().width < 768)
 
 // The card that opens on arrival is one sentence and one button. The list of
-// all four steps is still there, behind the bar's "What's this?". (A phone's
+// all five steps is still there, behind the bar's "What's this?". (A phone's
 // panel is the one surface: it opens with the list.)
 test.describe('Brand kit walkthrough: the arrival card', () => {
   for (const { width, height } of WIDTHS) {
-    test(`${width}px: short on arrival, the four steps behind "What's this?"`, async ({ page }) => {
+    test(`${width}px: short on arrival, the five steps behind "What's this?"`, async ({ page }) => {
       watch(page, 'designer arriving at the brand kit for the first time')
       await page.setViewportSize({ width, height })
       await page.addInitScript((g) => {
@@ -76,8 +77,8 @@ test.describe('Brand kit walkthrough: the arrival card', () => {
         const panel = stepsPanel(page)
         await expect(panel).toBeVisible()
         await expect(stepsTrigger(page)).toHaveAttribute('aria-expanded', 'true')
-        await expect(panel.locator('.bkit-sheet-help')).toHaveText('Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.')
-        await expect(panel.locator('.bkit-card-steps li')).toHaveCount(4)
+        await expect(panel.locator('.bkit-sheet-help')).toHaveText('Pick your brand colour. Semantic colours, fonts, type scale and icons come next, and each one uses what you chose here.')
+        await expect(panel.locator('.bkit-card-steps li')).toHaveCount(5)
         await expect(panel.locator('.bkit-card-steps')).toContainText('Type scale')
         await page.screenshot({ path: test.info().outputPath(`brand-kit-arrival-card-${width}.png`), fullPage: false })
         // Pressed again, the trigger closes it.
@@ -86,9 +87,9 @@ test.describe('Brand kit walkthrough: the arrival card', () => {
         await expect(stepsTrigger(page)).toHaveAttribute('aria-expanded', 'false')
         return
       }
-      const card = page.getByRole('dialog', { name: 'Step 1 of 4: Colours' })
+      const card = page.getByRole('dialog', { name: 'Step 1 of 5: Colours' })
       await expect(card).toBeVisible()
-      await expect(card.locator('.bkit-card-body')).toHaveText('Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.')
+      await expect(card.locator('.bkit-card-body')).toHaveText('Pick your brand colour. Semantic colours, fonts, type scale and icons come next, and each one uses what you chose here.')
       await expect(card.locator('.bkit-card-steps'), 'the list is on the arrival card').toHaveCount(0)
       await expect(card.getByRole('button', { name: 'Start with colours' })).toBeVisible()
       // Nothing in the card scrolls.
@@ -98,7 +99,7 @@ test.describe('Brand kit walkthrough: the arrival card', () => {
       // "What's this?" grows the same card to the list.
       await rail(page).getByRole('button', { name: /What.s this\?/ }).click()
       await expect(card).toBeVisible()
-      await expect(card.locator('.bkit-card-steps li')).toHaveCount(4)
+      await expect(card.locator('.bkit-card-steps li')).toHaveCount(5)
       await expect(card.locator('.bkit-card-steps')).toContainText('Type scale')
       await page.screenshot({ path: test.info().outputPath(`brand-kit-whats-this-${width}.png`), fullPage: false })
 
@@ -111,7 +112,7 @@ test.describe('Brand kit walkthrough: the arrival card', () => {
 
 test.describe('Brand kit walkthrough: the step count', () => {
   for (const { width, height } of WIDTHS) {
-    test(`${width}px: "Step N of 4" on every step, and the bar does not move between them`, async ({ page }) => {
+    test(`${width}px: "Step N of 5" on every step, and the bar does not move between them`, async ({ page }) => {
       watch(page, 'designer stepping through the brand kit')
       await page.setViewportSize({ width, height })
       await page.addInitScript(([g, s]) => {
@@ -122,10 +123,10 @@ test.describe('Brand kit walkthrough: the step count', () => {
       for (const { route, n } of STEPS) {
         await go(page, route)
         await expect(rail(page)).toBeVisible()
-        await expect(rail(page)).toContainText(`Step ${n} of 4`)
+        await expect(rail(page)).toContainText(`Step ${n} of 5`)
         const tablet = width >= 768 && width < 1024
         if (tablet) {
-          // Read out, not drawn: clipped to a pixel, so the four labels get the width.
+          // Read out, not drawn: clipped to a pixel, so the five labels get the width.
           await expect.poll(async () => (await measure(page)).shown, { message: `step ${n}: the count is drawn on a tablet` }).toBe(false)
         } else {
           // Polled: the rail remounts as each tool arrives and a node caught
@@ -133,7 +134,7 @@ test.describe('Brand kit walkthrough: the step count', () => {
           await expect.poll(async () => (await measure(page)).shown, { message: `step ${n}: the count is not drawn` }).toBe(true)
         }
         const m = await measure(page)
-        expect(m.text, `step ${n}`).toBe(`Step ${n} of 4`)
+        expect(m.text, `step ${n}`).toBe(`Step ${n} of 5`)
         if (!tablet) {
           expect(m.fontSize, `step ${n}: the count is under the 13px floor`).toBeGreaterThanOrEqual(13)
           expect(m.clipped, `step ${n}: the count is clipped`).toBe(false)

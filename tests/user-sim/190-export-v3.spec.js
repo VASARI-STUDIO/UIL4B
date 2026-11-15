@@ -41,6 +41,7 @@ function savedProject() {
   design.typeScale.base = 17
   design.typeScale.ratio = 1.333
   design.tints.scale = ['#1F4B8E', '#2E7BB8', '#3FA9A0']
+  design.states.warning = 1 // a decision on a role: the semantic colours part is set
   const now = new Date().toISOString()
   return { id: 'harbour', name: PROJECT_NAME, design, createdAt: now, updatedAt: now }
 }
@@ -967,6 +968,7 @@ async function walkToSave(page) {
   // The arrival state is cleared by a replace navigation that would overwrite an earlier press on Next.
   await expect.poll(() => page.evaluate(() => window.history.state?.usr ?? null), 'the walkthrough has taken up its arrival').toBeNull()
   for (const [button, url] of [
+    [/^Next: Semantic colours/, /\/create\/semantic-color$/],
     [/^Next: Fonts/, /\/create\/font-pair$/],
     [/^Next: Type scale/, /\/create\/type-scale$/],
     [/^Next: Icons/, /\/create\/icons$/],

@@ -3,12 +3,12 @@
 //   · Below 1024px the bar is 60px high (plus the safe-area inset, 0 in a test
 //     browser), on the foot of the viewport, in both themes. On a phone the tab
 //     bar steps aside for it.
-//   · Phone (under 768px): a four-segment progress strip, ONE steps trigger and
+//   · Phone (under 768px): a five-segment progress strip, ONE steps trigger and
 //     Next. The old Close, help button, step chips and lead are not rendered.
 //     The trigger opens an upward, non-modal panel that holds the step links,
 //     the help line and "Close the walkthrough".
-//   · Tablet (768 to 1023px): one row, four step links on one line, Next at its
-//     content width, "Step N of 4" read out and not drawn.
+//   · Tablet (768 to 1023px): one row, five step links on one line, Next at its
+//     content width, "Step N of 5" read out and not drawn.
 //   · No horizontal scroll at 360, 390 or 768px.
 //
 // What would make each test fail:
@@ -17,7 +17,7 @@
 //     bringing back a second row or a band above the steps.
 //   · "tab bar is hidden": dropping the bkit-on rule that hides .pnav-tabs.
 //   · "phone bar holds": rendering the old X, help button, chips or lead on a
-//     phone, or giving the strip anything but four segments.
+//     phone, or giving the strip anything but five segments.
 //   · "tablet row": letting the chips wrap onto a second line, or putting the
 //     stretch back on Next (the old grid made it as wide as the bar).
 //   · "panel": moving the panel off the bar's top edge, dropping its Escape
@@ -76,8 +76,8 @@ for (const theme of THEMES) {
         const lift = await page.evaluate(() => parseFloat(document.documentElement.style.getPropertyValue('--bkit-toolbar-h')) || 0)
         expect(Math.abs(b.bottom + lift - height), 'the bar is not on the foot of the viewport (or on the toolbar that is)').toBeLessThanOrEqual(1)
         expect(b.width, 'the bar is not the width of the viewport').toBe(width)
-        // The 60px follows through the four tools: no step has a taller bar.
-        for (const route of ['/create/font-pair', '/create/type-scale', '/create/icons']) {
+        // The 60px follows through the five tools: no step has a taller bar.
+        for (const route of ['/create/semantic-color', '/create/font-pair', '/create/type-scale', '/create/icons']) {
           await go(page, route)
           await expect.poll(async () => Math.round((await box(kitRail(page))).height), { message: `${route}: the bar is not 60px` }).toBe(60)
           // No bottom toolbar on Icons: the bar is flush with the foot of the viewport.
@@ -115,7 +115,7 @@ test.describe('Brand kit bar on a phone (390px)', () => {
       watch(page, 'designer on a phone')
       await go(page, '/create/font-pair')
       const rail = kitRail(page)
-      await expectOnStep(page, 'Fonts', 2)
+      await expectOnStep(page, 'Fonts', 3)
 
       // Not rendered at all on a phone (not merely hidden).
       for (const gone of ['.bkit-rail-close', '.bkit-rail-help', '.bkit-steps', '.bkit-rail-head', '.bkit-step']) {
@@ -124,16 +124,16 @@ test.describe('Brand kit bar on a phone (390px)', () => {
       await expect(rail.getByRole('button', { name: 'Leave the walkthrough' })).toHaveCount(0)
       await expect(rail.getByRole('button', { name: /What.s this\?/ })).toHaveCount(0)
 
-      // The strip: four segments, decoration, the second the current one.
+      // The strip: five segments, decoration, the third the current one.
       const strip = rail.locator('.bkit-progress')
       await expect(strip).toHaveAttribute('aria-hidden', 'true')
-      await expect(strip.locator('.bkit-progress-seg')).toHaveCount(4)
+      await expect(strip.locator('.bkit-progress-seg')).toHaveCount(5)
       await expect(strip.locator('.bkit-progress-seg.is-current')).toHaveCount(1)
-      await expect(strip.locator('.bkit-progress-seg').nth(1)).toHaveClass(/is-current/)
+      await expect(strip.locator('.bkit-progress-seg').nth(2)).toHaveClass(/is-current/)
 
       // The trigger: named for the step, the position and what is built; closed.
       const trigger = stepsTrigger(page)
-      await expect(trigger).toHaveAccessibleName('Fonts, step 2 of 4, 0 built. Steps and help.')
+      await expect(trigger).toHaveAccessibleName('Fonts, step 3 of 5, 0 built. Steps and help.')
       await expect(trigger).toHaveAttribute('aria-expanded', 'false')
       await expect(trigger).not.toHaveAttribute('aria-controls', /./)
 
@@ -152,13 +152,13 @@ test.describe('Brand kit bar on a phone (390px)', () => {
     try {
       watch(page, 'designer pressing Next on a phone')
       await go(page, '/create/palette')
-      await expect(stepsTrigger(page)).toHaveAccessibleName('Colours, step 1 of 4, 0 built. Steps and help.')
-      await kitRail(page).getByRole('button', { name: /^Next: Fonts/ }).click()
-      await expect(page).toHaveURL(/\/create\/font-pair$/)
-      await expectOnStep(page, 'Fonts', 2)
-      await expect(stepsTrigger(page)).toHaveAccessibleName('Fonts, step 2 of 4, 1 built. Steps and help.')
+      await expect(stepsTrigger(page)).toHaveAccessibleName('Colours, step 1 of 5, 0 built. Steps and help.')
+      await kitRail(page).getByRole('button', { name: /^Next: Semantic colours/ }).click()
+      await expect(page).toHaveURL(/\/create\/semantic-color$/)
+      await expectOnStep(page, 'Semantic colours', 2)
+      await expect(stepsTrigger(page)).toHaveAccessibleName('Semantic colours, step 2 of 5, 1 built. Steps and help.')
       await stepsTrigger(page).click()
-      await expect(stepsPanel(page)).toContainText('1 of 4 parts')
+      await expect(stepsPanel(page)).toContainText('1 of 5 parts')
     } finally {
       await ctx.close()
     }
@@ -169,7 +169,7 @@ test.describe('Brand kit bar on a phone (390px)', () => {
     try {
       watch(page, 'designer naming a project on a phone')
       await go(page, '/create/icons')
-      await expectOnStep(page, 'Icons', 4)
+      await expectOnStep(page, 'Icons', 5)
       await kitRail(page).getByRole('button', { name: /^Name your project/ }).click()
       await expect(page.getByRole('dialog', { name: 'Name your project' })).toBeVisible()
       await expect(kitRail(page).locator('.bkit-rail-next'), 'Next shows under the name sheet').toBeHidden()
@@ -184,7 +184,7 @@ test.describe('Brand kit bar on a phone (390px)', () => {
     try {
       watch(page, 'designer using the steps panel on a phone')
       await go(page, '/create/font-pair')
-      await expectOnStep(page, 'Fonts', 2)
+      await expectOnStep(page, 'Fonts', 3)
       const trigger = stepsTrigger(page)
       const panel = stepsPanel(page)
       await expect(panel, 'the panel is open before it was asked for').toBeHidden()
@@ -208,11 +208,11 @@ test.describe('Brand kit bar on a phone (390px)', () => {
 
       // What is in it.
       await expect(panel.getByRole('heading', { name: 'Brand kit' })).toBeVisible()
-      await expect(panel).toContainText('0 of 4 parts')
+      await expect(panel).toContainText('0 of 5 parts')
       await expect(panel.locator('.bkit-sheet-help')).toHaveText('This step uses what you chose in the steps before it.')
       const links = panel.locator('ol.bkit-card-steps').getByRole('link')
-      await expect(links).toHaveCount(4)
-      for (const name of [/Colours/, /Fonts/, /Type scale/, /Icons/]) await expect(panel.getByRole('link', { name })).toBeVisible()
+      await expect(links).toHaveCount(5)
+      for (const name of [/Colours/, /Semantic colours/, /Fonts/, /Type scale/, /Icons/]) await expect(panel.getByRole('link', { name })).toBeVisible()
       await expect(panel.locator('a[aria-current="step"]')).toHaveCount(1)
       await expect(panel.getByRole('link', { name: /Fonts/ })).toHaveAttribute('aria-current', 'step')
       await expect(panel.getByRole('button', { name: /^Close the walkthrough/ })).toBeVisible()
@@ -252,7 +252,7 @@ test.describe('Brand kit bar on a phone (390px)', () => {
       await stepsTrigger(page).click()
       await stepsPanel(page).getByRole('link', { name: /Type scale/ }).click()
       await expect(page).toHaveURL(/\/create\/type-scale$/)
-      await expectOnStep(page, 'Type scale', 3)
+      await expectOnStep(page, 'Type scale', 4)
     } finally {
       await ctx.close()
     }
@@ -261,22 +261,22 @@ test.describe('Brand kit bar on a phone (390px)', () => {
 
 // ─── Tablet: one 60px row ───
 for (const theme of THEMES) {
-  test(`768px ${theme}: the four steps are on one row and Next is not stretched`, async ({ browser }) => {
+  test(`768px ${theme}: the five steps are on one row and Next is not stretched`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 768, height: 1024, theme })
     try {
       watch(page, `designer on a tablet in ${theme}`)
       await go(page, '/create/type-scale')
       const rail = kitRail(page)
-      await expectOnStep(page, 'Type scale', 3)
+      await expectOnStep(page, 'Type scale', 4)
 
       const links = rail.locator('.bkit-steps').getByRole('link')
-      await expect(links).toHaveCount(4)
-      for (let i = 0; i < 4; i++) await expect(links.nth(i)).toBeVisible()
+      await expect(links).toHaveCount(5)
+      for (let i = 0; i < 5; i++) await expect(links.nth(i)).toBeVisible()
       await expect.poll(async () => {
         const tops = []
-        for (let i = 0; i < 4; i++) tops.push((await box(links.nth(i))).top)
+        for (let i = 0; i < 5; i++) tops.push((await box(links.nth(i))).top)
         return Math.max(...tops) - Math.min(...tops) <= 2
-      }, { message: 'the four step links are not on one row' }).toBe(true)
+      }, { message: 'the five step links are not on one row' }).toBe(true)
 
       // Next: a button at its content width, not the stretched pill.
       const next = await box(rail.locator('.bkit-rail-next'))
@@ -291,8 +291,8 @@ for (const theme of THEMES) {
       await expect(rail.getByRole('button', { name: 'Leave the walkthrough' })).toBeVisible()
       await expect(rail.locator('.bkit-rail-steps, .bkit-progress')).toHaveCount(0)
 
-      // "Step N of 4" is read out, not drawn.
-      await expect(rail).toContainText('Step 3 of 4')
+      // "Step N of 5" is read out, not drawn.
+      await expect(rail).toContainText('Step 4 of 5')
       const lead = await box(rail.locator('.bkit-rail-head'))
       expect(lead.width, 'the count is drawn on a tablet').toBeLessThanOrEqual(1)
     } finally {
@@ -303,11 +303,11 @@ for (const theme of THEMES) {
 
 // ─── No horizontal scroll ───
 for (const { width, height } of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) {
-  test(`${width}px: the bar adds no horizontal scroll, on each of the four tools`, async ({ browser }) => {
+  test(`${width}px: the bar adds no horizontal scroll, on each of the five tools`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height, theme: 'dark' })
     try {
       watch(page, `designer at ${width}px`)
-      for (const [route, label, n] of [['/create/palette', 'Colours', 1], ['/create/font-pair', 'Fonts', 2], ['/create/type-scale', 'Type scale', 3], ['/create/icons', 'Icons', 4]]) {
+      for (const [route, label, n] of [['/create/palette', 'Colours', 1], ['/create/semantic-color', 'Semantic colours', 2], ['/create/font-pair', 'Fonts', 3], ['/create/type-scale', 'Type scale', 4], ['/create/icons', 'Icons', 5]]) {
         await go(page, route)
         await expectOnStep(page, label, n)
         const over = await page.evaluate(() => {

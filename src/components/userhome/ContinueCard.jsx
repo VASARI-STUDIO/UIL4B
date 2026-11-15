@@ -37,7 +37,7 @@ export function partRows(digest) {
     { id: 'palette', label: 'Colour', done: done.palette, detail: done.palette ? `${n} colour${n === 1 ? '' : 's'}` : 'not set' },
     { id: 'fonts', label: 'Type', done: done.fonts, detail: done.fonts ? `${digest.heading} over ${digest.body}` : 'not set' },
     { id: 'type-scale', label: 'Type scale', done: done['type-scale'], detail: done['type-scale'] ? `${digest.scaleBase}px, ${ratioName(digest.scaleRatio)}` : 'not set' },
-    { id: 'tints', label: 'Tints', done: done.tints, detail: done.tints ? `${digest.tintCount} step${digest.tintCount === 1 ? '' : 's'}` : 'not set' },
+    { id: 'semantic', label: 'Semantic colours', done: done.semantic, detail: done.semantic ? 'success, warning, error and info' : 'not set' },
   ]
 }
 

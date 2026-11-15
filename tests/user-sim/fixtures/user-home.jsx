@@ -40,6 +40,7 @@ function complete() {
   design.typeScale.base = 17
   design.typeScale.ratio = 1.333
   design.tints.scale = ['#1A0B2E', '#2E1650', '#4B1F9E', '#6C3FD4', '#8B5CF6', '#B69BF0']
+  design.states.warning = 1
   return { id: 'fx-complete', name: 'Violet Lime', design, createdAt: '2026-08-20T09:00:00.000Z', updatedAt: ago(25 * 60_000) }
 }
 

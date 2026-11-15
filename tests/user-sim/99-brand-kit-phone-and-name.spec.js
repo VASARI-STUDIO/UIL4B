@@ -12,7 +12,7 @@
 //     refuses without losing anything; signed out, saving asks for an account
 //     and the work waits.
 //   · Pressing Next counts a step as built, so accepting every default still
-//     finishes at 4 of 4.
+//     finishes at 5 of 5.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { kitRail, helpCard, stepsTrigger, stepsPanel, stepLink, leaveWalkthrough, expectOnStep } from './kit-bar.js'
@@ -23,7 +23,7 @@ const DESIGN_KEY = 'vs-current-design'
 const SEED_COLOURS = ['#1D3557', '#E63946', '#F1FAEE']
 
 const rail = kitRail
-// The orientation card at this width: the popover named "Step N of 4: ..." from 768px, the steps panel on a phone.
+// The orientation card at this width: the popover named "Step N of 5: ..." from 768px, the steps panel on a phone.
 const introCard = helpCard
 const nameCard = (page) => page.getByRole('dialog', { name: 'Name your project' })
 // The closing step is one panel at every width: a sheet joined to the bar on a phone, a popover above it from 768px.
@@ -111,7 +111,7 @@ async function railControlsAllLand(page, { nameOpen = false } = {}) {
   const r = rail(page)
   const phone = (page.viewportSize()?.width ?? 1280) < 768
   if (phone) {
-    // A phone's bar is the steps trigger and Next: the four steps, the help and Close are in the panel.
+    // A phone's bar is the steps trigger and Next: the five steps, the help and Close are in the panel.
     await expect(r.locator('.bkit-rail-steps')).toHaveCount(1)
     await expectTapsLand(r.locator('.bkit-rail-steps'), 'steps trigger')
     await expectHitArea(r.locator('.bkit-rail-steps'), 'steps trigger')
@@ -186,12 +186,12 @@ test.describe('Brand kit walkthrough on a phone', () => {
       // The card opens itself on step one; its controls must take taps too.
       await expect(introCard(page)).toBeVisible()
       await introCard(page).evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))))
-      // The panel's own controls: the four step links and the Close row.
+      // The panel's own controls: the five step links and the Close row.
       const panelLinks = introCard(page).getByRole('link')
-      await expect(panelLinks).toHaveCount(4)
-      for (let i = 0; i < 4; i++) await expectTapsLand(panelLinks.nth(i), `panel step link ${i + 1}`)
+      await expect(panelLinks).toHaveCount(5)
+      for (let i = 0; i < 5; i++) await expectTapsLand(panelLinks.nth(i), `panel step link ${i + 1}`)
       await expectTapsLand(introCard(page).getByRole('button', { name: /^Close the walkthrough/ }), 'panel Close')
-      for (let i = 0; i < 4; i++) await expectHitArea(panelLinks.nth(i), `panel step link ${i + 1}`)
+      for (let i = 0; i < 5; i++) await expectHitArea(panelLinks.nth(i), `panel step link ${i + 1}`)
       await expectHitArea(introCard(page).getByRole('button', { name: /^Close the walkthrough/ }), 'panel Close')
       // The panel's foot is the bar's top edge (its own 1px hairline may overlap by a pixel).
       const cardBottom = await introCard(page).evaluate((el) => el.getBoundingClientRect().bottom)
@@ -208,7 +208,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
       await expect(page).toHaveURL(/\/create\/icons$/)
       // The URL changes before the page does, so the rail on screen at this
       // point can still be the Colours page's. Wait for the Icons page's own.
-      await expectOnStep(page, 'Icons', 4)
+      await expectOnStep(page, 'Icons', 5)
       await expect(rail(page)).toBeVisible()
       await railControlsAllLand(page)
 
@@ -278,7 +278,7 @@ test.describe('Brand kit walkthrough on a phone', () => {
 
     const trigger = stepsTrigger(page)
     await expect(trigger).toBeVisible()
-    await expect(trigger).toHaveAccessibleName('Colours, step 1 of 4, 0 built. Steps and help.')
+    await expect(trigger).toHaveAccessibleName('Colours, step 1 of 5, 0 built. Steps and help.')
     const box = await trigger.boundingBox()
     expect(box.height, 'the trigger is under 44px high').toBeGreaterThanOrEqual(44)
     expect(await hitAreaMisses(trigger), 'a tap within 22px of the trigger centre misses it').toEqual([])
@@ -324,12 +324,12 @@ test.describe('Brand kit walkthrough on a phone', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await seed(page)
     await go(page, '/create/icons')
-    await expectOnStep(page, 'Icons', 4)
+    await expectOnStep(page, 'Icons', 5)
     await expect(stepsTrigger(page).locator('.bkit-rail-steps-name')).toHaveText('Icons')
-    await expect(stepsTrigger(page).locator('.bkit-rail-steps-count')).toHaveText('Step 4 of 4')
-    // Four segments in the strip, the fourth the current one.
-    await expect(rail(page).locator('.bkit-progress-seg')).toHaveCount(4)
-    await expect(rail(page).locator('.bkit-progress-seg').nth(3)).toHaveClass(/is-current/)
+    await expect(stepsTrigger(page).locator('.bkit-rail-steps-count')).toHaveText('Step 5 of 5')
+    // Five segments in the strip, the fifth the current one.
+    await expect(rail(page).locator('.bkit-progress-seg')).toHaveCount(5)
+    await expect(rail(page).locator('.bkit-progress-seg').nth(4)).toHaveClass(/is-current/)
 
     await stepsTrigger(page).click()
     const current = stepsPanel(page).locator('a[aria-current="step"]')
@@ -431,34 +431,40 @@ test.describe('Brand kit walkthrough: naming the kit on a touch screen', () => {
 })
 
 test.describe('Brand kit walkthrough: ticks', () => {
-  test('pressing Next through every step with the defaults ticks all four and reads Step 4 of 4', async ({ page }) => {
+  test('pressing Next through every step with the defaults ticks all five and reads Step 5 of 5', async ({ page }) => {
     watch(page, 'designer happy with the defaults')
     await seed(page)
     await go(page, '/create/palette')
     // The count says where the person is; the ticks say what is built.
     const ticks = rail(page).locator('.bkit-step.is-done')
-    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(rail(page)).toContainText('Step 1 of 5')
     await expect(ticks).toHaveCount(0)
+
+    await rail(page).getByRole('button', { name: /^Next: Semantic colours/ }).click()
+    await expect(page).toHaveURL(/\/create\/semantic-color$/)
+    await expect(rail(page)).toContainText('Step 2 of 5')
+    await expect(ticks).toHaveCount(1)
+    await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     await rail(page).getByRole('button', { name: /^Next: Fonts/ }).click()
     await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('Step 2 of 4')
-    await expect(ticks).toHaveCount(1)
+    await expect(rail(page)).toContainText('Step 3 of 5')
+    await expect(ticks).toHaveCount(2)
     await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     await rail(page).getByRole('button', { name: /^Next: Type scale/ }).click()
     await expect(page).toHaveURL(/\/create\/type-scale$/)
-    await expect(rail(page)).toContainText('Step 3 of 4')
-    await expect(ticks).toHaveCount(2)
+    await expect(rail(page)).toContainText('Step 4 of 5')
+    await expect(ticks).toHaveCount(3)
 
     await rail(page).getByRole('button', { name: /^Next: Icons/ }).click()
     await expect(page).toHaveURL(/\/create\/icons$/)
-    await expect(rail(page)).toContainText('Step 4 of 4')
-    await expect(ticks).toHaveCount(3)
+    await expect(rail(page)).toContainText('Step 5 of 5')
+    await expect(ticks).toHaveCount(4)
 
     await rail(page).getByRole('button', { name: /^Name your project/ }).click()
-    await expect(rail(page)).toContainText('Step 4 of 4')
-    await expect(ticks).toHaveCount(4)
+    await expect(rail(page)).toContainText('Step 5 of 5')
+    await expect(ticks).toHaveCount(5)
     await expect(nameField(page)).toBeVisible()
   })
 })
@@ -650,7 +656,7 @@ test.describe('Brand kit walkthrough: Name your project', () => {
       await go(page, '/create/icons')
       const r = rail(page)
       const next = r.getByRole('button', { name: /^Name your project/ })
-      // The four steps are a row of links from 768px; on a phone the bar shows the steps trigger.
+      // The five steps are a row of links from 768px; on a phone the bar shows the steps trigger.
       const stepsControl = width < 768 ? r.locator('.bkit-rail-steps') : r.locator('.bkit-steps')
       await expect(stepsControl).toBeVisible()
       await expect(next).toHaveClass(/btn-accent/)
