@@ -54,7 +54,7 @@
 :where(.fg-page) .fg-compare-col{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px;border:1px solid var(--tl-line);border-radius:12px;background:var(--tl-card)}
 :where(.fg-page) .fg-compare-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 :where(.fg-page) .fg-compare-col-name{min-width:0;padding:0;font-size:13px;font-weight:700;color:var(--tl-ink);background:none;border:none;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color var(--t)}
-:where(.fg-page) .fg-compare-col-name:hover{color:var(--tl-ink)}
+:where(.fg-page) .fg-compare-col-name:hover{color:var(--tl-ink);text-decoration:underline;text-underline-offset:3px}
 :where(.fg-page) .fg-compare-col-remove{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--tl-card2);border:1px solid var(--tl-line);color:var(--tl-dim);cursor:pointer;transition:color var(--t),border-color var(--t)}
 :where(.fg-page) .fg-compare-col-remove:hover{border-color:var(--err);color:var(--err-strong)}
 :where(.fg-page) .fg-compare-meta{font-family:var(--font);font-size:max(var(--fs-caption),10px);color:var(--tl-dim);text-transform:none}

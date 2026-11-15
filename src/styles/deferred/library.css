@@ -194,7 +194,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Prompt modal overlay */
 .pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:max(40px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(40px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
 .pl-modal{background:var(--v3-raised);border:1px solid var(--v3-hair);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;max-height:80dvh;display:flex;flex-direction:column;box-shadow:var(--v3-shadow);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
-.pl-modal-close{position:absolute;top:16px;right:16px;background:var(--v3-l2);border:1px solid var(--v3-hair);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--v3-sec);transition:all var(--t);z-index:2}
+.pl-modal-close{position:absolute;top:16px;right:16px;background:var(--v3-l2);border:1px solid var(--v3-hair);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--v3-sec);transition:background-color var(--t),color var(--t),border-color var(--t);z-index:2}
 .pl-modal-close:hover{background:var(--v3-l2);color:var(--v3-ink)}
 .pl-modal-header{padding:28px 28px 0;flex-shrink:0}
 .pl-modal-header h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;padding-right:32px}
@@ -1277,9 +1277,6 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .lib-surface .lib-btn--primary:hover{background:color-mix(in srgb,var(--v3-ink) 86%,var(--v3-on-ink));border-color:transparent}
 .lib-surface .lib-btn--primary:disabled:hover{background:var(--v3-ink);border-color:var(--v3-ink)}
 /* The Upgrade to Pro face of the customiser's primary button: the accent fill, the same shape. */
-.lib-surface .lib-btn--upgrade{background:var(--v3-ink);border-color:var(--v3-ink);color:var(--v3-on-ink)}
-.lib-surface .lib-btn--upgrade:hover{background:var(--v3-ink-hover);border-color:var(--v3-ink-hover)}
-.lib-surface .lib-btn--upgrade:disabled:hover{background:var(--v3-ink);border-color:var(--v3-ink)}
 .lib-surface .lib-btn svg{flex-shrink:0}
 @media(pointer:coarse){.lib-surface .lib-btn{min-height:44px}}
 
