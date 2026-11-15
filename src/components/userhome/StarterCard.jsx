@@ -11,7 +11,7 @@ const STARTER_STEPS = [
   { part: 'palette', label: 'Colour', art: 'palette' },
   { part: 'fonts', label: 'Type', art: 'font-pair' },
   { part: 'type-scale', label: 'Type scale', art: 'type-scale' },
-  { part: 'tints', label: 'Tints', art: 'tint' },
+  { part: 'semantic', label: 'Semantic colours', art: 'semantic' },
 ]
 
 // What a signed-in account with no project in play sees where the lead would be. It names the one
@@ -43,7 +43,7 @@ export default function StarterCard({ design, onStart, archived = false, limit =
         <p className="uh-starter-text">
           {limit
             ? `All your projects are archived, and archived projects count toward the Free plan's ${limit}. Open one below to delete it, or go Pro to keep them all and start another.`
-            : `${archived ? 'All your projects are archived. ' : ''}New project sets up colour, type, type scale and tints, and saves as you go.`}
+            : `${archived ? 'All your projects are archived. ' : ''}New project sets up colour, type, type scale and semantic colours, and saves as you go.`}
         </p>
         {!limit && !touched && (
           <ol className="uh-steps uh-steps--plates" aria-label="The walkthrough">

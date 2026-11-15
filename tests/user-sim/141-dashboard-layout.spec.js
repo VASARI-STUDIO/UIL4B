@@ -5,9 +5,9 @@
 // Every number is the design board's own, read off its rendered page and then off this one (the numbers are
 // written here by hand, none is worked out from the page's CSS):
 //
-//   1440  sheet 1240 x 512; strip columns 400 / 224 / 280 / 176 with 32 gaps; plates 280 tall;
+//   1440  sheet 1240 x 512; strip columns 400 / 200 / 256 / 224 with 32 gaps; plates 280 tall;
 //         minis 292 x 200 with 24 gaps; shelf columns 548 / 280 / 148 / 168 with 32 gaps, plates 160 tall.
-//   1200  sheet 1096 x 512; strip columns 312 / 200 / 280 / 144; minis 256 x 200;
+//   1200  sheet 1096 x 512; strip columns 312 / 176 / 240 / 208; minis 256 x 200;
 //         shelf columns 436 / 288 / 148 / 128.
 //
 // MUTATION (each made, the named test went red, then put back byte for byte):
@@ -21,8 +21,8 @@ import { go, watch, expectRendered, signIn } from './helpers.js'
 import { MINUTE, ago, complete, half, many } from './fixtures/dashboard-projects.js'
 
 const SIZES = [
-  { name: 'laptop', width: 1440, height: 900, sheet: [1240, 512], strip: [400, 224, 280, 176], mini: [292, 200], shelf: [548, 280, 148, 168] },
-  { name: 'narrow desktop', width: 1200, height: 900, sheet: [1096, 512], strip: [312, 200, 280, 144], mini: [256, 200], shelf: [436, 288, 148, 128] },
+  { name: 'laptop', width: 1440, height: 900, sheet: [1240, 512], strip: [400, 200, 256, 224], mini: [292, 200], shelf: [548, 280, 148, 168] },
+  { name: 'narrow desktop', width: 1200, height: 900, sheet: [1096, 512], strip: [312, 176, 240, 208], mini: [256, 200], shelf: [436, 288, 148, 128] },
 ]
 
 const sheetOf = (page, name) => page.getByRole('region', { name })
@@ -173,7 +173,7 @@ test.describe('the dashboard in each state keeps the sheet\'s size', () => {
     ['an account with no project (the empty example)', (page) => signIn(page, { plan: 'free', projects: 0 }), 'Start your first brand kit'],
     ['a half-built project (three parts say Not set)', (page) => signIn(page, { plan: 'free', projects: [half()] }), 'Harbour Rebrand, latest project'],
   ]) {
-    test(`${label} at 1440 is 1240 x 512, strip 400 / 224 / 280 / 176`, async ({ page }) => {
+    test(`${label} at 1440 is 1240 x 512, strip 400 / 200 / 256 / 224`, async ({ page }) => {
       watch(page, label)
       await page.setViewportSize({ width: 1440, height: 900 })
       await setup(page)
@@ -184,7 +184,7 @@ test.describe('the dashboard in each state keeps the sheet\'s size', () => {
       const [box] = await boxes(sheet)
       expect([box.w, box.h]).toEqual([1240, 512])
       const parts = await boxes(sheet.locator('.db-kit > .db-part'))
-      expect(parts.map((p) => p.w)).toEqual([400, 224, 280, 176])
+      expect(parts.map((p) => p.w)).toEqual([400, 200, 256, 224])
     })
   }
 })

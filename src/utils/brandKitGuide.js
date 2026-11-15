@@ -86,7 +86,8 @@
 
 import { partsPresent } from './userHome.js'
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
-import { activeColour, deriveTints, hasTints, tintsStale } from './projectTints.js'
+import { deriveTints, activeColour, tintsNeedWrite } from './projectTints.js'
+import { SEMANTIC_ROLES, semanticShades } from '../data/semanticPresets.js'
 
 /** Live under localStorage, not sessionStorage — see the resumability note. */
 export const GUIDE_KEY = 'vs-uikit-guide'
@@ -105,9 +106,10 @@ export const GUIDE_SEEN_KEY = 'vs-uikit-guide-seen'
 export const GUIDE_START_EVENT = 'vs-uikit-guide-start'
 
 /**
- * The ordered steps, and the four the Create mega-menu card already promises:
- * Colours, Fonts, Type scale, Icons. The menu card derives its numbered list
- * from THIS array (see PillNav.jsx), so the promise and the flow cannot drift.
+ * The ordered steps: Colours, Semantic colours, Fonts, Type scale, Icons. The
+ * Create mega-menu card derives its numbered list from THIS array (see
+ * PillNav.jsx), so the promise and the flow cannot drift. Icons stays last.
+ * Tints are not a step: the ramp is derived from the colours (see savePatch).
  *
  * `path` MUST be a live Create tool that renders. tests/unit/brand-kit-guide.test.js
  * checks each one against liveToolRoutes() in src/data/toolTree.js and against
@@ -127,6 +129,13 @@ export const BRAND_KIT_STEPS = Object.freeze([
     blurb: 'Pick a seed and build the full set',
     path: '/create/palette',
     part: 'palette',
+  }),
+  Object.freeze({
+    id: 'semantic',
+    label: 'Semantic colours',
+    blurb: 'Set success, warning, error and info',
+    path: '/create/semantic-color',
+    part: 'semantic',
   }),
   Object.freeze({
     id: 'fonts',
@@ -165,6 +174,12 @@ export const BRAND_KIT_STEPS = Object.freeze([
  */
 const SWATCH_CAP = 5
 
+/** The 500 step of success, warning, error and info, in that order. */
+const semanticSwatches = (d) => {
+  const shades = semanticShades(d.states)
+  return SEMANTIC_ROLES.map((role) => shades[role][5])
+}
+
 export function stepArtefacts(design) {
   const d = withDefaults(design)
   const colors = (Array.isArray(d.palette?.colors) ? d.palette.colors : [])
@@ -177,6 +192,7 @@ export function stepArtefacts(design) {
 
   return {
     color: { colors },
+    semantic: { colors: semanticSwatches(d) },
     fonts: {
       // One line when both faces are the same family, which is a real and
       // common choice — "Inter / Inter" reads like a bug.
@@ -203,14 +219,14 @@ export function stepArtefacts(design) {
  * from the nav on every render, before anything is loaded, and "nothing built"
  * must never render as "one of four built".
  *
- * Group-by-group rather than a top-level spread: the four groups are what
+ * Group-by-group rather than a top-level spread: these groups are what
  * `partsPresent` reads, and a shallow spread would leave `{ palette: null }`
  * as null.
  */
 export function withDefaults(design) {
   const d = design && typeof design === 'object' ? design : {}
   const out = { ...DEFAULT_DESIGN, ...d }
-  for (const key of ['palette', 'fonts', 'typeScale', 'tints']) {
+  for (const key of ['palette', 'fonts', 'typeScale', 'tints', 'states']) {
     const group = d[key]
     out[key] = group && typeof group === 'object'
       ? { ...DEFAULT_DESIGN[key], ...group }
@@ -220,7 +236,7 @@ export function withDefaults(design) {
 }
 
 /**
- * The four steps with `done` resolved, in order.
+ * The steps with `done` resolved, in order.
  *
  * `iconsTouched` is injected rather than read here because the only honest
  * signal for it is `getRecentIcons()` in utils/recentIcons.js — a localStorage
@@ -243,7 +259,7 @@ export function guideSteps(design, { iconsTouched = false, accepted = [] } = {})
   }))
 }
 
-/** How many of the four are built, and out of how many. */
+/** How many steps are built, and out of how many. */
 export function guideProgress(design, options) {
   const steps = guideSteps(design, options)
   const done = steps.filter((s) => s.done).length
@@ -409,13 +425,11 @@ export function clearAcceptedSteps(storage) {
  *  - `chosen`: the parts whose step was moved past with Next. A part kept on its
  *    defaults is a choice, but its values match the defaults, so only a marker
  *    can say so (see partsPresent in utils/userHome.js).
- *  - `tints`: the project's fourth part is not a walkthrough step, it is made
- *    from the colour. Once the colours are settled the ramp is derived with the
- *    Colour Studio's own generator, unless the project already has one made from
- *    its active colour (a ramp recorded as made from another colour is replaced;
- *    one with no record is kept, its colour being unknown). Not
- *    derived for a design with no palette work in it, so a half-built project
- *    still reads as incomplete and keeps "Fill the gaps".
+ *  - `tints`: never a walkthrough step, always made from the colour. The ramp is
+ *    derived with the Colour Studio's own generator whenever the design has an
+ *    active colour, unless the project already has one made from it (a ramp
+ *    recorded as made from another colour is replaced; one with no record is
+ *    kept, its colour being unknown).
  */
 export function savePatch(design, accepted = acceptedSteps()) {
   const moved = new Set(Array.isArray(accepted) ? accepted : [])
@@ -423,8 +437,7 @@ export function savePatch(design, accepted = acceptedSteps()) {
   for (const step of BRAND_KIT_STEPS) if (step.part && moved.has(step.id)) chosen[step.part] = true
   const patch = {}
   if (Object.keys(chosen).length) patch.chosen = chosen
-  const paletteSet = !!partsPresent({ ...withDefaults(design), chosen }).palette
-  if (paletteSet && (!hasTints(design) || tintsStale(design?.tints, activeColour(design)))) {
+  if (tintsNeedWrite(design?.tints, activeColour(design))) {
     const tints = deriveTints(design)
     if (tints) patch.tints = tints
   }

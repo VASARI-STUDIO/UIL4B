@@ -551,6 +551,8 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
     await page.getByRole('button', { name: 'Delete account', exact: true }).tap()
     const actions = page.locator('.danger-confirm-actions')
     await expect(actions).toBeVisible()
+    // The sheet slides up; measure once it has settled, all in one frame.
+    await actions.evaluate((el) => Promise.all(el.closest('.stg-dlg').getAnimations({ subtree: true }).map((a) => a.finished)))
     const m = await actions.evaluate((el) => {
       const btns = [...el.querySelectorAll(':scope > .btn')]
       // Top to bottom as drawn, whatever the page order is.
@@ -561,12 +563,12 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
         gap: Math.round(second.r.top - first.r.bottom), widthGap: Math.abs(first.r.width - second.r.width),
         fill: Math.round(first.r.width), room: Math.round(sheet.width - 32), heights: btns.map((x) => Math.round(x.getBoundingClientRect().height)),
         clipped: btns.some((x) => x.scrollWidth > x.clientWidth + 1),
+        stacked: first.r.bottom <= second.r.top + 1,
       }
     })
     expect(m.n).toBe(2)
     expect(m.order, 'Permanently delete should be drawn first, Cancel under it').toEqual(['Permanently delete', 'Cancel'])
-    const [del, cancel] = await Promise.all([page.getByRole('button', { name: 'Permanently delete' }).boundingBox(), actions.getByRole('button', { name: 'Cancel' }).boundingBox()])
-    expect(del.y + del.height, 'Permanently delete is not above Cancel').toBeLessThanOrEqual(cancel.y + 1)
+    expect(m.stacked, 'Permanently delete is not above Cancel').toBe(true)
     expect(m.sameColumn, 'the two buttons are not in one column').toBe(true)
     expect(m.gap, 'the two buttons are too close').toBeGreaterThanOrEqual(8)
     expect(m.widthGap, 'the pair should be equal width').toBeLessThan(2)

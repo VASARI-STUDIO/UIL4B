@@ -57,7 +57,7 @@ test('the feedback form opens on Help request for support arrivals, and on Featu
   // the support heading for Help request (see feedback-copy.test.js).
   assert.match(form, /paymentFailed \? PAYMENT_TITLE : t\(copy\.title\)/)
   assert.match(form, /paymentFailed && accountEmail && \(/)
-  assert.match(form, /<Link className="btn btn-s" to="\/settings" state=\{\{ section: 'support' \}\}>\{PAYMENT_CARD_LINK\}<\/Link>/)
+  assert.match(form, /<Link className="ui-pill ui-pill-out fb-out" to="\/settings" state=\{\{ section: 'support' \}\}>\{PAYMENT_CARD_LINK\}<\/Link>/)
   assert.match(form, /<p className="fb-fix">/)
   assert.doesNotMatch(form, /style=\{\{ marginTop: 12 \}\}/)
   // The payment copy: subject, subline, placeholder, a required email.
