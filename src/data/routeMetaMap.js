@@ -24,7 +24,7 @@ const NAMED_3D_INPUTS = ['step', 'iges', 'fbx', 'obj', 'stl'].map((id) => INPUT_
 
 // A title without the site name, whichever end it sits at: tool pages lead with
 // the search phrase ("Type Scale Generator for CSS | UI L4B"), the rest with the
-// brand ("UI L4B | Learn").
+// brand ("UI L4B | Checkout").
 export function pageName(title) {
   if (!title) return null
   return title.replace(/^UI L4B \| /, '').replace(/ \| UI L4B$/, '').trim() || null
@@ -68,11 +68,11 @@ export const PAGE_TITLES = {
   '/create/icons/groups': 'Matching SVG Icon Sets for UI Design | UI L4B',
   '/create/imagery': 'UI L4B | Imagery',
   '/create/icons-emoji': 'SVG Icons and Emoji Library | UI L4B',
-  '/discover': 'UI L4B | Discover',
+  '/discover': 'Discover | UI L4B',
   '/discover/gradients': 'CSS Gradient Library and Ideas | UI L4B',
   '/discover/palettes': 'Color Palette Ideas for UI Design | UI L4B',
-  '/learn': 'UI L4B | Learn',
-  '/create/alt-text': 'UI L4B | Alt Text Generator',
+  '/learn': 'Learn | UI L4B',
+  '/create/alt-text': 'AI Alt Text Generator for Images | UI L4B',
   '/create/ai-prompt': 'UI L4B | AI Image Prompt Generator',
   '/create/ai-tools': 'UI L4B | AI Tools',
   '/create/landing-prompts': 'AI Landing Page Prompts | UI L4B',
@@ -89,7 +89,7 @@ export const PAGE_TITLES = {
   '/reset-password': 'UI L4B | Link expired',
   '/plans': 'UI L4B | Pricing & Plans',
   '/mobile': 'UI L4B | On mobile',
-  '/tools': 'UI L4B | Tools',
+  '/tools': 'Tools | UI L4B',
   '/checkout': 'UI L4B | Checkout',
   '/community': 'UI L4B | Community',
   '/feedback': 'UI L4B | Feedback',
@@ -103,7 +103,7 @@ export const PAGE_TITLES = {
   '/sitemap': 'UI L4B | Sitemap',
   '/admin': 'UI L4B | Admin',
   '/create/auto-builder': 'UI L4B | Brand Starter',
-  '/create/file-converter': 'UI L4B | File Converter',
+  '/create/file-converter': 'Image and Video File Converter | UI L4B',
   '/create/3d-converter': '3D Model Converter for STEP, FBX, OBJ and STL | UI L4B',
   ...LEARN_PAGE_TITLES,
 }
@@ -193,7 +193,7 @@ export const PAGE_DESCRIPTIONS = {
   // designs" is real: the Submit a design dialog publishes to the shared review
   // queue in utils/communityQueue.js. "Discover inspiration" is the twelve
   // seeded entries the page renders and openly labels as seeded.
-  '/community': 'Join the UI L4B community. Share designs and discover inspiration.',
+  '/community': 'Share your designs with the UI L4B community and browse community inspiration for colour, type and interface work.',
   '/feedback': 'Share your feedback, report bugs, or request features for UI L4B. We read every submission.',
   '/learn/help': 'Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.',
   '/learn/principles': 'The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.',

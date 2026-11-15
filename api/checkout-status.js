@@ -9,6 +9,11 @@ import {
 } from './_lib/billing.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins } from './_lib/origins.js'
+import { limitRequest } from './_lib/rateLimit.js'
+
+// The return page polls every 4 seconds for up to a minute while a payment
+// settles, so this leaves room for that and for several people on one address.
+const STATUS_LIMIT = { bucket: 'checkout-status', limit: 60, windowMs: 60 * 1000 }
 
 // Returns the status of an embedded Checkout session so the /checkout/return
 // page can confirm the result. The session is verified to belong to the
@@ -37,6 +42,8 @@ export default async function handler(req, res) {
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing auth token' })
   }
+
+  if (await limitRequest(req, res, adminDb, STATUS_LIMIT)) return
 
   let uid
   try {

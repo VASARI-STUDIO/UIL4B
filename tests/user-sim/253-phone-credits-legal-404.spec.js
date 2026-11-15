@@ -1,7 +1,7 @@
 // Phone and tablet quality for /credits, /privacy, /terms, the 404 and the guide 404.
 //
 // Each page is opened at 390 and 768 with touch on, in light and dark, and the
-// page's own content (`.sec`, never the shared header or footer) is measured:
+// page's own content (`.pv3`, never the shared header or footer) is measured:
 //   - nothing scrolls sideways;
 //   - no control is under 44px on either axis, except a link set inside a run of
 //     text (WCAG 2.5.8's inline exception);
@@ -18,9 +18,9 @@
 //     two-line row is taller than 44px on its own content.
 //   - credits.css: change `.crd-scope li` font-size to `11px` -> "no text under 12px".
 //   - Credits.jsx: put `<em>licences</em>` back in the H1 -> "no italic accent".
-//   - legal.css: set `.sec.lgl { margin-inline: 0 auto }` -> "balanced margins"
-//     on /terms and /privacy at 768. (Deleting `margin-inline: auto` is a no-op:
-//     the shared `.sec` rule centres the column anyway.)
+//   - plain-v3.css: set `.pv3 { margin: 0 auto 0 0 }` -> "balanced margins"
+//     on /terms, /privacy and /credits at 768, where the 720px column is narrower
+//     than the window.
 //   - legal.css: put `.lgl .storage-table .storage-key { font-size: 11px }` back
 //     -> "no text under 12px" on /privacy at 768.
 //   - v3-edge.css: make `.ed-row` `min-height:24px` -> "no control under 44px" on
@@ -50,8 +50,8 @@ const SHOTS = path.join(process.cwd(), '.claude', 'scratch', 'phlegal1')
 
 /** Everything measured in one pass, inside the page. */
 function measure() {
-  // The 404s are the edge layout (`.ed`); every other page is a `.sec` column.
-  const root = document.querySelector('.ed') || document.querySelector('.app-page .sec') || document.querySelector('.sec')
+  // The 404s are the edge layout (`.ed`); the plain pages are the `.pv3` column.
+  const root = document.querySelector('.ed') || document.querySelector('.pv3')
   const visible = (el) => {
     const r = el.getBoundingClientRect()
     const cs = getComputedStyle(el)
@@ -132,7 +132,7 @@ for (const theme of ['light', 'dark']) {
         const page = await ctx.newPage()
         watch(page, 'a visitor on a phone or tablet')
         await go(page, pg.route)
-        await expect(page.locator('.ed h1, .sec h1').first()).toBeVisible()
+        await expect(page.locator('.ed h1, .pv3 h1').first()).toBeVisible()
         await page.waitForTimeout(300)
 
         fs.mkdirSync(SHOTS, { recursive: true })
@@ -178,13 +178,14 @@ for (const vp of WIDTHS) {
     watch(page, 'a visitor on a phone or tablet')
     await go(page, '/privacy')
     const fit = await page.evaluate(() => {
-      const col = document.querySelector('.app-page .sec').getBoundingClientRect()
+      const col = document.querySelector('.pv3').getBoundingClientRect()
       const t = document.querySelector('.storage-table').getBoundingClientRect()
       return { colL: col.left, colR: col.right, tL: t.left, tR: t.right, colW: col.width }
     })
     expect(fit.tL, 'table starts left of the column').toBeGreaterThanOrEqual(fit.colL - 1)
     expect(fit.tR, 'table ends right of the column').toBeLessThanOrEqual(fit.colR + 1)
-    if (vp.width === 768) expect(Math.round(fit.colW), 'the 612px reading column').toBe(612)
+    // At 768 the 720px column is the window less its two 24px gutters, so it is full width.
+    if (vp.width === 768) expect(Math.round(fit.colW), 'the reading column is the 720px column').toBe(720)
     await ctx.close()
   })
 }
