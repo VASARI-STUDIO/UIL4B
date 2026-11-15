@@ -1529,4 +1529,4 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 }
 
 /* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */
-[data-theme="dark"] :is(.lib-surface,.fbd-overlay) .lbry-search{background:var(--v3-l2)}
+[data-theme="dark"] :is(.lib-surface,.fbd-overlay) .lbry-search{background:var(--bg-3)}
