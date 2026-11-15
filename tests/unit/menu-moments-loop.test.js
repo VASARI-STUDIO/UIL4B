@@ -1,7 +1,8 @@
 // Every mega menu hover moment loops while its row is live, and none of them loops
 // under reduced motion.
 //
-// The moments are CSS (global.css, "HOVER MOMENTS"). A row that is live carries
+// The moments are CSS: the rest states in global.css, the loops and their guards in
+// styles/deferred/menu-moments.css, which PillNav loads on a fine pointer. A row that is live carries
 // [data-live]; the loop is an `animation` with `infinite` on a rule under that
 // attribute, inside the hover-capable media query so touch gets nothing. The
 // end-state rules beside it are the reduced-motion look, so each moment also needs
@@ -24,7 +25,8 @@ const CSS_IDS = IDS.filter((id) => !JS_LOOPED.has(id))
 
 // Comments out first (the section is full of prose that mentions these words), then a
 // flat list of rules with the at-rule prelude each one sits inside.
-const CSS = GLOBAL_CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+const MOMENTS_CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/deferred/menu-moments.css'), 'utf8')
+const CSS = (GLOBAL_CSS + MOMENTS_CSS).replace(/\/\*[\s\S]*?\*\//g, '')
 function parse(src) {
   const rules = []
   const keyframes = new Map()
@@ -133,4 +135,10 @@ test('the moments never use transition: all', () => {
   const end = CSS.indexOf('.pnav-editorial{flex:0 0')
   assert.ok(start > 0 && end > start)
   assert.doesNotMatch(CSS.slice(start, end), /transition\s*:\s*all/)
+})
+
+test('PillNav loads the moments sheet after first paint, on a fine pointer only', () => {
+  const nav = fs.readFileSync(path.join(process.cwd(), 'src/components/PillNav.jsx'), 'utf8')
+  assert.match(nav, /if \(finePointer\(\)\) import\('\.\.\/styles\/deferred\/menu-moments\.css'\)/)
+  assert.doesNotMatch(nav, /^\s*import\s+['"][^'"]*menu-moments\.css['"]/m, 'a static import would put the sheet back in the first paint')
 })

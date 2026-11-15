@@ -419,6 +419,11 @@ function AppHeader() {
   const closeAccountMenu = useCallback(() => setMenu(null), [])
   const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   const stateRef = useRef({ open: null, menu: null, sheet: false })
+  // The menu's moments (hover loops and their guards) are a separate sheet, fetched after
+  // first paint and only where a fine pointer can hover. Until it lands, the rows rest.
+  useEffect(() => {
+    if (finePointer()) import('../styles/deferred/menu-moments.css')
+  }, [])
   useEffect(() => {
     openRef.current = open
     stateRef.current.open = open
