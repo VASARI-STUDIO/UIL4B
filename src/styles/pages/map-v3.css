@@ -1,0 +1,109 @@
+/* /sitemap and /roadmap on the V3 marketing language. They use the bench classes of
+   v3-marketing.css (mk-group, mk-rows, mk-row, mk-thumb) as /tools does, and this sheet
+   holds only what those two pages add. Every rule is scoped to .mkt.mk-map (three
+   classes with the element's own) so it wins over the v3-marketing and spectrum-tools
+   rules of the same weight whichever chunk loads last. No gradient, glow or mono face
+   here: routes take the .mk-mono class in the markup. */
+
+/* Hues the tree does not name: the accent family and the neutral Account tiles. */
+.mkt.mk-map [data-hue="accent"] { --hue-strong: var(--accent-strong); }
+.mkt.mk-map [data-hue="none"] { --hue: var(--sp-dim); --hue-strong: var(--sp-ink); }
+
+/* ── intro and sections ── */
+/* A jump to a section leaves its heading clear of the fixed nav: nav height and 24px of
+   air, less the section's own top padding. */
+.mkt.mk-map .mk-sec[id] { scroll-margin-top: calc(var(--spnav-h, 92px) + var(--notice-h, 0px) + 24px - var(--section-y-compact)); }
+.mkt.mk-map .mk-h2 { margin-bottom: 12px; }
+.mkt.mk-map .mk-sub { max-width: 68ch; margin-bottom: 40px; }
+.mkt.mk-map .mk-lead a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+/* The lede's jump links are the first links a thumb meets: a 44px touch strip on each. */
+@media (pointer: coarse), (max-width: 767px) {
+  .mkt.mk-map .mk-lead a { position: relative; }
+  .mkt.mk-map .mk-lead a::after { content: ""; position: absolute; inset-inline: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+}
+
+/* ── group rail: tile and name, then a meta line or a description ── */
+.mkt.mk-map .mk-rail, .mkt.mk-map .mk-col { min-width: 0; }
+.mkt.mk-map .mk-col h3, .mkt.mk-map .mk-rail h2 { display: flex; align-items: flex-start; gap: 10px; padding-top: 12px; }
+.mkt.mk-map .mk-gmeta { margin-top: 10px; }
+.mkt.mk-map .mk-gdesc { margin-top: 8px; }
+
+/* "Soon" is plain words in the secondary ink: no pill, no border. */
+.mkt.mk-map .mk-soon { font-size: 15px; font-weight: 400; line-height: 1.5; color: var(--mk-sec); white-space: nowrap; }
+
+/* ── rows ── */
+.mkt.mk-map .mk-lbl { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.mkt.mk-map .mk-row-text b { line-height: 1.3; }
+.mkt.mk-map .mk-note { display: block; max-width: 68ch; }
+/* Wrap only after a slash: each segment is one unit, and only a segment wider than the
+   whole column may break inside itself. */
+.mkt.mk-map .mk-route { display: block; margin-top: 2px; line-height: 1.4; color: var(--mk-ter); }
+.mkt.mk-map .mk-route-seg { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.mkt.mk-map .mk-row--text { grid-template-columns: minmax(0, 1fr) auto; min-height: 64px; }
+/* A destination still in the workshop is not a link: no wash, no press, a quieter name. */
+.mkt.mk-map .mk-row--soon .mk-row-text b { color: var(--mk-sec); }
+.mkt.mk-map div.mk-row:active { transform: none; }
+@media (hover: hover) { .mkt.mk-map div.mk-row:hover { background: none; } }
+
+/* ── Account & more: three columns of compact rows ── */
+.mkt.mk-map .mk-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; }
+.mkt.mk-map .mk-col .mk-rows { margin-top: 8px; }
+.mkt.mk-map .mk-col .mk-row { min-height: 56px; }
+
+@media (max-width: 1199px) {
+  .mkt.mk-map .mk-rail { padding-bottom: 4px; }
+  .mkt.mk-map .mk-gdesc { max-width: 60ch; }
+  .mkt.mk-map .mk-rail h2 { padding: 0 0 8px; }
+}
+@media (max-width: 1023px) {
+  .mkt.mk-map .mk-cols { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+}
+@media (max-width: 760px) {
+  .mkt.mk-map .mk-group { margin-top: 32px; }
+  .mkt.mk-map .mk-group:first-of-type { margin-top: 0; }
+}
+/* Phones: the arrow on every row goes, so the text beside the plate has room to read in
+   three lines rather than four. The whole row is still the link. */
+@media (max-width: 480px) {
+  .mkt.mk-map .mk-row:not(.mk-row--text) { grid-template-columns: 112px minmax(0, 1fr); }
+  .mkt.mk-map .mk-row--text { grid-template-columns: minmax(0, 1fr); }
+  .mkt.mk-map .mk-row-go { display: none; }
+}
+@media (max-width: 374px) {
+  .mkt.mk-map .mk-row:not(.mk-row--text) { grid-template-columns: 72px minmax(0, 1fr); }
+}
+
+/* ── /roadmap ──
+   The head is the app's h1 token, left-aligned and plain. The vote list (VoteList, shared
+   with the /tools foot) keeps its markup; here its count and button take the V3 shapes. */
+.mkt.mk-road .rm-h1 { max-width: 20ch; font-size: var(--fs-h1); font-weight: 600; line-height: 1; letter-spacing: -.04em; text-align: left; text-wrap: balance; }
+.mkt.mk-road .rm-meta { margin-top: 16px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.mkt.mk-road .rm-meta b { color: var(--sp-ink); font-weight: 600; }
+.mkt.mk-road .vr { min-height: 96px; padding: 20px 12px; }
+.mkt.mk-road .vr-name { font-weight: 500; }
+.mkt.mk-road .vr-status { font-size: 15px; }
+.mkt.mk-road .stage span { font-size: 12px; color: var(--mk-sec); }
+.mkt.mk-road .vl-more { font-size: 15px; color: var(--mk-sec); }
+.mkt.mk-road .vl-more.is-err { color: var(--err-strong); }
+.mkt.mk-road .vl-more a { color: var(--sp-ink); }
+.mkt.mk-road .rm-dl dt { font-size: 15px; font-weight: 600; }
+.mkt.mk-road .rm-dl dd { color: var(--mk-sec); }
+
+/* The vote count: 22/600 with its unit beside it. */
+.mkt.mk-road .count { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; min-width: 0; }
+.mkt.mk-road .count b { display: inline-block; min-width: 3ch; font-family: inherit; font-size: 22px; font-weight: 600; line-height: 1.2; text-align: right; font-variant-numeric: tabular-nums; }
+.mkt.mk-road .count small { display: inline; margin-top: 0; font-size: 12px; line-height: 1; color: var(--mk-sec); }
+.mkt.mk-road .count .sk { height: 22px; vertical-align: middle; }
+.mkt.mk-road .count.dash b { color: var(--mk-sec); }
+
+/* The Vote and Voted button: a 44px outline pill, never filled. Voted keeps its check
+   and takes the full ink for its outline and label. */
+.mkt.mk-road .vote[type="button"] { height: 44px; }
+.mkt.mk-road .vote[type="button"][data-voted="true"]:not([aria-disabled="true"]) { background: transparent; border-color: var(--sp-ink); color: var(--sp-ink); }
+@media (hover: hover) {
+  .mkt.mk-road .vote[type="button"][data-voted="true"]:not([aria-disabled="true"]):hover { background: var(--mk-wash); border-color: var(--sp-ink); }
+}
+
+@media (max-width: 760px) {
+  .mkt.mk-road .vr { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "text text" "stage votes"; gap: 12px 16px; padding: 16px 12px; }
+}

