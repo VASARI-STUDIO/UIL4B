@@ -16,14 +16,15 @@ export const BACKDROP_BASE = '/gallery-bg/'
 // The width up to which the gallery uses its phone layout, and so the small files.
 export const BACKDROP_SMALL = '(max-width: 767px)'
 
-// The order inside each list is part of the choice: it is what the index lands
-// on, so reordering a list changes which family gets which strip.
+// Each kind draws only on its own strips, on both grounds. The order inside each
+// list is part of the choice: it is what the index lands on, so reordering a list
+// changes which family gets which strip.
 const SETS = {
   dark: {
-    sans: ['dark-sans-1b', 'dark-sans-3', 'dark-script-4', 'dark-serif-2'],
-    serif: ['dark-serif-1', 'dark-serif-3', 'dark-serif-4', 'dark-sans-2'],
-    display: ['dark-display-1', 'dark-display-3', 'dark-display-4', 'dark-sans-4'],
-    script: ['dark-script-1', 'dark-script-2', 'dark-script-3', 'dark-display-2'],
+    sans: ['dark-sans-1b', 'dark-sans-2', 'dark-sans-3', 'dark-sans-4'],
+    serif: ['dark-serif-1', 'dark-serif-2', 'dark-serif-3', 'dark-serif-4'],
+    display: ['dark-display-1', 'dark-display-2', 'dark-display-3', 'dark-display-4'],
+    script: ['dark-script-1', 'dark-script-2', 'dark-script-3', 'dark-script-4'],
     mono: ['dark-mono-1', 'dark-mono-2', 'dark-mono-3', 'dark-mono-4'],
   },
   light: {

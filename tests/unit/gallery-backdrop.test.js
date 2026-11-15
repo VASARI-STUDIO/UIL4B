@@ -21,7 +21,7 @@ test('a Google category maps to a kind, and anything unknown reads as sans', () 
 test('the strip is picked by the sum of the name\'s character codes', () => {
   assert.equal(nameSum('Inter'), 73 + 110 + 116 + 101 + 114)
   // Inter: 514 mod 4 is 2, so the third dark sans strip; mod 2 is 0, the first light one.
-  assert.equal(backdropFor('Inter', 'sans-serif', 'dark'), `${BACKDROP_BASE}dark-script-4.webp`)
+  assert.equal(backdropFor('Inter', 'sans-serif', 'dark'), `${BACKDROP_BASE}dark-sans-3.webp`)
   assert.equal(backdropFor('Inter', 'sans-serif', 'light'), `${BACKDROP_BASE}light-sans-1.webp`)
 })
 
@@ -48,6 +48,16 @@ test('the sets hold 20 dark and 10 light strips, and every one is hosted under 2
 test('one kind\'s list is four strips on dark and two on light', () => {
   assert.equal(backdropUrls('dark', 'serif').length, 4)
   assert.equal(backdropUrls('light', 'serif').length, 2)
+})
+
+test('each kind draws only on its own strips, on both grounds', () => {
+  for (const ground of ['dark', 'light']) {
+    for (const kind of ['sans', 'serif', 'display', 'script', 'mono']) {
+      for (const url of backdropUrls(ground, kind)) {
+        assert.ok(url.includes(`/${ground}-${kind}-`), `${url} is in the ${ground} ${kind} list`)
+      }
+    }
+  }
 })
 
 // ── The files each strip ships ───────────────────────────────────────────────
