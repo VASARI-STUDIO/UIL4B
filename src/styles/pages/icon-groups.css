@@ -37,6 +37,10 @@
 }
 .iel-page .igp-page .igp-card-name{font-size:14px;font-weight:560;letter-spacing:-.01em;color:var(--t0)}
 .iel-page .igp-page .igp-card-meta{font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the dot before each part sits in a 1em strip pulled left of the box and clipped, so the dot that opens a line never shows */
+.iel-page .igp-page .igp-card-meta{margin-left:-1em;clip-path:inset(0 0 0 1em)}
+.iel-page .igp-page .igp-meta-seg{white-space:nowrap}
+.iel-page .igp-page .igp-meta-seg::before{content:"·";display:inline-block;width:1em;text-align:center}
 .iel-page .igp-page .igp-wait{display:block;border-radius:6px;background:none;animation:none}
 .iel-page .igp-page img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
 .iel-page .igp-page img.igp-glyph-pending{opacity:0;transition:none}
