@@ -1,6 +1,6 @@
 // The brand kit walkthrough bar, as a person meets it at each width.
 //
-//   · 1024px and up: a glass pill with the four steps, "What's this?", Leave and Next.
+//   · 1024px and up: a glass pill with the five steps, "What's this?", Leave and Next.
 //   · 768 to 1023px: a 60px docked row with the same controls.
 //   · under 768px: a 60px docked bar holding a progress strip, ONE steps trigger
 //     and Next. The four steps, the help line and "Close the walkthrough" are in
@@ -28,7 +28,7 @@ export const stepsPanel = (page) => page.getByRole('dialog', { name: 'Brand kit'
 /** The card that holds the orientation copy and the step list at this width. */
 export const helpCard = (page) => (isPhone(page)
   ? stepsPanel(page)
-  : page.getByRole('dialog', { name: /^Step [1-4] of 4: / }))
+  : page.getByRole('dialog', { name: /^Step [1-5] of 5: / }))
 
 /** The control that opens the help card: the steps trigger on a phone, "What's this?" above. */
 export const helpTrigger = (page) => (isPhone(page)
@@ -43,7 +43,7 @@ export async function openHelp(page) {
   return card
 }
 
-/** A link to one of the four steps, with whatever has to be open to reach it. */
+/** A link to one of the five steps, with whatever has to be open to reach it. */
 export async function stepLink(page, name) {
   if (isPhone(page)) return (await openHelp(page)).getByRole('link', { name })
   return kitRail(page).getByRole('link', { name })
@@ -68,7 +68,7 @@ export async function leaveWalkthrough(page) {
 export async function expectOnStep(page, label, number) {
 
   if (isPhone(page)) {
-    await expect(stepsTrigger(page)).toHaveAttribute('aria-label', new RegExp(`^${label}, step ${number} of 4`))
+    await expect(stepsTrigger(page)).toHaveAttribute('aria-label', new RegExp(`^${label}, step ${number} of 5`))
   } else {
     await expect(kitRail(page).locator('.bkit-step[aria-current="step"]')).toContainText(label)
   }

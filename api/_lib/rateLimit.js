@@ -188,3 +188,35 @@ export async function consume(db, { bucket, key, limit, windowMs, now = Date.now
     return { allowed: false, remaining: 0, retryAfter: CONTENTION_RETRY_SECONDS, contended: true }
   }
 }
+
+/**
+ * Counts a request against a per-address limit and answers 429 itself when the
+ * allowance is spent. Returns true when it has answered, so the caller just
+ * returns:  if (await limitRequest(req, res, getDb, LIMIT)) return
+ *
+ * `getDb` is a function so a credential problem while opening the database is
+ * logged and lets the request through (the route's own checks then report it)
+ * rather than escaping as an uncaught error. A request with no address is not
+ * counted. The counter itself keeps the default fail-open behaviour on a
+ * database outage; see consume().
+ */
+export async function limitRequest(req, res, getDb, { bucket, limit, windowMs }) {
+  const ip = clientIp(req)
+  if (!ip) return false
+  let verdict
+  try {
+    verdict = await consume(getDb(), { bucket, key: ip, limit, windowMs })
+  } catch (err) {
+    console.error('rate-limit: could not open the database, allowing through', { bucket, errorMessage: err?.message })
+    return false
+  }
+  if (verdict.allowed) return false
+  res.setHeader('Retry-After', String(verdict.retryAfter))
+  res.status(429).json({
+    error: verdict.contended
+      ? 'The service is busy. Try again in a few seconds.'
+      : 'Too many requests. Try again shortly.',
+    retryAfter: verdict.retryAfter,
+  })
+  return true
+}

@@ -3,12 +3,17 @@ import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 import { isAdminEmail, adminEmails } from './_lib/adminEmails.js'
 // The CORS allowlist, shared with /api/support and the Stripe flows.
 import { allowedOrigins } from './_lib/origins.js'
+import { limitRequest } from './_lib/rateLimit.js'
 // The moderator roster. Files in api/_lib are not deployed as routes.
 import {
   reconcileModeratorClaim, roleFromDecodedToken,
   listModerators, grantModerator, revokeModerator,
   MODERATOR_CLAIM,
 } from './_lib/moderators.js'
+
+// Every call costs a token verify and a roster read. A signed-in page makes a
+// handful per load, so this is generous for a person and small for a script.
+const VERIFY_LIMIT = { bucket: 'verify-admin', limit: 60, windowMs: 60 * 1000 }
 
 // Cross-user data for the admin Users tab. `users/{uid}` is owner-only in the
 // Firestore rules, so it is read here with the Admin SDK and returned only to a
@@ -71,6 +76,8 @@ export default async function handler(req, res) {
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Not authenticated', isAdmin: false })
   }
+
+  if (await limitRequest(req, res, adminDb, VERIFY_LIMIT)) return
 
   try {
     // checkRevoked: a token minted before the account's sessions were revoked
@@ -138,7 +145,7 @@ export default async function handler(req, res) {
       moderator = rec.moderator
       if (rec.changed) claimUpdated = true
     } catch (err) {
-      rosterError = err?.message || 'The moderator roster could not be read'
+      rosterError = 'the server log has the detail'
       console.error('verify-admin: could not reconcile the moderator claim', { uid: decoded.uid, error: err?.message })
     }
     // The role is derived from the reconciled claim, not the incoming token, so
@@ -195,7 +202,8 @@ export default async function handler(req, res) {
         }
         return res.status(400).json({ error: `Unknown moderatorAction: ${action}`, isAdmin, moderator, role })
       } catch (err) {
-        return res.status(500).json({ error: err?.message || 'The roster could not be updated', isAdmin, moderator, role })
+        console.error('verify-admin: moderator action failed', { uid: decoded.uid, action, error: err?.message })
+        return res.status(500).json({ error: 'The roster could not be updated', isAdmin, moderator, role })
       }
     }
 
@@ -206,7 +214,8 @@ export default async function handler(req, res) {
       } catch (err) {
         // Verification succeeded; report the user-list failure separately so
         // the dashboard can fall back to local data.
-        return res.status(200).json({ isAdmin, uid: decoded.uid, email, claimUpdated, moderator, role, rosterError, usersError: err?.message || 'Failed to list users' })
+        console.error('verify-admin: could not list users', { uid: decoded.uid, error: err?.message })
+        return res.status(200).json({ isAdmin, uid: decoded.uid, email, claimUpdated, moderator, role, rosterError, usersError: 'Failed to list users' })
       }
     }
 
@@ -216,6 +225,8 @@ export default async function handler(req, res) {
     if (err?.code === 'auth/id-token-revoked') {
       return res.status(401).json({ code: 'session-revoked', error: 'Your session was ended. Sign in again.', isAdmin: false })
     }
-    return res.status(401).json({ error: credentialProblem() || 'Invalid token', isAdmin: false })
+    const problem = credentialProblem()
+    if (problem) console.error('verify-admin: server credentials are not usable', { problem })
+    return res.status(401).json({ error: 'Invalid token', isAdmin: false })
   }
 }

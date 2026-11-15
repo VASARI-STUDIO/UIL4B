@@ -53,6 +53,7 @@ import { allPackCredits, licenceOf } from '../data/iconPackCredits'
 import creditsManifest from '../data/creditsManifest.json'
 import nearestSources from '../../scripts/nearest-sources/systems.json'
 import '../styles/pages/credits.css'
+import '../styles/pages/plain-v3.css'
 
 const { fonts: FONT_CREDITS, dependencies: DIRECT_DEPENDENCIES, firebase: FIREBASE_PACKAGES } = creditsManifest
 
@@ -195,6 +196,13 @@ function Ext({ href, children, className }) {
 const HEADING_MAX = 40
 const licenceHeading = (raw) => (raw.length <= HEADING_MAX ? raw : 'Publisher’s own terms')
 
+/* A group's count names what it counts: icon groups hold sets, package groups
+   hold packages. */
+const countOf = (n, one, many) => `${n} ${n === 1 ? one : many}`
+// The firebase row also stands for the scope it folds, as the tally above does.
+const pkgCount = (rows) => rows.reduce(
+  (n, d) => n + (d.name === 'firebase' ? 1 + FIREBASE_PACKAGES.length : 1), 0)
+
 /** Group rows by a key, keeping first-seen order. */
 function groupBy(rows, key) {
   const out = new Map()
@@ -268,10 +276,10 @@ export default function Credits() {
     + shownAssets.length
 
   return (
-    <div className="sec crd">
-      <div className="sec-h">
-        <h1>Credits &amp; licences.</h1>
-        <p>
+    <div className="pv3 crd">
+      <header className="pv-head">
+        <h1 className="pv-h1">Credits &amp; licences.</h1>
+        <p className="pv-lede">
           UI L4B is built on other people’s work. Everything below is here because
           its licence asks for it, or because leaving it out would be mean. Every
           row is read from the same tables the product runs on, so a set, a
@@ -279,16 +287,18 @@ export default function Credits() {
           the product — to a project, a licence or a package — opens in a new
           tab.
         </p>
-      </div>
+      </header>
 
-      <ul className="crd-tally">
-        <li><b>{packs.length}</b> icon sets</li>
-        <li><b>{FONT_CREDITS.length}</b> typefaces</li>
-        <li><b>{DIRECT_DEPENDENCIES.length + FIREBASE_PACKAGES.length}</b> packages</li>
-      </ul>
+      <p className="crd-tally">
+        <span><b>{packs.length}</b> icon sets</span>
+        <span className="crd-dot" aria-hidden="true">·</span>
+        <span><b>{FONT_CREDITS.length}</b> typefaces</span>
+        <span className="crd-dot" aria-hidden="true">·</span>
+        <span><b>{DIRECT_DEPENDENCIES.length + FIREBASE_PACKAGES.length}</b> packages</span>
+      </p>
 
       <div className="crd-search">
-        <label className="sr-only" htmlFor={searchId}>Search credits</label>
+        <label className="crd-search-label" htmlFor={searchId}>Search credits</label>
         <input
           id={searchId}
           className="crd-search-input"
@@ -326,7 +336,7 @@ export default function Credits() {
             <details className="crd-group" key={`${spdx}:${groupOpen}`} open={groupOpen}>
               <summary className="crd-group-sum">
                 <h3 className="crd-group-h">{licence.name}</h3>
-                <span className="crd-group-count">{rows.length}</span>
+                <span className="crd-group-count">{countOf(rows.length, 'set', 'sets')}</span>
               </summary>
               <div className="crd-group-body">
                 <p className="crd-asks">
@@ -408,7 +418,7 @@ export default function Credits() {
             <details className="crd-group" key={`${licence}:${groupOpen}`} open={groupOpen}>
               <summary className="crd-group-sum">
                 <h3 className="crd-group-h">{licenceHeading(licence)}</h3>
-                <span className="crd-group-count">{rows.length}</span>
+                <span className="crd-group-count">{countOf(pkgCount(rows), 'package', 'packages')}</span>
               </summary>
               <div className="crd-group-body">
                 {licenceHeading(licence) !== licence && (

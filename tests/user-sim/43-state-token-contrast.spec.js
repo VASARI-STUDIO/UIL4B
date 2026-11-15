@@ -250,12 +250,12 @@ test.describe('state-colour text clears its AA floor', () => {
   })
 
   // /sitemap paints no state hue: its group meta ("5 live", "more coming") and its
-  // admin-only Soon pills are dim text, so the state walk above cannot catch them.
+  // admin-only Soon words are dim text, so the state walk above cannot catch them.
   // They are read here by element instead, against the same floor and ground maths.
   for (const theme of ['light', 'dark']) {
     for (const admin of [false, true]) {
       const who = admin ? 'admin' : 'visitor'
-      test(`/sitemap group meta${admin ? ' and Soon pills' : ''} clear AA for a ${who}, ${theme} theme`, async ({ browser }) => {
+      test(`/sitemap group meta${admin ? ' and Soon words' : ''} clear AA for a ${who}, ${theme} theme`, async ({ browser }) => {
         const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: theme })
         await ctx.addInitScript((t) => {
           try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
@@ -266,20 +266,20 @@ test.describe('state-colour text clears its AA floor', () => {
         await settle(page)
         const res = await page.evaluate(`(() => {
           ${HELPERS}
-          const targets = [...document.querySelectorAll('.spt-gmeta, .spt-soon')]
-          const rows = walk().filter((n) => /spt-gmeta|spt-soon/.test(n.cls))
+          const targets = [...document.querySelectorAll('.mk-gmeta, .mk-soon')]
+          const rows = walk().filter((n) => /mk-gmeta|mk-soon/.test(n.cls))
           return {
             targets: targets.length,
-            soonPills: document.querySelectorAll('.spt-soon').length,
+            soonPills: document.querySelectorAll('.mk-soon').length,
             measured: rows.length,
             bad: rows.filter((n) => n.value < n.floor).map((n) => n.text + ' ' + n.value + ':1 needs ' + n.floor),
           }
         })()`)
         await ctx.close()
-        expect(res.targets, 'no group meta or Soon pill on /sitemap to measure').toBeGreaterThan(0)
+        expect(res.targets, 'no group meta or Soon word on /sitemap to measure').toBeGreaterThan(0)
         expect(res.measured, 'the contrast walk skipped some of them (its ground may be an image)').toBeGreaterThanOrEqual(res.targets)
-        if (admin) expect(res.soonPills, 'an admin should see Soon pills').toBeGreaterThan(0)
-        else expect(res.soonPills, 'a visitor should see no Soon pill').toBe(0)
+        if (admin) expect(res.soonPills, 'an admin should see Soon words').toBeGreaterThan(0)
+        else expect(res.soonPills, 'a visitor should see no Soon word').toBe(0)
         expect(res.bad, `/sitemap meta text under AA in ${theme}`).toEqual([])
       })
     }

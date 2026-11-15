@@ -98,7 +98,7 @@ async function answerPrices(page, answer = () => liveBody()) {
 }
 
 // Opens /checkout the way a buyer arrives. `session` and `prices` shape the stubs.
-async function openCheckout(page, vp, url, { signedIn = true, session, prices, account = {} } = {}) {
+async function openCheckout(page, vp, url, { signedIn = true, session, prices, account = {}, rendered = true } = {}) {
   await page.setViewportSize({ width: vp.width, height: vp.height })
   await page.clock.setFixedTime(NOW)
   const calls = await answerSessions(page, session)
@@ -107,7 +107,7 @@ async function openCheckout(page, vp, url, { signedIn = true, session, prices, a
   if (signedIn) await signIn(page, { plan: 'free', ...account })
   await answerPrices(page, prices)
   await go(page, url)
-  await expectRendered(page)
+  if (rendered) await expectRendered(page)
   return calls
 }
 
@@ -499,8 +499,9 @@ for (const vp of VIEWPORTS) {
     })
 
     test('16 a Pro account has nothing to buy and is sent to Settings', async ({ page }) => {
-      await openCheckout(page, vp, '/checkout?plan=yearly', { account: { plan: 'pro' } })
+      await openCheckout(page, vp, '/checkout?plan=yearly', { account: { plan: 'pro' }, rendered: false })
       await expect.poll(() => new URL(page.url()).pathname).toBe('/settings')
+      await expectRendered(page)
       await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toHaveCount(0)
     })
   })
@@ -586,7 +587,7 @@ for (const vp of VIEWPORTS) {
         account: { subscription: { status: 'trialing', interval: 'yearly', trialEndsAt: ends, currentPeriodEnd: ends, cancelAtPeriodEnd: false } },
       })
       await expect(returnH1(page, 'You’re on UI L4B Pro')).toBeFocused()
-      await expect(page.getByRole('status')).toContainText('Your free trial runs until November 17, 2026, and you won’t be charged before then.')
+      await expect(page.getByRole('status')).toContainText('Your free trial runs until 17 November 2026, and you won’t be charged before then.')
     })
 
     test('R3 confirming, then payment received: announced, no actions yet, focus follows the new heading', async ({ page }) => {

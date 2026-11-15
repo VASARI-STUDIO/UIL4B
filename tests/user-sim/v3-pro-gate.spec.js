@@ -186,10 +186,10 @@ test.describe('closing, focus and the keyboard', () => {
 
   test('Escape is ignored while the pill is busy', async ({ browser }) => {
     const { ctx, page, dialog } = await open(browser, DESK)
-    // /plans is a client route, so hold the code it loads to keep the pill busy.
-    // The Pricing chunk is the one asked for only when the route changes; the
-    // home-plans files can already be loaded by then.
-    await page.route(/\/assets\/(Pricing|HomePlans|home-plans)-/i, async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue() })
+    // The route changes within a frame of the click and fades the popup out on
+    // its own, so the history entry is not written: the location stays put and
+    // the pill stays busy until its give-up timer, long after these checks.
+    await page.evaluate(() => { window.history.pushState = () => {} })
     await pillOf(dialog).click()
     await expect(pillOf(dialog)).toHaveAttribute('aria-busy', 'true')
     await page.keyboard.press('Escape')
