@@ -19,6 +19,7 @@ import {
   scaleFilter, clampBox, freeCrop, padRect, cropPlan, resolveFill, padFilters, cutoutFilter,
   loopSeconds, previewSourceTime, spriteLayout, splitPngStream, findVideoFormat, TRANSPARENT,
   dragBox, spriteFits, VIDEO_FORMATS, atempoFilter, soundState, soundInHeader,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, adjustFilters, adjustCss, adjustChanged, clampAdjust,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -623,4 +624,89 @@ test('soundInHeader: reads the track list of an MP4, a WebM and an AVI', () => {
   assert.equal(soundInHeader(bytes('RIFF\0\0\0\0AVI LIST....strh\0\0\0\0auds')), true)
   assert.equal(soundInHeader(bytes('RIFF\0\0\0\0AVI LIST....strh\0\0\0\0vids')), false)
   assert.equal(soundInHeader(bytes('GIF89a')), null)
+})
+
+// ── Q047: the Adjust group ───────────────────────────────────────────────────
+const adj = (o) => ({ ...ADJUST_DEFAULTS, ...o })
+
+test('adjust: untouched sliders build no filter and no CSS, however they are spelled', () => {
+  assert.deepEqual(adjustFilters(ADJUST_DEFAULTS, { seconds: 4 }), [])
+  assert.deepEqual(adjustFilters(null), [])
+  assert.deepEqual(adjustFilters(undefined, { seconds: 4 }), [])
+  assert.deepEqual(adjustFilters({}), [])
+  assert.equal(adjustCss(ADJUST_DEFAULTS), '')
+  assert.equal(adjustCss(null), '')
+  assert.equal(adjustChanged(ADJUST_DEFAULTS), false)
+  assert.equal(adjustChanged(null), false)
+})
+
+test('adjust: a clip with untouched sliders is argument for argument the clip it was before', () => {
+  const plain = { format: 'mp4', input: 'in.mp4', fps: 12, width: 480, quality: 'medium', speed: 2, sound: true }
+  assert.deepEqual(videoToAnimationArgs({ ...plain, adjust: ADJUST_DEFAULTS, seconds: 4 }), videoToAnimationArgs(plain))
+  assert.deepEqual(videoToAnimationArgs({ ...plain, adjust: null }), videoToAnimationArgs(plain))
+  assert.ok(!videoToAnimationArgs({ ...plain, adjust: ADJUST_DEFAULTS }).join(' ').match(/eq=|hue=|gblur|fade=/))
+})
+
+test('adjust: brightness, contrast and saturation are one eq with only the changed terms', () => {
+  assert.deepEqual(adjustFilters(adj({ brightness: 20 })), ['eq=brightness=0.1'])
+  assert.deepEqual(adjustFilters(adj({ contrast: 50 })), ['eq=contrast=1.5'])
+  assert.deepEqual(adjustFilters(adj({ saturation: -100 })), ['eq=saturation=0'])
+  assert.deepEqual(adjustFilters(adj({ brightness: -40, contrast: 25, saturation: 10 })), ['eq=brightness=-0.2:contrast=1.25:saturation=1.1'])
+})
+
+test('adjust: hue, blur and the two fades each build their own filter', () => {
+  assert.deepEqual(adjustFilters(adj({ hue: -30 })), ['hue=h=-30'])
+  assert.deepEqual(adjustFilters(adj({ blur: 4 })), ['gblur=sigma=4'])
+  assert.deepEqual(adjustFilters(adj({ fadeIn: 1.5 }), { seconds: 6 }), ['fade=t=in:st=0:d=1.5'])
+  assert.deepEqual(adjustFilters(adj({ fadeOut: 2 }), { seconds: 6 }), ['fade=t=out:st=4:d=2'])
+  // the colour filters come first, then the fades, in the order they were applied
+  assert.deepEqual(
+    adjustFilters(adj({ brightness: 10, hue: 5, blur: 2, fadeIn: 1, fadeOut: 1 }), { seconds: 5 }),
+    ['eq=brightness=0.05', 'hue=h=5', 'gblur=sigma=2', 'fade=t=in:st=0:d=1', 'fade=t=out:st=4:d=1'],
+  )
+})
+
+test('adjust: a fade is held to the clip, and a fade out needs the length', () => {
+  assert.deepEqual(adjustFilters(adj({ fadeOut: 10 }), { seconds: 3 }), ['fade=t=out:st=0:d=3'])
+  assert.deepEqual(adjustFilters(adj({ fadeIn: 10 }), { seconds: 3 }), ['fade=t=in:st=0:d=3'])
+  assert.deepEqual(adjustFilters(adj({ fadeOut: 2 }), { seconds: 0 }), [])
+  assert.deepEqual(adjustFilters(adj({ fadeIn: 2 }), { seconds: 0 }), ['fade=t=in:st=0:d=2'])
+})
+
+test('adjust: values are held to their range, and junk is the default', () => {
+  assert.equal(clampAdjust({ brightness: 900 }).brightness, 100)
+  assert.equal(clampAdjust({ hue: -999 }).hue, -180)
+  assert.equal(clampAdjust({ blur: -3 }).blur, 0)
+  assert.equal(clampAdjust({ fadeIn: 'soon' }).fadeIn, 0)
+  assert.equal(clampAdjust({ contrast: NaN }).contrast, 0)
+  assert.deepEqual(Object.keys(clampAdjust(null)), ADJUST_FIELDS.map(f => f.id))
+  assert.deepEqual(adjustFilters({ brightness: 900 }), ['eq=brightness=0.5'])
+})
+
+test('adjust: in a clip the colour comes after the scale, and the fades after a reverse', () => {
+  const base = { format: 'gif', input: 'in.mp4', fps: 10, width: 320, quality: 'medium' }
+  const vf = (args) => args[args.indexOf('-vf') + 1]
+  const flat = vf(videoToAnimationArgs({ ...base, adjust: adj({ hue: 10, fadeIn: 1, fadeOut: 1 }), seconds: 5 }))
+  assert.ok(flat.indexOf('scale=') < flat.indexOf('hue=h=10'))
+  assert.ok(flat.indexOf('hue=h=10') < flat.indexOf('fade=t=in'))
+  const rev = vf(videoToAnimationArgs({ ...base, direction: 'reverse', adjust: adj({ hue: 10, fadeIn: 1 }), seconds: 5 }))
+  assert.ok(rev.indexOf('hue=h=10') < rev.indexOf('reverse'))
+  assert.ok(rev.indexOf('reverse') < rev.indexOf('fade=t=in'), 'the fade must run on the clip as it plays, after the reverse')
+})
+
+test('adjust: a sprite sheet gets the colour but no fade; MP3 gets neither', () => {
+  const sheet = { cols: 2, rows: 2 }
+  const sprite = videoToAnimationArgs({ format: 'sprite', input: 'in.mp4', fps: 8, width: 200, sheet, adjust: adj({ hue: 10, fadeIn: 1 }), seconds: 2 }).join(' ')
+  assert.match(sprite, /hue=h=10/)
+  assert.doesNotMatch(sprite, /fade=/)
+  const mp3 = videoToAnimationArgs({ format: 'mp3', input: 'in.mp4', fps: 8, width: 200, adjust: adj({ hue: 10, fadeIn: 1 }), seconds: 2 })
+  assert.doesNotMatch(mp3.join(' '), /hue=|fade=|-vf/)
+})
+
+test('adjust: the preview CSS carries colour, hue and blur but never the fades', () => {
+  assert.equal(adjustCss(adj({ brightness: 20 })), 'brightness(1.1)')
+  assert.equal(adjustCss(adj({ contrast: -50, saturation: 50 })), 'contrast(0.5) saturate(1.5)')
+  assert.equal(adjustCss(adj({ hue: 90 })), 'hue-rotate(90deg)')
+  assert.equal(adjustCss(adj({ blur: 10 }), { scale: 0.5 }), 'blur(5px)')
+  assert.equal(adjustCss(adj({ fadeIn: 2, fadeOut: 2 })), '')
 })

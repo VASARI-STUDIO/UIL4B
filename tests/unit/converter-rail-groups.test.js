@@ -6,6 +6,7 @@ import {
   PHONE_SLOTS, RAIL_GROUPS, SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId, railTabId, splitRail,
 } from '../../src/components/converter/railGroups.js'
 import { EDIT_DEFAULTS } from '../../src/utils/editHistory.js'
+import { ADJUST_DEFAULTS } from '../../src/utils/mediaEncode.js'
 
 const ids = (list) => list.map(g => g.id)
 const fresh = () => ({ ...EDIT_DEFAULTS, ...SIZE_DEFAULTS })
@@ -15,21 +16,22 @@ test('the groups run in pipeline order: clip, crop, turn, time, look, add, size'
 })
 
 test('a group with no controls today is absent, not disabled', () => {
-  assert.deepEqual(ids(presentGroups({ hasDuration: true })), ['clip', 'crop', 'turn', 'time', 'size'])
-  assert.ok(!ids(presentGroups({ hasDuration: true })).includes('look'))
+  // Look holds the Adjust sliders; Add has no control yet.
+  assert.deepEqual(ids(presentGroups({ hasDuration: true })), ['clip', 'crop', 'turn', 'time', 'look', 'size'])
+  assert.ok(ids(presentGroups({ hasDuration: true })).includes('look'))
   assert.ok(!ids(presentGroups({ hasDuration: true })).includes('add'))
 })
 
 test('Clip needs a known length to trim, so it is absent without one', () => {
-  assert.deepEqual(ids(presentGroups({ hasDuration: false })), ['crop', 'turn', 'time', 'size'])
-  assert.deepEqual(ids(presentGroups({ hasDuration: 0 })), ['crop', 'turn', 'time', 'size'])
+  assert.deepEqual(ids(presentGroups({ hasDuration: false })), ['crop', 'turn', 'time', 'look', 'size'])
+  assert.deepEqual(ids(presentGroups({ hasDuration: 0 })), ['crop', 'turn', 'time', 'look', 'size'])
 })
 
 test('the phone row never holds more than five slots', () => {
   const all = presentGroups({ hasDuration: true })
   const { direct, more } = splitRail(all)
   assert.deepEqual(ids(direct), ['clip', 'crop', 'time', 'size'])
-  assert.deepEqual(ids(more), ['turn'])
+  assert.deepEqual(ids(more), ['turn', 'look'])
   assert.ok(direct.length + (more.length ? 1 : 0) <= PHONE_SLOTS)
 })
 
@@ -64,6 +66,8 @@ test('each edit marks its own group and no other', () => {
   only({ turn: 90 }, 'turn')
   only({ flipH: true }, 'turn')
   only({ flipV: true }, 'turn')
+  only({ adjust: { ...ADJUST_DEFAULTS, hue: 20 } }, 'look')
+  only({ adjust: { ...ADJUST_DEFAULTS, fadeOut: 1.5 } }, 'look')
   only({ speed: 2 }, 'time')
   only({ direction: 'reverse' }, 'time')
   only({ fps: 15 }, 'size')
@@ -72,6 +76,12 @@ test('each edit marks its own group and no other', () => {
   only({ plays: 1 }, 'size')
   only({ colours: 64 }, 'size')
   only({ dither: 'none' }, 'size')
+})
+
+test('Look is marked only while a slider is off its default', () => {
+  assert.equal(groupMarks({ ...fresh(), adjust: { ...ADJUST_DEFAULTS } }).look, false)
+  assert.equal(groupMarks({ ...fresh(), adjust: undefined }).look, false)
+  assert.equal(groupMarks({ ...fresh(), adjust: { ...ADJUST_DEFAULTS, blur: 3 } }).look, true)
 })
 
 test('a fit or position that does nothing yet does not mark Crop', () => {

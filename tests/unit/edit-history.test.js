@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {
   EDIT_DEFAULTS, GESTURE_MS, HISTORY_DEPTH, canRedo, canUndo, changedEditNames, describeEdits, record, redo, startHistory, undo,
 } from '../../src/utils/editHistory.js'
-import { cropPlan, videoToAnimationArgs } from '../../src/utils/mediaEncode.js'
+import { ADJUST_DEFAULTS, cropPlan, videoToAnimationArgs } from '../../src/utils/mediaEncode.js'
 import { historyKey, isTyping } from '../../src/components/converter/useEditHistory.js'
 
 const base = () => ({ ...EDIT_DEFAULTS })
@@ -20,6 +20,7 @@ const argsFor = (r) => {
     format: 'gif', input: 'input.mp4', fps: 10, width: 480, plays: 0, quality: 'medium', start: 0, length: 0,
     crop: plan.crop, pad: plan.pad, turn: r.turn, flipH: r.flipH, flipV: r.flipV, speed: r.speed, direction: r.direction,
     colours: 256, dither: 'pattern', fill: 'transparent', cut: r.cut, radius: r.radius, sheet: null, maxFrames: 500,
+    adjust: r.adjust, seconds: 4,
   })
 }
 
@@ -104,6 +105,26 @@ test('the edit line is plain words, in a fixed order, and empty when there are n
   ])
   assert.deepEqual(describeEdits({ ...base(), shape: '16:9', fit: 'fit' }), ['Fitted to 16:9 with bars'])
   assert.deepEqual(describeEdits({ ...base(), direction: 'reverse' }), ['Plays reverse'])
+})
+
+test('Adjust sliders: a drag is one step, a later change another, and undo puts the sliders back', () => {
+  const adj = (o) => ({ ...ADJUST_DEFAULTS, ...o })
+  let h = edit(startHistory(base()), { adjust: adj({ brightness: 5 }) }, 0)
+  h = edit(h, { adjust: adj({ brightness: 10 }) }, 100)
+  h = edit(h, { adjust: adj({ brightness: 15 }) }, 100 + GESTURE_MS / 2)
+  assert.equal(h.past.length, 1)
+  h = edit(h, { adjust: adj({ brightness: 15, hue: 40 }) }, 20_000)
+  assert.equal(h.past.length, 2)
+  assert.deepEqual(undo(h).present.adjust, adj({ brightness: 15 }))
+  assert.deepEqual(undo(undo(h)).present.adjust, ADJUST_DEFAULTS)
+})
+
+test('Adjust words name only the sliders that are off their default', () => {
+  assert.deepEqual(describeEdits({ ...base(), adjust: { ...ADJUST_DEFAULTS } }), [])
+  assert.deepEqual(describeEdits({ ...base(), adjust: { ...ADJUST_DEFAULTS, hue: 30, fadeIn: 1 } }), ['Adjusted hue, fade in'])
+  assert.deepEqual(changedEditNames(base(), { ...base(), adjust: { ...ADJUST_DEFAULTS, blur: 2 } }), ['adjust'])
+  assert.deepEqual(argsFor({ ...base(), adjust: { ...ADJUST_DEFAULTS } }), argsFor(base()))
+  assert.notDeepEqual(argsFor({ ...base(), adjust: { ...ADJUST_DEFAULTS, hue: 30 } }), argsFor(base()))
 })
 
 test('the names of what an undo changed', () => {

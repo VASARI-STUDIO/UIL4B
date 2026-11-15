@@ -4,9 +4,9 @@
 // The order is the order the edits are applied in (the pipeline): cut the clip,
 // crop it, turn it, change its time, restyle it, add to it, then size the
 // output. A group with no control today is simply absent, never greyed out:
-// LOOK and ADD are listed so their place is fixed, and stay out of the rail
-// until something real lives in them.
-import { GIF_COLOURS_MAX } from '../../utils/mediaEncode.js'
+// ADD is listed so its place is fixed, and stays out of the rail until
+// something real lives in it. LOOK holds the Adjust sliders.
+import { GIF_COLOURS_MAX, adjustChanged } from '../../utils/mediaEncode.js'
 
 export const RAIL_GROUPS = [
   { id: 'clip', label: 'Clip' },
@@ -23,7 +23,7 @@ export const RAIL_GROUPS = [
 // just the trim and the speed.
 export function presentGroups({ hasDuration, audioOnly = false }) {
   if (audioOnly) return RAIL_GROUPS.filter(g => (g.id === 'clip' && hasDuration) || g.id === 'time')
-  const hasControls = { clip: !!hasDuration, crop: true, turn: true, time: true, look: false, add: false, size: true }
+  const hasControls = { clip: !!hasDuration, crop: true, turn: true, time: true, look: true, add: false, size: true }
   return RAIL_GROUPS.filter(g => hasControls[g.id])
 }
 
@@ -61,7 +61,7 @@ export function groupMarks(s) {
     crop: s.shape !== 'original' || s.cut !== 'none',
     turn: s.turn !== 0 || !!s.flipH || !!s.flipV,
     time: s.speed !== 1 || s.direction !== 'forward',
-    look: false,
+    look: adjustChanged(s.adjust),
     add: false,
     size: Object.keys(SIZE_DEFAULTS).some(k => s[k] !== SIZE_DEFAULTS[k]),
   }

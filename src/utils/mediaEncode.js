@@ -636,6 +636,83 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
     ...encoderArgs(fmt, { quality, plays, transparentGif: true })]
 }
 
+// ── Adjust: brightness, contrast, saturation, hue, blur, fades ───────────────
+// One group of sliders. Each is 0 when untouched, and an untouched group adds
+// no filter at all, so every list built without it is the list it always was.
+// Brightness, contrast and saturation are one `eq`; hue is `hue`; blur is
+// `gblur` (a sigma in pixels of the saved picture); the fades are `fade`, in
+// seconds of the saved clip. Measured present in the pinned core 2026-11-15.
+export const ADJUST_DEFAULTS = Object.freeze({ brightness: 0, contrast: 0, saturation: 0, hue: 0, blur: 0, fadeIn: 0, fadeOut: 0 })
+export const ADJUST_FIELDS = [
+  { id: 'brightness', label: 'Brightness', min: -100, max: 100, step: 1, unit: '', signed: true },
+  { id: 'contrast', label: 'Contrast', min: -100, max: 100, step: 1, unit: '', signed: true },
+  { id: 'saturation', label: 'Saturation', min: -100, max: 100, step: 1, unit: '', signed: true },
+  { id: 'hue', label: 'Hue', min: -180, max: 180, step: 1, unit: '°', signed: true },
+  { id: 'blur', label: 'Blur', min: 0, max: 20, step: 1, unit: ' px', signed: false },
+  { id: 'fadeIn', label: 'Fade in', min: 0, max: 10, step: 0.5, unit: ' s', signed: false },
+  { id: 'fadeOut', label: 'Fade out', min: 0, max: 10, step: 0.5, unit: ' s', signed: false },
+]
+
+/** Every field a number inside its range; anything else is the default. */
+export function clampAdjust(a) {
+  const out = { ...ADJUST_DEFAULTS }
+  for (const f of ADJUST_FIELDS) {
+    const n = Number(a?.[f.id])
+    if (Number.isFinite(n)) out[f.id] = Math.min(f.max, Math.max(f.min, n))
+  }
+  return out
+}
+
+export const adjustChanged = (a) => ADJUST_FIELDS.some((f) => clampAdjust(a)[f.id] !== 0)
+
+const trim3 = (n) => +Number(n).toFixed(3)
+
+/**
+ * The filters for an adjust group, in the order they are applied: colour,
+ * hue, blur, then the two fades. `seconds` is the length of the saved clip; the
+ * fade out starts that long before its end, and is left out when the length is
+ * not known. Each fade is held to the clip's length. `part` is 'colour' or
+ * 'fades' for one half (the fades must run after a reverse, so they are split).
+ */
+export function adjustFilters(a, { seconds = 0, part = 'all' } = {}) {
+  const v = clampAdjust(a)
+  const out = []
+  const eq = []
+  const colour = part !== 'fades'
+  const fades = part !== 'colour'
+  // eq's brightness adds to every pixel (-1 to 1); a slider's full swing is half of that.
+  if (v.brightness) eq.push(`brightness=${trim3(v.brightness * 0.005)}`)
+  if (v.contrast) eq.push(`contrast=${trim3(1 + v.contrast / 100)}`)
+  if (v.saturation) eq.push(`saturation=${trim3(1 + v.saturation / 100)}`)
+  if (colour && eq.length) out.push(`eq=${eq.join(':')}`)
+  if (colour && v.hue) out.push(`hue=h=${trim3(v.hue)}`)
+  if (colour && v.blur) out.push(`gblur=sigma=${trim3(v.blur)}`)
+  const len = Number(seconds) > 0 ? Number(seconds) : 0
+  if (fades && v.fadeIn) out.push(`fade=t=in:st=0:d=${trim3(len ? Math.min(v.fadeIn, len) : v.fadeIn)}`)
+  if (fades && v.fadeOut && len) {
+    const d = Math.min(v.fadeOut, len)
+    out.push(`fade=t=out:st=${trim3(len - d)}:d=${trim3(d)}`)
+  }
+  return out
+}
+
+/**
+ * The same adjustments as a CSS filter for the preview. Close, not exact: CSS
+ * and ffmpeg scale brightness and hue a little differently, and `scale` turns
+ * the blur's pixels of the saved picture into pixels of the preview. The fades
+ * are not in it. '' when nothing here shows.
+ */
+export function adjustCss(a, { scale = 1 } = {}) {
+  const v = clampAdjust(a)
+  const out = []
+  if (v.brightness) out.push(`brightness(${trim3(1 + v.brightness / 200)})`)
+  if (v.contrast) out.push(`contrast(${trim3(1 + v.contrast / 100)})`)
+  if (v.saturation) out.push(`saturate(${trim3(1 + v.saturation / 100)})`)
+  if (v.hue) out.push(`hue-rotate(${trim3(v.hue)}deg)`)
+  if (v.blur) out.push(`blur(${trim3(Math.min(40, v.blur * scale))}px)`)
+  return out.join(' ')
+}
+
 /**
  * The whole argument list for a video clip. `start` and `length` are seconds;
  * a length of 0 means "to the end". Both sides are capped at MAX_ANIMATION_SIDE
@@ -652,7 +729,7 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
  * wrong the moment speed changes: at half speed a 3 s clip is 6 s long.
  *
  * Filter order (each step is left out when it does nothing): speed, fps, crop
- * or pad, turn, flips, scale, cut-out, direction, sheet. Speed and fps come first so every later filter
+ * or pad, turn, flips, scale, adjust (colour), cut-out, direction, fades, sheet. Speed and fps come first so every later filter
  * only touches the frames that end up in the file; crop precedes the turn (the
  * crop box is drawn on the unturned picture); scale follows the turn so Width is
  * the width of what comes out; reverse runs last, on the smallest frames,
@@ -663,7 +740,7 @@ export function videoToAnimationArgs({
   crop = null, pad = null, turn = 0, flipH = false, flipV = false, speed = 1, direction = 'forward',
   colours = GIF_COLOURS_MAX, dither = 'pattern',
   fill = TRANSPARENT, cut = 'none', radius = CORNER_DEFAULT, sheet = null, maxFrames = MAX_FRAMES,
-  sound = false,
+  sound = false, adjust = null, seconds = 0,
 }) {
   const fmt = findVideoFormat(format)
   const w = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
@@ -688,10 +765,14 @@ export function videoToAnimationArgs({
   if (flipH) filters.push('hflip')
   if (flipV) filters.push('vflip')
   filters.push(scaleFilter(w))
+  filters.push(...adjustFilters(adjust, { seconds, part: 'colour' }))
   const cutout = cutoutFilter(cut, { radius, ...outside })
   if (cutout) filters.push(cutout)
   const dir = directionFilter(direction)
   if (dir) filters.push(dir)
+  // Fades belong to the clip as it plays, so they run after a reverse; a
+  // sprite sheet is one still, so it has none.
+  if (fmt.id !== 'sprite') filters.push(...adjustFilters(adjust, { seconds, part: 'fades' }))
   if (fmt.id === 'sprite' && sheet) filters.push('format=rgba', `tile=${sheet.cols}x${sheet.rows}:padding=0:margin=0:color=black@0`)
   // Transparency in a GIF is one palette slot, reserved only when something
   // in the picture is actually transparent.

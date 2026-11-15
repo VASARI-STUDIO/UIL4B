@@ -60,10 +60,10 @@ test.describe('the tool rail at 1440', () => {
 
   test('the rail is a tablist of the groups that have controls, in pipeline order, with none greyed out', async ({ page }) => {
     const got = await names(page)
-    const known = ['Clip', 'Crop', 'Turn', 'Time', 'Size']
+    const known = ['Clip', 'Crop', 'Turn', 'Time', 'Look', 'Size']
     expect(got, 'the groups are not in pipeline order').toEqual(known.filter(n => got.includes(n)))
     for (const n of ['Crop', 'Turn', 'Time', 'Size']) expect(got, `${n} is missing from the rail`).toContain(n)
-    expect(got, 'Look has no control yet and must be absent').not.toContain('Look')
+    expect(got, 'Look holds the Adjust sliders and must be present').toContain('Look')
     expect(got, 'Add has no control yet and must be absent').not.toContain('Add')
     for (const tab of await tabs(page).all()) await expect(tab).toBeEnabled()
     await expect(page.locator('[role="tab"][aria-selected="true"][data-group]')).toHaveCount(1)

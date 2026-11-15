@@ -34,10 +34,10 @@ import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from 
 import CropBox from '../components/converter/CropBox'
 import ResultPreview from '../components/converter/ResultPreview'
 import {
-  ANIMATION_FORMATS, AUDIO_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, ANIMATION_FORMATS, AUDIO_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
   FPS_MAX, FPS_MIN, FRAME_EXPORTS, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
   MAX_ANIMATION_SIDE, MAX_FRAMES as ENGINE_MAX_FRAMES, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TRANSPARENT, TURNS,
-  animatedImageSeconds, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
+  adjustChanged, adjustCss, animatedImageSeconds, clampAdjust, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
   fileHasSound, outputFrames, outputSize, resolveFill, reverseFits, soundState, spriteFits, spriteLayout, splitPngStream,
   VIDEO_FILE_FORMATS, videoToAnimationArgs,
 } from '../utils/mediaEncode'
@@ -963,6 +963,7 @@ function VideoConvert({ toast }) {
   const [flipV, setFlipV] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [direction, setDirection] = useState('forward')
+  const [adjust, setAdjust] = useState(ADJUST_DEFAULTS) // the Look group: colour, hue, blur, fades
   const [sound, setSound] = useState(true) // keep the clip's sound where the format can hold it
   const [soundProbe, setSoundProbe] = useState({ file: null, has: null }) // what the file's header says about sound
   const [colours, setColours] = useState(SIZE_DEFAULTS.colours)
@@ -981,8 +982,8 @@ function VideoConvert({ toast }) {
   // The edits as one value, for Undo and Redo. The controls above stay plain
   // state; stepping back writes an earlier recipe into them all at once.
   const recipe = useMemo(
-    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction }),
-    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction],
+    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust }),
+    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust],
   )
   const history = useEditHistory(recipe, (r) => {
     setTrimStart(r.trimStart)
@@ -1000,6 +1001,7 @@ function VideoConvert({ toast }) {
     setFlipV(r.flipV)
     setSpeed(r.speed)
     setDirection(r.direction)
+    setAdjust(r.adjust)
   }, !!srcUrl && !job)
   const resetEdits = history.reset
   const videoRef = useRef(null)
@@ -1150,6 +1152,9 @@ function VideoConvert({ toast }) {
   const hasSound = isImage ? false : soundProbe.file === file ? soundProbe.has : null
   const snd = soundState(fmt, { hasSound, direction: dir })
   const soundOn = isAudio || (sound && snd.ok)
+  // The Look group's values, or null while they are all untouched (then no filter is built).
+  const adj = !isAudio && adjustChanged(adjust) ? clampAdjust(adjust) : null
+  const setAdj = (id, value) => setAdjust(a => ({ ...a, [id]: value }))
   // The sheet's grid, from how many frames the edits make (the engine writes at
   // most ENGINE_MAX_FRAMES). Not known while the clip's length is not.
   const sheet = isSprite && frames > 0 && outSize ? spriteLayout(Math.min(frames, ENGINE_MAX_FRAMES), outSize.w, outSize.h) : null
@@ -1160,7 +1165,7 @@ function VideoConvert({ toast }) {
   const sig = JSON.stringify([
     format, fps, width, isGif || isFrameExport ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir,
     isGif ? colours : 0, isGif ? dither : 0, shape === 'custom' ? box : 0, shape === 'original' ? 0 : fit, cut, cut === 'rounded' ? radius : 0, outsideShown ? outside : 0,
-    soundOn,
+    soundOn, adj,
   ])
 
   const convert = useCallback(async () => {
@@ -1212,7 +1217,7 @@ function VideoConvert({ toast }) {
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
-          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn,
+          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn, adjust: adj, seconds: outSeconds,
           fill: outside.transparent ? TRANSPARENT : outside.colour, cut, radius, sheet, maxFrames: ENGINE_MAX_FRAMES,
         }),
         output: `output.${target.engineExt || target.ext}`,
@@ -1248,7 +1253,7 @@ function VideoConvert({ toast }) {
           ? UNREADABLE_VIDEO_NOTE
           : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, adj, outSeconds, toast])
 
   const cancel = () => {
     runRef.current++
@@ -1331,7 +1336,7 @@ function VideoConvert({ toast }) {
   const groups = presentGroups({ hasDuration: duration > 0, audioOnly: isAudio })
   const openGroup = activeOf(groups, group)?.id
   const marks = groupMarks({
-    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction,
+    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction, adjust,
     fps, width, quality, plays, colours, dither,
   })
   const panel = (id, body) => (
@@ -1398,6 +1403,7 @@ function VideoConvert({ toast }) {
                   mediaRef={isImage ? imgRef : videoRef} isImage={isImage} srcSize={srcSize} plan={plan}
                   turn={turn} flipH={flipH} flipV={flipV} cut={cut} radius={radius} outside={outside}
                   outSize={outSize} dir={dir} speed={speed} fps={fps} start={start} len={secs} facts={consequence}
+                  filter={adj && outSize ? adjustCss(adj, { scale: Math.min(1, 560 / outSize.w) }) : ''}
                 />
               ) : null}
               edits={<EditBar history={history} disabled={working} />}
@@ -1616,6 +1622,34 @@ function VideoConvert({ toast }) {
                 {flipBtn('v', flipV, setFlipV)}
               </div>
               {(turn !== 0 || flipH || flipV) && <p className="fc-note">Turn and flip show in the result, not the preview.</p>}
+            </div>
+            ))}
+            {panel('look', (
+            <div className="fc-insp-sec">
+              {ADJUST_FIELDS.map(f => {
+                const v = clampAdjust(adjust)[f.id]
+                return (
+                  <div className="fc-adj" key={f.id}>
+                    <div className="fc-adj-head">
+                      <label className="fc-eyebrow" htmlFor={`fc-vid-adj-${f.id}`}>{f.label}</label>
+                      <output className="fc-adj-val" htmlFor={`fc-vid-adj-${f.id}`}>{f.signed && v > 0 ? '+' : ''}{v}{f.unit}</output>
+                    </div>
+                    <input
+                      id={`fc-vid-adj-${f.id}`} type="range" className="fc-scrub fc-adj-range"
+                      min={f.min} max={f.max} step={f.step} value={v} disabled={working}
+                      onChange={e => setAdj(f.id, Number(e.target.value))}
+                    />
+                  </div>
+                )
+              })}
+              <button type="button" className="fc-btn fc-btn--quiet" onClick={() => setAdjust(ADJUST_DEFAULTS)} disabled={working || !adjustChanged(adjust)}>
+                Reset adjustments
+              </button>
+              <p className="fc-note">
+                {adjustChanged(adjust) ? 'Colour, hue and blur show in the After preview (blur is approximate). ' : ''}
+                Fades show in the saved file only.
+                {clampAdjust(adjust).fadeOut > 0 && !(outSeconds > 0) ? ' Fade out needs this file’s length, which it does not give, so it is left out.' : ''}
+              </p>
             </div>
             ))}
             {panel('time', (
