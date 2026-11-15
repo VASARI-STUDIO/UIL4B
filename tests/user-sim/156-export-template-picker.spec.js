@@ -14,7 +14,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
-import { mockThemeApi, cleanHtml } from './export-theme-mock.js'
+import { mockThemeApi, cleanHtml, printedDoc } from './export-theme-mock.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 const TEMPLATE_NAMES = ['Studio', 'Manual', 'Showcase', 'Specification', 'Monograph', 'Atlas', 'Presentation', 'Poster', 'Grid']
@@ -64,7 +64,7 @@ test('a themed request carries the theme, the row and the format, and no templat
   const panel = await openProject(page, 'pro')
   await chooseFormat(panel, 'book')
   const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
-  await expect(popup.locator('#printed-doc')).toBeVisible()
+  await expect(printedDoc(popup).locator('#printed-doc')).toBeVisible()
   expect(calls).toHaveLength(1)
   expect(calls[0].body).toMatchObject({ theme: '01-presentation', row: 'book', format: 'pdf' })
   expect(Object.keys(calls[0].body)).not.toContain('template')

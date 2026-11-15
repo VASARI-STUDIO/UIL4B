@@ -175,14 +175,25 @@ test.describe('the tool rail at 1440', () => {
   })
 
   test('every tab has a visible focus ring and is at least 44 px tall', async ({ page }) => {
-    for (const tab of await tabs(page).all()) {
-      await page.keyboard.press('Shift') // a key press first, so the focus counts as the keyboard's
-      await tab.focus()
-      const out = await tab.evaluate(el => ({ style: getComputedStyle(el).outlineStyle, w: parseFloat(getComputedStyle(el).outlineWidth), h: el.getBoundingClientRect().height }))
-      expect(out.style, 'focus draws no ring').not.toBe('none')
+    // Focus moves by the rail's own keys, so it is always the keyboard's.
+    const count = await tabs(page).count()
+    await tabs(page).first().focus()
+    await page.keyboard.press('Home')
+    const seen = new Set()
+    for (let i = 0; i < count; i++) {
+      await expect(page.locator(':focus')).toHaveAttribute('role', 'tab')
+      const out = await page.evaluate(() => {
+        const el = document.activeElement
+        const cs = getComputedStyle(el)
+        return { name: el.textContent.trim(), style: cs.outlineStyle, w: parseFloat(cs.outlineWidth), h: el.getBoundingClientRect().height }
+      })
+      seen.add(out.name)
+      expect(out.style, `focus draws no ring on ${out.name}`).not.toBe('none')
       expect(out.w).toBeGreaterThanOrEqual(2)
       expect(out.h).toBeGreaterThanOrEqual(44)
+      await page.keyboard.press('ArrowRight')
     }
+    expect(seen.size, 'the arrow keys skipped a tab').toBe(count)
   })
 })
 

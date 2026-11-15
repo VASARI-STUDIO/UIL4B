@@ -111,11 +111,12 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       watch(page, 'designer reading the panel')
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
-      const ink = await page.evaluate(() => getComputedStyle(document.querySelector('.tsc-page')).getPropertyValue('--t0').trim())
+      const ink = await page.evaluate(() => getComputedStyle(document.querySelector('.tsc-page')).getPropertyValue('--tl-ink').trim())
       const probe = await page.evaluate(() => {
+        // The tool frame's full ink, read inside the page so it resolves as the panel does.
         const t0 = document.createElement('span')
-        t0.style.color = 'var(--t0)'
-        document.body.appendChild(t0)
+        t0.style.color = 'var(--tl-ink)'
+        document.querySelector('.tsc-page').appendChild(t0)
         const full = getComputedStyle(t0).color
         t0.remove()
         const colour = el => getComputedStyle(el).color

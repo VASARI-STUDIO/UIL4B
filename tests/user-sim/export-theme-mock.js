@@ -19,6 +19,18 @@ export const cleanHtml = (title = 'Print document') => '<!doctype html><html><he
   + `<body><h1 id="printed-doc">${title}</h1><p>Sample page</p></body></html>`
 
 /**
+ * The print document inside a print window. The route's document is written into a sandboxed iframe (srcdoc) in a shell page, so
+ * a locator on the popup itself sees the shell, not the document: look through this instead.
+ */
+export const printedDoc = (popup) => popup.frameLocator('iframe[sandbox]')
+
+/** window.__printed inside the print iframe (a spec stubs window.print on the context, which reaches the iframe's window too). */
+export async function printedCount(popup) {
+  const frame = popup.frames().find((f) => f !== popup.mainFrame())
+  return frame ? frame.evaluate(() => window.__printed) : undefined
+}
+
+/**
  * Answer the route and record each request. `answer(body, calls)` returns one of
  *   { zip: Buffer, name }                          200, application/zip, Content-Disposition with that file name
  *   { html, json? }                                200, JSON { ok, theme, row, format, html } for the request; `json` overrides fields

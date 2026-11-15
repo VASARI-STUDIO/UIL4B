@@ -1479,6 +1479,10 @@
   height: calc(100% - 80px); aspect-ratio: 4 / 5; translate: -50% 0;
   border-radius: 14px; overflow: hidden; isolation: isolate;
 }
+/* A touch screen's switch is 52px tall (8px in, 44px buttons, 2px padding): the poster starts 12px under it. */
+@media (min-width: 901px) and (pointer: coarse) {
+  .grd .grd-poster-frame { inset-block-start: 68px; height: calc(100% - 92px); }
+}
 .grd .grd-fx .grd-poster-frame { background: var(--fx-paint); }
 .grd .grd-poster-frame > .grd-fx-grain { position: absolute; inset: 0; }
 .grd .grd-txt .grd-poster-frame { container-type: inline-size; }
@@ -1530,6 +1534,22 @@
   .grd .grd-spec-strip { margin-top: 8px; }
   .grd .grd-spec-sw { height: 28px; }
   .grd .grd-spec-note { margin-top: 4px; }
+}
+/* Touch: the switch is 52px tall, so the card starts 12px under it, as it does from 901px. */
+@media (max-width: 600px) and (pointer: coarse) {
+  .grd .grd-spec-box { padding-top: 68px; }
+}
+/* Under 373px five hexes do not sit side by side (7 characters of 12px mono is 50px; a column is 46px at 320),
+   so the strip becomes a legend, three to a row: a 16px swatch and its hex. */
+@media (max-width: 372px) {
+  .grd .grd-spec-body { padding-block: 8px; }
+  .grd .grd-spec-name { font-size: 16px; line-height: 20px; }
+  .grd .grd-spec-head { flex-basis: 40px; min-height: 12px; }
+  .grd .grd-spec-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
+  .grd .grd-spec-strip li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .grd .grd-spec-sw { flex: none; width: 16px; height: 16px; }
+  .grd .grd-spec-hex { margin-top: 0; text-align: start; }
+  .grd .grd-spec-note { margin-top: 2px; }
 }
 
 /* Mesh and Waves. The effects layer draws the whole scene: Mesh is soft points of colour on a
