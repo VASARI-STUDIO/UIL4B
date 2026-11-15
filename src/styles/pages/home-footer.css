@@ -320,9 +320,11 @@ html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost, .hm-close-i
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost):active { transform: none; }
 
 /* /plans drops the "This page" column, so the headline line has four columns
-   instead of five. */
-.pricing .sp-footer--no-page .sp-footer-grid {
-  grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+   instead of five. Phones keep the one-column grid above. */
+@media (min-width: 1024px) {
+  .pricing .sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .pricing .sp-footer--no-page .sp-footer-grid {

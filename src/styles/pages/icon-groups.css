@@ -112,6 +112,8 @@ html[data-reduced-motion="true"] .iel-page .igp-page img{transition:none}
 
 /* On a phone the labels go; each control keeps its glyph and its name. */
 .iel-page .igp-page .igp-label{white-space:nowrap}
+/* Phones: the meta line names the libraries, so it wraps instead of ending in an ellipsis */
+@media(max-width:639px){.iel-page .igp-page .igp-card-meta{white-space:normal;text-wrap:pretty}}
 @media(max-width:559px){
   .iel-page .igp-page .igp-label{
     position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
