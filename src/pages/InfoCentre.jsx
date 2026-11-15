@@ -7,7 +7,8 @@ import { Link } from 'react-router-dom'
 // there is a follow-up for whoever owns that file next; it is shared with
 // /learn/:slug, /404 and /sitemap, and three other lanes are writing to this
 // tree.
-import '../styles/pages/content.css'
+// This page's own sheet carries its tokens and layout; the shared reading sheet
+// (content.css) is not loaded here, so its .cpg rail and tokens no longer reach it.
 import '../styles/pages/info.css'
 // The front door's own glyph set. Inline SVG in the NavIcon idiom, already in
 // the entry chunk because Spectrum is a static import in App.jsx.
@@ -461,7 +462,7 @@ export default function InfoCentre() {
   }
 
   return (
-    <div className="sec cpg ic-wrap">
+    <div className="sec ic-wrap">
       <header className="ic-head">
         {/* NO TAXONOMY EYEBROW. It read "Information Centre" behind an open-book
             glyph — a 10px mono-caps label, in --accent-strong, restating the
@@ -499,8 +500,8 @@ export default function InfoCentre() {
             https://mobbin.com/sites/sections/29328957-8bef-4ee5-ac7a-e6cef73db235  Dub
           and it is the same rail the front door already runs beside its bench,
           so this is the product's own pattern rather than a new one. */}
-      <div className="cpg-split">
-        <div className="cpg-rail-col">
+      <div className="ic-split">
+        <div className="ic-rail-col">
           {/* Below 1000px the 14 links would wrap to several rows and push the
               content down the screen, so the rail gives way to one button that
               opens the same list as a sheet (a popover from 768). The sticky
@@ -513,7 +514,8 @@ export default function InfoCentre() {
             options={JUMP_OPTIONS}
             onChange={jumpTo}
           />
-          <nav className="cpg-rail ic-toc" aria-label="On this page">
+          <nav className="ic-rail ic-toc" aria-label="On this page">
+            <p className="ic-rail-h" aria-hidden="true">On this page</p>
             <ol>
               {SECTIONS.map(s => (
                 <li key={s.id}>
@@ -523,17 +525,17 @@ export default function InfoCentre() {
                       the question the rail is actually asked here — which of
                       these is showing. */}
                   <a
-                    className={`cpg-rail-row${open[s.id] ? ' is-on' : ''}`}
+                    className={`ic-rail-row${open[s.id] ? ' is-on' : ''}`}
                     href={`#${s.id}`}
                     onClick={() => openSection(s.id)}
                   >
-                    <span className="cpg-rail-label">{s.title}</span>
+                    <span className="ic-rail-label">{s.title}</span>
                   </a>
                 </li>
               ))}
               <li>
-                <a className="cpg-rail-row" href="#screen-stats">
-                  <span className="cpg-rail-label">Screen stats</span>
+                <a className="ic-rail-row" href="#screen-stats">
+                  <span className="ic-rail-label">Screen stats</span>
                 </a>
               </li>
             </ol>

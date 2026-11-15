@@ -9,7 +9,7 @@
 //   the arrow stays at 390                 -> "on a phone"
 //   the jump links lose their touch strip  -> "on a phone"
 //   rows keep border-radius 12px           -> "square row rules"
-//   .spm-intro keeps max-width 1460px      -> "lines up at 1440"
+//   the intro leaves the shared wrap                -> "lines up at 1440"
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -19,14 +19,14 @@ test.describe('on a phone', () => {
   test('the rows drop the arrow and the jump links are 44px targets', async ({ page }) => {
     watch(page, 'a visitor browsing the site map on a phone')
     await go(page, '/sitemap')
-    const row = page.locator('.spt-sitemap .spt-row:not(.spt-row--text)').first()
+    const row = page.locator('.mk-map .mk-row:not(.mk-row--text)').first()
     await expect(row).toBeVisible()
-    await expect(row.locator('.spt-row-go')).toBeHidden()
+    await expect(row.locator('.mk-row-go')).toBeHidden()
     // The text column takes the room the arrow had: at least 220px beside a 112px plate.
-    const text = await row.locator('.spt-row-text').boundingBox()
+    const text = await row.locator('.mk-row-text').boundingBox()
     expect(text.width).toBeGreaterThanOrEqual(220)
 
-    const links = page.locator('.spt-sitemap .spm-lede a')
+    const links = page.locator('.mk-map .mk-lead a')
     await expect(links).toHaveCount(3)
     for (const a of await links.all()) {
       const strip = await a.evaluate((el) => parseFloat(getComputedStyle(el, '::after').height))
@@ -41,11 +41,11 @@ test.describe('at 1440', () => {
   test('square row rules, and the heading lines up with the sections', async ({ page }) => {
     watch(page, 'a visitor browsing the site map on a laptop')
     await go(page, '/sitemap')
-    const row = page.locator('.spt-sitemap .spt-row').first()
+    const row = page.locator('.mk-map .mk-row').first()
     await expect(row).toBeVisible()
     expect(await row.evaluate((el) => getComputedStyle(el).borderTopLeftRadius), 'square row rules').toBe('0px')
-    const h1 = await page.locator('.spt-sitemap .spm-intro h1').boundingBox()
-    const h2 = await page.locator('.spt-sitemap .spt-section .spt-h2').first().boundingBox()
+    const h1 = await page.locator('.mk-map .mk-intro h1').boundingBox()
+    const h2 = await page.locator('.mk-map .mk-sec .mk-h2').first().boundingBox()
     expect(Math.abs(h1.x - h2.x), 'lines up at 1440').toBeLessThanOrEqual(1)
   })
 })
