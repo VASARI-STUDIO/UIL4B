@@ -713,6 +713,57 @@ export function adjustCss(a, { scale = 1 } = {}) {
   return out.join(' ')
 }
 
+/** Censor: a rectangle of the picture pixelated or blurred. The box is in pixels of the source. */
+export const CENSOR_MODES = [
+  { id: 'pixelate', label: 'Pixelate' },
+  { id: 'blur', label: 'Blur' },
+]
+export const CENSOR_STRENGTH = { min: 1, max: 10 }
+export const CENSOR_DEFAULTS = Object.freeze({ on: false, mode: 'pixelate', strength: 5, box: null })
+
+/**
+ * The filters that hide one rectangle. Each is a small graph: the frame is
+ * split, one copy is cropped to the box and pixelated (scaled down, then up
+ * with nearest-neighbour so the blocks stay square) or blurred, and the
+ * result is laid back at the same spot. Labels are ca/cb/cc, clear of the
+ * s0/s1/p the GIF palette uses. The box must already sit inside the picture
+ * (clampBox does that); a missing box or an off switch adds nothing. Strength
+ * 1 to 10 is a block of 4 to 40 pixels, or a blur of 3 to 30.
+ */
+export function censorFilters(c) {
+  if (!c || !c.on || !c.box) return []
+  const num = v => Math.max(0, Math.round(Number(v) || 0))
+  const w = Math.max(2, num(c.box.w))
+  const h = Math.max(2, num(c.box.h))
+  const x = num(c.box.x)
+  const y = num(c.box.y)
+  const s = Math.max(CENSOR_STRENGTH.min, Math.min(CENSOR_STRENGTH.max, Math.round(Number(c.strength) || CENSOR_DEFAULTS.strength)))
+  const hide = c.mode === 'blur'
+    ? `gblur=sigma=${s * 3}`
+    : `scale=${Math.max(1, Math.floor(w / (s * 4)))}:${Math.max(1, Math.floor(h / (s * 4)))}:flags=neighbor,scale=${w}:${h}:flags=neighbor`
+  return [`split[ca][cb];[ca]crop=${w}:${h}:${x}:${y},${hide}[cc];[cb][cc]overlay=${x}:${y}`]
+}
+
+/** Colour key: one colour made transparent, with how close a pixel has to be. */
+export const KEY_DEFAULTS = Object.freeze({ on: false, colour: '#00ff00', tolerance: 20 })
+export const KEY_TOLERANCE = { min: 0, max: 100 }
+
+/**
+ * Takes one colour out of the picture. Tolerance 0 to 100 maps to a colorkey
+ * similarity of 0.01 to 0.5, with a little edge blend. Where the format can
+ * be transparent the pixels simply become clear; otherwise they show the
+ * Outside colour, laid on with a filled box under the keyed picture (the
+ * encoder would otherwise turn the clear pixels black).
+ */
+export function colourKeyFilters(k, { transparent = true, colour = FILL_DEFAULT } = {}) {
+  if (!k || !k.on || !isHexColour(k.colour)) return []
+  const tol = Math.max(KEY_TOLERANCE.min, Math.min(KEY_TOLERANCE.max, Number(k.tolerance) || 0))
+  const similarity = Math.max(0.01, trim3(tol / 100 * 0.5))
+  const keyed = `format=rgba,colorkey=0x${k.colour.slice(1).toLowerCase()}:${similarity}:0.1`
+  if (transparent) return [keyed]
+  return [`${keyed},split[ka][kb];[kb]drawbox=x=0:y=0:w=iw:h=ih:c=0x${colour.slice(1)}:t=fill[kc];[kc][ka]overlay`]
+}
+
 /**
  * The whole argument list for a video clip. `start` and `length` are seconds;
  * a length of 0 means "to the end". Both sides are capped at MAX_ANIMATION_SIDE
@@ -729,7 +780,8 @@ export function adjustCss(a, { scale = 1 } = {}) {
  * wrong the moment speed changes: at half speed a 3 s clip is 6 s long.
  *
  * Filter order (each step is left out when it does nothing): speed, fps, crop
- * or pad, turn, flips, scale, adjust (colour), cut-out, direction, fades, sheet. Speed and fps come first so every later filter
+ * or pad, turn, flips, scale, adjust (colour), colour key, cut-out, direction, fades, sheet. Censor sits right after fps (its box is in
+ * source pixels, so it runs before the crop). Speed and fps come first so every later filter
  * only touches the frames that end up in the file; crop precedes the turn (the
  * crop box is drawn on the unturned picture); scale follows the turn so Width is
  * the width of what comes out; reverse runs last, on the smallest frames,
@@ -740,7 +792,7 @@ export function videoToAnimationArgs({
   crop = null, pad = null, turn = 0, flipH = false, flipV = false, speed = 1, direction = 'forward',
   colours = GIF_COLOURS_MAX, dither = 'pattern',
   fill = TRANSPARENT, cut = 'none', radius = CORNER_DEFAULT, sheet = null, maxFrames = MAX_FRAMES,
-  sound = false, adjust = null, seconds = 0,
+  sound = false, adjust = null, seconds = 0, censor = null, key = null,
 }) {
   const fmt = findVideoFormat(format)
   const w = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
@@ -759,6 +811,8 @@ export function videoToAnimationArgs({
   if (speed && speed !== 1) filters.push(`setpts=PTS/${speed}`)
   filters.push(`fps=${clampFps(fps)}`)
   const outside = resolveFill(fmt, fill)
+  // The censor box is in source pixels, so it runs before the crop moves them.
+  filters.push(...censorFilters(censor))
   if (crop) filters.push(`crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}`)
   filters.push(...padFilters(pad, outside))
   filters.push(...turnFilters(turn))
@@ -766,6 +820,9 @@ export function videoToAnimationArgs({
   if (flipV) filters.push('vflip')
   filters.push(scaleFilter(w))
   filters.push(...adjustFilters(adjust, { seconds, part: 'colour' }))
+  // After the colour filters (eq drops the alpha a key makes), before the cut-out.
+  const keyed = colourKeyFilters(key, outside)
+  filters.push(...keyed)
   const cutout = cutoutFilter(cut, { radius, ...outside })
   if (cutout) filters.push(cutout)
   const dir = directionFilter(direction)
@@ -776,7 +833,7 @@ export function videoToAnimationArgs({
   if (fmt.id === 'sprite' && sheet) filters.push('format=rgba', `tile=${sheet.cols}x${sheet.rows}:padding=0:margin=0:color=black@0`)
   // Transparency in a GIF is one palette slot, reserved only when something
   // in the picture is actually transparent.
-  const transparentGif = outside.transparent && (!!pad || cut !== 'none')
+  const transparentGif = outside.transparent && (!!pad || cut !== 'none' || keyed.length > 0)
   return [...args, ...encoderArgs(fmt, { quality, plays, filters, transparentGif, maxFrames, audio, gif: fmt.id === 'gif' ? { colours, dither } : null })]
 }
 

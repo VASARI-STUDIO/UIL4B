@@ -23,7 +23,7 @@ export const RAIL_GROUPS = [
 // just the trim and the speed.
 export function presentGroups({ hasDuration, audioOnly = false }) {
   if (audioOnly) return RAIL_GROUPS.filter(g => (g.id === 'clip' && hasDuration) || g.id === 'time')
-  const hasControls = { clip: !!hasDuration, crop: true, turn: true, time: true, look: true, add: false, size: true }
+  const hasControls = { clip: !!hasDuration, crop: true, turn: true, time: true, look: true, add: true, size: true }
   return RAIL_GROUPS.filter(g => hasControls[g.id])
 }
 
@@ -62,7 +62,7 @@ export function groupMarks(s) {
     turn: s.turn !== 0 || !!s.flipH || !!s.flipV,
     time: s.speed !== 1 || s.direction !== 'forward',
     look: adjustChanged(s.adjust),
-    add: false,
+    add: !!s.censor?.on || !!s.colourKey?.on,
     size: Object.keys(SIZE_DEFAULTS).some(k => s[k] !== SIZE_DEFAULTS[k]),
   }
 }

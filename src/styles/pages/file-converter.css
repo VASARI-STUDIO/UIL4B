@@ -811,6 +811,9 @@
 
 .fc .fc-crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 
+/* The censor box marks a patch, not what is kept, so it does not dim the rest of the picture. */
+.fc .fc-crop-box[data-tone="censor"] { outline-style: dashed; outline-width: 2px; box-shadow: none; }
+
 .fc .fc-crop-box[data-disabled] { cursor: not-allowed; }
 
 /* Four corner handles. Each is a 44 px hit area sitting inside its corner, so

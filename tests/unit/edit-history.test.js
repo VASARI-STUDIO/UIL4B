@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {
   EDIT_DEFAULTS, GESTURE_MS, HISTORY_DEPTH, canRedo, canUndo, changedEditNames, describeEdits, record, redo, startHistory, undo,
 } from '../../src/utils/editHistory.js'
-import { ADJUST_DEFAULTS, cropPlan, videoToAnimationArgs } from '../../src/utils/mediaEncode.js'
+import { ADJUST_DEFAULTS, CENSOR_DEFAULTS, KEY_DEFAULTS, cropPlan, videoToAnimationArgs } from '../../src/utils/mediaEncode.js'
 import { historyKey, isTyping } from '../../src/components/converter/useEditHistory.js'
 
 const base = () => ({ ...EDIT_DEFAULTS })
@@ -20,7 +20,7 @@ const argsFor = (r) => {
     format: 'gif', input: 'input.mp4', fps: 10, width: 480, plays: 0, quality: 'medium', start: 0, length: 0,
     crop: plan.crop, pad: plan.pad, turn: r.turn, flipH: r.flipH, flipV: r.flipV, speed: r.speed, direction: r.direction,
     colours: 256, dither: 'pattern', fill: 'transparent', cut: r.cut, radius: r.radius, sheet: null, maxFrames: 500,
-    adjust: r.adjust, seconds: 4,
+    adjust: r.adjust, seconds: 4, censor: r.censor, key: r.colourKey,
   })
 }
 
@@ -125,6 +125,29 @@ test('Adjust words name only the sliders that are off their default', () => {
   assert.deepEqual(changedEditNames(base(), { ...base(), adjust: { ...ADJUST_DEFAULTS, blur: 2 } }), ['adjust'])
   assert.deepEqual(argsFor({ ...base(), adjust: { ...ADJUST_DEFAULTS } }), argsFor(base()))
   assert.notDeepEqual(argsFor({ ...base(), adjust: { ...ADJUST_DEFAULTS, hue: 30 } }), argsFor(base()))
+})
+
+test('Censor: moving the box is one step, switching it on is another, and undo brings the old box back', () => {
+  const on = { ...CENSOR_DEFAULTS, on: true, box: { x: 10, y: 10, w: 100, h: 80 } }
+  let h = edit(startHistory(base()), { censor: on }, 0)
+  h = edit(h, { censor: { ...on, box: { x: 20, y: 10, w: 100, h: 80 } } }, 20_000)
+  h = edit(h, { censor: { ...on, box: { x: 30, y: 10, w: 100, h: 80 } } }, 20_000 + GESTURE_MS / 2)
+  assert.equal(h.past.length, 2)
+  assert.deepEqual(undo(h).present.censor, on)
+  assert.deepEqual(undo(undo(h)).present.censor, CENSOR_DEFAULTS)
+})
+
+test('Censor and colour key words, and what they change in the file', () => {
+  const on = { ...CENSOR_DEFAULTS, on: true, mode: 'blur', box: { x: 10, y: 10, w: 100, h: 80 } }
+  const key = { ...KEY_DEFAULTS, on: true, colour: '#00ff00' }
+  assert.deepEqual(describeEdits(base()), [])
+  assert.deepEqual(describeEdits({ ...base(), censor: on }), ['Censored a region (blur)'])
+  assert.deepEqual(describeEdits({ ...base(), colourKey: key }), ['Removed the colour #00ff00'])
+  assert.deepEqual(describeEdits({ ...base(), censor: { ...on, on: false } }), [])
+  assert.deepEqual(changedEditNames(base(), { ...base(), censor: on, colourKey: key }), ['censor', 'colour key'])
+  assert.deepEqual(argsFor(base()), argsFor({ ...base(), censor: CENSOR_DEFAULTS, colourKey: KEY_DEFAULTS }))
+  assert.notDeepEqual(argsFor({ ...base(), censor: on }), argsFor(base()))
+  assert.notDeepEqual(argsFor({ ...base(), colourKey: key }), argsFor(base()))
 })
 
 test('the names of what an undo changed', () => {

@@ -11,14 +11,14 @@
 // One history belongs to one file. A new file starts a new history
 // (`startHistory`), and the old steps are gone with the old file.
 import {
-  ADJUST_DEFAULTS, ADJUST_FIELDS, CORNER_DEFAULT, DIRECTIONS, FILL_DEFAULT, SPEEDS, TRANSPARENT, TURNS, clampAdjust,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, CENSOR_DEFAULTS, CENSOR_MODES, CORNER_DEFAULT, DIRECTIONS, FILL_DEFAULT, KEY_DEFAULTS, SPEEDS, TRANSPARENT, TURNS, clampAdjust,
 } from './mediaEncode.js'
 
 /** Steps kept. An edit is a few numbers, so this is about memory for the list only. */
 export const HISTORY_DEPTH = 100
 
 /** Dragging a crop box or a slider makes dozens of changes a second; these keys merge into one step. */
-const GESTURE_KEYS = ['box', 'adjust']
+const GESTURE_KEYS = ['box', 'adjust', 'censor']
 /** Changes to a gesture key closer together than this are one drag. */
 export const GESTURE_MS = 500
 
@@ -39,6 +39,8 @@ export const EDIT_DEFAULTS = Object.freeze({
   speed: 1,
   direction: 'forward',
   adjust: ADJUST_DEFAULTS,
+  censor: CENSOR_DEFAULTS,
+  colourKey: KEY_DEFAULTS,
 })
 
 export const EDIT_KEYS = Object.keys(EDIT_DEFAULTS)
@@ -172,6 +174,16 @@ const GROUPS = [
       const names = ADJUST_FIELDS.filter(f => v[f.id] !== 0).map(f => f.label.toLowerCase())
       return names.length ? `Adjusted ${names.join(', ')}` : null
     },
+  },
+  {
+    name: 'censor',
+    keys: ['censor'],
+    say: r => (r.censor?.on ? `Censored a region (${(CENSOR_MODES.find(o => o.id === r.censor.mode)?.label || r.censor.mode).toLowerCase()})` : null),
+  },
+  {
+    name: 'colour key',
+    keys: ['colourKey'],
+    say: r => (r.colourKey?.on ? `Removed the colour ${r.colourKey.colour}` : null),
   },
 ]
 

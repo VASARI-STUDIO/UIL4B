@@ -6,7 +6,7 @@ import {
   PHONE_SLOTS, RAIL_GROUPS, SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId, railTabId, splitRail,
 } from '../../src/components/converter/railGroups.js'
 import { EDIT_DEFAULTS } from '../../src/utils/editHistory.js'
-import { ADJUST_DEFAULTS } from '../../src/utils/mediaEncode.js'
+import { ADJUST_DEFAULTS, CENSOR_DEFAULTS, KEY_DEFAULTS } from '../../src/utils/mediaEncode.js'
 
 const ids = (list) => list.map(g => g.id)
 const fresh = () => ({ ...EDIT_DEFAULTS, ...SIZE_DEFAULTS })
@@ -16,22 +16,25 @@ test('the groups run in pipeline order: clip, crop, turn, time, look, add, size'
 })
 
 test('a group with no controls today is absent, not disabled', () => {
-  // Look holds the Adjust sliders; Add has no control yet.
-  assert.deepEqual(ids(presentGroups({ hasDuration: true })), ['clip', 'crop', 'turn', 'time', 'look', 'size'])
-  assert.ok(ids(presentGroups({ hasDuration: true })).includes('look'))
-  assert.ok(!ids(presentGroups({ hasDuration: true })).includes('add'))
+  // Look holds the Adjust sliders and Add holds Censor and Remove a colour, so every group has controls.
+  assert.deepEqual(ids(presentGroups({ hasDuration: true })), ['clip', 'crop', 'turn', 'time', 'look', 'add', 'size'])
+  assert.ok(ids(presentGroups({ hasDuration: true })).includes('add'))
+})
+
+test('a sound-only output keeps only Clip and Time, so it has no Add', () => {
+  assert.deepEqual(ids(presentGroups({ hasDuration: true, audioOnly: true })), ['clip', 'time'])
 })
 
 test('Clip needs a known length to trim, so it is absent without one', () => {
-  assert.deepEqual(ids(presentGroups({ hasDuration: false })), ['crop', 'turn', 'time', 'look', 'size'])
-  assert.deepEqual(ids(presentGroups({ hasDuration: 0 })), ['crop', 'turn', 'time', 'look', 'size'])
+  assert.deepEqual(ids(presentGroups({ hasDuration: false })), ['crop', 'turn', 'time', 'look', 'add', 'size'])
+  assert.deepEqual(ids(presentGroups({ hasDuration: 0 })), ['crop', 'turn', 'time', 'look', 'add', 'size'])
 })
 
 test('the phone row never holds more than five slots', () => {
   const all = presentGroups({ hasDuration: true })
   const { direct, more } = splitRail(all)
   assert.deepEqual(ids(direct), ['clip', 'crop', 'time', 'size'])
-  assert.deepEqual(ids(more), ['turn', 'look'])
+  assert.deepEqual(ids(more), ['turn', 'look', 'add'])
   assert.ok(direct.length + (more.length ? 1 : 0) <= PHONE_SLOTS)
 })
 
@@ -68,6 +71,8 @@ test('each edit marks its own group and no other', () => {
   only({ flipV: true }, 'turn')
   only({ adjust: { ...ADJUST_DEFAULTS, hue: 20 } }, 'look')
   only({ adjust: { ...ADJUST_DEFAULTS, fadeOut: 1.5 } }, 'look')
+  only({ censor: { ...CENSOR_DEFAULTS, on: true } }, 'add')
+  only({ colourKey: { ...KEY_DEFAULTS, on: true } }, 'add')
   only({ speed: 2 }, 'time')
   only({ direction: 'reverse' }, 'time')
   only({ fps: 15 }, 'size')
@@ -76,6 +81,14 @@ test('each edit marks its own group and no other', () => {
   only({ plays: 1 }, 'size')
   only({ colours: 64 }, 'size')
   only({ dither: 'none' }, 'size')
+})
+
+test('Add is marked only while Censor or Remove a colour is switched on', () => {
+  assert.equal(groupMarks(fresh()).add, false)
+  assert.equal(groupMarks({ ...fresh(), censor: { ...CENSOR_DEFAULTS, strength: 9 } }).add, false)
+  assert.equal(groupMarks({ ...fresh(), censor: undefined, colourKey: undefined }).add, false)
+  assert.equal(groupMarks({ ...fresh(), censor: { ...CENSOR_DEFAULTS, on: true } }).add, true)
+  assert.equal(groupMarks({ ...fresh(), colourKey: { ...KEY_DEFAULTS, on: true } }).add, true)
 })
 
 test('Look is marked only while a slider is off its default', () => {

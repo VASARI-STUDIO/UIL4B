@@ -34,11 +34,11 @@ import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from 
 import CropBox from '../components/converter/CropBox'
 import ResultPreview from '../components/converter/ResultPreview'
 import {
-  ADJUST_DEFAULTS, ADJUST_FIELDS, ANIMATION_FORMATS, AUDIO_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, ANIMATION_FORMATS, AUDIO_FORMATS, CENSOR_DEFAULTS, CENSOR_MODES, CENSOR_STRENGTH, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
   FPS_MAX, FPS_MIN, FRAME_EXPORTS, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
   MAX_ANIMATION_SIDE, MAX_FRAMES as ENGINE_MAX_FRAMES, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TRANSPARENT, TURNS,
   adjustChanged, adjustCss, animatedImageSeconds, clampAdjust, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
-  fileHasSound, outputFrames, outputSize, resolveFill, reverseFits, soundState, spriteFits, spriteLayout, splitPngStream,
+  KEY_DEFAULTS, KEY_TOLERANCE, fileHasSound, isHexColour, outputFrames, outputSize, resolveFill, reverseFits, soundState, spriteFits, spriteLayout, splitPngStream,
   VIDEO_FILE_FORMATS, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
@@ -808,7 +808,13 @@ function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, fact
           ) : (
             <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} onError={onError} />
           )}
-          {editor.box && size ? (
+          {editor.censor && size && (
+            <CropBox
+              box={editor.censor.box} size={size} onChange={editor.censor.onBox} disabled={editor.disabled}
+              ariaLabel="Censor box. Arrow keys move it, Alt with the arrow keys resizes it." tone="censor"
+            />
+          )}
+          {!editor.censor && editor.box && size ? (
             <CropBox box={editor.box} size={size} onChange={editor.onBox} disabled={editor.disabled} />
           ) : crop && size && (
             <div
@@ -964,6 +970,8 @@ function VideoConvert({ toast }) {
   const [speed, setSpeed] = useState(1)
   const [direction, setDirection] = useState('forward')
   const [adjust, setAdjust] = useState(ADJUST_DEFAULTS) // the Look group: colour, hue, blur, fades
+  const [censor, setCensor] = useState(CENSOR_DEFAULTS) // the Add group: one region pixelated or blurred
+  const [colourKey, setColourKey] = useState(KEY_DEFAULTS) // the Add group: one colour made clear
   const [sound, setSound] = useState(true) // keep the clip's sound where the format can hold it
   const [soundProbe, setSoundProbe] = useState({ file: null, has: null }) // what the file's header says about sound
   const [colours, setColours] = useState(SIZE_DEFAULTS.colours)
@@ -982,8 +990,8 @@ function VideoConvert({ toast }) {
   // The edits as one value, for Undo and Redo. The controls above stay plain
   // state; stepping back writes an earlier recipe into them all at once.
   const recipe = useMemo(
-    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust }),
-    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust],
+    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust, censor, colourKey }),
+    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust, censor, colourKey],
   )
   const history = useEditHistory(recipe, (r) => {
     setTrimStart(r.trimStart)
@@ -1002,6 +1010,8 @@ function VideoConvert({ toast }) {
     setSpeed(r.speed)
     setDirection(r.direction)
     setAdjust(r.adjust)
+    setCensor(r.censor)
+    setColourKey(r.colourKey)
   }, !!srcUrl && !job)
   const resetEdits = history.reset
   const videoRef = useRef(null)
@@ -1094,7 +1104,9 @@ function VideoConvert({ toast }) {
     setFit('crop')
     setView('before')
     // The edits above are the new file's starting point, not steps to undo.
-    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop' })
+    // The censor box is in this file's pixels, so it does not carry over.
+    setCensor(CENSOR_DEFAULTS)
+    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop', censor: CENSOR_DEFAULTS })
   }, [srcUrl, result, toast, resetEdits])
 
   // Picking Custom starts a box a tenth in from every edge, so there is
@@ -1121,7 +1133,19 @@ function VideoConvert({ toast }) {
   const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop: plan.frame, turn, width }) : null
   // Transparent only where the format can hold it; MP4 gets the colour.
   const outside = resolveFill(fmt, fill === TRANSPARENT && fmt.alpha ? TRANSPARENT : fillColour)
-  const outsideShown = !!pad || cut !== 'none'
+  // Censor and colour key apply to the picture, so a sound-only output has neither. The censor
+  // box is held to the picture here, so a stale box can never reach the encoder.
+  const censorOn = censor.on
+  const censorMode = censor.mode
+  const censorStrength = censor.strength
+  const censorBox = censor.box
+  const soundOnlyOut = fmt.kind === 'audio'
+  const cen = useMemo(() => {
+    const held = !soundOnlyOut && censorOn && censorBox && srcSize ? clampBox(censorBox, srcSize.w, srcSize.h) : null
+    return held ? { on: true, mode: censorMode, strength: censorStrength, box: held } : null
+  }, [soundOnlyOut, censorOn, censorMode, censorStrength, censorBox, srcSize])
+  const keyOn = !soundOnlyOut && colourKey.on && isHexColour(colourKey.colour) ? colourKey : null
+  const outsideShown = !!pad || cut !== 'none' || !!keyOn
   const unreadable = srcFailed && !srcSize
   // The length Reverse is measured against: the clip for a video, the header's
   // sum of frame delays for a GIF or WebP. 0 means it is not known.
@@ -1155,6 +1179,13 @@ function VideoConvert({ toast }) {
   // The Look group's values, or null while they are all untouched (then no filter is built).
   const adj = !isAudio && adjustChanged(adjust) ? clampAdjust(adjust) : null
   const setAdj = (id, value) => setAdjust(a => ({ ...a, [id]: value }))
+  // Turning Censor on gives it a box to drag, a third of the picture in the middle.
+  const toggleCensor = () => setCensor(c => {
+    if (c.on) return { ...c, on: false }
+    const s = srcSize
+    const box = c.box || (s ? clampBox({ x: s.w / 3, y: s.h / 3, w: s.w / 3, h: s.h / 3 }, s.w, s.h) : null)
+    return { ...c, on: true, box }
+  })
   // The sheet's grid, from how many frames the edits make (the engine writes at
   // most ENGINE_MAX_FRAMES). Not known while the clip's length is not.
   const sheet = isSprite && frames > 0 && outSize ? spriteLayout(Math.min(frames, ENGINE_MAX_FRAMES), outSize.w, outSize.h) : null
@@ -1165,7 +1196,7 @@ function VideoConvert({ toast }) {
   const sig = JSON.stringify([
     format, fps, width, isGif || isFrameExport ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir,
     isGif ? colours : 0, isGif ? dither : 0, shape === 'custom' ? box : 0, shape === 'original' ? 0 : fit, cut, cut === 'rounded' ? radius : 0, outsideShown ? outside : 0,
-    soundOn, adj,
+    soundOn, adj, cen, keyOn,
   ])
 
   const convert = useCallback(async () => {
@@ -1217,7 +1248,7 @@ function VideoConvert({ toast }) {
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
-          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn, adjust: adj, seconds: outSeconds,
+          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn, adjust: adj, seconds: outSeconds, censor: cen, key: keyOn,
           fill: outside.transparent ? TRANSPARENT : outside.colour, cut, radius, sheet, maxFrames: ENGINE_MAX_FRAMES,
         }),
         output: `output.${target.engineExt || target.ext}`,
@@ -1253,7 +1284,7 @@ function VideoConvert({ toast }) {
           ? UNREADABLE_VIDEO_NOTE
           : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, adj, outSeconds, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, adj, outSeconds, cen, keyOn, toast])
 
   const cancel = () => {
     runRef.current++
@@ -1336,7 +1367,7 @@ function VideoConvert({ toast }) {
   const groups = presentGroups({ hasDuration: duration > 0, audioOnly: isAudio })
   const openGroup = activeOf(groups, group)?.id
   const marks = groupMarks({
-    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction, adjust,
+    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction, adjust, censor, colourKey,
     fps, width, quality, plays, colours, dither,
   })
   const panel = (id, body) => (
@@ -1422,6 +1453,10 @@ function VideoConvert({ toast }) {
                 crop,
                 box: shape === 'custom' && !isAudio ? box : null,
                 onBox: setBox,
+                // The censor box is drawn only while the Add group is open, in place of the crop box.
+                censor: openGroup === 'add' && !isAudio && !isImage && censor.on && censor.box
+                  ? { box: censor.box, onBox: b => setCensor(c => ({ ...c, box: b })) }
+                  : null,
                 disabled: working,
                 hidden: previewReady,
                 onImageLoad: (w, h) => { if (w > 0 && h > 0) setSrcSize({ w, h }) },
@@ -1605,7 +1640,7 @@ function VideoConvert({ toast }) {
                         value={fillColour} onChange={setFillColour} disabled={working}
                         ariaLabel="Outside colour" triggerClassName="fc-bg-pick"
                       />
-                      <p className="fc-note">{pad ? 'Colour of the bars' : 'Colour outside the cut-out'}</p>
+                      <p className="fc-note">{pad ? 'Colour of the bars' : cut !== 'none' ? 'Colour outside the cut-out' : 'Colour shown where the removed colour was'}</p>
                     </div>
                   )}
                   {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency, so the outside is filled with a colour.</p>}
@@ -1651,6 +1686,67 @@ function VideoConvert({ toast }) {
                 {clampAdjust(adjust).fadeOut > 0 && !(outSeconds > 0) ? ' Fade out needs this file’s length, which it does not give, so it is left out.' : ''}
               </p>
             </div>
+            ))}
+            {panel('add', (
+            <>
+            <div className="fc-insp-sec">
+              <button
+                type="button" id="fc-vid-censor" className="fc-btn fc-toggle" aria-pressed={censor.on}
+                disabled={working || !srcSize || isImage} onClick={toggleCensor}
+              >
+                Censor a region
+              </button>
+              {censor.on && (
+                <>
+                  <Segmented id="fc-vid-censor-mode" label="Style" options={CENSOR_MODES} value={censor.mode} onChange={id => setCensor(c => ({ ...c, mode: id }))} disabled={working} />
+                  <label className="fc-eyebrow" htmlFor="fc-vid-censor-strength">Strength</label>
+                  <input
+                    id="fc-vid-censor-strength" type="range" className="fc-scrub fc-adj-range"
+                    min={CENSOR_STRENGTH.min} max={CENSOR_STRENGTH.max} step={1} value={censor.strength} disabled={working}
+                    onChange={e => setCensor(c => ({ ...c, strength: Number(e.target.value) }))}
+                  />
+                </>
+              )}
+              <p className="fc-note">
+                {isImage ? 'Censor works on video files, not on an animated image.'
+                  : censor.on ? 'Drag the box on the preview, or move it with the arrow keys. It shows in the saved file, not the preview.'
+                    : 'Pixelate or blur one rectangle of every frame, such as a face or a plate.'}
+              </p>
+            </div>
+            <div className="fc-insp-sec">
+              <button
+                type="button" id="fc-vid-key" className="fc-btn fc-toggle" aria-pressed={colourKey.on}
+                disabled={working || isAudio} onClick={() => setColourKey(k => ({ ...k, on: !k.on }))}
+              >
+                Remove a colour
+              </button>
+              {colourKey.on && (
+                <>
+                  <div className="fc-row">
+                    <ColorPickerPop
+                      value={colourKey.colour} onChange={c => setColourKey(k => ({ ...k, colour: c }))} disabled={working}
+                      ariaLabel="Colour to remove" triggerClassName="fc-bg-pick"
+                    />
+                    <p className="fc-note">The colour made clear, such as a green screen</p>
+                  </div>
+                  <div className="fc-adj-head">
+                    <label className="fc-eyebrow" htmlFor="fc-vid-key-tol">Tolerance</label>
+                    <output className="fc-adj-val" htmlFor="fc-vid-key-tol">{colourKey.tolerance}%</output>
+                  </div>
+                  <input
+                    id="fc-vid-key-tol" type="range" className="fc-scrub fc-adj-range"
+                    min={KEY_TOLERANCE.min} max={KEY_TOLERANCE.max} step={1} value={colourKey.tolerance} disabled={working}
+                    onChange={e => setColourKey(k => ({ ...k, tolerance: Number(e.target.value) }))}
+                  />
+                </>
+              )}
+              <p className="fc-note">
+                {colourKey.on
+                  ? (outside.transparent ? 'The colour becomes clear in the saved file.' : `${fmt.label} has no transparency, so the colour is replaced by the Outside colour (set it in Crop).`)
+                  : 'Make one colour see-through, or replace it with the Outside colour where the format cannot be clear.'}
+              </p>
+            </div>
+            </>
             ))}
             {panel('time', (
             <div className="fc-insp-sec">

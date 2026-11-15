@@ -20,6 +20,7 @@ import {
   loopSeconds, previewSourceTime, spriteLayout, splitPngStream, findVideoFormat, TRANSPARENT,
   dragBox, spriteFits, VIDEO_FORMATS, atempoFilter, soundState, soundInHeader,
   ADJUST_DEFAULTS, ADJUST_FIELDS, adjustFilters, adjustCss, adjustChanged, clampAdjust,
+  CENSOR_DEFAULTS, KEY_DEFAULTS, censorFilters, colourKeyFilters,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -709,4 +710,75 @@ test('adjust: the preview CSS carries colour, hue and blur but never the fades',
   assert.equal(adjustCss(adj({ hue: 90 })), 'hue-rotate(90deg)')
   assert.equal(adjustCss(adj({ blur: 10 }), { scale: 0.5 }), 'blur(5px)')
   assert.equal(adjustCss(adj({ fadeIn: 2, fadeOut: 2 })), '')
+})
+
+// ── Censor and colour key (the Add group) ────────────────────────────────────
+const cen = (o) => ({ ...CENSOR_DEFAULTS, on: true, box: { x: 20, y: 10, w: 80, h: 60 }, ...o })
+const key = (o) => ({ ...KEY_DEFAULTS, on: true, ...o })
+const argsWith = (o) => videoToAnimationArgs({ format: 'gif', input: 'in.mp4', fps: 10, width: 200, ...o })
+const vf = (a) => a[a.indexOf('-vf') + 1]
+
+test('censor: off, boxless or null builds nothing, and the args stay byte-identical', () => {
+  assert.deepEqual(censorFilters(null), [])
+  assert.deepEqual(censorFilters(CENSOR_DEFAULTS), [])
+  assert.deepEqual(censorFilters({ ...CENSOR_DEFAULTS, on: true }), [])
+  assert.deepEqual(argsWith({ censor: CENSOR_DEFAULTS, key: KEY_DEFAULTS }), argsWith({}))
+})
+
+test('censor: pixelate crops the box, shrinks it by the strength and scales it back with square blocks', () => {
+  const [g] = censorFilters(cen({ strength: 5 }))
+  assert.equal(g, 'split[ca][cb];[ca]crop=80:60:20:10,scale=4:3:flags=neighbor,scale=80:60:flags=neighbor[cc];[cb][cc]overlay=20:10')
+  // A stronger setting makes bigger blocks, so fewer of them, and never fewer than one.
+  assert.match(censorFilters(cen({ strength: 10 }))[0], /scale=2:1:flags=neighbor/)
+  assert.match(censorFilters(cen({ box: { x: 0, y: 0, w: 4, h: 4 }, strength: 10 }))[0], /scale=1:1:flags=neighbor/)
+})
+
+test('censor: blur gives the box a gaussian blur, and a wild strength is held to 1 to 10', () => {
+  assert.match(censorFilters(cen({ mode: 'blur', strength: 4 }))[0], /\[ca\]crop=80:60:20:10,gblur=sigma=12\[cc\]/)
+  assert.match(censorFilters(cen({ mode: 'blur', strength: 99 }))[0], /gblur=sigma=30/)
+  assert.match(censorFilters(cen({ mode: 'blur', strength: -5 }))[0], /gblur=sigma=3\[/)
+})
+
+test('censor: it runs after fps and before the crop, in source pixels', () => {
+  const f = vf(argsWith({ censor: cen(), crop: { x: 5, y: 5, w: 100, h: 90 } })).split(',')
+  const at = (s) => f.findIndex(p => p.startsWith(s))
+  assert.ok(at('fps=') < at('split[ca][cb]'))
+  assert.ok(at('split[ca][cb]') < f.findIndex(p => p.startsWith('crop=100:90')))
+})
+
+test('censor: the graph keeps its own labels, clear of the GIF palette ones', () => {
+  const v = vf(argsWith({ censor: cen() }))
+  assert.match(v, /split\[s0\]\[s1\];\[s0\]palettegen/)
+  assert.doesNotMatch(censorFilters(cen())[0], /s0|s1|\[p\]/)
+})
+
+test('colour key: tolerance 0 to 100 maps to a similarity of 0.01 to 0.5', () => {
+  assert.deepEqual(colourKeyFilters(null), [])
+  assert.deepEqual(colourKeyFilters(KEY_DEFAULTS), [])
+  assert.deepEqual(colourKeyFilters(key({ colour: 'green' })), [])
+  assert.deepEqual(colourKeyFilters(key({ colour: '#00FF00', tolerance: 20 })), ['format=rgba,colorkey=0x00ff00:0.1:0.1'])
+  assert.deepEqual(colourKeyFilters(key({ tolerance: 0 })), ['format=rgba,colorkey=0x00ff00:0.01:0.1'])
+  assert.deepEqual(colourKeyFilters(key({ tolerance: 500 })), ['format=rgba,colorkey=0x00ff00:0.5:0.1'])
+})
+
+test('colour key: where the format has no alpha the Outside colour is laid under the keyed picture', () => {
+  const [g] = colourKeyFilters(key(), { transparent: false, colour: '#ff0000' })
+  assert.match(g, /^format=rgba,colorkey=0x00ff00:0\.1:0\.1,split\[ka\]\[kb\];\[kb\]drawbox=x=0:y=0:w=iw:h=ih:c=0xff0000:t=fill\[kc\];\[kc\]\[ka\]overlay$/)
+  const mp4 = vf(videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 200, key: key(), fill: '#ff0000' }))
+  assert.match(mp4, /drawbox=.*c=0xff0000/)
+  const webm = vf(videoToAnimationArgs({ format: 'webm', input: 'in.mp4', fps: 10, width: 200, key: key() }))
+  assert.match(webm, /colorkey=/)
+  assert.doesNotMatch(webm, /drawbox/)
+})
+
+test('colour key: it runs after the colour adjustments and before the cut-out, and a keyed GIF reserves a transparent slot', () => {
+  const a = argsWith({ key: key(), adjust: { ...ADJUST_DEFAULTS, hue: 30 }, cut: 'circle' })
+  const v = vf(a)
+  assert.ok(v.indexOf('hue=h=30') < v.indexOf('colorkey='))
+  assert.ok(v.indexOf('colorkey=') < v.indexOf('geq='))
+  const gifKeyed = argsWith({ key: key() }).join(' ')
+  const gifPlain = argsWith({}).join(' ')
+  assert.notEqual(gifKeyed, gifPlain)
+  assert.match(gifKeyed, /reserve_transparent=1|transparency_index|alpha_threshold/)
+  assert.doesNotMatch(gifPlain, /reserve_transparent=1|alpha_threshold/)
 })
