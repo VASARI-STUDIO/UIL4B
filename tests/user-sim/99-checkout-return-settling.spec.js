@@ -125,8 +125,7 @@ test.describe('a free trial says when it ends', () => {
 
     await expect(heading(page)).toHaveText('You’re on UI L4B Pro')
     await expect(statusLine(page)).toContainText('Your free trial runs until')
-    await expect(statusLine(page)).toContainText('March')
-    await expect(statusLine(page)).toContainText('2031')
+    await expect(statusLine(page)).toContainText('15 March 2031')
     await expect(statusLine(page)).toContainText('you won’t be charged before then')
   })
 
