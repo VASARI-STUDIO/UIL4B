@@ -95,6 +95,15 @@ function pagesDoc(E, T, ctx, kind, standalone) {
   return E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
 }
 
+// The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
+// A site that cannot be laid out for this brand gives null, and the caller serves the stacked document instead.
+async function premiumSite(kind, ctx, T) {
+  try {
+    return kind === 'kit' ? (await import('./exportThemes/engine/kit-site-build.js')).kitSiteFiles(ctx, T)
+      : (await import('./exportThemes/engine/guide-site-build.js')).guideSiteFiles(ctx, T)
+  } catch (err) { console.warn(`[export] ${kind} site not built (${err?.name || 'Error'}); serving the single document`); return null }
+}
+
 // A file map as a zip with one top folder.
 const zipOf = (E, files, top) => E.zipFiles(files, top)
 
@@ -121,13 +130,15 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   const T = await THEMES[theme]()
   if (row === 'ui-kit') {
     const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, brand)
-    const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }
+    const site = T.kitSite ? await premiumSite('kit', ctx, T) : null
+    const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), ...(site || { 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }) }
     return { name: `${slug}-ui-kit-${theme}.zip`, zip: await zipOf(E, files, `${slug}-ui-kit-${theme}`) }
   }
   if (row === 'slides') {
     const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand)
     if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, ctx, 'guidelines', true)) }
-    const files = { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
+    const site = T.guideSite ? await premiumSite('guide', ctx, T) : null
+    const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
     return { name: `${slug}-brand-guidelines-${theme}.zip`, zip: await zipOf(E, files, `${slug}-brand-guidelines-${theme}`) }
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
