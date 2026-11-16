@@ -356,6 +356,8 @@
     background: var(--v3-ground); border-top: 1px solid var(--v3-hair);
   }
   html.has-tabbar .cm-bar { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: 12px; }
+  /* Lift toasts above the docked action bar (12 + 52 + 12 + 1px rule) so Dismiss stays reachable. */
+  html:has(.cm-bar) { --toast-dock: 77px; }
   .cm-bar .cm-btn { flex: 1 1 auto; height: 52px; font-size: 16px; }
   .cm-bar-more {
     flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
