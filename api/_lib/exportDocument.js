@@ -46,6 +46,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { planForUser } from './plans.js'
+import { assertThemeAccess } from './themeAccess.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { defaultTemplate, isTemplate } from '../../src/config/exportTemplates.js'
 import { safeFamily, safeWeight } from '../../src/utils/styleGuideExport.js'
@@ -224,8 +225,9 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
   } catch {
     return res.status(500).json({ error: 'Could not check your plan' })
   }
-  if (plan.id !== 'pro') {
-    return res.status(403).json({ error: 'Pro plan required', code: 'pro_required', format: format.id })
+  const access = assertThemeAccess(plan, { format: format.id })
+  if (!access.ok) {
+    return res.status(access.status).json({ error: 'Pro plan required', code: 'pro_required', format: format.id })
   }
 
   // The plan has passed; only now is the request body read for its content,
