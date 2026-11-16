@@ -557,6 +557,6 @@ for (const [route, chunk, where] of [
     await expect(page).toHaveURL((url) => url.pathname === '/feedback' && url.search === `?type=bug&page=${encodeURIComponent(route)}`)
     // Bug is preselected: the person should not have to say what kind of
     // report a crash is.
-    await expect(page.locator('.fb-page [role="radio"][aria-checked="true"]')).toHaveText('Bug report')
+    await expect(page.locator('.fb-page [role="radio"][aria-checked="true"]')).toContainText('Bug report')
   })
 }

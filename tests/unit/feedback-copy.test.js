@@ -78,7 +78,7 @@ test('the feedback page takes its heading, intro and placeholder from the chosen
   assert.ok(!form.includes("t('feedback.messagePlaceholder')"), 'the placeholder is the feedback one again, whatever the type')
   // The type a link names with `?type=` is read once, for the first render.
   assert.match(form, /TYPES\.some\(\(x\) => x\.id === params\.get\('type'\)\)/)
-  assert.ok(form.includes("{ id: 'help', labelKey: 'feedback.helpRequest' }"))
+  assert.match(form, /\{ id: 'help', labelKey: 'feedback\.helpRequest'/)
 })
 
 test('/contact redirects to the form on Help request, at the edge and in the client', () => {

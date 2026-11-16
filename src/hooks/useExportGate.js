@@ -1,6 +1,11 @@
 import { useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import { holdOnboardingForExport } from '../utils/exportHold'
+
+// After a sign-in at this gate the caller saves its file in the same task;
+// onboarding waits this long so the download starts first.
+export const GATE_SETTLE_MS = 1500
 
 // COPYING A VALUE IS FREE FOREVER. TAKING A FILE AWAY NEEDS AN ACCOUNT.
 //
@@ -77,7 +82,10 @@ export default function useExportGate() {
     // Nobody is stranded either way — the dialog's own toggle reads "Already
     // have an account? Sign in" in this mode, and Continue with Google is the
     // primary action and identical in both.
+    const release = holdOnboardingForExport()
     const signedIn = await requireLogin(reason, { free: true, signup: true })
+    if (signedIn) setTimeout(release, GATE_SETTLE_MS)
+    else release()
     return !!signedIn
   }, [user, requireLogin])
 }

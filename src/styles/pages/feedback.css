@@ -1,237 +1,437 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   FEEDBACK — /feedback, on the app file's form language.
+   FEEDBACK — /feedback, on the V3 roles.
    ═══════════════════════════════════════════════════════════════════════════
 
-   Every selector is scoped under `.fb-page`, the page root, so it carries one
-   class more than the base rules it restates (`.card`, `.pt-t`, `.seg-label`
-   in global.css; `.fb-*` in account.css). Importing this sheet last does NOT
-   make it win — Vite orders a lazy chunk's CSS by the dependency graph — so
-   the extra class is what settles the cascade, by construction.
+   Two columns at desktop width: the type choice on the left, the form in a
+   raised panel on the right. Once a message has gone up, the left column holds
+   a receipt of what was sent and the panel holds the sent or failed content.
+   One column below 900px, with a sticky Send bar on a phone.
 
-   Source for the values: `UIL4B App.dc.html`. Its app-page h1 is
-   clamp(26px,3.6vw,40px) at 600 and -.035em; its panels are 18px radius over a
-   hairline with no lift; its fields, segmented choices and buttons are 12px
-   rectangles. The FeedbackModal (the dialog version of this form) is styled in
-   global.css and is not touched here.
+   Every colour is a V3 role (--v3-*, --danger), so the light and dark themes
+   come from them. Every selector sits under `.fb-page`; the modal version of
+   this form owns the bare `.fb-*` names in global.css, and the old account
+   sheet still defines `.fb-done`, `.fb-form` and `.fb-submit`, so the rules
+   here state every property they rely on instead of trusting the cascade.
+   Focus is a 2px ink outline and nothing else (see the one-indicator rule in
+   global.css). No gradient, no glow, no `transition: all`.                    */
 
-   Accent: the derived family only. The chosen type's label sits on the 8%
-   accent wash over the white card, so it reads --accent-text, 5.52:1 light and
-   7.90:1 dark; its border is --accent-mid, 5.55:1 against the card, so the
-   chosen state does not rest on the wash alone.                                */
-
-.fb-page .sec-h {
-  margin-bottom: clamp(24px, 3vw, 32px);
+/* The page's own gutter and top space. `.fb-page` is the only child of the app
+   page, so the app page widens to the gutter here and nowhere else. */
+.app-page:has(> .fb-page) {
+  --fb-gut: clamp(20px, 4vw, 52px);
+  max-width: none;
+  padding-inline: max(var(--fb-gut), env(safe-area-inset-left, 0px)) max(var(--fb-gut), env(safe-area-inset-right, 0px));
+  padding-top: calc(var(--chrome-h) + clamp(32px, 5vw, 56px));
 }
-.fb-page .sec-h h1 {
-  margin: 0 0 10px;
-  padding: 0;
-  font-family: var(--display);
-  font-size: clamp(26px, 3.6vw, 40px);
+
+.fb-page {
+  width: 100%;
+  max-width: 1064px;
+  color: var(--v3-ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.fb-page *,
+.fb-page *::before,
+.fb-page *::after { box-sizing: border-box; }
+.fb-page :where(p, h1, h2) { margin: 0; padding: 0; }
+.fb-page :where(button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: inherit; -webkit-tap-highlight-color: transparent; }
+.fb-page :where(a) { color: inherit; text-decoration: none; }
+.fb-page :is(a, button):focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.fb-page .fb-top h1 {
+  max-width: 30ch;
+  font-family: var(--font);
+  font-size: 64px;
   font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -.015em;
-  color: var(--t0);
+  line-height: 1;
+  letter-spacing: -.04em;
+  color: var(--v3-ink);
   text-wrap: balance;
 }
-.fb-page .sec-h p {
-  max-width: 56ch;
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--t1);
+.fb-page .fb-lead {
+  max-width: 52ch;
+  margin-top: 16px;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--v3-sec);
   text-wrap: pretty;
 }
+.fb-page .fb-fix { margin-top: 16px; }
 
-/* The card link under the heading, set apart from the subtitle. */
-.fb-page .sec-h .fb-fix { margin-top: 12px; }
-
-/* The panel. */
-.fb-page .fb-card {
-  max-width: 600px;
-  padding: clamp(20px, 4vw, 28px);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow: none;
+/* ── Columns ─────────────────────────────────────────────────────────────── */
+.fb-page .fb-cols {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 640px);
+  column-gap: 64px;
+  align-items: start;
+  margin-top: 48px;
 }
+.fb-page .fb-left { min-width: 0; }
 
-.fb-page .fb-form { gap: 20px; }
-
-/* Field labels. The global .seg-label is an 8.5px uppercase caption built for
-   toolbars; a form label is read before the field, so it is the same 12.5px
-   label the sign-in form uses. */
-.fb-page .seg-label {
+/* Field labels. */
+.fb-page .fb-label {
   display: block;
-  margin: 0 0 7px;
-  font-size: 12.5px;
-  font-weight: 560;
+  margin: 0 0 8px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--t1);
+  color: var(--v3-sec);
 }
 
-/* The type choice: a radiogroup drawn as the app file's segmented buttons. */
-.fb-page .fb-types { gap: 6px; }
-.fb-page .pt-t {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--btn-radius);
-  background: var(--card);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--t1);
-  transition: background var(--dur-1) var(--ease-standard),
-              border-color var(--dur-1) var(--ease-standard),
-              color var(--dur-1) var(--ease-standard);
+/* ── The type choice: a radiogroup of four rows ──────────────────────────── */
+.fb-page .fb-radios { display: block; }
+.fb-page .fb-ty {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 0;
+  border-radius: 8px;
+  text-align: left;
+  transition: transform 140ms var(--v3-ease);
 }
-.fb-page .pt-t:hover { background: var(--bg-2); border-color: var(--bh); color: var(--t0); }
-.fb-page .pt-t.on,
-.fb-page .pt-t[aria-checked="true"] {
-  background: var(--accent-wash);
-  border-color: var(--accent-mid);
-  color: var(--accent-text);
-  font-weight: 560;
+.fb-page .fb-ty + .fb-ty { border-top: 1px solid var(--v3-hair); border-top-left-radius: 0; border-top-right-radius: 0; }
+.fb-page .fb-ty:active { transform: scale(.97); }
+.fb-page .fb-rg {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 2px solid var(--v3-t56);
+  border-radius: 999px;
+  transition: border-color 150ms linear, background-color 150ms linear;
+}
+.fb-page .fb-ty[aria-checked="true"] .fb-rg { border-color: var(--v3-ink); background: var(--v3-ink); }
+.fb-page .fb-ty[aria-checked="true"] .fb-rg::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: var(--v3-ground);
+}
+@media (hover: hover) {
+  .fb-page .fb-ty[aria-checked="false"]:hover .fb-rg { border-color: var(--v3-ink); }
+}
+.fb-page .fb-ty-text { display: block; flex: 1 1 auto; min-width: 0; }
+.fb-page .fb-tl {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--v3-ink);
+}
+.fb-page .fb-td {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--v3-t56);
+}
+
+/* The return address, under the list. Specificity matches `.fb-form .fb-hint`
+   in global.css, which the extra class here outranks. */
+.fb-page .fb-left .fb-sending-as {
+  margin: 24px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--v3-sec);
+}
+.fb-page .fb-acct {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--v3-ink);
+  overflow-wrap: anywhere;
+}
+
+/* ── The receipt ─────────────────────────────────────────────────────────── */
+.fb-page .fb-receipt { animation: fb-fade 240ms ease-out both; }
+.fb-page .fb-ln { animation: fb-rise 240ms var(--v3-ease) both; overflow-wrap: anywhere; }
+.fb-page .fb-ln:nth-child(2) { animation-delay: 60ms; }
+.fb-page .fb-ln:nth-child(3) { animation-delay: 120ms; }
+.fb-page .fb-ln:nth-child(4) { animation-delay: 180ms; }
+.fb-page .fb-rc-l { font-size: 14px; font-weight: 600; line-height: 20px; color: var(--v3-sec); }
+.fb-page .fb-rc-t { margin-top: 12px; font-size: 18px; font-weight: 600; line-height: 1.3; color: var(--v3-ink); }
+.fb-page .fb-rc-s { margin-top: 6px; font-size: 15px; line-height: 1.5; color: var(--v3-ink); }
+.fb-page .fb-rc-m {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--v3-sec);
+  white-space: pre-line;
+}
+
+/* ── The panel and its form ──────────────────────────────────────────────── */
+.fb-page .fb-panel {
+  min-width: 0;
+  min-height: 496px;
+  padding: 32px;
+  background: var(--v3-raised);
+  border-radius: 16px;
+}
+.fb-page .fb-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .fb-page .fb-input,
 .fb-page .fb-textarea {
-  border-radius: var(--radius);
+  display: block;
+  width: 100%;
+  margin: 0;
+  background: var(--v3-l2);
+  border: 0 solid transparent;
+  border-radius: 12px;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--v3-ink);
+  box-shadow: none;
+}
+.fb-page .fb-input { height: 44px; padding: 0 14px; line-height: 1.4; }
+.fb-page .fb-textarea { min-height: 240px; padding: 14px; line-height: 1.55; resize: vertical; }
+.fb-page .fb-input::placeholder,
+.fb-page .fb-textarea::placeholder { color: var(--v3-t56); opacity: 1; }
+/* One indicator: the outline. The border and shadow stay as they were. */
+.fb-page .fb-input:focus-visible,
+.fb-page .fb-textarea:focus-visible {
+  outline: 2px solid var(--v3-ink);
+  outline-offset: 2px;
+  border-color: transparent;
+  box-shadow: none;
+}
+.fb-page .fb-input[aria-invalid="true"]:not(:focus-visible),
+.fb-page .fb-textarea[aria-invalid="true"]:not(:focus-visible) { box-shadow: inset 0 0 0 1px var(--danger); }
+
+/* Helper, error and offline lines. `.fb-panel` in the selector outranks the
+   global `.fb-form .fb-error` and `.fb-form .fb-hint`. */
+.fb-page .fb-panel .fb-hint {
+  margin: 8px 0 0;
   font-size: 14px;
+  line-height: 1.5;
+  color: var(--v3-t56);
 }
-.fb-page .fb-textarea { min-height: 132px; line-height: 1.55; }
+.fb-page .fb-panel .fb-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--danger);
+}
+.fb-page .fb-error svg,
+.fb-page .fb-offline svg { flex: none; margin-top: 2px; }
+.fb-page .fb-panel .fb-offline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--v3-sec);
+}
 
-.fb-page .fb-submit {
-  min-height: 44px;
-  padding: 0 22px;
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.fb-page .fb-fill {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v3-ink);
+  color: var(--v3-on-ink);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 150ms linear, transform 140ms var(--v3-ease);
 }
+@media (hover: hover) {
+  .fb-page .fb-fill:not(:disabled):hover { background: var(--v3-ink-hover); }
+}
+.fb-page .fb-fill:not(:disabled):active { transform: scale(.97); }
+.fb-page .fb-fill:disabled { opacity: .4; cursor: not-allowed; }
+.fb-page .fb-send { display: block; }
+.fb-page .fb-submit { align-self: flex-start; }
 
-/* The confirmation. */
-.fb-page .fb-done { padding: clamp(24px, 5vw, 40px) 8px; }
-.fb-page .fb-done-mark { border-radius: var(--radius); }
+/* The outline pill: the shared pill, restated on the V3 ring. The global chroma
+   ring on `.ui-pill-out` still draws on hover and focus. */
+.fb-page .fb-out,
+.fb-page .fb-out:hover {
+  height: 36px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--v3-ring);
+  border-radius: 999px;
+  color: var(--v3-ink);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+}
+.fb-page .fb-out-lg,
+.fb-page .fb-out-lg:hover { height: 44px; padding: 0 20px; font-size: 15px; }
+.fb-page .fb-out:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Sent and failed ─────────────────────────────────────────────────────── */
+.fb-page .fb-done {
+  padding: 0;
+  text-align: left;
+  transform-origin: top left;
+  animation: fb-pop 240ms var(--v3-ease) both;
+}
+.fb-page .fb-done-mark {
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--v3-ink);
+}
+.fb-page .fb-done-mark svg { display: block; }
 .fb-page .fb-done-title {
-  margin: 0 0 6px;
-  font-size: 19px;
+  margin: 16px 0 0;
+  font-size: 32px;
   font-weight: 600;
-  letter-spacing: -.02em;
-  color: var(--t0);
+  line-height: 1.1;
+  letter-spacing: -.03em;
+  color: var(--v3-ink);
 }
-.fb-page .fb-again { min-height: 36px; padding: 0 14px; }
+.fb-page .fb-done-title:focus,
+.fb-page .fb-done-title:focus-visible { outline: none; }
+.fb-page .fb-done-sub { margin: 8px 0 0; font-size: 18px; line-height: 1.6; color: var(--v3-sec); }
+.fb-page .fb-done-reply { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--v3-t56); }
+.fb-page .fb-again { margin-top: 24px; }
+.fb-page .fb-fail .fb-fail-line {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.fb-page .fb-fail .fb-textarea {
+  margin-top: 16px;
+  min-height: 176px;
+  color: var(--v3-sec);
+  resize: none;
+}
+.fb-page .fb-fail-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 
-/* Coarse pointers get the 44px floor on every control in the form. */
-@media (pointer: coarse) {
-  .fb-page .pt-t,
-  .fb-page .fb-again { min-height: 44px; }
+@keyframes fb-fade { from { opacity: 0; } }
+@keyframes fb-rise { from { opacity: 0; transform: translateY(12px); } }
+@keyframes fb-pop { from { opacity: 0; transform: scale(.97); } }
+
+/* ── Under 1100px: the columns narrow before they stack ──────────────────── */
+@media (max-width: 1099px) {
+  .fb-page .fb-cols { grid-template-columns: 300px minmax(0, 1fr); column-gap: 40px; }
 }
 
-/* ── Phone and tablet (under 900px) ──────────────────────────────────────────
-   The page is the surface: no outer card, one centred column no wider than
-   560px, so a tablet shows a balanced form instead of one pushed to the left.
-   `.fb-page` is a flex item of the app page, where an auto margin switches off
-   stretch, so it takes `width: 100%` and lets the cap and the auto margins
-   centre it. `.card` clips its overflow, which would stop the Send bar from
-   sticking, so the clip is lifted here. */
+/* ── One column (under 900px) ────────────────────────────────────────────── */
 @media (max-width: 899px) {
-  .fb-page { width: 100%; max-width: 560px; margin-inline: auto; }
-  .fb-page .fb-card {
-    max-width: none;
+  .fb-page { max-width: 640px; margin-inline: auto; }
+  .fb-page .fb-top h1 { font-size: 48px; }
+  .fb-page .fb-lead { font-size: 17px; }
+  .fb-page .fb-cols { display: block; margin-top: 32px; }
+
+  .fb-page .fb-ty:first-child { border-top: 1px solid var(--v3-hair); }
+  .fb-page .fb-ty:last-child { border-bottom: 1px solid var(--v3-hair); }
+  .fb-page .fb-tl { font-size: 17px; }
+  .fb-page .fb-left .fb-sending-as { margin-top: 16px; }
+  .fb-page .fb-receipt { margin-bottom: 0; }
+  .fb-page .fb-rc-t { margin-top: 8px; font-size: 17px; }
+  .fb-page .fb-rc-s,
+  .fb-page .fb-rc-m { margin-top: 4px; }
+
+  /* The page is the surface: the panel loses its card and its padding, and the
+     form sits straight on the ground. Sent and failed hang under the receipt
+     behind a hairline. */
+  .fb-page .fb-panel {
+    min-height: 0;
     padding: 0;
-    overflow: visible;
-    background: transparent;
-    border: 0;
+    background: none;
     border-radius: 0;
   }
-  .fb-page .sec-h p { font-size: 16px; }
-
-  .fb-page .seg-label { margin-bottom: 8px; font-size: 14px; }
-  .fb-page .fb-hint,
-  .fb-page .fb-sending-as { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
-
-  .fb-page .fb-input,
-  .fb-page .fb-textarea { font-size: 16px; }
-  .fb-page .fb-input { min-height: 48px; }
-  .fb-page .fb-textarea { min-height: 144px; }
-
-  /* The type choice: four radios, a row of four at tablet width. */
-  .fb-page .fb-types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .fb-page .pt-t { justify-content: center; min-height: 44px; padding: 0 8px; font-size: 14px; }
-  .fb-page .pt-t.on,
-  .fb-page .pt-t[aria-checked="true"] { box-shadow: inset 0 0 0 1px var(--accent-mid); }
-
-  /* Error line: 14px, a glyph in front, tucked under the field above it. */
-  .fb-page .fb-error {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 14px;
-    line-height: 1.45;
+  .fb-page .fb-panel[data-state="form"] { margin-top: 24px; }
+  .fb-page .fb-panel:not([data-state="form"]) {
+    margin-top: 32px;
+    padding-top: 32px;
+    border-top: 1px solid var(--v3-hair);
   }
-  .fb-page .fb-error::before {
-    content: "";
-    flex: none;
-    width: 16px;
-    height: 16px;
-    margin-top: 2px;
-    background: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E") center / contain no-repeat;
-  }
-  .fb-page .fb-form > .fb-error { margin-top: -12px; }
-
-  /* Send: 160px, left aligned under the message. */
-  .fb-page .fb-submit { min-width: 160px; min-height: 48px; font-size: 16px; }
+  .fb-page .fb-form { gap: 20px; }
+  .fb-page .fb-input { height: 48px; font-size: 16px; }
+  .fb-page .fb-textarea { min-height: 160px; font-size: 16px; }
+  .fb-page .fb-fail .fb-textarea { min-height: 120px; }
+  .fb-page .fb-error svg,
+  .fb-page .fb-offline svg { margin-top: 3px; }
+  .fb-page .fb-done-sub { font-size: 17px; }
 }
 
-/* Phone: the type radios are a 2x2 grid of 48px pills, the selected one carries
-   a tick as well as its colour, and Send is the full-width bar above the tab
-   bar so it stays reachable however far the form scrolls. */
+/* ── Phone (under 600px) ─────────────────────────────────────────────────── */
 @media (max-width: 599px) {
-  .fb-page .fb-types { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .fb-page .pt-t { min-height: 48px; }
-  .fb-page .pt-t[aria-checked="true"]::before {
-    content: "";
-    flex: none;
-    width: 14px;
-    height: 14px;
-    margin-right: 6px;
-    background: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
-  }
-  .fb-page { --fb-send-bottom: calc(8px + env(safe-area-inset-bottom)); }
-  .fb-page .fb-submit {
+  .fb-page { --fb-send-bottom: env(safe-area-inset-bottom, 0px); }
+  html.has-tabbar .fb-page { --fb-send-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  .fb-page .fb-top h1 { font-size: 40px; }
+  .fb-page .fb-lead { font-size: 16px; }
+
+  /* Send is a bar that stays above the tab bar, on the page colour, so the form
+     never shows through behind it. */
+  .fb-page .fb-send {
     position: sticky;
     bottom: var(--fb-send-bottom);
-    z-index: 2;
-    align-self: stretch;
-    width: 100%;
-    /* A ring in the page colour keeps the form from showing through around it. */
-    box-shadow: 0 0 0 8px rgb(var(--page-rgb));
+    z-index: 4;
+    margin: 4px calc(var(--fb-gut) * -1) 0;
+    padding: 8px var(--fb-gut) 12px;
+    background: var(--v3-ground);
   }
-  /* While the message is being typed the bar would sit over its last lines and
-     hide the caret, so it drops back into place under the box until focus moves. */
-  .fb-page .fb-form:has(#fb-message:focus) .fb-submit { position: static; }
-  .fb-page #fb-message { scroll-margin-bottom: calc(var(--fb-send-bottom) + 16px); }
-  /* The error sits just under the message, which on a short screen is where the
-     sticky Send bar is. It sticks above the bar's ring (48px bar + 8px ring + 4px)
-     instead of being hidden behind it, with the page colour behind the text. */
-  .fb-page .fb-form > .fb-error {
-    position: sticky;
-    bottom: calc(var(--fb-send-bottom) + 60px);
-    z-index: 2;
-    padding-block: 4px;
-    background: rgb(var(--page-rgb));
-  }
+  /* While the message is being typed the bar would sit over its last lines, so
+     it drops into place under the box until focus moves. */
+  .fb-page .fb-form:has(#fb-message:focus) .fb-send { position: static; }
+  .fb-page #fb-message { scroll-margin-bottom: calc(var(--fb-send-bottom) + 84px); }
+  .fb-page .fb-submit { width: 100%; height: 52px; font-size: 16px; font-weight: 600; }
+
+  .fb-page .fb-fail-actions .fb-fill,
+  .fb-page .fb-fail-actions .fb-out { flex: 1 1 130px; }
 }
 
-/* With the tab bar showing, the Send bar rests on top of it. */
-@media (max-width: 599px) {
-  html.has-tabbar .fb-page { --fb-send-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 8px); }
+/* Touch: every control reaches 44px. */
+@media (pointer: coarse), (max-width: 599px) {
+  .fb-page .fb-out { height: 44px; }
 }
 
-/* Forced colours: the chosen type has to survive without its wash. */
+/* ── Reduced motion: opacity only, and the press does not scale ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fb-page .fb-receipt,
+  html:not([data-reduced-motion="false"]) .fb-page .fb-ln { animation: none; }
+  html:not([data-reduced-motion="false"]) .fb-page .fb-done { animation: fb-fade 240ms ease-out both; }
+  html:not([data-reduced-motion="false"]) .fb-page .fb-fail { animation: fb-fade 150ms ease-out both; }
+  html:not([data-reduced-motion="false"]) .fb-page :is(.fb-ty, .fb-fill):active { transform: none; }
+}
+html[data-reduced-motion="true"] .fb-page .fb-receipt,
+html[data-reduced-motion="true"] .fb-page .fb-ln { animation: none; }
+html[data-reduced-motion="true"] .fb-page .fb-done { animation: fb-fade 240ms ease-out both; }
+html[data-reduced-motion="true"] .fb-page .fb-fail { animation: fb-fade 150ms ease-out both; }
+html[data-reduced-motion="true"] .fb-page :is(.fb-ty, .fb-fill):active { transform: none; }
+
+/* ── Forced colours: the panel, the pills and the chosen ring keep an edge ── */
 @media (forced-colors: active) {
-  .fb-page .pt-t.on,
-  .fb-page .pt-t[aria-checked="true"] { border: 2px solid Highlight; }
+  .fb-page .fb-panel { outline: 1px solid CanvasText; outline-offset: -1px; }
+  .fb-page .fb-fill { border: 1px solid ButtonText; }
+  .fb-page .fb-ty[aria-checked="true"] .fb-rg { border-color: Highlight; background: Highlight; }
+  .fb-page .fb-ty[aria-checked="true"] .fb-rg::after { background: Canvas; }
 }

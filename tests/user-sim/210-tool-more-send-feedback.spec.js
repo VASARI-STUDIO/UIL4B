@@ -463,7 +463,7 @@ for (const view of VIEWS) {
   test(`the dialog's type names are the page's, one line each, at ${view.name}`, async ({ browser }) => {
     const { ctx, page } = await newPage(browser, view, 'someone comparing the dialog with the feedback page')
     await go(page, '/feedback')
-    const pageNames = (await page.locator('.fb-page [role="radio"]').allTextContents()).map((s) => s.trim()).sort()
+    const pageNames = (await page.locator('.fb-page [role="radio"] [id$="-l"]').allTextContents()).map((s) => s.trim()).sort()
     expect(pageNames).toEqual(['Bug report', 'Feature request', 'General', 'Help request'])
 
     await go(page, '/create/palette')
