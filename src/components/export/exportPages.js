@@ -1,8 +1,8 @@
 // Which stock pages the stage and the gallery show for a file, and how a page's picture is addressed. The manifest
-// (config/exportPreviews.js) is the one place that knows where a picture lives; this file only picks pages out of it
+// (config/exportPreviewData.js) is the one place that knows where a picture lives; this file only picks pages out of it
 // and decides, for a viewer, which address may reach the page.
 
-import { previewPages } from '../../config/exportPreviews'
+import { previewPages } from '../../config/exportPreviewData'
 import { themeStandinSrc } from '../../utils/lockedStandin'
 
 // The pages of each document, in the order they are shown.
