@@ -230,7 +230,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   // nav at 1280. (At 390 the nav's Export button is display:none and the
   // panel has no other entry — recorded in the PR, not asserted here.)
   // The modal is raised from the palette's colour-system wall. The export
-  // panel's "Unlock with Pro" goes straight to /plans and raises no modal at all — see the
+  // panel's "Upgrade to Pro" goes straight to /plans and raises no modal at all — see the
   // export test in flow 4. Keyboard activation for the reason the phone test
   // above gives.
   async function raiseWall(page) {
@@ -593,13 +593,13 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await themes.getByRole('radio', { name: /^Studio\b/ }).click()
     if (folded) await expect(toggle).toHaveAccessibleName(/^Theme: Studio\b/)
     else await expect(themes.getByRole('radio', { checked: true })).toHaveText(/^Studio/)
-    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(page.locator('.xd-stage-pro'), 'the preview is locked').toHaveText(/Pro template/)
     // Slides is not tagged Pro in the rail: the theme decides, and the lock is on the preview and the button.
     await expect(categoryRadio(page, 'Slides'), 'the rail does not call the free document Pro').toHaveAccessibleName('Slides, Brand guidelines')
-    await expect(primaryButton(page)).toHaveText('Unlock with Pro')
+    await expect(primaryButton(page)).toHaveText('Upgrade to Pro')
     // The wall goes to /plans, and asks
     // for nothing on the way.
-    await page.getByRole('button', { name: /Unlock with Pro/i }).click()
+    await page.getByRole('button', { name: /Upgrade to Pro/i }).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await context.close()

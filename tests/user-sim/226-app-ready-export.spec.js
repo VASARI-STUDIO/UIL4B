@@ -239,7 +239,7 @@ test.describe('a free signed-in account', () => {
           }
         })
         const panel = await openAppReady(page)
-        await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+        await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
         await expect(dockStatus(panel)).toContainText('Pro unlocks the app-ready bundle.')
 
         await primaryButton(panel).click()
@@ -331,7 +331,7 @@ test.describe('signed out', () => {
     page.on('download', (d) => downloads.push(d.suggestedFilename()))
     await go(page, WORKED_BOARD)
     const panel = await openAppReady(page)
-    await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+    await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     await expect(panel.locator('.xfp[data-kind="bundle"] .xfp-box')).toHaveAttribute('data-state', 'ready')
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)

@@ -148,7 +148,7 @@ test('a Free account is sent to /plans and the server is never asked', async ({ 
   const popups = []
   context.on('page', (p) => popups.push(p))
 
-  await exportPanel(page).getByRole('button', { name: /Unlock with Pro/i }).click()
+  await exportPanel(page).getByRole('button', { name: /Upgrade to Pro/i }).click()
 
   await expect(page).toHaveURL(/\/plans(\?|$)/)
   expect(asked, 'a Free account must not even reach the endpoint').toHaveLength(0)

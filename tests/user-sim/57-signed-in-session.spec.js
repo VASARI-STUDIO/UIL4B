@@ -192,9 +192,9 @@ test.describe('the export gate, driven', () => {
       'the Book category must carry its Pro badge for a free account',
     ).toBeVisible()
     await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
-    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(page.locator('.xd-stage-pro'), 'the preview is locked').toHaveText(/Pro template/)
 
-    const action = page.getByRole('button', { name: /Unlock with Pro/i })
+    const action = page.getByRole('button', { name: /Upgrade to Pro/i })
     await expect(action, 'the button must say what is about to happen').toBeVisible()
 
     const popups = []
@@ -219,7 +219,7 @@ test.describe('the export gate, driven', () => {
 
     await expect(primaryButton(page), 'the plan has loaded and the button names the export').toHaveText('Export PDF')
     await expect(page.locator('.xd-pro'), 'Pro sees no Pro badges').toHaveCount(0)
-    await expect(page.locator('.xd-theme-lock'), 'and no lock over the preview').toHaveCount(0)
+    await expect(page.locator('.xd-stage-pro'), 'and no lock over the preview').toHaveCount(0)
 
     // The book is built by the server (POST /api/ai?export=document); the preview
     // server has no /api, so the answer is stubbed with the real generator's

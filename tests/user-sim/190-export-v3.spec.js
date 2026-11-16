@@ -24,7 +24,7 @@ import { mockThemeApi, cleanHtml, printedDoc } from './export-theme-mock.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import {
-  exportPanel, typeRadio, categoryRadio, fileGroup, primaryButton, dockStatus, dockError,
+  exportPanel, chooseTemplate, typeRadio, categoryRadio, fileGroup, primaryButton, dockStatus, dockError,
 } from './export-rows.js'
 
 const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -54,9 +54,9 @@ async function settled(page) {
   return panel
 }
 
-/** Choose a named theme in the Theme step's inline list (Studio is Pro in every row; Label and Swiss Field are the Free pair). */
+/** Choose a named theme in the grid under View templates (Studio is Pro in every row; Label and Swiss Field are the Free pair). */
 async function chooseTheme(panel, name) {
-  await panel.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: new RegExp(`^${name}\\b`) }).click()
+  await chooseTemplate(panel, name)
 }
 
 /** Open from the app header's Export button. */
@@ -547,7 +547,7 @@ const PRO_CATEGORIES = [
 
 // Criteria 8, 9, 10 and 12: Pro categories for a free account.
 //   - Draw the previews without bakeBlur (utils/proPreviews.js): "the blur is in the pixels" fails.
-//   - Render .xd-theme-lock / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
+//   - Render .xd-stage-pro / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
 //   - Send a free account on a Pro file to the server instead of /plans: "goes to /plans" fails.
 //   - Drop from=kit-gallery from the checkout navigation: "a saved project goes to checkout" fails.
 test.describe('Pro categories for a free account', () => {
@@ -565,18 +565,18 @@ test.describe('Pro categories for a free account', () => {
       await categoryRadio(panel, name).click()
       if (name === 'Slides') {
         // The guidelines open on Label, a Free theme, so there is no lock yet; a Pro theme is what locks them.
-        await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+        await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
         await expect(primaryButton(panel)).toHaveText('Export PDF')
         await chooseTheme(panel, 'Studio')
       }
-      await expect(panel.locator('.xd-theme-lock')).toBeVisible()
-      await expect(panel.locator('.xd-theme-lock')).toContainText('Pro')
-      const shots = panel.locator('.xd-theme-stage.is-locked img')
+      await expect(panel.locator('.xd-stage-pro')).toBeVisible()
+      await expect(panel.locator('.xd-stage-pro')).toContainText('Pro')
+      const shots = panel.locator('.xd-box.is-locked img')
       await expect(shots.first()).toBeVisible()
       for (const img of await shots.all()) {
         expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the locked pictures are blurred').toMatch(/blur\(/)
       }
-      await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+      await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
       await primaryButton(panel).click()
       await expect(page).toHaveURL(/\/plans(\?|$)/)
       expect(await eventsNamed(page, 'upgrade_gate_shown')).toContainEqual({ gate })
@@ -591,7 +591,7 @@ test.describe('Pro categories for a free account', () => {
     const panel = await openFromHeader(page)
     await expect(categoryRadio(panel, 'Style guide')).toHaveAccessibleName('Style guide, A4')
     await categoryRadio(panel, 'Style guide').click()
-    await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+    await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
     await expect(panel.locator('img[data-blurred="true"]')).toHaveCount(0)
   })
 
@@ -601,13 +601,13 @@ test.describe('Pro categories for a free account', () => {
     const panel = await openFromHeader(page)
     await typeRadio(panel, 'Brand book').click()
     await categoryRadio(panel, 'Book').click()
-    await expect(panel.locator('.xd-theme-lock')).toBeVisible()
+    await expect(panel.locator('.xd-stage-pro')).toBeVisible()
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
     expect(await eventsNamed(page, 'upgrade_gate_shown')).toContainEqual({ gate: 'design-system-book-export' })
   })
 
-  test('with a saved project a Pro pick has one offer, Unlock with Pro, and it lands on checkout from the gallery', async ({ page }) => {
+  test('with a saved project a Pro pick has one offer, Upgrade to Pro, and it lands on checkout from the gallery', async ({ page }) => {
     watch(page, 'a free account with a saved project on Book')
     await signIn(page, { plan: 'free', projects: [savedProject()] })
     await go(page, ROUTE)
@@ -615,7 +615,7 @@ test.describe('Pro categories for a free account', () => {
     // The dialog starts on a free file, so there is no offer until a Pro pick is made.
     await expect(primaryButton(panel)).toHaveText('Export PDF')
     await categoryRadio(panel, 'Book').click()
-    await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+    await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     await expect(dockStatus(panel)).toHaveText(/Pro unlocks this file/)
     await expect(dockStatus(panel), 'one offer, with no trial wording in the dialog').not.toContainText(/trial|Cancel before/i)
     await primaryButton(panel).click()
@@ -633,8 +633,8 @@ test.describe('Pro categories for a free account', () => {
       const panel = await openFromHeader(page)
       // A free account opens on the free Slides, which are sharp; the Book is the Pro file to compare.
       await categoryRadio(panel, 'Book').click()
-      await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
-      sharp[plan] = await panel.locator('.xd-theme-stage img').first().evaluate((el) => getComputedStyle(el).filter)
+      await expect(panel.locator('.xd-box img').first()).toBeVisible()
+      sharp[plan] = await panel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter)
       await context.close()
     }
     expect(sharp.free, 'free: the Book preview is blurred').toMatch(/blur\(/)
@@ -654,9 +654,9 @@ test.describe('a Pro account', () => {
     for (const name of ['Book', 'Slides', 'Style guide']) {
       await expect(categoryRadio(panel, name)).not.toHaveAccessibleName(/, (Pro|free)$/)
     }
-    await expect(panel.locator('.xd-theme-lock, .xd-pro')).toHaveCount(0)
-    await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
-    await expect(panel.locator('.xd-theme-stage.is-locked')).toHaveCount(0)
+    await expect(panel.locator('.xd-stage-pro, .xd-pro')).toHaveCount(0)
+    await expect(panel.locator('.xd-box img').first()).toBeVisible()
+    await expect(panel.locator('.xd-box.is-locked')).toHaveCount(0)
     await expect(primaryButton(panel)).toHaveText('Export PDF')
     await expect(dockStatus(panel)).toContainText('No watermark')
     await expect(panel.getByRole('radiogroup', { name: 'Theme' }).locator('.xd-theme-gh'), 'a Pro account sees one plain list, with no Free or In Pro groups').toHaveCount(0)
@@ -857,7 +857,7 @@ test.describe('while the plan is still loading', () => {
       await signIn(page, { plan, uid, slowReads: [{ path: `users/${uid}`, hold: true }] })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      const tags = panel.locator('.xd-pro, .xd-theme-lock')
+      const tags = panel.locator('.xd-pro, .xd-stage-pro')
 
       // A Pro category, then a free one.
       await expect(primaryButton(panel), 'Book, plan unknown').toHaveText('Checking your plan…')
@@ -874,9 +874,9 @@ test.describe('while the plan is still loading', () => {
       await expect(primaryButton(panel)).toBeEnabled()
       await expect(primaryButton(panel), 'Style guide once the plan is known').toHaveText('Export style guide')
       await categoryRadio(panel, 'Book').click()
-      await expect(primaryButton(panel), 'Book once the plan is known').toHaveText(plan === 'pro' ? 'Export PDF' : 'Unlock with Pro')
+      await expect(primaryButton(panel), 'Book once the plan is known').toHaveText(plan === 'pro' ? 'Export PDF' : 'Upgrade to Pro')
       await expect(categoryRadio(panel, 'Book'), 'the tag, free accounts only').toHaveAccessibleName(plan === 'free' ? 'Book, A4 pages, Pro' : 'Book, A4 pages')
-      await expect(panel.locator('.xd-theme-lock')).toHaveCount(plan === 'free' ? 1 : 0)
+      await expect(panel.locator('.xd-stage-pro')).toHaveCount(plan === 'free' ? 1 : 0)
     })
   }
 })

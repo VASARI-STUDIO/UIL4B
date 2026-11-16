@@ -13,10 +13,10 @@
 // MUTATION
 //   - exportThemePicker.js: themeShots points at '.png'                  -> tests 1 and 2
 //   - ExportSteps (Preview): locked is always false for a free account   -> test 3
-//   - export-dialog.css: .xd-theme-stage.is-locked img loses its blur    -> test 3
+//   - export-dialog.css: .xd-box.is-locked img loses its blur    -> test 3
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { chooseFormat, exportPanel } from './export-rows.js'
+import { chooseFormat, chooseTemplate, exportPanel } from './export-rows.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 const THEMES = [
@@ -40,15 +40,7 @@ async function open(page, plan, file, size) {
 /** Pick a theme from the inline list. Where the list is folded under a "Theme: <name> · <brand>" row (a phone, or a window under
     1024 x 900), open it first, as a person would; a pick folds it again and the row then names the theme. */
 async function choose(page, panel, name) {
-  const toggle = panel.getByRole('button', { name: /^Theme:/ })
-  const folded = (await toggle.count()) > 0
-  if (folded && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
-  const themes = panel.getByRole('radiogroup', { name: 'Theme' })
-  // The theme's own name, matched whole: 'Standards' must not also pick 'Standards Plate'.
-  const own = page.locator('.xd-theme-opt-n').getByText(name, { exact: true })
-  await themes.getByRole('radio').filter({ has: own }).click()
-  if (folded) await expect(toggle).toHaveAccessibleName(new RegExp(`^Theme: ${name} · `))
-  else await expect(themes.getByRole('radio', { checked: true }).locator('.xd-theme-opt-n')).toHaveText(name)
+  await chooseTemplate(panel, name)
 }
 
 for (const [kind, keys] of Object.entries(KEYS)) {
@@ -72,7 +64,7 @@ for (const [kind, keys] of Object.entries(KEYS)) {
     const panel = await open(page, 'pro', kind)
     for (const [id, name, brand] of [THEMES[0], THEMES[3], THEMES[9]]) {
       if (id !== '01-presentation') await choose(page, panel, name)
-      const shots = panel.locator('.xd-theme-stage img')
+      const shots = panel.locator('.xd-box img')
       await expect(shots).toHaveCount(keys.length)
       for (const [i, key] of keys.entries()) {
         await expect(shots.nth(i)).toHaveAttribute('src', `/export-themes/${id}-${key}.webp`)
@@ -90,9 +82,9 @@ test.describe('blur and lock', () => {
         watch(page, `a free account looking at the ${file} preview in ${name}`)
         const panel = await open(page, 'free', file)
         await choose(page, panel, name)
-        const stage = panel.locator('.xd-theme-stage')
+        const stage = panel.locator('.xd-box')
         await expect(stage).toHaveClass(/is-locked/)
-        await expect(panel.locator('.xd-theme-lock')).toHaveText('Pro export')
+        await expect(panel.locator('.xd-stage-pro')).toHaveText('Pro template')
         for (const img of await stage.locator('img').all()) expect(await img.evaluate((el) => getComputedStyle(el).filter)).toMatch(/blur\(\d+px\)/)
 
         const ctx = await browser.newContext()
@@ -100,9 +92,9 @@ test.describe('blur and lock', () => {
         watch(proPage, `a Pro account looking at the ${file} preview in ${name}`)
         const proPanel = await open(proPage, 'pro', file)
         await choose(proPage, proPanel, name)
-        await expect(proPanel.locator('.xd-theme-stage')).not.toHaveClass(/is-locked/)
-        await expect(proPanel.locator('.xd-theme-lock')).toHaveCount(0)
-        expect(await proPanel.locator('.xd-theme-stage img').first().evaluate((el) => getComputedStyle(el).filter)).toBe('none')
+        await expect(proPanel.locator('.xd-box')).not.toHaveClass(/is-locked/)
+        await expect(proPanel.locator('.xd-stage-pro')).toHaveCount(0)
+        expect(await proPanel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter)).toBe('none')
         await ctx.close()
       })
     }
@@ -112,8 +104,8 @@ test.describe('blur and lock', () => {
     watch(page, 'a free account looking at the kit in a Pro theme')
     const panel = await open(page, 'free', 'kit')
     await choose(page, panel, 'Studio')
-    await expect(panel.locator('.xd-theme-stage')).not.toHaveClass(/is-locked/)
-    expect(await panel.locator('.xd-theme-stage img').first().evaluate((el) => getComputedStyle(el).filter)).toBe('none')
+    await expect(panel.locator('.xd-box')).not.toHaveClass(/is-locked/)
+    expect(await panel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter)).toBe('none')
     await expect(panel.locator('.xd-dock')).toContainText('Pro theme.')
   })
 })
@@ -126,7 +118,7 @@ for (const file of ['kit', 'book', 'guidelines']) {
       await choose(page, panel, name)
       const fit = await page.evaluate(() => {
         const card = document.querySelector('.xd-card').getBoundingClientRect()
-        const stage = document.querySelector('.xd-theme-stage').getBoundingClientRect()
+        const stage = document.querySelector('.xd-box').getBoundingClientRect()
         return { sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth, inside: stage.left >= card.left - 1 && stage.right <= card.right + 1 }
       })
       expect(fit, name).toEqual({ sideways: false, inside: true })

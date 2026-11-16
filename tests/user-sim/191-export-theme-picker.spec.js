@@ -144,18 +144,18 @@ test.describe('Free and Pro', () => {
       await pick(panel, name)
       await expect(primaryButton(panel)).toHaveText('Export UI kit')
       await expect(dockStatus(panel)).toContainText('Free.')
-      await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+      await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
     })
   }
 
   for (const name of NAMES.filter((n) => !FREE_KIT.includes(n))) {
-    test(`free, UI kit in ${name}: Pro, so the button reads Unlock with Pro and goes to /plans without asking the server`, async ({ page }) => {
+    test(`free, UI kit in ${name}: Pro, so the button reads Upgrade to Pro and goes to /plans without asking the server`, async ({ page }) => {
       watch(page, `a free account on the UI kit in the Pro theme ${name}`)
       const calls = await mockThemeApi(page)
       const panel = await open(page, { plan: 'free', file: 'kit' })
       await pick(panel, name)
       await expectTier(panel, 'In Pro')
-      await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+      await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
       await expect(dockStatus(panel)).toHaveText('Pro theme. The UI kit is free in Standards. The guidelines are free in Label and Swiss Field.')
       await primaryButton(panel).click()
       await expect(page).toHaveURL(/\/(plans|checkout)(\?|$)/)
@@ -171,9 +171,9 @@ test.describe('Free and Pro', () => {
         const panel = await open(page, { plan: 'free', file, saved: false })
         await pick(panel, name)
         await expectTier(panel, 'In Pro', 'the group says what the dock says')
-        await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+        await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
         await expect(dockStatus(panel)).toHaveText(isGuide(file) ? GUIDE_LOCK : 'Pro unlocks this file.')
-        await expect(panel.locator('.xd-theme-lock'), 'the blurred preview carries its lock').toBeVisible()
+        await expect(panel.locator('.xd-stage-pro'), 'the blurred preview carries its lock').toBeVisible()
         await primaryButton(panel).click()
         await expect(page).toHaveURL(/\/plans(\?|$)/)
         expect(calls, 'a free account never asks the route for a Pro file').toHaveLength(0)
@@ -192,7 +192,7 @@ test.describe('Free and Pro', () => {
         await expectTier(panel, 'Free')
         await expect(primaryButton(panel)).toHaveText(FILES[file].label)
         await expect(dockStatus(panel)).toContainText('Free.')
-        await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+        await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
       })
     }
   }
@@ -219,9 +219,9 @@ test.describe('Free and Pro', () => {
         const free = freeThemes.includes(name)
         await pick(panel, name)
         await expectTier(panel, free ? 'Free' : 'In Pro', `${name}: the group`)
-        await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Unlock with Pro')
-        if (file !== 'kit' && !free) await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the blurred preview`).toBeVisible()
-        if (free) await expect(panel.locator('.xd-theme-lock'), `${name}: no lock on a free file`).toHaveCount(0)
+        await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Upgrade to Pro')
+        if (file !== 'kit' && !free) await expect(panel.locator('.xd-stage-pro'), `${name}: the lock on the blurred preview`).toBeVisible()
+        if (free) await expect(panel.locator('.xd-stage-pro'), `${name}: no lock on a free file`).toHaveCount(0)
       }
     })
   }
@@ -233,7 +233,7 @@ test.describe('Free and Pro', () => {
       await expect(chosenRow(panel)).toHaveText(/^Presentation/)
       expect(await groupsOf(panel), 'no Free or In Pro headings').toEqual(groupsFor(file, false))
       await expectTier(panel, '')
-      await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+      await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
       for (const name of ['Specification', 'Blueprint']) {
         await pick(panel, name)
         await expect(primaryButton(panel)).toHaveText(FILES[file].label)
@@ -278,7 +278,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     await page.keyboard.press('ArrowDown')
     await at('Presentation', 'ArrowDown chooses the next theme')
     await expectTier(panel, 'In Pro')
-    await expect(primaryButton(panel), 'choosing a Pro theme is a choice, not a purchase').toHaveText('Unlock with Pro')
+    await expect(primaryButton(panel), 'choosing a Pro theme is a choice, not a purchase').toHaveText('Upgrade to Pro')
     await page.keyboard.press('ArrowRight')
     await at('Ticket', 'ArrowRight does the same')
     await page.keyboard.press('ArrowUp')
@@ -332,7 +332,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     page.on('request', (req) => { const m = /\/export-themes\/([\w-]+)\.webp/.exec(req.url()); if (m) fetched.push(m[1]) })
     const panel = await open(page, { plan: 'free', file: 'kit', size })
     await reveal(panel)
-    const shot = panel.locator('.xd-theme-stage img').first()
+    const shot = panel.locator('.xd-box img').first()
     await expect(shot).toHaveAttribute('alt', /^Standards theme UI kit/)
     await row(panel, 'Catalogue').focus()
     await expect.poll(() => fetched, 'the theme’s pictures are asked for on focus, before it is chosen').toContain('05-specimen-kitScreen')

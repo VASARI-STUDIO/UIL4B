@@ -11,7 +11,7 @@
 // A Pro account is the control: it must still get the real pictures, or the test would pass
 // by loading nothing.
 //
-// To see it fail: in ThemeStage (ExportThemeRow.jsx) draw themeShots in place of themeStandinShots,
+// To see it fail: in ExportStage.jsx draw the real page picture in place of the stand-in,
 // or in PromptLockedCard.jsx use promptPosterSrc in place of promptStandinSrc.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -59,7 +59,7 @@ test.describe('export dialog theme previews', () => {
       // The guidelines open on Label, a Free theme whose real pictures a free account may load. Count requests from the Pro theme on.
       urls.length = 0
       await chooseTheme(page, panel, 'Studio')
-      const stage = panel.locator('.xd-theme-stage')
+      const stage = panel.locator('.xd-box')
       await expect(stage).toHaveClass(/is-locked/)
       for (const img of await stage.locator('img').all()) {
         await expect(img).toHaveAttribute('src', STANDIN_THEME)
@@ -77,7 +77,7 @@ test.describe('export dialog theme previews', () => {
       const urls = capture(page)
       const panel = await openExport(page, 'pro', file)
       await chooseTheme(page, panel, 'Studio')
-      const stage = panel.locator('.xd-theme-stage')
+      const stage = panel.locator('.xd-box')
       await expect(stage).not.toHaveClass(/is-locked/)
       await expect(stage.locator('img').first()).toHaveAttribute('src', REAL_THEME)
       expect(urls.some((u) => REAL_THEME.test(u)), 'the real picture is requested for Pro').toBe(true)
