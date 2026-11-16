@@ -31,11 +31,14 @@ export const previewKey = (theme, page, hash) => `${theme}|${page}|${hash}`
 
 const cache = new Map()
 const asking = new Map()
+// Set once the server answers that the endpoint does not exist (404, 405, 501): later pages are not asked for.
+let missing = false
 
-/** Forget every stored page (for a test, and for a sign-out). */
+/** Forget every stored page and the memory of a missing endpoint (for a test, and for a sign-out). */
 export function clearPreviewCache() {
   cache.clear()
   asking.clear()
+  missing = false
 }
 
 /** The stored answer for a request, or null. */
@@ -49,6 +52,7 @@ function remember(key, answer) {
 export async function fetchPagePreview({ theme, page, brand }, { loadAuth, fetchImpl, signal } = {}) {
   const key = previewKey(theme, page, brandHash(brand))
   if (cache.has(key)) return cache.get(key)
+  if (missing) return { status: 'unavailable' }
   if (asking.has(key)) return asking.get(key)
   const run = (async () => {
     try {
@@ -68,6 +72,7 @@ export async function fetchPagePreview({ theme, page, brand }, { loadAuth, fetch
         remember(key, answer)
         return answer
       }
+      if (res.status === 404 || res.status === 405 || res.status === 501) missing = true
       if (!res.ok) return { status: 'unavailable' }
       const type = String(res.headers?.get?.('Content-Type') || '')
       const html = type.includes('json') ? (await res.json().catch(() => null))?.html : await res.text()
