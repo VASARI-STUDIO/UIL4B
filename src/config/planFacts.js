@@ -41,7 +41,7 @@ export const TOOL_COUNT = createTools().filter((t) => !t.soon && !t.beta).length
 const NUMBER_WORDS = [
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
   'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
-  'seventeen', 'eighteen', 'nineteen', 'twenty',
+  'seventeen', 'eighteen', 'nineteen', 'twenty', 'twenty-one', 'twenty-two',
 ]
 export function numberWord(n) {
   return NUMBER_WORDS[n] || String(n)

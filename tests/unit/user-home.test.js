@@ -36,7 +36,7 @@ function complete(over = {}) {
   design.fonts.body.family = 'Inter'
   design.typeScale.base = 17
   design.typeScale.ratio = 1.333
-  design.tints.scale = ['#000', '#111', '#222']
+  design.states.warning = 1
   return { id: 'p2', name: 'Harbour', design, createdAt: '2026-09-02T10:00:00.000Z', updatedAt: '2026-09-04T10:00:00.000Z', ...over }
 }
 
@@ -47,7 +47,7 @@ test('an untouched project reports NOTHING built, not everything built', () => {
   // carries a full design object, so "does typeScale exist?" is true for all of
   // them and the progress row would be four ticks on every card.
   const present = partsPresent(untouched().design)
-  assert.deepEqual(present, { palette: false, 'type-scale': false, fonts: false, tints: false })
+  assert.deepEqual(present, { palette: false, 'type-scale': false, fonts: false, semantic: false })
   const digest = projectDigest(untouched())
   assert.equal(digest.done, 0)
   assert.equal(digest.total, 4)
@@ -68,7 +68,43 @@ test('colours but no type scale says exactly that — the founder\u2019s example
   assert.equal(digest.parts.find((p) => p.id === 'palette').done, true)
   assert.equal(digest.parts.find((p) => p.id === 'type-scale').done, false)
   assert.equal(digest.next.id, 'type-scale')
-  assert.deepEqual(digest.missing.map((m) => m.id), ['type-scale', 'fonts', 'tints'])
+  assert.deepEqual(digest.missing.map((m) => m.id), ['type-scale', 'fonts', 'semantic'])
+})
+
+test('the four parts are palette, type scale, fonts and semantic colours, and tints are not one', () => {
+  assert.deepEqual(SYSTEM_PARTS.map((p) => p.id), ['palette', 'type-scale', 'fonts', 'semantic'])
+  assert.equal(SYSTEM_PARTS.find((p) => p.id === 'semantic').tool, '/create/semantic-color')
+  assert.equal(SYSTEM_PARTS.some((p) => p.id === 'tints'), false)
+})
+
+test('semantic colours count as built when a role or the information hue moves, or when kept on purpose', () => {
+  assert.equal(partsPresent(clone(DEFAULT_DESIGN)).semantic, false, 'the default selection is not a decision')
+
+  const role = clone(DEFAULT_DESIGN)
+  role.states.warning = 1
+  assert.equal(partsPresent(role).semantic, true)
+
+  const custom = clone(DEFAULT_DESIGN)
+  custom.states.error = { custom: 20 }
+  assert.equal(partsPresent(custom).semantic, true)
+
+  const hue = clone(DEFAULT_DESIGN)
+  hue.states.infoHue = 'purple'
+  assert.equal(partsPresent(hue).semantic, true)
+
+  const kept = { ...clone(DEFAULT_DESIGN), chosen: { semantic: true } }
+  assert.equal(partsPresent(kept).semantic, true, 'Next on the step keeps the defaults as a choice')
+  assert.equal(partsPresent({ ...clone(DEFAULT_DESIGN), chosen: { semantic: 'yes' } }).semantic, false)
+})
+
+test('tints are derived from the colour for a project that never made any, and never count as a part', () => {
+  const design = clone(DEFAULT_DESIGN)
+  design.palette.colors = ['#112233', '#445566']
+  assert.equal(design.tints.scale.length, 0, 'the project carries no ramp of its own')
+  const digest = projectDigest({ id: 'x', name: 'x', design })
+  assert.equal(digest.tintCount, 11)
+  assert.equal(digest.total, 4)
+  assert.equal(digest.parts.some((p) => p.id === 'tints'), false)
 })
 
 test('a single deliberate brand colour counts as a palette; the default seed does not', () => {
@@ -120,7 +156,7 @@ test('THE FOUNDER’S SENTENCE: colours but no type scale says so, in words', ()
   const design = clone(DEFAULT_DESIGN)
   design.palette.colors = ['#112233', '#445566', '#778899']
   design.fonts.heading.family = 'Fraunces'
-  design.tints.scale = ['#111', '#222']
+  design.states.warning = 1
   assert.equal(partsLabel(projectDigest({ id: 'x', name: 'x', design })), 'No type scale')
 })
 
@@ -128,12 +164,12 @@ test('several gaps read as a list, and a complete system says so', () => {
   const design = clone(DEFAULT_DESIGN)
   design.palette.colors = ['#112233', '#445566']
   assert.equal(partsLabel(projectDigest({ id: 'x', name: 'x', design })),
-    'No type scale, fonts or tints')
+    'No type scale, fonts or semantic colours')
   assert.equal(partsLabel(projectDigest(complete())), 'All four parts')
 })
 
 test('an untouched project is not given a list of everything it lacks', () => {
-  // ‘No palette, type scale, fonts or tints’ is technically correct and reads as
+  // ‘No palette, type scale, fonts or semantic colours’ is technically correct and reads as
   // a telling-off — and it is the state every project starts in.
   assert.equal(partsLabel(projectDigest(untouched())), 'Nothing built yet')
   assert.equal(partsLabel(null), 'All four parts', 'a missing digest must not throw')

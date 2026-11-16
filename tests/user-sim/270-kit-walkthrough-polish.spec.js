@@ -18,7 +18,7 @@
 //     `.bkit-card[tabindex]:focus-visible` rule in tool-shell.css, so the global
 //     :focus-visible ring paints round the card.
 //   · On a phone the bar has no X, no help button and no step chips: the steps
-//     trigger opens a panel that holds the four step links, the help line and
+//     trigger opens a panel that holds the five step links, the help line and
 //     "Close the walkthrough", so those tests drive the panel's equivalents.
 //   · "two quick presses on the X": lowering .bkit-exit-shield below the phone
 //     tab bar (z-index 118), or not rendering it, so the second press lands on
@@ -85,7 +85,7 @@ for (const width of [390, 1440]) {
       await expect(page).toHaveURL(/\/create\/font-pair$/)
       expect(await page.evaluate((k) => localStorage.getItem(k), GUIDE_KEY)).toBe('1:color')
 
-      await expectOnStep(page, 'Fonts', 2)
+      await expectOnStep(page, 'Fonts', 3)
       await (await stepLink(page, /Colours/)).click()
       await expect(page).toHaveURL(/\/create\/palette$/)
       expect(await page.evaluate((k) => localStorage.getItem(k), GUIDE_KEY), 'a chip behind wrote something').toBe('1:color')
@@ -108,7 +108,7 @@ for (const width of [390, 1440]) {
         await expect(panel.getByRole('button', { name: /^Start with/ })).toHaveCount(0)
         return
       }
-      const dialog = page.getByRole('dialog', { name: 'Step 2 of 4: Fonts' })
+      const dialog = page.getByRole('dialog', { name: 'Step 3 of 5: Fonts' })
       await expect(dialog).toBeVisible()
       await expect(dialog).not.toContainText(/step one/i)
       await expect(dialog.getByRole('button', { name: 'Back to fonts' })).toBeVisible()
@@ -126,7 +126,7 @@ for (const width of [390, 1440]) {
 
         await expect(page).toHaveURL(/\/create\/palette$/)
         await expect(rail(page)).toBeVisible()
-        await expect(rail(page)).toContainText('Step 1 of 4')
+        await expect(rail(page)).toContainText('Step 1 of 5')
         await expect(card(page)).toBeVisible()
         await expect.poll(() => focusInside(card(page)), { message: 'focus is not inside the walkthrough card' }).toBe(true)
         // The ring is on a control, so a keyboard user can see where they are.
