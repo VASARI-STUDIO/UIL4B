@@ -5,7 +5,7 @@ import { onAccountApplied } from '../utils/accountEvents'
 const I18nContext = createContext()
 const STORAGE_KEY = 'vs-lang'
 
-const LANGUAGES = [
+const ALL_LANGUAGES = [
   { code: 'en', label: 'English (AU)', native: 'English (AU)', flag: '🇦🇺', region: 'AU' },
   { code: 'en-US', label: 'English (US)', native: 'English (US)', flag: '🇺🇸', region: 'US' },
   { code: 'es', label: 'Spanish', native: 'Español', flag: '🇪🇸', region: 'ES' },
@@ -17,6 +17,17 @@ const LANGUAGES = [
   { code: 'zh', label: 'Chinese', native: '中文', flag: '🇨🇳', region: 'CN' },
   { code: 'ko', label: 'Korean', native: '한국어', flag: '🇰🇷', region: 'KR' },
 ]
+
+// Launch offers English only. The other locale files and the loader stay, so
+// offering a language again is adding its code here.
+const OFFERED_CODES = ['en', 'en-US']
+const LANGUAGES = ALL_LANGUAGES.filter(l => OFFERED_CODES.includes(l.code))
+
+// A saved choice (or one synced from an account) for a language no longer on offer is ignored.
+function storedLang() {
+  const saved = localStorage.getItem(STORAGE_KEY)
+  return LANGUAGES.some(l => l.code === saved) ? saved : null
+}
 
 function detectBrowserLang() {
   try {
@@ -51,7 +62,7 @@ function loadLocale(code) {
   return localeLoads[code]
 }
 try {
-  if ((localStorage.getItem(STORAGE_KEY) || detectBrowserLang()) === 'en-US') loadLocale('en-US').catch(() => {})
+  if ((storedLang() || detectBrowserLang()) === 'en-US') loadLocale('en-US').catch(() => {})
 } catch { /* no storage, or no window: the effect below loads it */ }
 
 function resolve(obj, path) {
@@ -60,7 +71,7 @@ function resolve(obj, path) {
 
 export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || detectBrowserLang() } catch { return 'en' }
+    try { return storedLang() || detectBrowserLang() } catch { return 'en' }
   })
   // Seed synchronously from the statically-imported English locales so the very
   // first paint renders the correct copy — no raw keys, and no Colour→Color flash
@@ -87,7 +98,7 @@ export function I18nProvider({ children }) {
 
   // The language follows the account.
   useEffect(() => onAccountApplied([STORAGE_KEY], () => {
-    try { setLangState(localStorage.getItem(STORAGE_KEY) || detectBrowserLang()) } catch { /* keep the current one */ }
+    try { setLangState(storedLang() || detectBrowserLang()) } catch { /* keep the current one */ }
   }), [])
 
   useEffect(() => {

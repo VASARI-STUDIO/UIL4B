@@ -496,6 +496,11 @@
   margin: 6px 0 0; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .72); text-wrap: wrap;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
 }
+/* A 375 phone (window about 343): drop the footer glyph so the tool name fits */
+@container (max-width: 350px) {
+  .bmp-ft { gap: 6px; font-size: 12px; }
+  .bmp-grid0 .bmp-card:not(.bmp-wide) .bmp-ft .bmp-gl { display: none; }
+}
 /* A narrow window (320): the same cards, less text */
 @container (max-width: 330px) {
   .bmp-pal .bmp-mono, .bmp-fpc { display: none; }
