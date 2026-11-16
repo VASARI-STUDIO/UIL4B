@@ -97,11 +97,25 @@ function pagesDoc(E, T, ctx, kind, standalone) {
 
 // The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
 // A site that cannot be laid out for this brand gives null, and the caller serves the stacked document instead.
-async function premiumSite(kind, ctx, T) {
+async function premiumSite(kind, ctx, T, dirs) {
   try {
-    return kind === 'kit' ? (await import('./exportThemes/engine/kit-site-build.js')).kitSiteFiles(ctx, T)
+    const files = kind === 'kit' ? (await import('./exportThemes/engine/kit-site-build.js')).kitSiteFiles(ctx, T)
       : (await import('./exportThemes/engine/guide-site-build.js')).guideSiteFiles(ctx, T)
+    return relinkSites(files, dirs)
   } catch (err) { console.warn(`[export] ${kind} site not built (${err?.name || 'Error'}); serving the single document`); return null }
+}
+
+// The themes link the guide and the kit to each other as sibling folders named ui-kit-html and guidelines-html (the engine's
+// layout). Each export is its own zip with its own top folder, so those links are pointed at the other zip's top folder: they
+// work when both zips are unpacked in the same place, which is where a browser saves them.
+export function relinkSites(files, { guide, kit }) {
+  const out = {}
+  for (const [path, body] of Object.entries(files)) {
+    out[path] = typeof body === 'string' && /\.html$/.test(path)
+      ? body.replaceAll('../ui-kit-html/', `../${kit}/`).replaceAll('../guidelines-html/', `../${guide}/`)
+      : body
+  }
+  return out
 }
 
 // A file map as a zip with one top folder.
@@ -128,18 +142,19 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   const brand = E.projectToBrand({ design, projectName })
   const slug = brand.slug
   const T = await THEMES[theme]()
+  const dirs = { guide: `${slug}-brand-guidelines-${theme}`, kit: `${slug}-ui-kit-${theme}` }
   if (row === 'ui-kit') {
     const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, brand)
-    const site = T.kitSite ? await premiumSite('kit', ctx, T) : null
+    const site = T.kitSite ? await premiumSite('kit', ctx, T, dirs) : null
     const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), ...(site || { 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }) }
-    return { name: `${slug}-ui-kit-${theme}.zip`, zip: await zipOf(E, files, `${slug}-ui-kit-${theme}`) }
+    return { name: `${dirs.kit}.zip`, zip: await zipOf(E, files, dirs.kit) }
   }
   if (row === 'slides') {
     const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand)
     if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, ctx, 'guidelines', true)) }
-    const site = T.guideSite ? await premiumSite('guide', ctx, T) : null
+    const site = T.guideSite ? await premiumSite('guide', ctx, T, dirs) : null
     const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
-    return { name: `${slug}-brand-guidelines-${theme}.zip`, zip: await zipOf(E, files, `${slug}-brand-guidelines-${theme}`) }
+    return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
   const { files } = await bookSite(E, T, brand, slug)
