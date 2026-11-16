@@ -42,7 +42,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { mockThemeApi } from './export-theme-mock.js'
+import { mockThemeApi, printedDoc } from './export-theme-mock.js'
 import { chooseFormat, exportPanel, categoryRadio, primaryButton } from './export-rows.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
@@ -235,7 +235,7 @@ test.describe('the export gate, driven', () => {
     // your design system book…") until the server answers, so its title alone proves
     // nothing, and the request may not have been made yet when the window appears.
     // The generated artefact is what shows the round trip finished.
-    await expect(book.locator('#printed-doc')).toBeVisible()
+    await expect(printedDoc(book).locator('#printed-doc')).toBeVisible()
     // The print window takes the PDF's file name as its title, so Save as PDF
     // offers the same name the file list shows.
     await expect(book).toHaveTitle(/-book$/)

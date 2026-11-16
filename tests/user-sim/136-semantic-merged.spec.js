@@ -269,26 +269,27 @@ test.describe('Semantic Colour, rebuilt', () => {
     })
   }
 
-  // ── 4. Copy tokens is the only accent fill ─────────────────────────────────
+  // ── 4. Copy tokens is the only ink fill ───────────────────────────────────
   //
-  // "Accent-filled" is measured, not looked up by class: a control whose computed
-  // background is the page's `--accent-fill` (read off a probe element, so a
-  // theme change cannot leave a stale literal). The Add to project popover is the
-  // one place a second accent fill is allowed (its Save button), and it is
-  // included here as the POSITIVE CONTROL that the measurement can see one.
+  // The one primary is the ink pill. "Ink-filled" is measured, not looked up by
+  // class: a control whose computed background is the page's `--v3-ink` (read
+  // off a probe element, so a theme change cannot leave a stale literal). The Add
+  // to project popover is the one place a second ink fill is allowed (its Save
+  // button), and it is included here as the POSITIVE CONTROL that the measurement
+  // can see one.
   //
   // MUTATION: give `.stc-bundle.is-on` (or `.tl-pill.is-on`, or `.stc-code-toggle`)
-  // `background: var(--accent-fill)` in semantic-color.css, or pass
-  // `variant="accent"` to the "Copy N variables" ToolButton: the list of accent
+  // `background: var(--v3-ink)` in semantic-color.css, or pass
+  // `variant="accent"` to the "Copy N variables" ToolButton: the list of ink
   // fills grows past ["Copy tokens"] and this goes red.
   for (const theme of ['light', 'dark']) {
-    test(`Copy tokens is the only accent-filled control outside the popover, in ${theme}`, async ({ browser }) => {
+    test(`Copy tokens is the only ink-filled control outside the popover, in ${theme}`, async ({ browser }) => {
       const { ctx, page } = await openPage(browser, { theme, account: { plan: 'free', projects: 1 } })
 
       const accentFills = () => page.evaluate(() => {
         const root = document.querySelector('.stc')
         const probe = document.createElement('i')
-        probe.style.background = 'var(--accent-fill)'
+        probe.style.background = 'var(--v3-ink)'
         root.appendChild(probe)
         const accent = getComputedStyle(probe).backgroundColor
         probe.remove()

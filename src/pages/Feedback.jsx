@@ -7,13 +7,9 @@ import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend, SUPPORT_MESSAGE_MAX } from '../utils/supportRequest'
 import { feedbackCopyKeys } from '../utils/feedbackCopy'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/account.css'
-import '../styles/deferred/tool-shell.css'
-// The page's own sheet, every selector under .fb-page. Last here, but it wins
-// by its scoping, not its position.
+// The page's own sheet: every selector under .fb-page, on the V3 roles. It
+// styles the whole page, so the account and tool-shell sheets this route used
+// to pull in are not imported here any more.
 import '../styles/pages/feedback.css'
 
 // Delivery acknowledges submission immediately and preserves failed drafts for retry.
@@ -30,12 +26,33 @@ const PAYMENT_SUBTITLE = "Payment didn't go through? Tell us what happened and w
 const PAYMENT_PLACEHOLDER = 'What happened when you tried to pay?'
 const PAYMENT_SUBJECT = 'Payment failed'
 
+// Each type carries a one-line description under its label, so the choice is
+// made on what the type is for rather than on its name alone.
 const TYPES = [
-  { id: 'feature', labelKey: 'feedback.featureRequest' },
-  { id: 'bug', labelKey: 'feedback.bugReport' },
-  { id: 'general', labelKey: 'feedback.general' },
-  { id: 'help', labelKey: 'feedback.helpRequest' },
+  { id: 'feature', labelKey: 'feedback.featureRequest', desc: "Something UIL4B should do that it doesn't yet." },
+  { id: 'bug', labelKey: 'feedback.bugReport', desc: "Something that broke or didn't work as expected." },
+  { id: 'general', labelKey: 'feedback.general', desc: 'Anything else you want us to know.' },
+  { id: 'help', labelKey: 'feedback.helpRequest', desc: "You're stuck and need a person to reply." },
 ]
+
+// The receipt's heading: what went up, or, once a send has failed, that nothing
+// did yet.
+const RECEIPT_SENT = 'What you sent'
+const RECEIPT_FAILED = 'Not sent yet'
+
+// A small glyph in front of the error and offline lines, so neither rests on
+// colour alone.
+const NoteGlyph = ({ children }) => (
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+)
+const AlertGlyph = () => <NoteGlyph><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></NoteGlyph>
+const OfflineGlyph = () => (
+  <NoteGlyph>
+    <path d="m2 2 20 20" />
+    <path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" />
+    <path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" />
+  </NoteGlyph>
+)
 
 // The 404's "Report a broken link" opens `?type=bug&page=<path>`, with
 // `&referrer=<path>` when the browser named the page that linked there. Only
@@ -231,167 +248,199 @@ export default function Feedback({ toast }) {
   // in the form changes them both ways. A payment link keeps its own copy.
   const copy = feedbackCopyKeys(type)
 
+  // Once a message has gone up (or failed to), the left column shows what was
+  // sent instead of the type list: the held payload, so it is the person's own
+  // words, not a re-reading of the form.
+  const receipt = (submitted || sendError) ? delivery.body : null
+  const receiptType = receipt ? TYPES.find((x) => x.id === receipt.type) : null
+  const panelState = sendError ? 'failed' : submitted ? 'sent' : 'form'
+
   return (
-    <div className="sec fb-page">
-      <div className="sec-h">
+    <div className="fb-page">
+      <div className="fb-top">
         <h1>{paymentFailed ? PAYMENT_TITLE : t(copy.title)}</h1>
-        <p>{paymentFailed ? PAYMENT_SUBTITLE : t(copy.subtitle)}</p>
+        <p className="fb-lead">{paymentFailed ? PAYMENT_SUBTITLE : t(copy.subtitle)}</p>
         {/* Billing lives in Settings, which needs an account, so only a
             signed-in visitor is sent there. */}
         {paymentFailed && accountEmail && (
           <p className="fb-fix">
             {/* The Subscription section holds billing; without the state
                 Settings opens on whichever section was used last. */}
-            <Link className="btn btn-s" to="/settings" state={{ section: 'support' }}>{PAYMENT_CARD_LINK}</Link>
+            <Link className="ui-pill ui-pill-out fb-out" to="/settings" state={{ section: 'support' }}>{PAYMENT_CARD_LINK}</Link>
           </p>
         )}
       </div>
-      <div className="card fb-card">
-        {sendError ? (
-          <div className="fb-done">
-            <p className="fb-error" role="alert" style={{ marginBottom: 'var(--s-3)' }}>{sendError}</p>
-            <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
-            <div className="fb-success-actions fb-again">
-              <button type="button" className="btn btn-accent" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>
-              <button type="button" className="btn" onClick={() => {
-                recoverFeedbackDraft(bodyRef, attemptRef)
-                pageFeedbackSend.edit()
-                requestAnimationFrame(() => messageRef.current?.focus())
-              }}>{t('feedback.editMessage')}</button>
+
+      <div className="fb-cols">
+        <div className="fb-left">
+          {receipt ? (
+            <div className="fb-receipt" role="group" aria-labelledby="fb-rc-label">
+              <p className="fb-rc-l fb-ln" id="fb-rc-label">{sendError ? RECEIPT_FAILED : RECEIPT_SENT}</p>
+              <p className="fb-rc-t fb-ln">{receiptType ? t(receiptType.labelKey) : receipt.type}</p>
+              <p className="fb-rc-s fb-ln">{receipt.subject}</p>
+              {/* A failed send shows the message in the panel beside it, where
+                  it can be retried or edited. */}
+              {!sendError && <p className="fb-rc-m fb-ln">{receipt.message}</p>}
             </div>
-          </div>
-        ) : submitted ? (
-          <div className="fb-done" role="status">
-            <div className="fb-done-mark" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <h2 className="fb-done-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h2>
-            <p className="fb-done-sub">{busy ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
-            {/* Which of the two things just happened. Neither line promises a
-                reply — whether one is written is a person's decision, not the
-                code's — they state whether one is POSSIBLE, which is a fact
-                about the five fields that were sent. */}
-            <p className="fb-done-reply">
-              {sentTo
-                ? t('feedback.replyAddress', { email: sentTo })
-                : t('feedback.noReplyAddress')}
-            </p>
-            <button className="btn btn-s fb-again" disabled={busy} onClick={() => {
-              pageFeedbackSend.reset()
-              requestAnimationFrame(() => messageRef.current?.focus())
-            }}>{t('feedback.submitAnother')}</button>
-          </div>
-        ) : (
-          <form onSubmit={submit} className="fb-form" noValidate>
+          ) : (
             <div>
-              <span className="seg-label" id="fb-type-label">{t('common.type')}</span>
+              <span className="fb-label" id="fb-type-label">{t('common.type')}</span>
               <div
-                className="row fb-types"
+                className="fb-radios"
                 role="radiogroup"
                 aria-labelledby="fb-type-label"
                 onKeyDown={onTypeKeyDown}
               >
-                {TYPES.map(({ id, labelKey }) => (
+                {TYPES.map(({ id, labelKey, desc }) => (
                   <button
                     key={id}
                     type="button"
                     role="radio"
                     aria-checked={type === id}
+                    // The name is the label alone; the description is read as
+                    // the radio's description.
+                    aria-labelledby={`fb-ty-${id}-l`}
+                    aria-describedby={`fb-ty-${id}-d`}
                     // Roving tabindex: the group is one tab stop, arrows move
                     // inside it.
                     tabIndex={type === id ? 0 : -1}
                     ref={(el) => { if (el) typeRefs.current[id] = el }}
-                    className={`pt-t${type === id ? ' on' : ''}`}
+                    className="fb-ty"
                     onClick={() => setType(id)}
                   >
-                    {t(labelKey)}
+                    <span className="fb-rg" aria-hidden="true" />
+                    <span className="fb-ty-text">
+                      <span className="fb-tl" id={`fb-ty-${id}-l`}>{t(labelKey)}</span>
+                      <span className="fb-td" id={`fb-ty-${id}-d`}>{desc}</span>
+                    </span>
                   </button>
                 ))}
               </div>
+              {/* The return address. Signed in, the account's address is what
+                  goes up and always has; signed out, the Email field is the
+                  only way one can. */}
+              {accountEmail && <p className="fb-sending-as">Sending as <span className="fb-acct">{accountEmail}</span></p>}
             </div>
+          )}
+        </div>
 
-            <div>
-              <label className="seg-label" htmlFor="fb-subject">Subject</label>
-              <input
-                id="fb-subject"
-                type="text"
-                className="fb-input"
-                value={subject}
-                onChange={e => setSubject(e.target.value)}
-                placeholder="Brief summary (optional)"
-              />
-            </div>
-
-            {/* The return address. Rendered only when there is not already one
-                — signed in, the account's address is what goes up, and offering
-                a second box to type a different one is a different feature.
-                `(optional)` sits in the placeholder because that is where the
-                Subject field above already puts it. */}
-            {accountEmail ? (
-              <p className="fb-sending-as">Sending as {accountEmail}</p>
-            ) : (
-              <div>
-                <label className="seg-label" htmlFor="fb-email">Email</label>
-                <input
-                  id="fb-email"
-                  ref={contactRef}
-                  type="email"
-                  className="fb-input"
-                  value={contact}
-                  onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
-                  placeholder={paymentFailed ? 'you@example.com' : 'you@example.com (optional)'}
-                  autoComplete="email"
-                  maxLength={CONTACT_EMAIL_MAX}
-                  required={paymentFailed}
-                  aria-required={paymentFailed}
-                  aria-invalid={!!contactError}
-                  aria-describedby={contactError ? 'fb-email-error' : 'fb-email-hint'}
-                />
-                {contactError
-                  ? <p className="fb-error" id="fb-email-error" role="alert">{contactError}</p>
-                  : <p className="fb-hint" id="fb-email-hint">
-                      {paymentFailed
-                        ? 'Required — we need your email to reply.'
-                        : 'Optional — but without it there is no way to reply to you.'}
-                    </p>}
+        <div className="fb-panel" data-state={panelState}>
+          {sendError ? (
+            <div className="fb-done fb-fail">
+              <p className="fb-error fb-fail-line" role="alert">{sendError}</p>
+              <textarea className="fb-textarea" aria-label={t('feedback.yourMessage')} value={message} readOnly />
+              <div className="fb-fail-actions">
+                <button type="button" className="fb-fill" ref={retryRef} onClick={() => { void send(bodyRef.current, false) }}>{t('feedback.tryAgain')}</button>
+                <button type="button" className="ui-pill ui-pill-out fb-out fb-out-lg" onClick={() => {
+                  recoverFeedbackDraft(bodyRef, attemptRef)
+                  pageFeedbackSend.edit()
+                  requestAnimationFrame(() => messageRef.current?.focus())
+                }}>{t('feedback.editMessage')}</button>
               </div>
-            )}
-
-            <div>
-              <label className="seg-label" htmlFor="fb-message">{t('common.message')}</label>
-              <textarea
-                id="fb-message"
-                ref={messageRef}
-                className="fb-textarea"
-                value={message}
-                onChange={e => { setMessage(e.target.value); if (error) setError('') }}
-                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t(copy.placeholder)}
-                maxLength={SUPPORT_MESSAGE_MAX}
-                aria-invalid={!!error}
-                aria-describedby={error ? 'fb-error' : undefined}
-              />
             </div>
+          ) : submitted ? (
+            <div className="fb-done" role="status">
+              <div className="fb-done-mark" aria-hidden="true">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h2 className="fb-done-title" ref={sentHeadingRef} tabIndex={-1}>{t('feedback.sent')}</h2>
+              <p className="fb-done-sub">{busy ? t('feedback.sendingMessage') : t('feedback.sentMessage')}</p>
+              {/* Which of the two things just happened. Neither line promises a
+                  reply — whether one is written is a person's decision, not the
+                  code's — they state whether one is POSSIBLE, which is a fact
+                  about the five fields that were sent. */}
+              <p className="fb-done-reply">
+                {sentTo
+                  ? t('feedback.replyAddress', { email: sentTo })
+                  : t('feedback.noReplyAddress')}
+              </p>
+              <button type="button" className="ui-pill ui-pill-out fb-out fb-again" disabled={busy} onClick={() => {
+                pageFeedbackSend.reset()
+                requestAnimationFrame(() => messageRef.current?.focus())
+              }}>{t('feedback.submitAnother')}</button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="fb-form" noValidate>
+              <div>
+                <label className="fb-label" htmlFor="fb-subject">Subject</label>
+                <input
+                  id="fb-subject"
+                  type="text"
+                  className="fb-input"
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  placeholder="Brief summary (optional)"
+                />
+              </div>
 
-            {error && <p className="fb-error" id="fb-error" role="alert">{error}</p>}
+              {/* `(optional)` sits in the placeholder because that is where the
+                  Subject field above already puts it. */}
+              {!accountEmail && (
+                <div>
+                  <label className="fb-label" htmlFor="fb-email">Email</label>
+                  <input
+                    id="fb-email"
+                    ref={contactRef}
+                    type="email"
+                    className="fb-input"
+                    value={contact}
+                    onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
+                    placeholder={paymentFailed ? 'you@example.com' : 'you@example.com (optional)'}
+                    autoComplete="email"
+                    maxLength={CONTACT_EMAIL_MAX}
+                    required={paymentFailed}
+                    aria-required={paymentFailed}
+                    aria-invalid={!!contactError}
+                    aria-describedby={contactError ? 'fb-email-error' : 'fb-email-hint'}
+                  />
+                  {contactError
+                    ? <p className="fb-error" id="fb-email-error" role="alert"><AlertGlyph />{contactError}</p>
+                    : <p className="fb-hint" id="fb-email-hint">
+                        {paymentFailed
+                          ? 'Required — we need your email to reply.'
+                          : 'Optional — but without it there is no way to reply to you.'}
+                      </p>}
+                </div>
+              )}
 
-            {/* Offline, the message stays in the form and Send waits for the
-                connection. */}
-            {!online && (
-              <p className="fb-hint" id="fb-offline" role="status">{t('feedback.offline')}</p>
-            )}
-            <button
-              className="btn btn-accent fb-submit"
-              type="submit"
-              disabled={busy || !online}
-              aria-busy={busy}
-              aria-describedby={online ? undefined : 'fb-offline'}
-            >
-              {busy ? 'Sending…' : t('feedback.send')}
-            </button>
-          </form>
-        )}
+              <div>
+                <label className="fb-label" htmlFor="fb-message">{t('common.message')}</label>
+                <textarea
+                  id="fb-message"
+                  ref={messageRef}
+                  className="fb-textarea"
+                  value={message}
+                  onChange={e => { setMessage(e.target.value); if (error) setError('') }}
+                  placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t(copy.placeholder)}
+                  maxLength={SUPPORT_MESSAGE_MAX}
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'fb-error' : undefined}
+                />
+                {error && <p className="fb-error" id="fb-error" role="alert"><AlertGlyph />{error}</p>}
+              </div>
+
+              {/* Offline, the message stays in the form and Send waits for the
+                  connection. */}
+              {!online && (
+                <p className="fb-hint fb-offline" id="fb-offline" role="status"><OfflineGlyph />{t('feedback.offline')}</p>
+              )}
+              {/* On a phone this is the bar that stays above the tab bar. */}
+              <div className="fb-send">
+                <button
+                  className="fb-fill fb-submit"
+                  type="submit"
+                  disabled={busy || !online}
+                  aria-busy={busy}
+                  aria-describedby={online ? undefined : 'fb-offline'}
+                >
+                  {busy ? 'Sending…' : t('feedback.send')}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -1,14 +1,14 @@
 // What the kit sheet draws, read off a saved project (or off the example kit).
 //
 // The sheet shows one project's four parts in the app's next-step order: Palette, Type scale, Font pair,
-// Tints. Each part is either set (its plate shows the real saved values) or unset (a one-line note and
+// Semantic colours. Each part is either set (its plate shows the real saved values) or unset (a one-line note and
 // "Not set"). "Set" is projectDigest's own reading, so it agrees with the project page and the cap.
 //
 // The example kit (Kerbside, a sample bike courier) is drawn for a visitor with no project of their own: it
 // goes through the same function, so the example and a real kit cannot look different by accident.
 
-import { DEFAULT_DESIGN, tintConfigFor } from '../../data/designDefaults'
-import { generateTintScale } from '../../utils/colors'
+import { DEFAULT_DESIGN } from '../../data/designDefaults'
+import { SEMANTIC_LABELS, SEMANTIC_ROLES, semanticShades } from '../../data/semanticPresets'
 import { projectDigest, relativeTime } from '../../utils/userHome'
 import { ratioName } from '../userhome/workspace'
 
@@ -29,15 +29,6 @@ export function inkOn(hex) {
   return ratio(l, lum('#0B0C0E')) >= ratio(l, lum('#EFEEEA')) ? 'var(--on-ink)' : 'var(--ink)'
 }
 
-/** The eleven-step ramp the Tint tool would build from `hex`, with the project's own tint settings. */
-function previewRamp(design, hex) {
-  try {
-    return generateTintScale({ ...tintConfigFor(design), hex }).filter(isHex)
-  } catch {
-    return []
-  }
-}
-
 // The example: Kerbside, a sample bike courier. Not a person's work and never saved.
 const EXAMPLE_COLOURS = ['#FF5A1F', '#1A1A1A', '#E6E4DE', '#FFFFFF']
 const EXAMPLE_DESIGN = {
@@ -48,7 +39,8 @@ const EXAMPLE_DESIGN = {
     body: { family: 'IBM Plex Sans', weight: 400, category: 'sans-serif' },
   },
   typeScale: { ...DEFAULT_DESIGN.typeScale, base: 15, ratio: 1.618 },
-  tints: { ...DEFAULT_DESIGN.tints, scale: previewRamp({ ...DEFAULT_DESIGN, palette: { ...DEFAULT_DESIGN.palette, base: EXAMPLE_COLOURS[0] } }, EXAMPLE_COLOURS[0]) },
+  // A decision on a role, so the example reads as set rather than as the defaults.
+  states: { ...DEFAULT_DESIGN.states, warning: 1 },
 }
 export const EXAMPLE_PROJECT = Object.freeze({ id: null, name: 'Kerbside', design: EXAMPLE_DESIGN })
 const EXAMPLE_SAMPLE = 'Book a pickup by ten and your parcel is there by twelve, set in IBM Plex Sans 400.'
@@ -96,18 +88,16 @@ function partsOf(project, name) {
     note: 'No fonts paired yet.',
   }
 
-  const saved = (Array.isArray(d.tints?.scale) ? d.tints.scale : []).filter(isHex)
-  const tintsSet = !!done.tints && saved.length > 0
-  const seed = colours[0]
-  const preview = !tintsSet && paletteSet && seed ? previewRamp(d, seed) : []
-  const tints = {
-    id: 'tints', name: 'Tints', set: tintsSet, tool: tool.tints, linkLabel: 'Open in Tint',
-    stops: tintsSet ? saved : preview,
-    count: saved.length,
-    seed: paletteSet && seed ? { c: seed.toUpperCase(), on: inkOn(seed) } : null,
-    note: 'Needs a palette first.',
+  // The 500 step of each role: the colour the role is known by. Tints are not a part (they are derived).
+  const shades = semanticShades(d.states)
+  const roles = SEMANTIC_ROLES.map((role) => ({ role, label: SEMANTIC_LABELS[role], c: shades[role][5], on: inkOn(shades[role][5]) }))
+  const semantic = {
+    id: 'semantic', name: 'Semantic colours', set: !!done.semantic, tool: tool.semantic, linkLabel: 'Open in Semantic Colour',
+    stops: roles,
+    meta: `${roles.length} roles`,
+    note: 'Set success, warning, error and info.',
   }
-  return { palette, scale, fonts, tints, digest }
+  return { palette, scale, fonts, semantic, digest }
 }
 
 /**
@@ -116,11 +106,11 @@ function partsOf(project, name) {
  */
 export function kitFromProject(project) {
   const name = project?.name || 'Untitled project'
-  const { palette, scale, fonts, tints, digest } = partsOf(project, name)
+  const { palette, scale, fonts, semantic, digest } = partsOf(project, name)
   const next = digest.next
   const when = relativeTime(project?.updatedAt || project?.createdAt)
   const pill = next
-    ? { text: `Continue: ${lower(next.action)}`, href: next.tool, cls: next.id === 'tints' ? 'nx' : '' }
+    ? { text: `Continue: ${lower(next.action)}`, href: next.tool, cls: '' }
     : { text: 'Continue: check the contrast', href: '/create/contrast', cls: '' }
   return {
     title: name,
@@ -129,13 +119,13 @@ export function kitFromProject(project) {
     meta: `${digest.done} of ${digest.total} parts set.${when ? ` Edited ${when}.` : ''}`,
     region: `${name}, latest project`,
     pill,
-    parts: [palette, scale, fonts, tints],
+    parts: [palette, scale, fonts, semantic],
   }
 }
 
 /** The example kit, with the words the signed-out visitor and the empty account each get. */
 export function exampleKit(kind) {
-  const { palette, scale, fonts, tints } = partsOf(EXAMPLE_PROJECT, 'Kerbside')
+  const { palette, scale, fonts, semantic } = partsOf(EXAMPLE_PROJECT, 'Kerbside')
   const head = kind === 'empty'
     ? {
         title: 'Start your first brand kit', wrap: true, region: 'Start your first brand kit',
@@ -145,5 +135,5 @@ export function exampleKit(kind) {
         title: 'Every kit has four parts', wrap: true, region: 'Example brand kit',
         meta: 'This one is an example: Kerbside, a sample bike courier. No account needed to start.',
       }
-  return { ...head, face: null, pill: null, parts: [palette, scale, fonts, tints] }
+  return { ...head, face: null, pill: null, parts: [palette, scale, fonts, semantic] }
 }

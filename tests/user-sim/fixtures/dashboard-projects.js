@@ -3,9 +3,11 @@
 // Every project is saved data with a fixed shape and a known age, so a spec can compare the page with a
 // hand-checked string ("1 of 4 parts set. Edited 1 day ago.") instead of re-working the page's own sum.
 //
-//   complete()   all four parts: five colours, Fraunces over Manrope, a 17px / 1.333 scale, six tints.
+//   complete()   all four parts: five colours, Fraunces over Manrope, a 17px / 1.333 scale, a decision on
+//                the warning role (semantic colours). It also carries a six-step tint ramp, which is derived
+//                and not a part.
 //                Its type scale runs 17, 23, 30, 40 px (17 x 1.333^n, rounded), so the caption reads "17 to 40px".
-//   noTints()    the same without tints: the next step is the Tint tool (the one part with a motion).
+//   noSemantic() the same with every semantic role at its default: the next step is the semantic colours.
 //   half()       colours only: 1 of 4 parts, and the type scale is next.
 //   blank()      the defaults untouched: 0 of 4 parts, so the palette is next and the mini has no colour strip.
 //   many(n)      n colour-only projects with different names, newest first, an hour apart.
@@ -29,12 +31,13 @@ export function complete(id = 'p-done', name = 'Violet Lime', updatedAt = ago(2 
   design.typeScale.base = 17
   design.typeScale.ratio = 1.333
   design.tints.scale = ['#1A0B2E', '#2E1650', '#4B1F9E', '#6C3FD4', '#8B5CF6', '#B69BF0']
+  design.states.warning = 1
   return { id, name, design, createdAt: ago(9 * DAY), updatedAt }
 }
 
-export function noTints(id = 'p-notints', name = 'Offcut', updatedAt = ago(2 * HOUR)) {
+export function noSemantic(id = 'p-nosemantic', name = 'Offcut', updatedAt = ago(2 * HOUR)) {
   const p = complete(id, name, updatedAt)
-  p.design.tints.scale = []
+  p.design.states = clone().states
   return p
 }
 

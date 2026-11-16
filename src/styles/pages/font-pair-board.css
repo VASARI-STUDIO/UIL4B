@@ -26,6 +26,10 @@
 /* The dock's Copy CSS: the label, then the copy glyph in a 32px disc of the page ground. */
 .fpr-page .fpr-copy-primary--disc.tl-btn { height: 44px; min-height: 44px; padding: 0 6px 0 18px; gap: 10px; }
 .fpr-page .fpr-copy-primary--disc .tl-btn-label { display: inline-flex; align-items: center; gap: 10px; }
+@media (max-width: 389px) {
+  .fpr-page .fpr-dock .fpr-copy-primary--disc.tl-btn { padding: 0 4px 0 14px; }
+  .fpr-page .fpr-dock .fpr-copy-primary--disc .tl-btn-label { gap: 8px; }
+}
 @media (max-width: 359px) {
   .fpr-page .fpr-dock .fpr-copy-primary--disc.tl-btn { padding: 0 4px 0 12px; }
   .fpr-page .fpr-dock .fpr-copy-primary--disc .tl-btn-label { gap: 6px; }

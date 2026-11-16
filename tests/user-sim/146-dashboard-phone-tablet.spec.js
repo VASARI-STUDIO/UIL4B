@@ -5,7 +5,7 @@
 //   phone   the four parts as a 2 x 2 of 120px plates; the head pill gone and a docked bar holding the 44px
 //           pill; the bar hidden while a popover is open; the name form a sheet in the flow; New project a
 //           44px plus; minis one to a row; the shelf's palettes two across; 44px targets; the 360px and
-//           320px rules; the Tints ramp unrolling once the part is 60% in view
+//           320px rules; the semantic colours as four role stops, and an unset part as a note
 //   tablet  the same 2 x 2 sheet with wider gutters, minis two to a row, no sideways scroll across the band
 //
 // Every number is worked out by hand from the board's rules, not read back from the page:
@@ -25,7 +25,7 @@
 //   dashboard.css   `.db-name` line-clamp / white-space: normal in the phone block removed -> "a lead name that does not fit one line wraps to two ..."
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
-import { MINUTE, ago, complete, half, noTints, many } from './fixtures/dashboard-projects.js'
+import { MINUTE, ago, complete, half, noSemantic, many } from './fixtures/dashboard-projects.js'
 
 const LONG_NAME = 'A very long project name that has to be cut short rather than push the page sideways'
 const LEAD = () => complete('p-done', 'Violet Lime', ago(10 * MINUTE))
@@ -271,27 +271,24 @@ test.describe('on a 390px phone, in a real touch context', () => {
     }, { projects: [complete('p-short', 'Violet', ago(10 * MINUTE)), half()] })
   })
 
-  test('the Tints ramp unrolls once the part is 60% in view, and with reduced motion it only fades', async ({ browser }) => {
-    await onPhone(browser, { width: 390, height: 600 }, async (page) => {
-      const tints = sheetOf(page, 'Offcut, latest project').locator('.db-tn')
-      const ramp = tints.locator('.db-ramp:not(.rest)')
-      await expect(tints, 'below the fold: not played').not.toHaveClass(/\bplay\b/)
-      expect(await ramp.evaluate((el) => getComputedStyle(el).clipPath), 'rolled up before').toMatch(/inset\(0px 0px 100%/)
-      await tints.scrollIntoViewIfNeeded()
-      await page.evaluate(() => window.scrollBy(0, 150))
-      await expect(tints).toHaveClass(/\bplay\b/)
-      await expect.poll(() => ramp.evaluate((el) => getComputedStyle(el).clipPath), { message: 'unrolled after' }).toMatch(/inset\(0px\)|inset\(0%\)|none/)
-    }, { projects: [noTints()] })
+  test('the semantic colours are four role stops when set, and a note and the next step when not', async ({ browser }) => {
+    await onPhone(browser, { width: 390, height: 844 }, async (page) => {
+      const sheet = sheetOf(page, 'Violet Lime, latest project')
+      const plate = sheet.getByRole('img', { name: /^Semantic colours: Success #[0-9a-f]{6}, Warning #[0-9a-f]{6}, Error #[0-9a-f]{6}, Information #[0-9a-f]{6}$/i })
+      await expect(plate.locator('.db-stop'), 'one stop for each of the four roles').toHaveCount(4)
+      const [box] = await boxes(plate)
+      expect(box.w, 'a plate as wide as the palette plate').toBe(157)
+      expect(box.h, 'and 120 tall').toBe(120)
+      expect(await overflowOf(page)).toBe(0)
+    }, { projects: [complete()] })
 
-    await onPhone(browser, { width: 390, height: 600 }, async (page) => {
-      const tints = sheetOf(page, 'Offcut, latest project').locator('.db-tn')
-      await tints.scrollIntoViewIfNeeded()
-      await page.evaluate(() => window.scrollBy(0, 150))
-      await expect(tints).toHaveClass(/\bplay\b/)
-      const ramp = tints.locator('.db-ramp:not(.rest)')
-      expect(await ramp.evaluate((el) => getComputedStyle(el).clipPath), 'no clip movement under reduced motion').toBe('none')
-      await expect.poll(() => ramp.evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
-    }, { projects: [noTints()], reducedMotion: 'reduce' })
+    await onPhone(browser, { width: 390, height: 844 }, async (page) => {
+      const sheet = sheetOf(page, 'Offcut, latest project')
+      await expect(sheet.getByRole('img', { name: /^Semantic colours:/ }), 'unset: no plate').toHaveCount(0)
+      await expect(sheet).toContainText('Set success, warning, error and info.')
+      await expect(page.locator('.db-bar').getByRole('link', { name: /^Continue: set the semantic colours/ })).toHaveAttribute('href', '/create/semantic-color')
+      expect(await overflowOf(page)).toBe(0)
+    }, { projects: [noSemantic()] })
   })
 })
 
