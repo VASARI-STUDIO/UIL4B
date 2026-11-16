@@ -25,6 +25,9 @@ import { groupFileNames, groupIconDataUri, groupIconSvg, groupSprite } from '../
 import '../styles/pages/icon-groups.css'
 
 const packNames = (g) => groupPacks(g).map((p) => packCredit(p)?.name || p).join(' · ')
+// The card meta wraps on a phone. Each part stays whole, and the separator dot hangs off the start of each part,
+// so the dot that would open a line is clipped (icon-groups.css) and no line starts or ends on one.
+const metaSegments = (g) => [`${groupCount(g)} icons`, ...groupPacks(g).map((p) => packCredit(p)?.name || p)]
 
 // Re-render once a batch of glyphs lands. Returns [ready, failed, retry].
 function useGroupGlyphs(groups, tier, limit) {
@@ -105,7 +108,7 @@ function GroupCard({ group, tier }) {
         </span>
         <span className="igp-card-foot">
           <span className="igp-card-name">{group.label}</span>
-          <span className="igp-card-meta">{groupCount(group)} icons · {packNames(group)}</span>
+          <span className="igp-card-meta">{metaSegments(group).flatMap((seg, i) => [i ? <wbr key={`w${i}`} /> : null, <span key={seg} className="igp-meta-seg">{seg}</span>])}</span>
         </span>
       </Link>
     </li>

@@ -23,6 +23,7 @@ import { useGatedDownload } from '../components/converter/shared'
 // Palette Builder and /projects so one refusal cannot be worded — or styled —
 // two ways on two surfaces.
 import SaveRefusal from '../components/SaveRefusal'
+import UIKitGuide from '../components/UIKitGuide'
 import { useTheme } from '../contexts/ThemeContext'
 // The `semantic-color` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
@@ -954,6 +955,8 @@ export default function ColorStudio({ onCopy, toast }) {
           )}
         </div>
       )}
+
+      <UIKitGuide step="semantic" />
 
       {undoToast && (
         <div className="cs-undo-toast">

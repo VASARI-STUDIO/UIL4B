@@ -9,9 +9,11 @@
 // component:
 //
 //   · the four parts are the four this product actually saves in a project
-//     (utils/userHome.js SYSTEM_PARTS — palette, type scale, fonts, tints).
-//     The design's fourth slot was Icons; a project stores no icons, so that slot is
-//     Tints, which it does store.
+//     (utils/userHome.js SYSTEM_PARTS — palette, type scale, fonts, semantic
+//     colours). The design's fourth slot was Icons; a project stores no icons, so
+//     that slot is the semantic colours, which it does store. Tints are no longer
+//     a part: the ramp is derived from the colour, and shown as a fifth,
+//     always-derived slot.
 //   · the AI meter reads the same per-browser counter the AI tools write
 //     (utils/usageTracker.js), against the plan's daily limit.
 //   · the price is the live cheapest per-month figure in the visitor's own
@@ -24,6 +26,8 @@ import { resolveOffers } from '../../config/planFacts.js'
 import { BILLED_EVERY } from '../../utils/billingCadence.js'
 import { createTools } from '../../data/toolTree.js'
 import { projectDigest, relativeTime } from '../../utils/userHome.js'
+import { tintScaleOf } from '../../utils/projectTints.js'
+import { SEMANTIC_ROLES, semanticShades } from '../../data/semanticPresets.js'
 
 /* ── Numbers in prose ─────────────────────────────────────────────────────── */
 
@@ -243,7 +247,7 @@ const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c)
 
 /**
  * The design's four slots in the design's order (Colour, Type, Type scale, then the fourth), each
- * filled from the saved design. `tool` is the live route that builds the part.
+ * filled from the saved design, followed by the derived tints. `tool` is the live route that builds the part.
  */
 export function projectSlots4(project) {
   const d = project?.design || {}
@@ -255,7 +259,9 @@ export function projectSlots4(project) {
   const base = digest.scaleBase
   const ratio = digest.scaleRatio
   const name = ratioName(ratio)
-  const tints = Array.isArray(d.tints?.scale) ? d.tints.scale : []
+  const tints = tintScaleOf(d)
+  const states = semanticShades(d.states)
+  const semanticRamp = SEMANTIC_ROLES.map((role) => states[role][5])
 
   return [
     {
@@ -279,10 +285,16 @@ export function projectSlots4(project) {
       emptyNote: 'Set a ratio and read it at shipping sizes.', emptyCta: 'Set the scale',
     },
     {
-      id: 'tints', icon: 'drop-half', label: 'Tints', done: done.tints, tool: tool.tints,
+      id: 'semantic', icon: 'circles-three', label: 'Semantic colours', done: done.semantic, tool: tool.semantic,
+      detail: 'Success, warning, error and info',
+      ramp: semanticRamp.filter(isHex),
+      emptyNote: 'Set success, warning, error and info colours.', emptyCta: 'Set the semantic colours',
+    },
+    {
+      id: 'tints', icon: 'drop-half', label: 'Tints', done: tints.length > 0, tool: '/create/tint',
       detail: `${tints.length} step${tints.length === 1 ? '' : 's'}`,
       ramp: tints.filter(isHex),
-      emptyNote: '', emptyCta: 'Generate the tints',
+      emptyNote: '', emptyCta: 'Open the tints',
     },
   ]
 }
