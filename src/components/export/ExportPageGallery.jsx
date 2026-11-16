@@ -49,7 +49,6 @@ export default function ExportPageGallery({ pages, state, dispatch, standin = fa
               className={`xd-thumb${on ? ' is-on' : ''}`}
               aria-label={`${page.label}, page ${i + 1} of ${pages.length}`}
               aria-current={on ? 'true' : undefined}
-              style={{ '--w': page.w, '--h': page.h }}
               onClick={() => dispatch({ type: 'select', index: i })}
             >
               {image.src && <img src={image.src} width={page.w} height={page.h} alt="" data-pin-nopin="true" decoding="async" loading="lazy" />}

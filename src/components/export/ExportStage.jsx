@@ -45,7 +45,7 @@ export default function ExportStage({ page, theme, standin = false, locked = fal
   const image = pageImage(page, standin)
   return (
     <div className="xd-stage">
-      <div className={`xd-box${standin ? ' is-locked' : ''}`} style={{ '--w': page.w, '--h': page.h }}>
+      <div className={`xd-box${standin ? ' is-locked' : ''}`} style={{ '--xd-w': page.w, '--xd-h': page.h }}>
         {html && !standin
           ? <LiveFrame html={html} page={page} title={`${theme.name} ${page.label} page, with your brand`} />
           : image.src && (
