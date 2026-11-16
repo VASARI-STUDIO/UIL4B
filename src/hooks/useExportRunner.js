@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import useExportGate from './useExportGate'
 import { useProject } from '../contexts/ProjectContext'
 import { loadAuthSdk } from '../utils/firebaseAccess'
+import { holdOnboardingForExport } from '../utils/exportHold'
 import {
   labelPrintWindow, releasePrintWindow, requestExportDocument, reservePrintWindow,
   showInPrintWindow, withPrintBootstrap,
@@ -538,7 +539,13 @@ export default function useExportRunner() {
   const run = async (formatId, { projectId, theme, signIn } = {}) => {
     if (exporting.current) return { status: 'busy' }
     exporting.current = true
-    try { return await runExport(formatId, projectId, theme, signIn) } finally { exporting.current = false }
+    // Signed out, the account gate may create a new account; onboarding waits
+    // until this export has saved its file.
+    const release = user ? null : holdOnboardingForExport()
+    try { return await runExport(formatId, projectId, theme, signIn) } finally {
+      exporting.current = false
+      if (release) release()
+    }
   }
 
   // Copy a Code file: the same text the download carries (with the credit

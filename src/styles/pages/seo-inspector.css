@@ -39,7 +39,14 @@
    here, its bottom padding the clamp below. */
 .seo-page { min-width: 0; }
 
-.tl.seo-page { margin: calc(-1 * clamp(14px, 2.6vw, 32px)) calc(-1 * var(--page-inline)) calc(-1 * clamp(48px, 6vw, 80px)); }
+/* Full bleed inside .app-page: never pull out further than the page's own inline
+   padding, which drops to 12px on phones while --page-inline stays at 20px. */
+.tl.seo-page {
+  margin: calc(-1 * clamp(14px, 2.6vw, 32px))
+    calc(-1 * min(var(--page-inline), max(clamp(12px, 3vw, 36px), env(safe-area-inset-right, 0px))))
+    calc(-1 * clamp(48px, 6vw, 80px))
+    calc(-1 * min(var(--page-inline), max(clamp(12px, 3vw, 36px), env(safe-area-inset-left, 0px))));
+}
 
 /* `.app-page > :first-child` pads the top of every app page; the toolbar has
    to meet the header, so the tool root takes none. */

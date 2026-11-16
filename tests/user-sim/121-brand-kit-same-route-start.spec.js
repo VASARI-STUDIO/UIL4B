@@ -12,7 +12,7 @@ import { go, watch } from './helpers.js'
 const GUIDE_KEY = 'vs-uikit-guide'
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const card = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
+const card = (page) => page.getByRole('dialog', { name: /^Step [1-5] of 5: / })
 
 async function pressBrandKit(page) {
   await page.getByRole('button', { name: 'Create', exact: true }).click()
@@ -31,7 +31,7 @@ test.describe('Brand kit: starting from the page it begins on', () => {
 
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(rail(page)).toBeVisible()
-    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(rail(page)).toContainText('Step 1 of 5')
     await expect(card(page)).toBeVisible()
     expect(await page.evaluate((key) => localStorage.getItem(key), GUIDE_KEY)).toBe('1')
   })
@@ -58,6 +58,6 @@ test.describe('Brand kit: starting from the page it begins on', () => {
 
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(rail(page)).toBeVisible()
-    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(rail(page)).toContainText('Step 1 of 5')
   })
 })
