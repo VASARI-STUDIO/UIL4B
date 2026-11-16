@@ -50,7 +50,7 @@ const readJson = async (page, key) => JSON.parse((await read(page, key)) || 'nul
 const sessionMark = (page) => page.evaluate(() => sessionStorage.getItem('vs-kit-session'))
 const toast = (page) => page.locator('.toast.show')
 const chooser = (page) => page.getByRole('dialog', { name: /^Your brand kit from / })
-const orientation = (page) => page.getByRole('dialog', { name: /^Step 1 of 4/ })
+const orientation = (page) => page.getByRole('dialog', { name: /^Step 1 of 5/ })
 const colours = async (page) => (await readJson(page, CURRENT))?.palette?.colors
 
 /** The nav's brand kit entry, from the Create menu. */

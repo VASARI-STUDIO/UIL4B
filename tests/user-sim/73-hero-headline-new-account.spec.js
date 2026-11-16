@@ -297,16 +297,18 @@ test.describe('a new account starts empty', () => {
     const marks = await page.evaluate(() => {
       const panel = document.querySelector('.db-sheet')
       if (!panel) return null
-      // The palette plate is the one graphic that says something (a single labelled image of the
-      // palette, its swatches plain spans); every other graphic stays hidden.
+      // The colour plates are the graphics that say something (the palette and the semantic colours,
+      // each a single labelled image, their swatches plain spans); every other graphic stays hidden.
       const graphics = [...panel.querySelectorAll('svg, img, [role="img"]')]
       const announced = graphics.filter((g) => !g.closest('[aria-hidden="true"]'))
-      return { found: graphics.length, announced: announced.length, labelled: announced.filter((g) => g.matches('.db-plate.pal[role="img"]') && g.getAttribute('aria-label')).length }
+      const plates = announced.filter((g) => g.matches('.db-plate.pal[role="img"]') && g.getAttribute('aria-label'))
+      return { found: graphics.length, announced: announced.length, labelled: plates.length, palette: plates.filter((g) => g.getAttribute('aria-label').startsWith('Palette: ')).length }
     })
     expect(marks, 'the example kit sheet itself is not on the page').not.toBeNull()
     expect(marks.found, 'the probe found no graphics to judge').toBeGreaterThan(3)
-    expect(marks.announced - marks.labelled, `${marks.announced - marks.labelled} of the sheet’s ${marks.found} graphic(s) are announced without being the palette`).toBe(0)
-    expect(marks.labelled, 'the palette is one labelled image').toBe(1)
+    expect(marks.announced - marks.labelled, `${marks.announced - marks.labelled} of the sheet’s ${marks.found} graphic(s) are announced without being a colour plate`).toBe(0)
+    expect(marks.palette, 'the palette is one labelled image').toBe(1)
+    expect(marks.labelled, 'only the palette and the semantic colours are labelled images').toBeLessThanOrEqual(2)
 
     await context.close()
   })
@@ -398,7 +400,7 @@ test.describe('a new account starts empty', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('an account that already has a Default Project keeps it', () => {
   // A real one, with work in it: five colours, two families that are not the
-  // default, a scale that was moved and six tints. Built off DEFAULT_DESIGN so
+  // default, a scale that was moved, an info hue that was changed and six tints. Built off DEFAULT_DESIGN so
   // it is the shape saveProject() writes, then changed in every one of the four
   // parts the card reports — so if anything were rewritten or re-seeded under
   // this account, the card would say so rather than merely disappearing.
@@ -414,6 +416,7 @@ test.describe('an account that already has a Default Project keeps it', () => {
       },
       typeScale: { ...DEFAULT_DESIGN.typeScale, base: 17, ratio: 1.333 },
       tints: { ...DEFAULT_DESIGN.tints, scale: ['#F3E8FD', '#D9B8F7', '#B97AEF', '#8A2BE2', '#5E1A9E', '#330E57'] },
+      states: { ...DEFAULT_DESIGN.states, infoHue: 'purple' },
     },
     createdAt: '2026-03-04T09:00:00.000Z',
     updatedAt: '2026-09-01T09:00:00.000Z',
@@ -445,7 +448,7 @@ test.describe('an account that already has a Default Project keeps it', () => {
       await expect(meta('fonts')).toContainText('Fraunces')
       await expect(meta('fonts')).toContainText('Manrope')
       await expect(page.locator('#pjv-type-scale .pjv-note')).toContainText('from 17 px')
-      await expect(meta('tints')).toHaveText('6 steps')
+      await expect(meta('semantic')).toHaveText('Success, warning, error and info')
       await expect(page.locator('.pjv-status')).toHaveText('Complete and ready to export')
 
       await context.close()

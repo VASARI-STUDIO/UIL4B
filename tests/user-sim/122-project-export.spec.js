@@ -12,6 +12,7 @@ function savedProject() {
   design.typeScale.base = 17
   design.typeScale.ratio = 1.333
   design.tints.scale = ['#1F4B8E', '#2E7BB8', '#3FA9A0']
+  design.states.warning = 1 // a decision on a role: the semantic colours part is set
   const now = new Date().toISOString()
   return { id: 'export-project', name: 'Harbour', design, createdAt: now, updatedAt: now }
 }

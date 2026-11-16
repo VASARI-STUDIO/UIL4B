@@ -34,8 +34,8 @@ const THEMES = [
   ['01-presentation', 'Presentation'], ['02-poster', 'Ticket'], ['03-broadsheet', 'Broadsheet'], ['04-standards', 'Standards'],
   ['05-specimen', 'Catalogue'], ['06-studio', 'Studio'], ['07-spec', 'Specification'], ['08-monograph', 'Riso'],
   ['09-blueprint', 'Blueprint'], ['10-inuse', 'In use'], ['21-presentation', 'Keynote'], ['22-ticket', 'Stub'],
-  ['24-standards', 'Standards Plate'], ['26-notebook', 'Notebook'], ['28-riso', 'Print Shop'], ['29-blueprint', 'Drawing Sheet'],
-  ['30-fluted', 'Fluted'], ['32-dieline', 'Dieline'],
+  ['23-broadsheet', 'Front Page'], ['24-standards', 'Standards Plate'], ['26-notebook', 'Notebook'], ['28-riso', 'Print Shop'], ['29-blueprint', 'Drawing Sheet'],
+  ['30-fluted', 'Fluted'], ['31-contact', 'Contact'], ['32-dieline', 'Dieline'],
 ]
 // The last theme in the UI kit list, where End lands.
 const LAST = THEMES[THEMES.length - 1][1]
