@@ -316,7 +316,7 @@ test('every gallery Pro file is a pick the gallery stores and reads back, and th
     assert.deepEqual(presetFromGalleryPick(pick), resolvePreset({ file: id }))
   }
   assert.deepEqual(presetFromGalleryPick({ design: 'kit', format: 'html' }), { type: 'ui', category: 'kit', file: 'kit' })
-  assert.deepEqual(presetFromGalleryPick({ design: 'nope' }), { type: 'branding', category: 'slides', file: 'guidelines' })
+  assert.deepEqual(presetFromGalleryPick({ design: 'nope' }), { type: 'branding', category: 'book', file: 'book' })
 })
 
 test('the gallery offers the book as PNG pages', () => {
