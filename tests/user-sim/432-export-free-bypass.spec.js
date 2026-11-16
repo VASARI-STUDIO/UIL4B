@@ -26,7 +26,6 @@ import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow } from '../../src/data/exportThemes.js'
 import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
-import { EXPORT_ROUTE } from './export-theme-mock.js'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
 
 const ROUTE = '/projects/harbour/export'
@@ -34,7 +33,12 @@ const ACCOUNTS = {
   'test-free': {},
   'test-pro': { subscription: { status: 'active', interval: 'monthly', currentPeriodEnd: Date.now() + 10 * 86_400_000 } },
 }
-const PRO_DOCS = ['book', 'book-html', 'guidelines', 'guidelines-html']
+// The documents the server builds. The offline-HTML ids (book-html, guidelines-html) are themed rows ({ row, format: 'html' }), so
+// they are walked in PRO_COMBOS; sent as a bare document format they are not a built document and are 400 with no file.
+const PRO_DOCS = ['book', 'guidelines']
+const THEMED_DOCS = ['book-html', 'guidelines-html']
+// Every request to the export route, whatever its query string carries (a glob would stop at the first extra parameter).
+const EXPORT_ROUTE = (url) => url.pathname === '/api/ai' && url.searchParams.get('export') === 'document'
 
 // The free tier, written out (not read from src/): the guidelines in Label and Swiss Field, the UI kit in Standards.
 const isFree = (theme, row) => ['25-label', '27-swissfield'].includes(theme) || (theme === '04-standards' && row === 'ui-kit')
@@ -206,6 +210,13 @@ test.describe('(a) direct calls', () => {
       expectUncached(refused, 'Free ' + format)
       expect(JSON.parse(refused.text).format).toBe(format)
     }
+    for (const format of THEMED_DOCS) {
+      const r = await post(page, { format, projectName: 'Harbour', design: DESIGN }, 'tok-free')
+      expect(r.status, 'Free ' + format + ' as a bare document').toBe(400)
+      expect(JSON.parse(r.text).code).toBe('unknown_format')
+      expect(r.text, 'no document').not.toMatch(/<html|<!doctype/i)
+      expect(r.zip).toBe(false)
+    }
     // The control: the same call from Pro does return a document, so "no file" is the answer and not a route that never worked.
     const served = await post(page, { format: 'book', projectName: 'Harbour', design: DESIGN }, 'tok-pro')
     expect(served.status).toBe(200)
@@ -230,7 +241,7 @@ test.describe('(b) an edited body', () => {
     ['the slides swapped in', (b) => ({ ...b, row: 'slides', format: 'html' })],
     ['a Pro theme and the slides', (b) => ({ ...b, theme: '24-standards', row: 'slides', format: 'pdf' })],
     ['a Pro document format (the theme and row dropped)', (b) => ({ format: 'book', projectName: b.projectName, design: b.design })],
-    ['a Pro document format beside a free theme', (b) => ({ ...b, theme: undefined, row: undefined, format: 'guidelines-html' })],
+    ['a Pro document format beside a free theme', (b) => ({ ...b, theme: undefined, row: undefined, format: 'guidelines' })],
     ['a plan claimed in the body', (b) => ({ ...b, theme: '03-broadsheet', plan: 'pro', pro: true, isPro: true, user: { plan: 'pro' } })],
   ]
   for (const [name, tamper] of edits) {
