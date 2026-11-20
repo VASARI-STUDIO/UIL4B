@@ -254,7 +254,7 @@ const DEFAULT_TEMPLATES = { book: 'specification', guidelines: 'presentation' }
 const LIVE_TEMPLATES = { book: ['specification', 'monograph', 'atlas'], guidelines: ['presentation', 'poster', 'grid'] }
 
 test('a missing, null or empty template is the format\'s default, and the reply says which', async () => {
-  assert.deepEqual(Object.keys(DEFAULT_TEMPLATES).sort(), Object.keys(BUILDERS).sort(), 'a Pro format has no default named here')
+  assert.deepEqual(Object.keys(DEFAULT_TEMPLATES).sort(), serverPro().map((f) => f.id).sort(), 'a Pro format has no default named here')
   for (const [format, expected] of Object.entries(DEFAULT_TEMPLATES)) {
     for (const body of [{}, { template: undefined }, { template: null }, { template: '' }]) {
       const { built, table } = templateSpy()
