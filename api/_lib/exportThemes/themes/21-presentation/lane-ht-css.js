@@ -27,7 +27,8 @@ export function htCss(ctx) {
 .ht-home{font-weight:600;color:var(--t);text-decoration:none}
 .ht-run{flex:1;min-width:0;color:var(--t)}
 .ht-run b{font-weight:400;color:var(--q);margin-right:12px}
-.ht-doc b{font-weight:400;color:var(--t);margin-left:12px}
+.ht-doc{display:flex;align-items:center}
+.ht-doc b{font-weight:400;color:var(--t);margin-left:16px;padding-left:16px;border-left:1px solid var(--h)}
 .ht-mode{display:flex}
 .ht-btn,.ht-mode button{font:500 13px/1 var(--body);color:var(--t);background:transparent;border:1px solid var(--h);border-radius:0;height:36px;padding:0 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background-color 150ms ease,color 150ms ease}
 .ht-mode button+button{border-left:0}
@@ -95,6 +96,15 @@ export function htCss(ctx) {
 .ht-field__logo>*{max-width:100%}
 .ht-stripe{display:flex;height:160px}
 .ht-stripe>div{display:flex;align-items:flex-end;padding:16px;font-size:14px;line-height:1.3;min-width:0}
+.ht-tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+.ht-tile{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ht-tile__a{position:relative;isolation:isolate;overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
+.ht-tile__b{position:absolute;top:0;bottom:0;z-index:0}
+.ht-tile__m{position:relative;z-index:1;display:block;max-width:60%}
+.ht-tile__m svg,.ht-tile__m img{display:block;max-width:100%;height:auto}
+.ht-tile__x{position:absolute;inset:0;width:100%;height:100%;z-index:2}
+.ht-tile__t{font-size:14px;line-height:1.4;font-weight:600;color:var(--t);margin-top:6px}
+.ht-tile__n{font-size:14px;line-height:1.5;color:var(--s)}
 .ht-scale>li{display:grid;grid-template-columns:120px minmax(0,1fr);gap:24px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--h)}
 .ht-scale>li:first-child{border-top:1px solid var(--h)}
 .ht-scale .ht-k{color:var(--t)}
@@ -121,7 +131,15 @@ export function htCss(ctx) {
 .ht-ix>li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px;padding:40px 56px 48px;container-type:inline-size}
 .ht-ix__h{font-size:var(--bs,64px)}
 .ht-ix__h b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%}
+.ht-ix__hc{min-width:0}
+.ht-ix__c{margin-top:16px;font-size:14px;line-height:1.4}
 .ht-ix ol{display:flex;flex-direction:column;align-self:end}
+@media (min-width:841px){
+.ht-ix--list{grid-template-columns:minmax(0,1fr)!important;gap:28px!important}
+.ht-ix--list ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 48px;align-self:stretch}
+.ht-ix--flip{grid-template-columns:minmax(0,7fr) minmax(0,5fr)!important}
+.ht-ix--flip .ht-ix__hc{order:2}
+}
 .ht-ix ol a{display:grid;grid-template-columns:56px minmax(0,1fr);padding:10px 0;border-top:1px solid currentColor;text-decoration:none;font-size:17px;line-height:1.4}
 .ht-ix ol a .num{color:var(--q)}
 @media (hover:hover){.ht-ix ol a:hover span:last-child{text-decoration:underline;text-underline-offset:4px}}
@@ -138,13 +156,17 @@ export function htCss(ctx) {
 @media (min-width:841px){
 .ht-stage--tight{padding-top:40px}
 }
-.ht-ml{display:none}
+/* the page's title: a display h1 over the slide on wide screens (the bar already carries the running head); on a phone it also leads the page, under the running head */
+.ht-ml{display:block;padding:72px 56px 8px;container-type:inline-size}
+.ht-ml__hd{display:none}
+.ht-ml__t{font-size:min(var(--bs,96px),clamp(48px,6vw,96px));line-height:0.98}
+.ht-ml__t b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%;color:var(--q)}
 @media (max-width:840px){
-.ht-ml{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:224px;padding:20px 20px 28px;container-type:inline-size}
+.ht-ml{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:224px;padding:20px 20px 28px}
 .ht-ml__hd{display:flex;justify-content:space-between;gap:12px;font-size:13px;line-height:1.3;color:var(--q)}
 .ht-ml__hd b{font-weight:400}
-.ht-ml__t{font-size:var(--bs,40px);line-height:0.98}
-.ht-stage:not(#cover){display:none}
+.ht-ml__t{font-size:min(var(--bs,40px),64px)}
+.ht-stage--reflow{display:none}
 .ht-bar{gap:12px;padding:0 20px}
 .ht-home,.ht-doc{display:none}
 .ht-bar{height:auto;min-height:56px;padding-top:10px;padding-bottom:10px}

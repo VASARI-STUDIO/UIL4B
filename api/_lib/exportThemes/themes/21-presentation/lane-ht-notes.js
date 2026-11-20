@@ -3,6 +3,7 @@
 // line (the slide's one idea, in words) and its notes; brand copy is printed whole, every value is read from ctx.
 import { A, L, lower, nameOfHex, fieldStyle, darkF, actF, panelF, fitSize, words } from './lane-ht-lib.js';
 import { onceRe, sayOnce } from './lane-g3-kit.js';
+import { distinctColours, servedFamily, standInNote } from './helpers.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -19,6 +20,21 @@ const pct = (n) => `${Math.round(n * 100)}%`;
 // fields that meet at straight edges; a field on the page ground gets a hairline so it reads against the ground
 const fields = (ctx, items, n = items.length) => `<div class="ht-fields" style="--n:${n}">${items.map((f) => `<div class="ht-field${lower(f.hex) === lower(L(ctx).surface) ? ' ht-field--hair' : ''}${lower(f.hex) === lower(darkF(ctx)) ? ' ht-field--dk' : ''}" style="${fieldStyle(ctx, f.hex, f.what || 'site notes field', f.size || 15)}${f.style || ''}">${f.html}</div>`).join('')}</div>`;
 const misuse = ['Do not stretch, squash or skew it.', 'Do not recolour it outside the versions above.', 'Do not rotate it.', 'Do not add shadows, glows or other effects.', 'Do not set it on a busy part of a photo.', 'Do not outline it or put it in a box.'];
+// The six misuses as tiles, each the real mark with its fault applied and crossed through (a grid of three, of two on a phone, where the slide is not drawn).
+// The mark sits above everything in its tile (z-index 1 in an isolated tile), so no ground can cover it.
+const misuseTiles = (ctx) => {
+  const cw = ctx.brand.logo.colourways, g = cw.reversed.ground, act = actF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0];
+  const seen = [], spare = ctx.colours.map((c) => c.hex).filter((h) => { const k = lower(h); if (seen.includes(k)) return false; seen.push(k); return k !== lower(g) && k !== lower(cw.reversed.name); });
+  const bands = spare.length ? spare.slice(0, 3) : [L(ctx).surface, L(ctx).text];
+  const xc = ctx.ratio(act, g) >= 3 ? act : cw.reversed.name;
+  const shade = ctx.ratio(L(ctx).text, g) >= 1.8 ? L(ctx).text : L(ctx).surface;
+  const stripes = bands.concat(bands, bands).slice(0, 7).map((c, i) => `<span class="ht-tile__b" style="left:${i * 14.2857}%;width:14.2857%;background:${c}"></span>`).join('');
+  const items = [
+    ['Stretched', 'transform:scale(1.4,0.8)'], ['Recoloured', 'filter:hue-rotate(150deg) saturate(1.6)'], ['Rotated', 'transform:rotate(-14deg)'],
+    ['Effects', `filter:drop-shadow(0 6px 6px ${shade})`], ['Busy ground', '', stripes], ['Outlined or boxed', `border:1.5px solid ${cw.reversed.name};padding:10px`],
+  ];
+  return `<ul class="ht-tiles">${items.map(([t, st, bg = ''], i) => `<li class="ht-tile"><div class="ht-tile__a" style="${fieldStyle(ctx, g, 'site misuse tile')}">${bg}<span class="ht-tile__m" style="${st}">${ctx.logo.html(geo, { width: 88, colourway: 'reversed', color: cw.reversed.name, label: 'Logo' })}</span><svg class="ht-tile__x" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M2 2L98 98M98 2L2 98" stroke="${xc}" stroke-width="2" vector-effect="non-scaling-stroke" fill="none"/></svg></div><p class="ht-tile__t">${A(t)}</p><p class="ht-tile__n">${A(misuse[i])}</p></li>`).join('')}</ul>`;
+};
 const doDont = (rules) => pair(rules.map((r) => [A(r.do), A(r.dont)]), ['Do', 'Do not']);
 const colourField = (ctx, c, big) => ({
   hex: c.hex, what: `site colour ${c.name}`, size: big ? 32 : 15,
@@ -46,26 +62,29 @@ export const NOTES = {
     const cw = ctx.brand.logo.colourways;
     return { big: 'Each ground has one version.', html: fields(ctx, Object.entries(cw).map(([k, v]) => ({ hex: v.ground, what: `site logo ground ${k}`, html: `<div class="ht-field__logo">${ctx.logo.html('colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], { width: 180, colourway: k, color: v.name, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(ctx.cap ? ctx.cap(k.replace(/-/g, ' ')) : k)}</b></p>` })), 3) };
   },
-  'logo-misuse': () => ({ big: 'Use the logo as it is drawn.', html: list(misuse.map(A)) }),
+  'logo-misuse': (ctx) => ({ big: 'Use the logo as it is drawn.', html: misuseTiles(ctx) }),
   palette: (ctx) => {
-    const cs = [...ctx.colours].sort((a, b) => (a.role === 'action' ? -1 : b.role === 'action' ? 1 : 0));
+    const cs = distinctColours(ctx).sort((a, b) => (a.role === 'action' ? -1 : b.role === 'action' ? 1 : 0));
     return { big: `${words(cs.length)} colours`, html: fields(ctx, cs.map((c, i) => colourField(ctx, c, i === 0)), 2) };
   },
   proportion: (ctx) => {
-    const cs = [...ctx.colours].sort((a, b) => b.share - a.share);
+    const cs = distinctColours(ctx).sort((a, b) => b.share - a.share);
     return { big: `${pct(cs[0].share)} ${cs[0].name}`, html: `<div class="ht-stripe" role="img" aria-label="${A(cs.map((c) => `${c.name} ${pct(c.share)}`).join(', '))}">${cs.map((c) => `<div style="flex:${c.share};${fieldStyle(ctx, c.hex, `site proportion ${c.name}`)}${lower(c.hex) === lower(L(ctx).surface) ? ';box-shadow:inset 0 0 0 1px var(--h)' : ''}"><span class="num">${pct(c.share)}</span></div>`).join('')}</div>` + dl(cs.map((c) => [c.name, `<span class="num">${pct(c.share)}</span>. ${A(c.lands || '')}`])) };
   },
   contrast: (ctx) => ({
     big: `${words(ctx.pairs.length)} pairs that pass`,
     html: `<ol class="ht-scale">${ctx.pairs.map((q) => `<li><p class="ht-k">${A(q.ratioText)}<span>${q.large ? '24 px and over' : 'Any size'}</span></p><p class="ht-scale__s" style="background:${q.bgHex};color:${q.fgHex};padding:16px 20px;font-size:${q.large ? 24 : 17}px;line-height:1.35;${q.large ? 'font-weight:600;' : ''}${lower(q.bgHex) === lower(L(ctx).surface) ? 'box-shadow:inset 0 0 0 1px var(--h)' : ''}">${A(nameOfHex(ctx, q.fgHex))} on ${A(nameOfHex(ctx, q.bgHex))}. ${A(q.use || '')}</p></li>`).join('')}</ol>`,
   }),
-  'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...ctx.colours, ...ctx.tones].map((c) => [c.name, `${m(c.hex)} ${m(`rgb(${ctx.C.hexToRgb(c.hex).join(', ')})`)}${ctx.C.cmykOf(c) ? ` ${m(ctx.C.cmykOf(c))}` : ''}`])) }),
-  typefaces: (ctx) => { const F = ctx.brand.fonts; return { big: F.display.family, html: dl([['Display', `${A(F.display.family)}, <span class="num">${F.display.weights.join(', ')}</span>`], ['Body', `${A(F.body.family)}, <span class="num">${F.body.weights.join(', ')}</span>`], ['Mono', `${A(F.mono.family)}, <span class="num">${F.mono.weights.join(', ')}</span>. Literal values only.`]]) }; },
+  'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...distinctColours(ctx), ...ctx.tones].map((c) => [c.name, `${m(c.hex)} ${m(`rgb(${ctx.C.hexToRgb(c.hex).join(', ')})`)}${ctx.C.cmykOf(c) ? ` ${m(ctx.C.cmykOf(c))}` : ''}`])) }),
+  typefaces: (ctx) => { const F = ctx.brand.fonts, sn = [...new Set(['display', 'body', 'mono'].map((r) => standInNote(F[r])).filter(Boolean))].join(' '); return { big: servedFamily(F.display), html: dl([['Display', `${A(servedFamily(F.display))}, <span class="num">${F.display.weights.join(', ')}</span>`], ['Body', `${A(servedFamily(F.body))}, <span class="num">${F.body.weights.join(', ')}</span>`], ['Mono', `${A(servedFamily(F.mono))}, <span class="num">${F.mono.weights.join(', ')}</span>. Literal values only.`], ...(sn ? [['Stand-ins', A(sn)]] : [])]) }; },
   hierarchy: (ctx) => ({
     big: `${words(ctx.brand.type.scale.length)} steps`,
     html: `<ol class="ht-scale">${ctx.brand.type.scale.map((t) => { const role = t.face === 'display' ? 'ht-d' : ''; return `<li><p class="ht-k">${A(t.token)}<span class="num">${t.size} px, weight ${t.weight}</span></p><p class="ht-scale__s ${role}" style="font-size:min(${t.size}px, 12cqw);line-height:${t.line < 3 ? t.line : (t.line / t.size).toFixed(2)};font-weight:${t.weight};${t.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(t.use)}</p></li>`; }).join('')}</ol>`,
   }),
-  'type-in-use': (ctx) => { const S = ctx.brand.type.sample; return { big: ok(ctx, S.headline) ? S.headline : lead(ctx), html: p(A(sayOnce(ctx, S.paragraph)), 'ht-lead') + p(A(sayOnce(ctx, S.caption))) }; },
+  'type-in-use': (ctx) => {
+    const T = ctx.brand.type, S = T.sample, step = (t) => T.scale.find((x) => x.token === t);
+    const spec = ['headline', 'body', 'caption'].map((t) => { const x = step(t); return [t === 'body' ? 'Paragraph' : t[0].toUpperCase() + t.slice(1), `<span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span>`]; });
+    return { big: ok(ctx, S.headline) ? S.headline : lead(ctx), html: p(A(sayOnce(ctx, S.paragraph)), 'ht-lead') + p(A(sayOnce(ctx, S.caption))) + dl(spec) }; },
   'type-rules': (ctx) => ({ big: ctx.brand.type.rules[0].do, html: doDont(ctx.brand.type.rules) }),
   'photo-direction': (ctx) => { const D = ctx.brand.imagery.direction; return { big: D.subject, html: dl(Object.entries(D).filter(([k]) => k !== 'subject').map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)])) }; },
   'shot-list': (ctx) => { const S = ctx.brand.imagery.shots; return { big: `${words(S.length)} shots`, html: list(S.map((s) => `<b>${A(s.caption || s.alt)}</b>${A(s.alt)}${s.credit && !s.generated ? ` Photo: ${A(s.credit)}.` : ''}`)) }; },
@@ -78,6 +97,6 @@ export const NOTES = {
   signage: (ctx) => ({ big: ctx.brand.applications.signage, html: '' }),
   'email-signature': (ctx) => { const E = ctx.brand.applications.email; return { big: E.person, html: dl([['Role', A(E.role)], ['Web', m(ctx.brand.applications.site.url)]]) }; },
   digital: (ctx) => ({ big: ok(ctx, ctx.brand.product) ? ctx.brand.product : ctx.brand.applications.site.url, html: dl([['Web', m(ctx.brand.applications.site.url)]]) }),
-  summary: (ctx) => { const B = ctx.brand; return { big: lead(ctx), html: fields(ctx, ctx.colours.map((c) => colourField(ctx, c, false)), 2) + dl([['Display', A(B.fonts.display.family)], ['Body', A(B.fonts.body.family)]]) }; },
+  summary: (ctx) => { const B = ctx.brand; return { big: lead(ctx), html: fields(ctx, distinctColours(ctx).map((c) => colourField(ctx, c, false)), 2) + dl([['Display', A(servedFamily(B.fonts.display))], ['Body', A(servedFamily(B.fonts.body))]]) }; },
   'contact-scope': (ctx) => { const B = ctx.brand; return { big: B.contact.email, html: dl([['Owner', A(B.contact.owner)], ['Email', m(B.contact.email)], ['Version', `<span class="num">${A(B.version.number)}</span>`], ['Issued', A(ctx.versionLine)]]) }; },
 };

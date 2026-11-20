@@ -4,6 +4,7 @@
 import { esc as A } from '../../engine/brand.js';
 import { outline } from '../../engine/logo.js';
 import { loadFont } from '../../engine/nodeFont.js';
+import { softOnDark } from './helpers.js';
 
 export { A };
 export const L = (ctx) => ctx.roles.light;
@@ -13,6 +14,8 @@ export const lower = (h) => String(h).toLowerCase();
 export const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
 // the deck's chrome rule: the quiet tone that reaches 4.5:1 on the field, else the best of text, ground and dark soft text
 export const chromeOn = (ctx, hex) => {
+  const soft = softOnDark(ctx, hex);
+  if (soft) return soft;
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, DK(ctx).quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
   return q || [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
 };
@@ -66,7 +69,7 @@ export function tocPanel(ctx, { id, sections, href, current, front }) {
 // the next slide as a field: the action colour, the next title at display size; the previous one small beside it
 export function nextField(ctx, { next, prev, nextLabel = 'Next', prevLabel = 'Previous' }) {
   const act = actF(ctx);
-  const n = next ? `<a class="ht-next__a" href="${next.href}" rel="next"><span class="ht-k">${nextLabel}${next.ref ? ` <b class="num">${A(next.ref)}</b>` : ''}</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, [next.title], 0.86, 120, 32)}">${A(next.title)}</span></a>` : '';
+  const n = next ? `<a class="ht-next__a" href="${next.href}" rel="next"><span class="ht-k">${nextLabel}${next.ref ? ` <b class="num">${A(next.ref)}</b>` : ''}</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, [next.title], 0.86, 56, 32)}">${A(next.title)}</span></a>` : '';
   const p = prev ? `<a class="ht-prev" href="${prev.href}" rel="prev"><span class="ht-k">${prevLabel}</span> ${prev.ref ? `<b class="num">${A(prev.ref)}</b> ` : ''}${A(prev.title)}</a>` : '';
   return `<nav class="ht-next" aria-label="Previous and next" style="${fieldStyle(ctx, act, 'site next field', 32)}">${n}${p}</nav>`;
 }

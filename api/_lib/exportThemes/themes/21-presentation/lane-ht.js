@@ -12,14 +12,17 @@ import { kitSite } from './lane-ht-kit.js';
 
 export { kitSite };
 
-const docName = (ctx) => `${ctx.brand.name} brand guidelines`;
+const docName = (ctx) => `${ctx.brand.name} guidelines`;
+// pages whose slide is a picture of a table or a spec: below 841 the slide is not drawn at all, its content is reflowed in the notes instead
+// (the colours as a stacked bar, the type as a spec list, the misuse as a grid of tiles). Every other slide scales to the column.
+const REFLOW = new Set(['palette', 'proportion', 'contrast', 'colour-values', 'typefaces', 'hierarchy', 'type-in-use', 'logo-misuse']);
 // a big line's cap follows its length, so a sentence sets as a paragraph of display type and a word as a poster
 const bigCap = (t) => (String(t).length > 90 ? 36 : String(t).length > 44 ? 48 : 72);
 const big = (ctx, t, cls = 'ht-big') => `<p class="ht-d ${cls}" style="--bs:${fitSize(ctx, [t], 0.94, bigCap(t), 18)};--bn:${String(t).length > 44 ? 30 : 72}px">${A(t)}</p>`;
 
 // the slide at its own size, zoomed to the column below 1280 (it is a picture of the PDF page, its text kept as text).
 // Below 841 the engine sets --fit on [data-gs-fit]; above it the CSS sets the zoom per breakpoint.
-const stage = (ctx, id, html) => `<section class="ht-stage" id="${id}" aria-label="Slide" style="${fieldStyle(ctx, darkF(ctx), 'site stage')}"><div class="ht-fit"><div class="ht-slides" data-gs-fit>${html}</div></div></section>`;
+const stage = (ctx, id, html, reflow = false) => `<section class="ht-stage${reflow ? ' ht-stage--reflow' : ''}" id="${id}" aria-label="Slide" style="${fieldStyle(ctx, darkF(ctx), 'site stage')}"><div class="ht-fit"><div class="ht-slides" data-gs-fit>${html}</div></div></section>`;
 // a slide the deck cannot draw for this brand (it needs a photo or a colourway the brand lacks): the deck's plain title slide,
 // the running head over the action field and the title at display size
 const titleSlide = (ctx, id) => {
@@ -33,8 +36,8 @@ function page(ctx, id) {
   // below 841 the 1280 px slide would be a 330 px thumbnail nobody can read, so the CSS swaps it for this lead: the deck's running head
   // and the page's title at display size on the same dark field. The slide stays in the markup for the wide layouts.
   const p = ctx.pages.find((x) => x.id === id);
-  const lead = `<section class="ht-ml" aria-label="Page" style="${fieldStyle(ctx, darkF(ctx), 'site narrow lead')}"><p class="ht-ml__hd"><span>${A(docName(ctx))}</span><span class="num">${String(ctx.pageNo(id)).padStart(3, '0')}</span></p><p class="ht-d ht-ml__t" style="--bs:${fitSize(ctx, [p.title], 0.9, 72, 32)}">${A(p.title)}</p></section>`;
-  return `${lead}${stage(ctx, 'slide', slideOf(ctx, id))}
+  const lead = `<section class="ht-ml" aria-label="Page" style="${fieldStyle(ctx, darkF(ctx), 'site narrow lead')}"><p class="ht-ml__hd"><span>${A(docName(ctx))}</span><span class="num">${String(ctx.pageNo(id)).padStart(3, '0')}</span></p><h1 class="ht-d ht-ml__t" style="--bs:${fitSize(ctx, [p.title], 0.9, 96, 32)}">${p.ref ? `<b class="num">${A(p.ref)}</b>` : ''}${A(p.title)}</h1></section>`;
+  return `${lead}${stage(ctx, 'slide', slideOf(ctx, id), REFLOW.has(id))}
 <section class="ht-notes" aria-label="Notes"><div class="ht-bigc">${big(ctx, n.big)}</div><div class="ht-nb">${n.html}</div></section>`;
 }
 
@@ -42,8 +45,10 @@ function page(ctx, id) {
 function front(ctx, S) {
   const grounds = [darkF(ctx), actF(ctx), panelF(ctx)];
   const hs = fitSize(ctx, S.sections.map((s) => s.title), 0.9, 72, 32);
-  const rows = S.sections.map((s, i) => `<li style="${fieldStyle(ctx, grounds[i % 3], 'site contents section', 32)}"><h2 class="ht-d ht-ix__h" style="--bs:${hs}"><b class="num">${s.n}</b>${A(s.title)}</h2><ol>${s.units.map((u) => `<li><a href="${u.file}"><span class="num">${u.ref}</span><span>${A(u.title)}</span></a></li>`).join('')}</ol></li>`).join('');
-  return `${stage(ctx, 'cover', guidelines.cover(ctx))}
+  // three band layouts in turn: title left and list right, title over a two-column list, list left and title right; each says how many pages it holds
+  const kinds = ['two', 'list', 'flip'];
+  const rows = S.sections.map((s, i) => `<li class="ht-ix--${kinds[i % 3]}" style="${fieldStyle(ctx, grounds[i % 3], 'site contents section', 32)}"><div class="ht-ix__hc"><h2 class="ht-d ht-ix__h" style="--bs:${hs}"><b class="num">${s.n}</b>${A(s.title)}</h2><p class="ht-ix__c num">${s.units.length === 1 ? '1 page' : `${s.units.length} pages`}, ${s.units[0].ref} to ${s.units[s.units.length - 1].ref}</p></div><ol>${s.units.map((u) => `<li><a href="${u.file}"><span class="num">${u.ref}</span><span>${A(u.title)}</span></a></li>`).join('')}</ol></li>`).join('');
+  return `${stage(ctx, 'cover', guidelines.cover(ctx), true)}
 <section class="ht-cv" aria-labelledby="ht-cv-h"><h1 class="ht-d ht-cv__t" id="ht-cv-h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 96, 32)}">${A(docName(ctx))}</h1><p class="ht-cv__l">${A(ctx.brand.lines.primary)}</p></section>
 <ol class="ht-ix" id="contents" aria-label="Contents">${rows}</ol>`;
 }

@@ -38,19 +38,28 @@ function actionStates(action, labels, hoverSeed) {
   return { action, actionHover: reach(hoverSeed || shiftL(action, dl * 0.05), [label], 4.5), actionPressed: reach(shiftL(action, dl * 0.1), [label], 4.5), actionLabel: label };
 }
 
-function lightRoles(palette, slots, semantic) {
-  const R = interfaceRoles(palette, semantic), surface = up(R.background), raised = '#FFFFFF', sunken = shiftL(surface, -0.04);
+// The Studio's default information colour is a stock blue and its focus ring follows it, so a brand whose own colours are green and gold shipped a blue ring and a blue
+// information message. Where the design does not choose an information colour it takes the primary's hue, and the focus ring is the brand's ink in both modes.
+const ownInfo = (design) => design?.states && ((design.states.info !== undefined && design.states.info !== null) || design.states.infoHue !== undefined);
+const infoTone = (primary, bgL, fgL, grounds) => {
+  const { C, H } = toOklch(primary), c = Math.min(C, 0.14), bg = up(fromOklch(bgL, Math.min(c, 0.035), H));
+  return { fg: reach(fromOklch(fgL, c, H), [bg, ...grounds], 4.5), bg };
+};
+
+function lightRoles(palette, slots, semantic, design) {
+  // raised is a lighter step of the surface, never pure white: a white card on a cream page is the one cold thing in the set
+  const R = interfaceRoles(palette, semantic), surface = up(R.background), raised = up(shiftL(surface, 0.03)), sunken = shiftL(surface, -0.04);
   const all = [surface, raised, sunken];
   const text = reach(up(R.onSurface), all, 4.5), quiet = reach(up(R.onSurfaceMuted), [surface, raised], 4.5);
-  const a = actionStates(slots.pine.hex, [text, '#FFFFFF', '#000000'], up(R.primaryHover));
+  const a = actionStates(slots.pine.hex, [text, raised, '#FFFFFF', '#000000'], up(R.primaryHover));
   const dis = up(R.disabled);
   const tone = (s) => { const bg = up(s.background); return { fg: reach(up(s.hex), [bg, surface], 4.5), bg }; };
   const by = Object.fromEntries(semantic.map((s) => [s.id, tone(s)]));
   const r = {
     surface, raised, sunken, text, textSoft: reach(shiftL(text, 0.08), all, 4.5), quiet, quietOnSunken: reach(quiet, [sunken], 4.5),
     border: reach(fromOklch(clamp((toOklch(text).L + toOklch(surface).L) / 2, 0, 1), toOklch(text).C, toOklch(text).H), [surface], 3), divider: up(R.border),
-    ...a, focus: reach(up(R.focus), [...all], 3), disabledBg: dis, disabledText: reach(up(R.onDisabled), [dis], 4.5), scrim: text,
-    success: by.success, warning: by.warning, danger: by.danger, info: by.info, neutral: { fg: text, bg: sunken },
+    ...a, focus: ownInfo(design) ? reach(up(R.focus), [...all], 3) : reach(text, [...all], 3), disabledBg: dis, disabledText: reach(up(R.onDisabled), [dis], 4.5), scrim: text,
+    success: by.success, warning: by.warning, danger: by.danger, info: ownInfo(design) ? by.info : infoTone(slots.pine.hex, 0.96, 0.45, [surface]), neutral: { fg: text, bg: sunken },
   };
   // A pale action fill gets an edge that reads on the surface, so the button is still seen.
   if (ratio(r.action, surface) < 3) r.actionEdge = r.border;
@@ -62,14 +71,14 @@ function darkRoles(design, primary) {
   const { C: chroma, H } = toOklch(primary), tint = chroma < 0.02 ? 0 : 1, dk = (L, C = 0.012) => fromOklch(L, C * tint, H);
   const surface = dk(0.19), raised = dk(0.235), sunken = dk(0.15), all = [surface, raised, sunken];
   const text = reach(dk(0.95, 0.01), all, 4.5), quiet = reach(dk(0.72), [surface, raised], 4.5), dis = dk(0.26);
-  const a = actionStates(reach(primary, [surface], 3), [surface, '#FFFFFF', '#000000']);
+  const a = actionStates(reach(primary, [surface], 3), [surface, text, '#FFFFFF', '#000000']);
   const shades = semanticShades(design?.states);
   const tone = (role) => { const bg = shades[role][9]; return { fg: reach(shades[role][3], [bg, surface], 4.5), bg }; };
   return {
     surface, raised, sunken, text, textSoft: reach(dk(0.86), all, 4.5), quiet, quietOnSunken: reach(quiet, [sunken], 4.5),
-    border: reach(dk(0.6), [surface], 3), divider: dk(0.3), ...a, focus: reach(fromOklch(0.78, 0.1, 250), all, 3),
+    border: reach(dk(0.6), [surface], 3), divider: dk(0.3), ...a, focus: ownInfo(design) ? reach(fromOklch(0.78, 0.1, 250), all, 3) : reach(text, all, 3),
     disabledBg: dis, disabledText: reach(dk(0.62), [dis], 4.5), scrim: sunken,
-    success: tone('success'), warning: tone('warning'), danger: tone('error'), info: tone('info'), neutral: { fg: text, bg: raised },
+    success: tone('success'), warning: tone('warning'), danger: tone('error'), info: ownInfo(design) ? tone('info') : infoTone(primary, 0.28, 0.82, [surface]), neutral: { fg: text, bg: raised },
   };
 }
 
@@ -179,15 +188,16 @@ function typeBlock(d, faces) {
   const lad = typeLadder(d).map((x) => x.px);
   const fw = (face, want) => nearest(faces[face].weights, want);
   const body = clamp(d.lineHeight, 1.2, 1.8);
-  const s = (v, lo, hi) => round1(clamp(v, lo, hi));
+  // whole pixels, and nothing under 12: a fractional size reads as computed, not decided, and a smaller caption cannot be read
+  const s = (v, lo, hi) => Math.round(clamp(v, lo, hi));
   return {
     scale: [
       T('display', 'display', s(lad[0], 24, 96), 1.05, fw('display', d.headingWeight), 'The largest line'),
       T('headline', 'display', s(lad[1], 20, 80), 1.1, fw('display', d.headingWeight), 'A page headline'),
       T('title', 'display', s(lad[3], 16, 40), 1.2, fw('display', d.headingWeight), 'A section title'),
       T('body', 'body', s(lad[5], 12, 24), round1(body * 100) / 100, fw('body', d.bodyWeight), 'Running copy'),
-      T('label', 'body', s(lad[6], 11, 18), 1.3, fw('body', 500), 'Labels and small text'),
-      T('caption', 'body', s(lad[7], 10, 16), 1.4, fw('body', 400), 'Notes and folios'),
+      T('label', 'body', s(lad[6], 12, 18), 1.3, fw('body', 500), 'Labels and small text'),
+      T('caption', 'body', s(lad[7], 12, 16), 1.4, fw('body', 400), 'Notes and folios'),
     ],
     sample: { headline: 'Your headline here', paragraph: 'A short paragraph of ordinary copy.', caption: 'A short caption.' },
     rules: [1, 2, 3, 4, 5, 6].map((i) => rule(`Type habit ${i}.`, `Type mistake ${i}.`)),
@@ -219,7 +229,7 @@ const cleanDesign = (design) => { const d = plain(design), p = plain(d.palette);
 function build({ design: rawDesign, projectName, date }) {
   const design = cleanDesign(rawDesign), d = readDesign(design), word = wordmarkOf(projectName);
   const palette = kitPalette(design || {}), slot = Object.fromEntries(palette.map((p) => [p.id, p]));
-  const light = lightRoles(palette, slot, kitSemantic(design || {})), dark = darkRoles(design, slot.pine.hex);
+  const light = lightRoles(palette, slot, kitSemantic(design || {}), design), dark = darkRoles(design, slot.pine.hex);
   const faces = {
     display: fontFace('display', d.heading, d.headingWeight, design?.fonts?.heading?.category),
     body: fontFace('body', d.body, d.bodyWeight, design?.fonts?.body?.category),

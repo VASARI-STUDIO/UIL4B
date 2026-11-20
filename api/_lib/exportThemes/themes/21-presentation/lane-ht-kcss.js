@@ -2,6 +2,7 @@
 // the markup list. The components keep the code package's own CSS.
 export function kitCss() {
   return `body{margin:0}
+.ht--kit,.ht--kit *,.ht--kit *::before,.ht--kit *::after{box-sizing:border-box}
 .ht--kit{--g:var(--surface);--t:var(--text);--s:var(--text-soft);--q:var(--quiet);--h:var(--divider)}
 .hk-top{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);min-height:min(calc(100vh - 56px),520px)}
 @media (min-width:1100px){.hk-live .hk-row,.hk-live .hk-col>.hk-i,.hk-live .hk-row--2{zoom:1.25}}
@@ -43,6 +44,15 @@ export function kitCss() {
 .hk-scr__h{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .hk-scr__t{margin:0;font-size:20px;font-weight:600}
 .hk-tok{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;margin:0}
+.hk-title__in{display:flex;flex-direction:column;gap:20px}
+.ht[data-page="tokens"] .hk-title{justify-content:flex-start}
+.ht[data-page="tokens"] .hk-title__in{position:sticky;top:80px}
+.hk-tg+.hk-tg{margin-top:56px}
+.hk-tg__h{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
+.hk-tg__t{margin:0;font-size:28px;line-height:1.1;font-weight:600}
+.hk-tok dt{display:flex;align-items:center;gap:10px;min-width:0}
+.hk-tok__c{flex:none;width:16px;height:16px;box-shadow:inset 0 0 0 1px var(--divider)}
+.ui [data-slot]{outline:0}
 .hk-tok>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--divider)}
 .hk-tok dd{margin:0;display:flex;gap:12px;align-items:center}
 .hk-code{padding:96px 56px;max-width:1440px;margin:0 auto}
@@ -50,11 +60,12 @@ export function kitCss() {
 .hk-code ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 32px}
 .hk-code ol:has(>li:only-child){grid-template-columns:minmax(0,1fr);max-width:720px}
 .hk-code li{display:flex;flex-direction:column;gap:12px;align-items:flex-start;min-width:0}
-.hk-code pre{margin:0;width:100%;overflow:auto;padding:16px;background:var(--sunken);color:var(--text);font:400 13px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.hk-code pre{margin:0;width:100%;max-width:100%;overflow:auto;padding:16px;background:var(--sunken);color:var(--text);font:400 13px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .hk-code code{font:inherit}
 .hk-sw b{font-weight:600}
 .hk-copy.is-done{background:var(--t);color:var(--g)}
 @media (max-width:840px){
+.ht[data-page="tokens"] .hk-title__in{position:static}
 .hk-top{grid-template-columns:minmax(0,1fr);min-height:0}
 .hk-title,.hk-live{padding:40px 20px}
 .hk-row--2,.hk-sw,.hk-rd,.hk-tok,.hk-code ol{grid-template-columns:minmax(0,1fr)}

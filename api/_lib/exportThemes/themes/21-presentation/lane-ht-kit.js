@@ -89,8 +89,10 @@ const PAGES = {
   'screen-dark': (ctx) => screen(ctx, true, false),
   'screen-mobile': (ctx) => screen(ctx, false, true),
   tokens: (ctx) => {
-    const g = tokenGroups(ctx), map = colourMap(ctx, 'light'), rows = [...Object.entries(map), ...Object.entries(g.space), ...Object.entries(g.radius), ...Object.entries(g.width), ...Object.entries(g.text)];
-    return { lede: 'Every token the components read, as CSS custom properties.', live: `<dl class="hk-tok">${rows.map(([k, v]) => `<div><dt>${tok(`--${k}`)}</dt><dd><span class="ht-m">${A(v)}</span>${copyBtn(`var(--${k})`, `--${k}`)}</dd></div>`).join('')}</dl>`, code: [] };
+    // one group to a row, each under its own heading with one Copy for the group (the declarations as they sit in tokens.css); a colour carries a 16 px chip
+    const g = tokenGroups(ctx), groups = [['Colour', Object.entries(colourMap(ctx, 'light')), true], ['Space', Object.entries(g.space)], ['Radius', Object.entries(g.radius)], ['Border width', Object.entries(g.width)], ['Text', Object.entries(g.text)]].filter(([, r]) => r.length);
+    const live = groups.map(([t, rows, chip], i) => `<section class="hk-tg" aria-labelledby="hk-tg-${i}"><div class="hk-tg__h"><h2 class="ht-d hk-tg__t" id="hk-tg-${i}">${A(t)}</h2>${copyBtn(rows.map(([k, v]) => `--${k}: ${v};`).join(String.fromCharCode(10)), `${t} tokens`)}</div><dl class="hk-tok">${rows.map(([k, v]) => `<div><dt>${chip ? `<span class="hk-tok__c" style="background:${A(v)}"></span>` : ''}${tok(`--${k}`)}</dt><dd><span class="ht-m">${A(v)}</span></dd></div>`).join('')}</dl></section>`).join('');
+    return { lede: 'Every token the components read, as CSS custom properties.', live, code: [] };
   },
   code: (ctx) => {
     const F = SC(ctx).form, h = ctx.ui.btn(F.book);
@@ -113,7 +115,7 @@ const grounds = (ctx) => [panelF(ctx), actF(ctx), darkF(ctx), panelF(ctx)];
 function body(ctx, K) {
   const p = K.page, d = PAGES[p.id](ctx), sec = p.section ? p.section.n : 1, hex = grounds(ctx)[(sec - 1) % 4];
   const ts = fitSize(ctx, K.pages.filter((q) => q.section).map((q) => q.title), 0.94, 72, 32);
-  const top = `<section class="hk-top"><div class="hk-title" style="${fieldStyle(ctx, hex, 'kit title field', 32)}"><p class="ht-k">${A(p.section.title)} <b class="num">${A(p.ref)}</b></p><h1 class="ht-d hk-title__h" style="--bs:${ts}">${A(p.title)}</h1><p class="hk-title__l">${A(d.lede)}</p></div>
+  const top = `<section class="hk-top"><div class="hk-title" style="${fieldStyle(ctx, hex, 'kit title field', 32)}"><div class="hk-title__in"><p class="ht-k">${A(p.section.title)} <b class="num">${A(p.ref)}</b></p><h1 class="ht-d hk-title__h" style="--bs:${ts}">${A(p.title)}</h1><p class="hk-title__l">${A(d.lede)}</p></div></div>
 <div class="ui hk-live"${d.dark ? ' data-theme="dark"' : ''}>${d.live}</div></section>`;
   const code = d.code.length ? `<section class="hk-code" aria-labelledby="hk-code-h"><h2 class="ht-d hk-code__h" id="hk-code-h">The markup</h2><ol>${d.code.map(([l, h], i) => `<li id="m-${i + 1}" data-rd-n="${p.ref}.${i + 1}"><p class="ht-k"><span class="num">${p.ref}.${i + 1}</span> ${A(l)}</p><pre><code>${A(pretty(K, h))}</code></pre>${copyBtn(pretty(K, h), l)}</li>`).join('')}</ol></section>` : '';
   return top + code;
@@ -121,7 +123,7 @@ function body(ctx, K) {
 // index.html: the kit's title slide (the logo on its dark ground, a live set of components), then the contents stripes
 function cover(ctx, K) {
   const B = ctx.brand, rev = B.logo.colourways.reversed, F = SC(ctx).form, E = EX(ctx), u = ctx.ui, dk = darkF(ctx);
-  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(E.secondary || F.book, { variant: 'secondary' }), 'Secondary')}${item(u.statusChip(SC(ctx).deliveries[0].status), 'Status')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}`;
+  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(E.secondary || F.book, { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(SC(ctx).deliveries[0].status)} <span class="ui-badge">${SC(ctx).deliveries.length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}`;
   const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320, label: 'Your logo goes here' })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 72, 32)}">${A(docName(ctx))}</h1><p class="hk-title__l">${A(B.product)}</p><p class="hk-title__v">${A(ctx.versionLine)}</p></div>
 <div class="ui hk-live">${live}</div></section>`;
   return top + contents(ctx, K);

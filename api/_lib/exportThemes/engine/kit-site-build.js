@@ -80,7 +80,7 @@ export function prettyHtml(markup) {
   for (const t of toks) {
     const top = stack[stack.length - 1];
     if (t.startsWith('</')) { if (stack.length > 1) stack.pop(); continue; }
-    if (t.startsWith('<svg') || t.startsWith('<!--')) { top.kids.push({ leaf: t }); continue; }
+    if (t.startsWith('<svg') || t.startsWith('<!--')) { top.kids.push({ leaf: t.startsWith('<svg') ? t.replace(/>\s+</g, '><').replace(/\s+/g, ' ') : t }); continue; } // an svg is one line of markup: its source indent never prints
     if (t.startsWith('<')) {
       const name = /^<([a-zA-Z0-9-]+)/.exec(t)[1].toLowerCase(), node = { open: t, name, kids: [] };
       top.kids.push(node); if (!VOID.has(name) && !t.endsWith('/>')) stack.push(node); continue;

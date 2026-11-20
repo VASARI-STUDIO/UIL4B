@@ -128,3 +128,31 @@ test('the guide and the UI kit link to each other by the top folder of the other
     assert.ok(out(kit, guide).length > 0, `${theme}: the kit links to the guide`)
   }
 })
+
+// The design review of the premium site (r1) found these; each is one thing a later edit could quietly bring back.
+test('the palette page counts and lists each colour once, and carries no writing-rule text', async () => {
+  const files = await exportZip('21-presentation', 'slides')
+  const page = files['palette.html']
+  const distinct = new Set(DESIGN.palette.colors.map((c) => c.toLowerCase()))
+  assert.match(page, new RegExp(`>${distinct.size} colours, each named`), 'the count is the number of distinct colours (the label colour on the action is the canvas: it must not make a sixth)')
+  assert.doesNotMatch(page, /Writing rule/, 'a writing-rule slot in the colour strip')
+})
+
+test('the type spec prints whole pixels, and the kit stylesheet sizes its code blocks by the border box', async () => {
+  const guide = await exportZip('21-presentation', 'slides')
+  assert.doesNotMatch(guide['type-in-use.html'], /\b\d+\.\d+ px\b/, 'a fractional px in the type spec')
+  const kit = await exportZip('21-presentation', 'ui-kit')
+  assert.match(kit['assets/kit.css'], /\.ht--kit\s*,[^{]*\*[^{]*\{\s*box-sizing:\s*border-box/, 'a border-box rule (a code block overflowed its column at 390 without it)')
+  assert.doesNotMatch(kit['buttons.html'], /\n\s+&lt;path/, 'the source indent of an svg printed inside the code sample')
+})
+
+test('the kit tokens are drawn from the palette: no stock blue, and no pure white as a surface or a label', async () => {
+  const kit = await exportZip('21-presentation', 'ui-kit')
+  const light = kit['tokens.css'].split('\n[data-theme="dark"]')[0] // the first line's comment names the dark selector too
+  for (const token of ['--focus', '--info', '--raised', '--action-label']) {
+    const m = new RegExp(token + ': *(#[0-9A-Fa-f]{6})').exec(light)
+    assert.ok(m, `${token} in tokens.css`)
+    assert.notEqual(m[1].toUpperCase(), '#2563EB', `${token} is the stock blue`)
+    assert.notEqual(m[1].toUpperCase(), '#FFFFFF', `${token} is pure white`)
+  }
+})

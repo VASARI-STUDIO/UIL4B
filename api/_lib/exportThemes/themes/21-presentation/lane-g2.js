@@ -241,17 +241,25 @@ export const guidelines = {
     const ink = inkOn(ctx, dark), ch = chromeOn(ctx, dark), hair = ctx.roles.dark.divider || L(ctx).textSoft;
     const colX = (n) => 56 + n * 98.667, span2 = 2 * 82.667 + 16, w = 124;
     const off = ctx.C.toOklch(act), wrong = ctx.C.fromOklch(Math.max(off.L, 0.62), Math.max(off.C, 0.1), (off.H + 180) % 360);
-    const base = (o = {}) => logo(ctx, 'colour', o.w || w, { colourway: 'reversed', ink, fill: o.fill, label: 'Logo' });
+    // the slot edition draws the frame in `ink`, so a recolour has to change that; the showcase logo takes `fill`
+    const base = (o = {}) => logo(ctx, 'colour', o.w || w, { colourway: 'reversed', ink: o.fill || ink, fill: o.fill, label: 'Logo' });
+    // a palette colour the logo is never set in (not its own ink, not the ground) and that still shows on the ground: the recolour; failing that, the opposite hue
+    const spare = ctx.colours.map((c) => c.hex).filter((h, i, a) => a.findIndex((x) => same(x, h)) === i && !same(h, dark) && !same(h, ink) && !same(h, cw.reversed.name));
+    const recolour = spare.find((h) => ctx.ratio(h, dark) >= 1.5 && ctx.ratio(h, dark) < 8) || wrong;
+    // the busy ground's bands: palette colours other than the ground and the logo's ink, so the mark lands across several of them
+    const bands = spare.length ? spare.slice(0, 3) : [L(ctx).surface, byRole(ctx, 'text').hex];
+    // the effects tile's shadow: the text colour where it shows on the ground, else the page ground
+    const shade = byRole(ctx, 'text').hex, shadowHex = ctx.ratio(shade, dark) >= 1.8 ? shade : L(ctx).surface, shadow = `rgba(${ctx.C.hexToRgb(shadowHex).join(',')},0.75)`;
     const shot = shotFor(ctx, 'cover', ['poster']);
     // the cross: two strokes from corner to corner of the art's square, in the action colour where it reads on the ground (3:1), else in the page's ink
     const xc = ctx.ratio(act, dark) >= 3 ? act : ink;
     const cross = (cx, cy, s) => box(cx - s / 2, cy - s / 2, s, s, '', `<svg width="${px(s)}" height="${px(s)}" viewBox="0 0 ${px(s)} ${px(s)}" aria-hidden="true"><path d="M1 1L${px(s - 1)} ${px(s - 1)}M${px(s - 1)} 1L1 ${px(s - 1)}" stroke="${xc}" stroke-width="2" fill="none"/></svg>`);
     const lh = hOf(ctx, 'colour', w), cy = 324;
     const items = [
-      ['Stretched', 'Never squash or stretch it. Scale it evenly.', `<div style="transform:scale(1.3,0.7)">${base()}</div>`],
-      ['Recoloured', 'Never recolour it. Use a colourway from the versions page.', base({ fill: wrong })],
+      ['Stretched', 'Never squash or stretch it. Scale it evenly.', `<div style="transform:scale(1.4,0.8)">${base()}</div>`],
+      ['Recoloured', 'Never recolour it. Use a colourway from the versions page.', base({ fill: recolour })],
       ['Rotated', 'Never tilt or turn it. It sits level with the page.', `<div style="transform:rotate(-14deg)">${base()}</div>`],
-      ['Effects', 'No shadows, glows or bevels.', `<div style="filter:drop-shadow(5px 5px 0 ${act})">${base()}</div>`],
+      ['Effects', 'No shadows, glows or bevels.', `<div style="filter:drop-shadow(0 6px 6px ${shadow})">${base()}</div>`],
       shot ? ['Busy ground', 'Never on a busy part of a photo. Use a quiet one, or a flat colour.', null]
         : ['Busy ground', 'Never across the edge of two colours or a busy photo. Give it one flat ground.', null],
       ['Outlined or boxed', 'No outlines, no boxes, no frames around it.', `<div style="box-sizing:border-box;padding:12px;border:1.5px solid ${cw.reversed.name}">${base({ w: w - 28 })}</div>`],
@@ -261,12 +269,14 @@ export const guidelines = {
       const x = colX(2 * i), cx = x + span2 / 2;
       if (i) inner += box(x - 8, 72, 1, 648, `background:${hair}`);
       if (art === null) {
-        // the busy ground: a window of the photograph in this column, from the head zone to the horizon, the logo set across it
-        const fx0 = x - 8, fw = span2 + 16, logoBox = box(cx - fx0 - w / 2, cy - 72 - lh / 2, w, lh, '', base());
+        // the busy ground: a window of the photograph in this column, from the head zone to the horizon, the logo set across it. The tile is its own stacking
+        // context and the logo sits above everything in it, so nothing the ground draws can cover the mark.
+        const fx0 = x - 8, fw = span2 + 16, logoBox = box(cx - fx0 - w / 2, cy - 72 - lh / 2, w, lh, 'z-index:1', base());
         if (shot) inner += cropped(ctx, shot, fx0, 72, fw, 504, logoBox);
         else {
-          const split = byRole(ctx, 'action').hex;
-          inner += box(fx0, 72, fw, 252, `background:${split}`) + box(fx0, 324, fw, 252, `background:${L(ctx).surface}`) + box(cx - w / 2, cy - lh / 2, w, lh, '', logo(ctx, 'colour', w, { colourway: colourwayFor(ctx, split) || 'colour', ink: inkOn(ctx, split), label: '' }));
+          // no photograph: a field of narrow bands in the brand's other colours, so the mark runs across several of them
+          const bw = 28, n = Math.ceil(fw / bw), stripes = Array.from({ length: n }, (_, k) => box(k * bw, 0, bw, 504, `background:${bands[k % bands.length]}`)).join('');
+          inner += box(fx0, 72, fw, 504, 'isolation:isolate;overflow:hidden', stripes + logoBox);
         }
       } else inner += box(cx - w / 2, cy - lh / 2, w, lh, '', art);
       inner += cross(cx, cy, 120) + box(x, 600, span2, 0, '', `<p class="r-t12 r-w600" style="color:${ink}">${A(t)}</p><p class="r-t12" style="color:${ch}">${A(note)}</p>`);
