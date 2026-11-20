@@ -1,6 +1,6 @@
 // APP-READY EXPORT: the export dialog's fourth type, one Pro category ("App-ready
 // bundle", format id app-bundle) that downloads <slug>-app-ready.zip, built in the
-// browser by src/utils/appBundle.js.
+// server (api/_lib/exportDocument.js, format app-bundle; src/utils/appBundle.js builds it).
 //
 // What a person does here: open Export, pick App-ready, and either get the zip (Pro)
 // or the Pro gate (free or signed out). The zip is read back with jszip and its
@@ -11,7 +11,7 @@
 // .xfp box with data-kind="bundle".
 //
 // MUTATIONS (each break must fail the test named after it):
-//   - Change the root folder in appBundle.js (UIL4B- to anything else): "the zip root" fails.
+//   - Change the root folder in src/utils/appBundlePaths.js (UIL4B- to anything else): "the zip root" fails.
 //   - Drop the dark rule from buildTokensCss: "the CSS has a .dark block" fails.
 //   - Write the dark Figma file from the light tokens: "light and dark differ" fails.
 //   - Give the apps category pro:false: every free-account test fails.

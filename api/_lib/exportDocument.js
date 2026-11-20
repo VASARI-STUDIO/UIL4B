@@ -1,5 +1,6 @@
 // POST /api/ai?export=document { format, projectName, design, template } — the Pro
-// documents (the design system book and the brand guidelines), built here.
+// documents (the design system book and the brand guidelines), and the two Pro files that
+// used to be made in the page (the app bundle and the book's page layout), built here.
 //
 // WHY THE SERVER BUILDS THEM. The Pro check used to sit in the browser, beside
 // generators that shipped in the page's own JavaScript. Anyone who read the bundle
@@ -20,6 +21,12 @@
 // a new Pro format cannot be badged in the panel and left unbuilt (or built in the
 // browser) here.
 //
+// THE TWO FILE FORMATS. `app-bundle` answers with the finished zip (base64), `book-png`
+// with the page layout as draw operations, because the pictures themselves need a browser
+// canvas and its fonts: the layout is the Pro part, the painter (src/utils/bookPainter.js)
+// only draws what it is told. Their extra body fields are read by FILE_FORMATS below, after
+// the plan check, and a bad one is 400.
+//
 // Contract (POST, JSON body { format, projectName, design, template }):
 //   no/invalid token                     401  { code: 'auth_required' }
 //   token check failed for a server      500 (credential) or 503 (anything else)
@@ -32,6 +39,10 @@
 //   over 200 colours (palette colours    400  { code: 'too_many_colours' }
 //   or gradient stops)
 //   Pro format, Pro or admin             200  { ok: true, format, template, html }
+//   app-bundle, Pro or admin             200  { ok: true, format, zip }  (zip: the file, base64)
+//   book-png, Pro or admin               200  { ok: true, format, pages, fonts, paper, contents, page, scale }
+//   book-png metrics, missingFonts,      400  { code: 'bad_metrics' } or { code: 'bad_options' }
+//     date or name malformed
 //   always                               Cache-Control: private, no-store
 //
 // A body that names a `theme` or a `row` is a themed export and is handed to
@@ -72,6 +83,8 @@ export function chromeFont(file) {
 export const BUILDERS = Object.freeze({
   book: async () => (await import('../../src/utils/designSystemBook.js')).buildDesignSystemBook,
   guidelines: async () => (await import('../../src/utils/brandGuidelines.js')).buildBrandGuidelines,
+  'app-bundle': async () => (await import('../../src/utils/appBundle.js')).buildAppBundle,
+  'book-png': async () => (await import('./bookPages.js')).bookPagesResponse,
 })
 
 // The most design JSON the function will read. A real design with a logo
@@ -131,7 +144,7 @@ function pickFont(f) {
 // untrusted already; this keeps the request from carrying (and the function from
 // walking) anything they never look at. Fonts and weights are cleaned here too,
 // because the panel opens the finished HTML as a same-origin blob.
-function pickDesign(design) {
+function pickDesign(design, { extras = false } = {}) {
   const d = design && typeof design === 'object' ? design : {}
   const fonts = d.fonts && typeof d.fonts === 'object' ? d.fonts : {}
   const ts = d.typeScale && typeof d.typeScale === 'object' ? d.typeScale : undefined
@@ -146,8 +159,77 @@ function pickDesign(design) {
     typeScale: ts && { ...ts, headingWeight: safeWeight(ts.headingWeight) ?? undefined },
     logo: d.logo,
     identity: description ? { description } : undefined,
+    // The app bundle also writes the tint ramps and the four state colours.
+    ...(extras ? { tints: pickTints(d.tints), states: pickStates(d.states) } : {}),
   }
 }
+
+const SMALL = 1e6
+const smallNumber = (n) => (typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= SMALL ? n : undefined)
+
+// design.tints reduced to its three settings, each checked; the generator fills in the defaults.
+function pickTints(t) {
+  const o = t && typeof t === 'object' ? t : {}
+  return { lumBias: smallNumber(o.lumBias), satDecay: smallNumber(o.satDecay), oled: typeof o.oled === 'boolean' ? o.oled : undefined }
+}
+
+// design.states reduced to the four roles (a preset number, or { custom } with a finite number) and the information hue.
+function pickStates(st) {
+  const o = st && typeof st === 'object' ? st : {}
+  const out = { infoHue: o.infoHue === 'purple' ? 'purple' : 'blue' }
+  for (const role of ['success', 'warning', 'error', 'info']) {
+    const v = o[role]
+    if (Number.isInteger(v) && v >= 0 && v < 100) out[role] = v
+    else if (v && typeof v === 'object' && smallNumber(v.custom) !== undefined) out[role] = { custom: v.custom }
+  }
+  return out
+}
+
+// The file formats: what each reads from the body besides the design, and what it answers.
+// `read` runs only after the plan check and returns { ok: true, opts } or { ok: false, code };
+// `answer` turns what the builder returned into the response body. They hold no layout or
+// bundle code of their own: that stays in the builders, loaded lazily through BUILDERS.
+const DAY = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
+const readDay = (v) => (typeof v === 'string' && DAY.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) ? v : null)
+const BAD_OPTIONS = { ok: false, code: 'bad_options' }
+
+const FILE_FORMATS = Object.freeze({
+  'app-bundle': {
+    async read(body) {
+      if (body.date !== undefined && readDay(body.date) === null) return BAD_OPTIONS
+      if (body.name !== undefined && typeof body.name !== 'string') return BAD_OPTIONS
+      return { ok: true, opts: { date: body.date, name: (body.name || '').slice(0, MAX_NAME_CHARS), type: 'base64' } }
+    },
+    answer: (zip) => {
+      if (typeof zip !== 'string' || !zip) throw new Error('empty bundle')
+      return { zip }
+    },
+  },
+  'book-png': {
+    async read(body) {
+      const { readBookMetrics } = await import('./bookPages.js')
+      const metrics = readBookMetrics(body.metrics)
+      if (!metrics.ok) return { ok: false, code: 'bad_metrics' }
+      const fonts = body.missingFonts
+      if (fonts !== undefined && (!Array.isArray(fonts) || fonts.length > 16 || fonts.some((n) => typeof n !== 'string' || n.length > 80))) return BAD_OPTIONS
+      if (body.date !== undefined && readDay(body.date) === null) return BAD_OPTIONS
+      return {
+        ok: true,
+        opts: {
+          metrics: metrics.metrics,
+          missingFonts: fonts,
+          date: body.date === undefined ? undefined : new Date(`${body.date}T12:00:00Z`),
+          // The server only builds this for Pro, so the page carries no watermark unless the caller asks.
+          watermark: body.watermark === true,
+        },
+      }
+    },
+    answer: (book) => {
+      if (!book || !Array.isArray(book.pages) || !book.pages.length) throw new Error('empty book')
+      return book
+    },
+  },
+})
 
 /**
  * @param req   needs headers.authorization and body { format, projectName, design }
@@ -234,12 +316,14 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
   // starting with the template. Absent, null or '' is the format's default; any
   // other value must be a live template of this format. The value is a lookup key
   // only: the layout comes from the generator's own template table.
+  // The file formats have no templates.
+  const file = Object.hasOwn(FILE_FORMATS, format.id) ? FILE_FORMATS[format.id] : null
   const wanted = body.template
-  const template = wanted === undefined || wanted === null || wanted === '' ? defaultTemplate(format.id) : wanted
-  if (!isTemplate(format.id, template)) {
+  const template = file ? null : wanted === undefined || wanted === null || wanted === '' ? defaultTemplate(format.id) : wanted
+  if (!file && !isTemplate(format.id, template)) {
     return res.status(400).json({ error: 'Unknown export template', code: 'unknown_template' })
   }
-  const design = pickDesign(body.design)
+  const design = pickDesign(body.design, { extras: format.id === 'app-bundle' })
   let size
   try { size = JSON.stringify(design).length } catch { size = Infinity }
   if (size > MAX_DESIGN_CHARS) {
@@ -259,8 +343,20 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
     ? body.projectName.trim().slice(0, MAX_NAME_CHARS)
     : 'Design System'
 
+  let fileOpts = null
+  if (file) {
+    let read
+    try { read = await file.read(body) } catch { return res.status(500).json({ error: 'The file could not be created', code: 'build_failed' }) }
+    if (!read.ok) return res.status(400).json({ error: 'That request could not be read', code: read.code })
+    fileOpts = read.opts
+  }
+
   try {
     const build = await builders[format.id]()
+    if (file) {
+      const made = await build(design, { projectName, ...fileOpts })
+      return res.status(200).json({ ok: true, format: format.id, ...file.answer(made) })
+    }
     const html = build(design, { projectName, template, fontData: chromeFont })
     if (typeof html !== 'string' || !html) throw new Error('empty document')
     return res.status(200).json({ ok: true, format: format.id, template, html })

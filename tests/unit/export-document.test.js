@@ -25,10 +25,11 @@ import {
   requestExportDocument, documentDesign, withPrintBootstrap, reservePrintWindow, showInPrintWindow, releasePrintWindow,
 } from '../../src/utils/exportDocument.js'
 
-// The Pro documents the server builds. The app-ready bundle is Pro too, but it is
-// zipped in the browser (utils/appBundle.js), so it has no server builder.
-const CLIENT_BUILT = new Set(['app-bundle'])
-const serverPro = () => proOnlyFormats().filter((f) => !CLIENT_BUILT.has(f.id))
+// The Pro documents the server builds as HTML. The app-ready bundle is Pro too and answers with a
+// zip, and the book's page images answer with draw operations; both have their own section below
+// (they have no template and a different body).
+const FILE_FORMATS = ['app-bundle', 'book-png']
+const serverPro = () => proOnlyFormats().filter((f) => !FILE_FORMATS.includes(f.id))
 
 const DESIGN = {
   palette: { base: '#1F4B8E', harmony: 'analogous', colors: ['#1F4B8E', '#2E7BB8', '#3FA9A0', '#C7D9E8', '#0D2540'] },
@@ -92,8 +93,12 @@ function spyBuilders() {
 }
 
 test('every Pro format has a server builder, and the builders are exactly the Pro formats', () => {
-  const pro = serverPro().map((f) => f.id).sort()
-  assert.ok(pro.length >= 2, 'the export table lost its Pro documents')
+  const pro = [...serverPro().map((f) => f.id), ...FILE_FORMATS].sort()
+  assert.ok(pro.length >= 4, 'the export table lost its Pro documents')
+  for (const id of FILE_FORMATS) {
+    const f = EXPORT_FORMATS.find((x) => x.id === id)
+    assert.ok(f && f.live && f.pro, `${id} is no longer a live Pro format, so the server table is stale`)
+  }
   assert.deepEqual(Object.keys(BUILDERS).sort(), pro,
     'a Pro format with no server builder cannot be exported, and a builder for a non-Pro format would be dead code')
 })
@@ -406,6 +411,8 @@ test('a generator that throws is a 500 with no partial document', async () => {
 // the paid document, so one the app can reach would ship it just as the generator would.
 const GENERATORS = [
   'src/utils/designSystemBook.js', 'src/utils/brandGuidelines.js',
+  // The app bundle and the book's page layout are Pro builders too: the browser gets only the paths list and the painter.
+  'src/utils/appBundle.js', 'api/_lib/bookPages.js', 'api/_lib/exportDocument.js',
   'src/utils/exportTemplates/book/index.js', 'src/utils/exportTemplates/book/specification.js',
   'src/utils/exportTemplates/guidelines/index.js', 'src/utils/exportTemplates/guidelines/presentation.js',
   'src/utils/exportTemplates/guidelines/poster.js', 'src/utils/exportTemplates/guidelines/grid.js', 'src/utils/exportTemplates/guidelines/notes.js',
@@ -445,6 +452,9 @@ test('neither Pro generator is reachable from the app entry, so neither ships to
     assert.ok(fs.existsSync(g), `${g} moved; update this test`)
     assert.ok(!reach.has(g), `${path.basename(g)} is in the client bundle again: anyone can call it and skip the Pro check`)
   }
+  // Nothing under api/ is client code at all.
+  const apiFiles = [...reach].filter((p) => p.startsWith(path.resolve('api') + path.sep))
+  assert.deepEqual(apiFiles, [], 'the app imports server code')
 })
 
 test('CONTROL: the walk does find a lazily imported module', () => {
@@ -467,6 +477,8 @@ const MARKERS = [
   { file: 'src/utils/exportTemplates/guidelines/poster.js', text: '<header class="pn-top">' },
   { file: 'src/utils/exportTemplates/guidelines/grid.js', text: '<span class="mh-name">' },
   { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design system</span>' },
+  { file: 'src/utils/appBundle.js', text: '# Import into Procreate' },
+  { file: 'api/_lib/bookPages.js', text: 'Made with UI L4B · uil4b.com' },
 ]
 
 test('CONTROL: each bundle marker is really in its generator', () => {
@@ -599,4 +611,276 @@ test('the gradient goes to the server as colours and positions only, without the
   }).gradient
   assert.deepEqual(sent, { stops: [{ color: '#112233', position: 0 }, { color: '#445566', position: 100 }], angle: 90, type: 'Linear' })
   assert.equal(documentDesign({}).gradient, undefined, 'no gradient stays no gradient')
+})
+
+/* ── the two Pro files: app-bundle (a zip) and book-png (draw operations) ─── */
+
+const METRICS = { fonts: { '400|Inter': { w: { a: 0.5, b: 0.55, ' ': 0.25 }, d: 0.2 }, '700|Space Grotesk': { w: { a: 0.6 } } } }
+const DAY = '2026-11-16'
+
+// A table whose builders record the design and options they were given.
+function fileSpy() {
+  const loaded = []
+  const seen = []
+  const book = { pages: [{ ops: [] }], fonts: [], paper: '#fff', contents: [], page: { width: 1, height: 1 }, scale: 1 }
+  const table = {
+    'app-bundle': async () => { loaded.push('app-bundle'); return async (d, o) => { seen.push({ format: 'app-bundle', d, o }); return 'QUJD' } },
+    'book-png': async () => { loaded.push('book-png'); return (d, o) => { seen.push({ format: 'book-png', d, o }); return book } },
+  }
+  return { loaded, seen, table }
+}
+
+const fileBody = (format, extra = {}) => ({
+  format, projectName: 'Harbour', design: DESIGN,
+  ...(format === 'app-bundle' ? { date: DAY, name: 'Harbour' } : { metrics: METRICS, missingFonts: [], date: DAY }),
+  ...extra,
+})
+
+for (const format of FILE_FORMATS) {
+  test(`${format}: signed-out and bad-token callers get 401 and no file`, async () => {
+    const { deps } = fakeDeps()
+    for (const token of [null, 'nope']) {
+      const res = await ask(token, fileBody(format), deps)
+      assert.equal(res.code, 401)
+      assert.equal(res.body.zip, undefined)
+      assert.equal(res.body.pages, undefined)
+    }
+  })
+
+  test(`${format}: a Free, lapsed or forged account gets 403 with no file, and the builder is never loaded`, async () => {
+    const { loaded, table } = fileSpy()
+    const { deps } = fakeDeps({ builders: table })
+    for (const token of ['tok-free', 'tok-ended', 'tok-liar']) {
+      const res = await ask(token, { ...fileBody(format), plan: 'pro', isPro: true }, deps)
+      assert.equal(res.code, 403, token)
+      assert.equal(res.body.code, 'pro_required')
+      assert.equal(res.body.zip, undefined, 'a refused request carries no zip')
+      assert.equal(res.body.pages, undefined, 'a refused request carries no draw operations')
+      assert.equal(res.body.ok, undefined)
+    }
+    assert.deepEqual(loaded, [], 'a Pro builder ran for an account that is not Pro')
+  })
+
+  test(`${format}: a malformed body is refused only after the plan check, so Free learns nothing`, async () => {
+    const { loaded, table } = fileSpy()
+    const { deps } = fakeDeps({ builders: table })
+    const bad = { ...fileBody(format), date: 'yesterday' }
+    assert.equal((await ask('tok-free', bad, deps)).code, 403)
+    const res = await ask('tok-pro', bad, deps)
+    assert.equal(res.code, 400)
+    assert.equal(res.body.code, 'bad_options')
+    assert.deepEqual(loaded, [], 'the builder ran for a body it should have refused')
+    // CONTROL: the same request with a good date is served.
+    assert.equal((await ask('tok-pro', fileBody(format), deps)).code, 200)
+  })
+
+  test(`${format}: the shared limits hold (colours, size)`, async () => {
+    const { loaded, table } = fileSpy()
+    const { deps } = fakeDeps({ builders: table })
+    const colours = Array.from({ length: MAX_COLOURS + 1 }, (_, i) => `#${(i + 1).toString(16).padStart(6, '0')}`)
+    const over = await ask('tok-pro', fileBody(format, { design: { ...DESIGN, palette: { colors: colours } } }), deps)
+    assert.equal(over.code, 400)
+    assert.equal(over.body.code, 'too_many_colours')
+    const huge = await ask('tok-pro', fileBody(format, { design: { ...DESIGN, logo: { src: 'x'.repeat(MAX_DESIGN_CHARS + 1) } } }), deps)
+    assert.equal(huge.code, 413)
+    assert.deepEqual(loaded, [])
+  })
+}
+
+test('an unknown file format and the free formats are still the same 400', async () => {
+  const { deps } = fakeDeps()
+  for (const format of ['app-bundle-zip', 'book-pdf', 'png', 'book-png ', 'BOOK-PNG']) {
+    const res = await ask('tok-pro', fileBody(format), deps)
+    assert.equal(res.code, 400, format)
+    assert.equal(res.body.code, 'unknown_format')
+  }
+})
+
+test('book-png: malformed metrics are a 400 bad_metrics, never a build', async () => {
+  const { loaded, table } = fileSpy()
+  const { deps } = fakeDeps({ builders: table })
+  const one = (w) => ({ fonts: { '400|Inter': { w } } })
+  const bad = [
+    'wide', 7, [], { fonts: [] }, { fonts: 'x' }, {},
+    { fonts: { Inter: { w: { a: 0.5 } } } },                         // key without a weight
+    { fonts: { '400|In<ter>': { w: { a: 0.5 } } } },                 // family outside the safe set
+    { fonts: { '400|Inter': { w: [] } } },
+    { fonts: { '400|Inter': {} } },
+    one({ ab: 0.5 }),                                                // not one character
+    one({ a: '0.5' }), one({ a: -1 }), one({ a: 5 }), one({ a: null }),
+    { fonts: { '400|Inter': { w: { a: 0.5 }, d: 3 } } },
+    { fonts: Object.fromEntries(Array.from({ length: 33 }, (_, i) => [`${(i % 9) + 1}00|F${i}`, { w: { a: 0.5 } }])) },
+    one(Object.fromEntries(Array.from({ length: 401 }, (_, i) => [String.fromCodePoint(0x4e00 + i), 0.5]))),
+  ]
+  for (const metrics of bad) {
+    const res = await ask('tok-pro', fileBody('book-png', { metrics }), deps)
+    assert.equal(res.code, 400, JSON.stringify(metrics).slice(0, 80))
+    assert.equal(res.body.code, 'bad_metrics')
+    assert.equal(res.body.pages, undefined)
+  }
+  // The byte cap: well-formed per face, but enormous in total.
+  const chars = (n) => Object.fromEntries(Array.from({ length: n }, (_, j) => [String.fromCodePoint(0x4e00 + j), 0.123456789012345]))
+  const wide = { fonts: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [`${(i % 9) + 1}00|Face ${i}`, { w: chars(400) }])) }
+  assert.equal((await ask('tok-pro', fileBody('book-png', { metrics: wide }), deps)).code, 400)
+  assert.deepEqual(loaded, [])
+  // No metrics at all is allowed (the layout estimates), and so is null.
+  for (const metrics of [undefined, null]) {
+    assert.equal((await ask('tok-pro', fileBody('book-png', { metrics }), deps)).code, 200)
+  }
+  // missingFonts must be a short array of short strings.
+  for (const missingFonts of ['Inter', [1], Array.from({ length: 17 }, () => 'a'), ['x'.repeat(81)]]) {
+    assert.equal((await ask('tok-pro', fileBody('book-png', { missingFonts }), deps)).code, 400)
+  }
+})
+
+test('book-png: a Pro account gets plain-JSON draw operations from the real layout, deterministically', async () => {
+  const { deps } = fakeDeps()
+  const res = await ask('tok-pro', fileBody('book-png'), deps)
+  assert.equal(res.code, 200)
+  assert.equal(res.body.ok, true)
+  assert.equal(res.body.format, 'book-png')
+  assert.equal(res.body.html, undefined)
+  assert.deepEqual(res.body.page, { width: 724, height: 1024 })
+  assert.equal(res.body.scale, 2)
+  assert.ok(res.body.pages.length >= 5, 'a book has a cover and more')
+  for (const p of res.body.pages) assert.ok(Array.isArray(p.ops) && p.ops.length > 0, 'a page without operations')
+  assert.deepEqual(JSON.parse(JSON.stringify(res.body)), res.body, 'the answer is plain JSON data')
+  assert.match(JSON.stringify(res.body.pages), /Harbour/, 'the project name reaches the pages')
+  assert.match(JSON.stringify(res.body.pages), /#1F4B8E/i, 'the palette reaches the pages')
+
+  const again = await ask('tok-pro', fileBody('book-png'), deps)
+  assert.deepEqual(again.body, res.body, 'the same request lays out the same pages')
+
+  // The metrics are used: very wide letters wrap the text differently.
+  const wide = { fonts: { '400|Inter': { w: Object.fromEntries([...'abcdefghijklmnopqrstuvwxyz '].map((c) => [c, 1.2])) } } }
+  const other = await ask('tok-pro', fileBody('book-png', { metrics: wide }), deps)
+  assert.equal(other.code, 200)
+  assert.notEqual(JSON.stringify(other.body.pages), JSON.stringify(res.body.pages), 'the table was ignored')
+})
+
+test('book-png: the watermark is only drawn when the caller asks', async () => {
+  const { deps } = fakeDeps()
+  const plain = JSON.stringify((await ask('tok-pro', fileBody('book-png'), deps)).body.pages)
+  const marked = JSON.stringify((await ask('tok-pro', fileBody('book-png', { watermark: true }), deps)).body.pages)
+  assert.notEqual(plain, marked)
+})
+
+test('app-bundle: a Pro account gets a base64 zip of the real bundle, named by the date and project sent', async () => {
+  const { deps } = fakeDeps()
+  const res = await ask('tok-pro', fileBody('app-bundle'), deps)
+  assert.equal(res.code, 200)
+  assert.equal(res.body.ok, true)
+  assert.equal(res.body.format, 'app-bundle')
+  assert.equal(res.body.html, undefined)
+  assert.match(res.body.zip, /^[A-Za-z0-9+/]+=*$/)
+  const { default: JSZip } = await import('jszip')
+  const zip = await JSZip.loadAsync(res.body.zip, { base64: true })
+  const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir).sort()
+  const { appBundlePaths } = await import('../../src/utils/appBundlePaths.js')
+  assert.deepEqual(names, appBundlePaths('Harbour', { date: DAY }).sort(), 'the zip holds exactly the paths the free preview shows')
+  const readme = await zip.file(names.find((n) => n.endsWith('/README.md'))).async('string')
+  assert.match(readme, /Harbour/)
+  assert.match(readme, /2026-11-16/)
+  assert.match(readme, /#1F4B8E/i, 'the palette reaches the bundle')
+  // The binary swatch files survive the base64 round trip.
+  const ase = await zip.file(names.find((n) => n.endsWith('.ase'))).async('uint8array')
+  assert.equal(String.fromCharCode(...ase.slice(0, 4)), 'ASEF')
+})
+
+test('app-bundle: tints and states are cleaned before the builder sees them', async () => {
+  const { seen, table } = fileSpy()
+  const { deps } = fakeDeps({ builders: table })
+  const design = {
+    ...DESIGN,
+    tints: { lumBias: 0.4, satDecay: 'lots', oled: 'yes', extra: 1 },
+    states: { success: 2, warning: { custom: 40 }, error: { custom: Infinity }, info: 'x', infoHue: 'green', other: 3 },
+  }
+  assert.equal((await ask('tok-pro', fileBody('app-bundle', { design }), deps)).code, 200)
+  const got = seen.at(-1)
+  assert.deepEqual(got.d.tints, { lumBias: 0.4, satDecay: undefined, oled: undefined })
+  assert.deepEqual(got.d.states, { infoHue: 'blue', success: 2, warning: { custom: 40 } })
+  assert.equal(got.o.type, 'base64')
+  assert.equal(got.o.date, DAY)
+  assert.equal(got.o.name, 'Harbour')
+
+  // A garbage name is a 400; a long one is cut.
+  assert.equal((await ask('tok-pro', fileBody('app-bundle', { name: { a: 1 } }), deps)).code, 400)
+  await ask('tok-pro', fileBody('app-bundle', { name: 'n'.repeat(500) }), deps)
+  assert.equal(seen.at(-1).o.name.length, 200)
+})
+
+test('the file formats ignore a template, and the reply carries none', async () => {
+  const { deps } = fakeDeps()
+  const res = await ask('tok-pro', fileBody('app-bundle', { template: 'nope' }), deps)
+  assert.equal(res.code, 200)
+  assert.equal(res.body.template, undefined)
+})
+
+test('a file builder that throws or returns nothing is a 500 with no file', async () => {
+  for (const [format, build] of [['app-bundle', async () => { throw new Error('x') }], ['app-bundle', async () => ''], ['book-png', () => ({ pages: [] })]]) {
+    const { deps } = fakeDeps({ builders: { [format]: async () => build } })
+    const res = await ask('tok-pro', fileBody(format), deps)
+    assert.equal(res.code, 500, format)
+    assert.equal(res.body.code, 'build_failed')
+    assert.equal(res.body.zip, undefined)
+  }
+})
+
+/* ── the browser half of the files ────────────────────────────────────────── */
+
+test('requestExportFile: sends the extras and the token, and reads an ok answer for each format', async () => {
+  const { requestExportFile, fileDesign } = await import('../../src/utils/exportFiles.js')
+  const calls = []
+  const bundleAnswer = { ok: true, format: 'app-bundle', zip: 'QUJD' }
+  const bookAnswer = { ok: true, format: 'book-png', pages: [{ ops: [] }], fonts: [], paper: '#fff', contents: [], page: { width: 1, height: 1 }, scale: 2 }
+  const fetchImpl = async (url, init) => { calls.push({ url, init }); return reply(200, calls.length === 1 ? bundleAnswer : bookAnswer) }
+  const loadAuth = sdkFor(async () => 'tok')
+  const bundle = await requestExportFile({ format: 'app-bundle', design: { ...DESIGN, tints: { oled: true }, states: { success: 1 } }, projectName: 'Harbour', extra: { date: DAY, name: 'Harbour' } }, { loadAuth, fetchImpl })
+  assert.deepEqual(bundle, { status: 'ok', zip: 'QUJD' })
+  const sentBody = JSON.parse(calls[0].init.body)
+  assert.equal(calls[0].url, '/api/ai?export=document')
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer tok')
+  assert.equal(sentBody.date, DAY)
+  assert.deepEqual(sentBody.design.tints, { oled: true })
+  assert.deepEqual(sentBody.design.states, { success: 1 })
+  const book = await requestExportFile({ format: 'book-png', design: DESIGN, projectName: 'Harbour', extra: { metrics: METRICS } }, { loadAuth, fetchImpl })
+  assert.equal(book.status, 'ok')
+  assert.equal(book.book.pages.length, 1)
+  assert.equal(book.book.scale, 2)
+  assert.deepEqual(JSON.parse(calls[1].init.body).metrics, METRICS)
+  // Tints and states go only with the app bundle.
+  assert.equal('tints' in fileDesign({ ...DESIGN, tints: {} }, 'book-png'), false)
+})
+
+test('requestExportFile: the same statuses as the documents, and a wrong-shaped 200 is never a file', async () => {
+  const { requestExportFile, fileRefusal, zipBlob } = await import('../../src/utils/exportFiles.js')
+  const run = (format, fetchImpl, token = async () => 'tok') => requestExportFile({ format, design: DESIGN, projectName: 'x' }, { loadAuth: sdkFor(token), fetchImpl })
+  const answer = (status, body) => async () => reply(status, body)
+  assert.equal((await requestExportFile({ format: 'book-png', design: DESIGN }, { loadAuth: sdkFor(null) })).status, 'signed-out')
+  assert.equal((await run('book-png', answer(403, {}))).status, 'pro-required')
+  assert.equal((await run('book-png', answer(413, {}))).status, 'too-large')
+  assert.equal((await run('book-png', answer(400, { code: 'too_many_colours' }))).status, 'too-many-colours')
+  assert.equal((await run('book-png', answer(400, { code: 'bad_metrics' }))).status, 'error')
+  assert.equal((await run('app-bundle', answer(500, {}))).status, 'error')
+  assert.equal((await run('app-bundle', async () => { throw new Error('offline') })).status, 'error')
+  assert.equal((await run('app-bundle', answer(200, { ok: true, format: 'book-png', zip: 'QUJD' }))).status, 'error', 'a 200 for another format')
+  assert.equal((await run('app-bundle', answer(200, { ok: true, format: 'app-bundle' }))).status, 'error')
+  assert.equal((await run('book-png', answer(200, { ok: true, format: 'book-png', pages: [] }))).status, 'error')
+  // A 401 retries once on a fresh token.
+  let n = 0
+  const seq = async () => reply(++n === 1 ? 401 : 200, { ok: true, format: 'app-bundle', zip: 'QUJD' })
+  assert.equal((await run('app-bundle', seq)).status, 'ok')
+  assert.equal((await run('app-bundle', answer(401, {}))).status, 'signed-out')
+
+  assert.equal(fileRefusal({ status: 'ok' }, 'book'), null)
+  assert.match(fileRefusal({ status: 'pro-required' }, 'book'), /Pro plan.*book/)
+  assert.match(fileRefusal({ status: 'signed-out' }, 'app bundle'), /signed out.*app bundle/)
+  assert.match(fileRefusal({ status: 'too-large' }, 'book'), /too large/)
+  assert.match(fileRefusal({ status: 'too-many-colours' }, 'book'), /200 max/)
+  assert.match(fileRefusal({ status: 'error' }, 'book'), /connection/)
+
+  // zipBlob returns the bytes that were encoded.
+  const blob = zipBlob(Buffer.from([80, 75, 3, 4, 255]).toString('base64'))
+  assert.equal(blob.type, 'application/zip')
+  assert.deepEqual([...new Uint8Array(await blob.arrayBuffer())], [80, 75, 3, 4, 255])
 })

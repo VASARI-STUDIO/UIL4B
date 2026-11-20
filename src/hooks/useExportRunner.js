@@ -13,6 +13,8 @@ import {
   labelPrintWindow, releasePrintWindow, requestExportDocument, reservePrintWindow,
   showInPrintWindow, withPrintBootstrap,
 } from '../utils/exportDocument'
+import { requestExportFile, fileRefusal, zipBlob } from '../utils/exportFiles'
+import { bundleDate } from '../utils/appBundlePaths'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
@@ -413,14 +415,22 @@ export default function useExportRunner() {
           }
         }
       } else if (bookPng) {
-        // The book as page images, drawn on a canvas like the style guide PNG (see
-        // the note at the top of utils/bookRaster.js). Loaded on demand: the pages,
-        // the zip writer and the font wait cost nothing to anyone who never exports
-        // them. The plan check above has already passed.
+        // The book as page images. The server lays the pages out (Pro only) and answers with draw
+        // operations; utils/bookPainter.js measures the fonts for it and then paints them on a canvas.
+        // Loaded on demand: the painter, the zip writer and the font wait cost nothing to anyone who
+        // never exports them.
         activation = PRO_DOCUMENT.book.activation
         setStage('pages')
-        const { renderBookPng } = await import('../utils/bookRaster')
-        const blob = await renderBookPng(design, { projectName, watermark: !proNow })
+        const { measureBookFaces, paintBookPng } = await import('../utils/bookPainter')
+        const { metrics, missingFonts } = await measureBookFaces(design)
+        const answer = await requestExportFile({
+          format: 'book-png', design, projectName,
+          extra: { metrics, missingFonts, date: new Date().toISOString().slice(0, 10), watermark: !proNow },
+        }, { loadAuth: loadAuthSdk })
+        if (!mounted.current) return { status: 'unmounted' }
+        const refusal = fileRefusal(answer, PRO_DOCUMENT.book.noun)
+        if (refusal) throw new Error(refusal)
+        const blob = await paintBookPng(answer.book)
         savedFile = download(blob, formatFileName(fileProject, 'book-png'))
       } else if (proDocument) {
         // The book and the brand guidelines, as a PDF or as HTML. The server checks the plan and builds
@@ -470,12 +480,18 @@ export default function useExportRunner() {
           }
         }
       } else if (appBundle) {
-        // One zip with a folder per app (utils/appBundle.js). Loaded on demand with
-        // its writers and the zip library. The plan check above has already passed.
+        // One zip with a folder per app. The server builds it (Pro only, api/_lib/exportDocument.js)
+        // and sends it as base64; the date and name go with the request so the folder is named as the
+        // panel's preview shows it.
         activation = 'app-ready-bundle'
-        const { buildAppBundle, bundleDate } = await import('../utils/appBundle')
-        const blob = await buildAppBundle(design, { date: bundleDate(new Date()), name: fileProject })
-        savedFile = download(blob, formatFileName(fileProject, 'app-bundle'))
+        const answer = await requestExportFile({
+          format: 'app-bundle', design, projectName,
+          extra: { date: bundleDate(new Date()), name: fileProject },
+        }, { loadAuth: loadAuthSdk })
+        if (!mounted.current) return { status: 'unmounted' }
+        const refusal = fileRefusal(answer, 'app bundle')
+        if (refusal) throw new Error(refusal)
+        savedFile = download(zipBlob(answer.zip), formatFileName(fileProject, 'app-bundle'))
       } else if (tokenFile) {
         // The token, Tailwind and contrast files all read one token list
         // (utils/designTokens.js), so they carry the same names and values. Built by

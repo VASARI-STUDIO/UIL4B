@@ -19,6 +19,9 @@
 //   (e) caches                a Pro answer, then the same request from Free; no-store and Vary on every answer
 //   (f) the gallery           choosing a Pro theme in the dialog and exporting
 //
+// The two file formats (app-bundle, book-png) are asked the way the page asks: the bundle with its date and name, the book pages with a
+// small measuring table (METRICS). The server must refuse Free before it reads either.
+//
 // MUTATION (each must fail this spec and tests/unit/theme-access.test.js): make assertThemeAccess in api/_lib/themeAccess.js return
 // { ok: true } for every plan.
 import { test, expect } from './base.js'
@@ -35,7 +38,8 @@ const ACCOUNTS = {
 }
 // The documents the server builds. The offline-HTML ids (book-html, guidelines-html) are themed rows ({ row, format: 'html' }), so
 // they are walked in PRO_COMBOS; sent as a bare document format they are not a built document and are 400 with no file.
-const PRO_DOCS = ['book', 'guidelines']
+// app-bundle (a zip) and book-png (draw operations for the pages) are built on the server too, so Free gets neither.
+const PRO_DOCS = ['book', 'guidelines', 'app-bundle', 'book-png']
 const THEMED_DOCS = ['book-html', 'guidelines-html']
 // Every request to the export route, whatever its query string carries (a glob would stop at the first extra parameter).
 const EXPORT_ROUTE = (url) => url.pathname === '/api/ai' && url.searchParams.get('export') === 'document'
@@ -49,6 +53,9 @@ for (const { id: theme } of EXPORT_THEMES) {
     for (const format of formats) if (!isFree(theme, row)) PRO_COMBOS.push({ theme, row, format })
   }
 }
+
+// A small, valid measuring table for book-png: one face, a few characters.
+const METRICS = { fonts: { '400|Inter': { w: { a: 0.5, b: 0.55, ' ': 0.28 }, d: 0.2 } } }
 
 const DESIGN = structuredClone(DEFAULT_DESIGN)
 DESIGN.palette.colors = ['#1F4B8E', '#2E7BB8', '#3FA9A0']
@@ -221,6 +228,46 @@ test.describe('(a) direct calls', () => {
     const served = await post(page, { format: 'book', projectName: 'Harbour', design: DESIGN }, 'tok-pro')
     expect(served.status).toBe(200)
     expect(JSON.parse(served.text).html).toMatch(/<html/i)
+  })
+
+  test('a Free or signed-out caller gets nothing for app-bundle and book-png, with the options the page sends', async ({ page }) => {
+    watch(page, 'a Free and a signed-out caller asking for the zip and the book pages')
+    await serveExport(page)
+    await go(page, '/')
+    const asked = {
+      'app-bundle': { format: 'app-bundle', projectName: 'Harbour', design: DESIGN, date: '2026-01-15', name: 'Harbour' },
+      'book-png': { format: 'book-png', projectName: 'Harbour', design: DESIGN, metrics: METRICS, date: '2026-01-15', missingFonts: [] },
+    }
+    for (const [format, body] of Object.entries(asked)) {
+      const refused = await post(page, body, 'tok-free')
+      expectRefusal(refused, 'Free ' + format)
+      expectUncached(refused, 'Free ' + format)
+      expect(JSON.parse(refused.text).format).toBe(format)
+      expect(refused.text, 'Free ' + format + ': no zip and no pages').not.toMatch(/"zip"|"pages"|"fonts"/)
+      for (const [token, what] of [[null, 'no token'], ['bad', 'a bad token']]) {
+        const r = await post(page, body, token)
+        expect(r.status, what + ' ' + format).toBe(401)
+        expect(r.zip, what + ' ' + format).toBe(false)
+        expect(r.text, what + ' ' + format + ': no zip and no pages').not.toMatch(/"zip"|"pages"/)
+      }
+      // The control: the same request from Pro is served, so the refusal is the plan and not a route that never worked.
+      const served = await post(page, body, 'tok-pro')
+      expect(served.status, 'Pro ' + format).toBe(200)
+      const json = JSON.parse(served.text)
+      if (format === 'app-bundle') expect(typeof json.zip, 'a base64 zip').toBe('string')
+      else expect(Array.isArray(json.pages) && json.pages.length > 0, 'draw operations for the pages').toBe(true)
+    }
+  })
+
+  test('a Free token gets 403 for app-bundle and book-png before the body is read, however malformed', async ({ page }) => {
+    watch(page, 'a Free account sending broken options for the file formats')
+    await serveExport(page)
+    await go(page, '/')
+    for (const format of ['app-bundle', 'book-png']) {
+      for (const extra of [{ metrics: 'x' }, { metrics: { fonts: { '400|Inter': { w: { a: 99 } } } } }, { date: 'not-a-date' }, { missingFonts: 7 }]) {
+        expectRefusal(await post(page, { format, design: DESIGN, ...extra }, 'tok-free'), format + ' ' + JSON.stringify(extra).slice(0, 40))
+      }
+    }
   })
 
   test('a Free token does get the free kit, so the refusals above are about Pro and not a broken route', async ({ page }) => {
