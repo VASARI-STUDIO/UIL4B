@@ -383,6 +383,8 @@ test.describe('onboarding kit, phone', () => {
     await page.locator('[data-sw=shallow-end]').tap()
     await expect(page.locator('[data-sw=shallow-end]')).toHaveAttribute('aria-checked', 'true')
     await expect(page.locator('.ob-cap')).toContainText('Shallow End, a sample brand')
+    // Choosing a starter moves focus to the next button on the next tick, so wait for it before taking focus back.
+    await expect(page.locator('[data-go]')).toBeFocused()
     await page.locator('[data-sw=kerbside]').focus()
     await page.keyboard.press('ArrowLeft')
     await expect(page.locator('[data-sw=two-shores]')).toHaveAttribute('aria-checked', 'true')

@@ -78,7 +78,7 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: nowrap;
   min-width: 0;
   padding: 9px max(var(--tl-pad), env(safe-area-inset-right, 0px)) 9px max(var(--tl-pad), env(safe-area-inset-left, 0px));
@@ -265,13 +265,13 @@
   flex: 0 0 auto;
   height: 36px;
   min-height: 36px;
-  padding: 0 16px;
+  padding: 0 14px;
   border: 1px solid var(--v3-hl20);
   border-radius: var(--btn-radius);
   background: transparent;
   color: var(--tl-ink);
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
@@ -297,7 +297,7 @@
 /* The one primary: the ink pill. Rest --v3-ink, hover --v3-ink-hover, label
    --v3-on-ink, the pairing the shell's Upgrade uses. */
 :is(.tl, .tl-sheet-layer) .tl-btn--accent {
-  padding: 0 16px;
+  padding: 0 15px;
   border: 0;
   background: var(--v3-ink);
   color: var(--v3-on-ink);
@@ -321,9 +321,8 @@
 :is(.tl, .tl-sheet-layer) .tl-btn-ico { flex: 0 0 auto; }
 :is(.tl, .tl-sheet-layer) .tl-kbd {
   font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1;
-  padding: 5px 7px;
+  font-size: 9.5px;
+  padding: 3px 7px;
   border-radius: 6px;
   background: var(--v3-wash);
   color: var(--tl-dim);
@@ -357,8 +356,8 @@
 :is(.tl, .tl-sheet-layer) .tl-toolbar .tl-select { border-radius: var(--btn-radius); }
 :is(.tl, .tl-sheet-layer) .tl-select:focus-within { border-color: var(--tl-focus); }
 :is(.tl, .tl-sheet-layer) .tl-select:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
-:is(.tl, .tl-sheet-layer) .tl-select-k { font-size: 13px; color: var(--tl-dim); white-space: nowrap; }
-:is(.tl, .tl-sheet-layer) .tl-select-v { font-size: 14px; font-weight: 500; color: var(--tl-ink); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-select-k { font-size: 12.5px; color: var(--tl-dim); white-space: nowrap; }
+:is(.tl, .tl-sheet-layer) .tl-select-v { font-size: 13.5px; font-weight: 500; color: var(--tl-ink); white-space: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-select-caret { position: absolute; right: 11px; color: var(--tl-faint); }
 @media (hover: hover) and (pointer: fine) {
   :is(.tl, .tl-sheet-layer) .tl-select:hover { background: var(--tl-wash-2); }
@@ -578,7 +577,7 @@
 }
 /* Tablet: the row holds every action, so the pills and the gaps between them sit a little tighter. */
 @media (min-width: 768px) and (max-width: 1023px) {
-  .tl .tl-toolbar { gap: 10px; }
+  .tl .tl-toolbar { gap: 8px; }
   .tl .tl-toolbar .tl-btn:not(.tl-btn--square):not(.tl-more-btn) { padding-inline: 12px; }
 }
 @media (max-width: 767px) and (pointer: coarse) {

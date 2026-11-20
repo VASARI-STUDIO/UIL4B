@@ -64,28 +64,28 @@ const BOTTOM_TOOLBAR = {
   typescale: ['.tsc-page', '.tsc-dock'],
 }
 
-// The Brand kit walkthrough, rendered by each of the four tools it walks.
+// The Brand kit walkthrough, rendered by each of the five tools it walks.
 //
 // The reading behind it (what was broken, where the state lives, why progress
 // is derived rather than counted) is in src/utils/brandKitGuide.js, next to the
 // step model itself. This file is the surface. Two pieces:
 //
 //   1. THE BAR. A strip docked to the bottom of every step (a floating glass
-//      pill from 1024px), showing all four steps at once with a tick on the
+//      pill from 1024px), showing all five steps at once with a tick on the
 //      ones that are built. The help panel lists THE ARTEFACT EACH ONE
 //      PRODUCED: the real swatches, the real family names, the real base and
-//      ratio. That is the difference between a guided flow and four bookmarks:
+//      ratio. That is the difference between a guided flow and five bookmarks:
 //      standing on Icons you can see the palette you drew on Colours. Every
 //      value comes off the saved design, so neither can show a system the tools
 //      did not build.
 //      The bar is fixed over the foot of the viewport at every width
 //      (tool-shell.css), so it has the same height, width and position on all
-//      four tools and on every step.
+//      five tools and on every step.
 //
 //   2. THE PANEL. One surface that holds both the orientation copy and the
 //      closing step where the project is named: from 768px a popover hung from
 //      the button that opened it. On a phone the orientation half is the steps
-//      panel (the four steps, the help line and Close), opened upward from the
+//      panel (the five steps, the help line and Close), opened upward from the
 //      bar's steps trigger, and the naming step is its own sheet.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ export default function UIKitGuide({ step, linked = false }) {
     setShowIntro(false)
   }
   // The orientation panel opens short, on arrival; "What's this?" opens it with
-  // the list of all four steps.
+  // the list of all five steps.
   const [introFull, setIntroFull] = useState(false)
   // Only one panel exists at a time: the chooser, the orientation copy, or the
   // naming step.
@@ -483,7 +483,7 @@ export default function UIKitGuide({ step, linked = false }) {
 
   const save = useCallback((name) => {
     try {
-      // `patch`: the parts moved past with Next, and the tints made from the colours.
+      // `patch`: the parts moved past with Next, and the tints derived from the colours.
       const id = saveProject(name, { identityName: name, patch: savePatch(design) })
       endGuide()
       markSession(SESSION_DONE)
@@ -749,7 +749,7 @@ export default function UIKitGuide({ step, linked = false }) {
       ) : (
         <p className="bkit-name-note" id={`${nameCardId}-note`}>
           {canSaveProjects
-            ? 'Saves to your projects with your colours, fonts, type scale and tints.'
+            ? 'Saves to your projects with your colours, semantic colours, fonts and type scale.'
             : 'Saving needs a free account. What you built stays here while you sign in.'}
         </p>
       )}
@@ -887,7 +887,7 @@ export default function UIKitGuide({ step, linked = false }) {
         >
           <p className="bkit-card-body">
             {firstStep
-              ? 'Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.'
+              ? 'Pick your brand colour. Semantic colours, fonts, type scale and icons come next, and each one uses what you chose here.'
               : 'This step uses what you chose in the steps before it.'}
           </p>
           {introFull && (
@@ -997,7 +997,7 @@ export default function UIKitGuide({ step, linked = false }) {
                 </div>
                 <p className="bkit-sheet-help">
                   {firstStep
-                    ? 'Pick your brand colour. Fonts, type scale and icons come next, and each one uses what you chose here.'
+                    ? 'Pick your brand colour. Semantic colours, fonts, type scale and icons come next, and each one uses what you chose here.'
                     : 'This step uses what you chose in the steps before it.'}
                 </p>
                 <ol className="bkit-card-steps">
@@ -1205,7 +1205,7 @@ function BkitPanel({ id, panelRef, style, titleId, titleRef, title, tabIndex, li
  * Swatches for colour because a list of six hex codes at this size is a wall and
  * the colours themselves are the artefact; text for the other two because a
  * family name and a ratio ARE readable at this size. Nothing at all for a step
- * with no work in it: "Not set" on three of four steps is noise, and the number
+ * with no work in it: "Not set" on most steps is noise, and the number
  * instead of a tick already says it.
  *
  * On the bar (`decorative`) it is hidden from assistive technology, because the
@@ -1213,7 +1213,7 @@ function BkitPanel({ id, panelRef, style, titleId, titleRef, title, tabIndex, li
  */
 function StepArtefact({ step, decorative = false }) {
   if (!step.done) return null
-  if (step.id === 'color') {
+  if (step.id === 'color' || step.id === 'semantic') {
     const colors = step.artefact.colors || []
     if (!colors.length) return null
     return (
@@ -1233,6 +1233,6 @@ function StepArtefact({ step, decorative = false }) {
 // to the step's blurb on the second line instead of leaving it empty.
 function hasArtefact(step) {
   if (!step.done) return false
-  if (step.id === 'color') return (step.artefact.colors || []).length > 0
+  if (step.id === 'color' || step.id === 'semantic') return (step.artefact.colors || []).length > 0
   return !!step.artefact.text
 }

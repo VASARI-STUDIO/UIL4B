@@ -127,8 +127,12 @@ export function styleVars(id, { stops, paint, oklch }) {
 
 /** Where along the ramp the Spec card samples its strip, in percent. */
 export const SPEC_POSITIONS = [0, 25, 50, 75, 100]
-/** How many hexes the Spec card's list holds on one line, the "+N" counted as one. */
-export const SPEC_HEX_ROOM = 4
+/**
+ * How many hexes the Spec card's list holds on one line, the "+N" counted as one, until the card
+ * has been laid out and measured (GradientText.jsx sizes it from the real line). Five, so a
+ * five-stop gradient shows every hex and "+N" is only ever a real overflow.
+ */
+export const SPEC_HEX_ROOM = 5
 /** Under this many stops the strip holds colours between the stops, and the card says so. */
 export const SPEC_FULL_STOPS = 5
 

@@ -69,10 +69,10 @@ export const HELP_STARTS = Object.freeze([
     id: 'icons',
     label: 'Icons',
     to: '/create/icons',
-    opensWith: 'the whole library',
+    opensWith: 'a sample from five packs',
     // What is free and what is capped is stated the same way /plans states it,
     // from the same constant, so the two surfaces cannot disagree.
-    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
+    body: `Search a sample of the library and copy its SVGs, up to a daily limit, signed out. A free account opens more packs. Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
   }),
   Object.freeze({
     id: 'files',
@@ -97,25 +97,26 @@ export const HELP_ANSWERS = Object.freeze([
   Object.freeze({
     id: 'account',
     q: 'Do I need an account?',
-    // Using a tool is never metered; what the free plan caps is how much you
-    // can SAVE. /plans makes the same distinction from the same constants.
-    a: `No. Every tool opens and runs signed out, and using one is never metered. An account lets you save and carry settings to another device. The free plan allows ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
+    // Every tool opens signed out. AI generation needs an account, and the
+    // free plan caps how much you can SAVE. /plans states the same caps from
+    // the same constants.
+    a: `No. Every tool opens signed out. An account lets you save and carry settings to another device, and AI generation needs one. The free plan allows ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
   }),
   Object.freeze({
     id: 'cost',
     q: 'What costs money?',
-    a: `Nothing you have read about so far. Pro raises the AI allowance and adds ${proOnlyFormats().length} export documents; the plans page has the current price.`,
+    a: `Pro. It raises the AI allowance and the save limits, opens every colour system, icon pack and library entry, and adds ${proOnlyFormats().length} export documents. The plans page has the current price.`,
     to: '/plans',
     linkLabel: 'See the plans',
   }),
   Object.freeze({
     id: 'ai',
     q: 'Why are the AI allowances small?',
-    // The arithmetic and its reason are both in api/_lib/plans.js: generation
-    // runs on free provider tiers metered per PROJECT, so every visitor draws
-    // from one shared bucket. Both plans resolve to the same model (MODELS.free
-    // and MODELS.pro are the same string), so Pro buys capacity, not output.
-    a: `They are shared, not per person: generation runs on a free provider tier metered across the whole site. Free gets ${AI_LIMITS.free.daily} a day, Pro gets ${AI_LIMITS.pro.daily}, and both run the same model.`,
+    // The caps are AI_LIMITS (mirrored from api/_lib/plans.js). They exist so
+    // one account cannot use up the site's shared AI capacity. Both plans
+    // resolve to the same model (MODELS.free and MODELS.pro are the same
+    // string), so Pro buys capacity, not output.
+    a: `They cap how many AI actions each account can run, so one person can't use up the shared capacity. Free gets ${AI_LIMITS.free.daily} a day, Pro gets ${AI_LIMITS.pro.daily}, with monthly caps of ${AI_LIMITS.free.monthly} and ${AI_LIMITS.pro.monthly}. Both plans run the same model.`,
   }),
   Object.freeze({
     id: 'data',
@@ -151,9 +152,9 @@ const answerOf = (id) => HELP_ANSWERS.find((a) => a.id === id)
  *
  * Every figure in `heading` and `lede` is read from FREE_SAVE_LIMITS,
  * proOnlyFormats() or the tool lists. The money job does not claim that
- * nothing costs money: the palette tool has paid colour systems and Pro adds
- * export documents, so the claim that holds is that using the tools costs
- * nothing.
+ * nothing costs money: Pro opens paid colour systems, icon packs and library
+ * entries and adds export documents, so the claim that holds is that every
+ * tool is free to open.
  */
 export const HELP_JOBS = Object.freeze([
   Object.freeze({
@@ -178,7 +179,7 @@ export const HELP_JOBS = Object.freeze([
     id: 'icons',
     label: 'Find an icon',
     start: startOf('icons'),
-    heading: 'Search the whole library and copy the SVG, signed out.',
+    heading: 'Search a sample of the library and copy the SVG, signed out.',
     lede: `Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
     to: startOf('icons').to,
     cta: 'Open in Icon Library',
@@ -204,7 +205,7 @@ export const HELP_JOBS = Object.freeze([
   Object.freeze({
     id: 'cost',
     label: 'Know what costs money',
-    heading: 'Using the tools costs nothing.',
+    heading: 'Every tool is free to open. Pro adds more.',
     lede: `Pro raises the AI allowance and adds ${proOnlyFormats().length} export documents. The plans page has the current price.`,
     more: Object.freeze(['ai']),
     to: answerOf('cost').to,
@@ -222,8 +223,8 @@ export const HELP_JOBS = Object.freeze([
   Object.freeze({
     id: 'report',
     label: 'Report something broken',
-    heading: 'One report form, from anywhere.',
-    lede: 'It is the same form the app uses everywhere. It reaches the same place whether you send it from here or from the tool that broke.',
+    heading: 'Tell us what broke.',
+    lede: 'Send it from here or from the tool that broke. Both reach the same place.',
     to: '/feedback',
     cta: 'Report it',
   }),

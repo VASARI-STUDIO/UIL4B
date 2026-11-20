@@ -45,6 +45,10 @@
 }
 .iel-page .igp-page .igp-card-name{font-size:14px;font-weight:500;letter-spacing:-.01em;color:var(--igp-ink)}
 .iel-page .igp-page .igp-card-meta{font-size:12px;color:var(--igp-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the dot before each part sits in a 1em strip pulled left of the box and clipped, so the dot that opens a line never shows */
+.iel-page .igp-page .igp-card-meta{margin-left:-1em;clip-path:inset(0 0 0 1em)}
+.iel-page .igp-page .igp-meta-seg{white-space:nowrap}
+.iel-page .igp-page .igp-meta-seg::before{content:"·";display:inline-block;width:1em;text-align:center}
 .iel-page .igp-page .igp-wait{display:block;border-radius:6px;background:none;animation:none}
 .iel-page .igp-page img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
 .iel-page .igp-page img.igp-glyph-pending{opacity:0;transition:none}
@@ -119,6 +123,8 @@ html[data-reduced-motion="true"] .iel-page .igp-page img{transition:none}
 
 /* On a phone the labels go; each control keeps its glyph and its name. */
 .iel-page .igp-page .igp-label{white-space:nowrap}
+/* Phones: the meta line names the libraries, so it wraps instead of ending in an ellipsis */
+@media(max-width:639px){.iel-page .igp-page .igp-card-meta{white-space:normal;text-wrap:pretty}}
 @media(max-width:559px){
   .iel-page .igp-page .igp-label{
     position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;

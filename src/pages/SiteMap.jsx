@@ -1,31 +1,27 @@
-import { Fragment, useState } from 'react'
+import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import ToolArt from '../components/spectrum/ToolArt'
 import NavIcon from '../components/NavIcon'
-import PhIcon from '../components/spectrum/PhIcon'
-import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, listedTools } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 import { TOOL_VOTES_ON } from '../data/toolVotes'
-import '../styles/pages/spectrum-mobile.css'
+import '../styles/pages/home-tokens.css'
 import '../styles/pages/spectrum-tools.css'
-// This page's own rules, imported last so they follow the /tools sheet they build on.
-import '../styles/pages/sitemap.css'
+// This page's own rules on the V3 marketing sheet (imported once in main.jsx), shared with /roadmap.
+import '../styles/pages/map-v3.css'
 
 // The full visual site map: every destination in UIL4B on one page, in the /tools
-// page's visual language (Spectrum nav and footer, hue-tile group rails, rows with
-// a drawn thumbnail).
+// page's V3 language (the same rail-and-rows groups, the same drawn thumbnails).
 //
 // The three build surfaces come straight from the tool tree (CREATE_GROUPS and
 // the Discover / Learn group lists), so this map can never drift from the nav or
 // the router. The account / help / legal areas aren't in the tree: they live only
 // in App's route table, so they're described here directly, kept in step by hand.
-// Unfinished pages are listed, badged and not linked, for admins only.
+// Unfinished pages are listed, marked and not linked, for admins only.
 
 // Non-tool destinations, grouped the way a visitor thinks about them rather
 // than the way the router lists them. Kept in sync with App.jsx by hand.
@@ -85,36 +81,39 @@ const routeSegments = (route) => route.match(/\/?[^/]+\/?|\//g) || [route]
 // breaks after a "/" and never at a hyphen.
 function RouteLine({ route }) {
   return (
-    <span className="spt-route">
+    <span className="mk-route mk-mono">
       {routeSegments(route).map((seg, i) => (
         <Fragment key={`${seg}-${i}`}>
           {i > 0 && <wbr />}
-          <span className="spt-route-seg">{seg}</span>
+          <span className="mk-route-seg">{seg}</span>
         </Fragment>
       ))}
     </span>
   )
 }
 
-const SoonPill = ({ inline }) => <span className={inline ? 'spt-soon spt-soon--inline' : 'spt-soon'}>Soon</span>
+// "Soon" is plain words in the secondary ink, not a pill.
+const Soon = () => <span className="mk-soon">Soon</span>
 
 // Live destinations are links. Staged destinations keep their route and context
 // visible, but are deliberately non-interactive so "Soon" never behaves like a
 // shipped action.
 function MapRow({ label, route, note, soon, thumb }) {
-  const cls = `spt-row${thumb ? '' : ' spt-row--text'}${soon ? ' spt-row--soon' : ''}`
+  const cls = `mk-row${thumb ? '' : ' mk-row--text'}${soon ? ' mk-row--soon' : ''}`
   const inner = (
     <>
       {thumb}
-      <span className="spt-row-text">
-        <span className="spt-lbl">
+      <span className="mk-row-text">
+        <span className="mk-lbl">
           <b>{label}</b>
-          {soon && <SoonPill />}
+          {soon && <Soon />}
         </span>
-        {note && <span className="spt-note">{note}</span>}
+        {note && <span className="mk-body mk-note">{note}</span>}
         <RouteLine route={route} />
       </span>
-      <span className="spt-row-go" aria-hidden="true">{soon ? null : <PhIcon name="arrow-up-right" />}</span>
+      <span className="mk-row-go" aria-hidden="true">
+        {soon ? null : <svg className="mk-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M8 7h9v9" /></svg>}
+      </span>
     </>
   )
   return (
@@ -124,21 +123,21 @@ function MapRow({ label, route, note, soon, thumb }) {
   )
 }
 
-function Rail({ icon, hue, label, meta, desc }) {
+function Rail({ icon, label, meta, desc }) {
   return (
-    <div className="spt-rail">
-      <h3>
-        <span className="spt-gtile" data-hue={hue} aria-hidden="true"><NavIcon id={icon} /></span>
+    <div className="mk-rail">
+      <h3 className="mk-t22">
+        <span className="mk-gtile" aria-hidden="true"><NavIcon id={icon} /></span>
         <span>{label}</span>
       </h3>
-      {meta && <p className="spt-gmeta">{meta}</p>}
-      {desc && <p className="spt-gdesc">{desc}</p>}
+      {meta && <p className="mk-body mk-gmeta">{meta}</p>}
+      {desc && <p className="mk-body mk-gdesc">{desc}</p>}
     </div>
   )
 }
 
 export default function SiteMap() {
-  // Unfinished pages are listed, badged, for admins only; everyone else gets a
+  // Unfinished pages are listed, marked, for admins only; everyone else gets a
   // map of what opens.
   const { isAdmin } = useIsAdmin()
   const showSoon = (flag) => isAdmin || !flag
@@ -150,44 +149,38 @@ export default function SiteMap() {
     .filter(({ tools }) => tools.length)
   const discoverGroups = DISCOVER_GROUPS.filter((g) => showSoon(g.soon))
   const learnRoadmap = LEARN_ROADMAP.filter((g) => showSoon(g.soon))
-  const [heroLit] = useState(() => typeof document !== 'undefined'
-    && !document.documentElement.hasAttribute('data-hero-prepainted')
-    && !prefersReducedMotion())
 
   return (
-    <div className="spectrum spm spt spt-sitemap">
+    <div className="spectrum spt mkt mk-map">
       <PillNav variant="spectrum" />
-      <div className="sp-grain" aria-hidden="true" />
-      <div className="spm-spacer" aria-hidden="true" />
+      <div className="mk-spacer" aria-hidden="true" />
       <main id="main" tabIndex={-1}>
-        <section className="spm-intro" aria-labelledby="smap-h1">
-          <div className={heroLit ? 'spm-hero is-in' : 'spm-hero'}>
-            <div className="spm-hero-copy">
-              {/* No taxonomy eyebrow above the h1, and no count in it: a count is a number that can be wrong. */}
-              <h1 className="spm-h1" id="smap-h1"><SpectrumWords text="The whole map." /></h1>
-              <p className="spm-lede">
-                {isAdmin ? (
-                  <>
-                    Every page in UI L4B, laid out end to end. Categories still in the workshop
-                    keep a <SoonPill inline /> badge, so the map only ever promises what&rsquo;s actually live.
-                  </>
-                ) : 'Every page in UI L4B, laid out end to end.'}{' '}
-                Jump to <a href="#create">Create</a>, <a href="#browse">Discover &amp; Learn</a> or <a href="#account">Account &amp; more</a>.
-              </p>
-            </div>
+        <section className="mk-intro mk-intro--solo mk-wrap" aria-labelledby="smap-h1">
+          <div className="mk-intro-copy">
+            {/* No taxonomy eyebrow above the h1, and no count in it: a count is a number that can be wrong. */}
+            <h1 className="mk-h1" id="smap-h1">The whole map.</h1>
+            <p className="mk-lead">
+              {isAdmin ? (
+                <>
+                  Every page in UI L4B, laid out end to end. Categories still in the workshop
+                  are marked <Soon />, so the map only ever promises what&rsquo;s actually live.
+                </>
+              ) : 'Every page in UI L4B, laid out end to end.'}{' '}
+              Jump to <a href="#create">Create</a>, <a href="#browse">Discover &amp; Learn</a> or <a href="#account">Account &amp; more</a>.
+            </p>
           </div>
         </section>
 
         {/* Create: the build surface, straight from the tool tree */}
-        <section className="spt-section" id="create" aria-labelledby="smap-create">
-          <h2 className="spt-h2" id="smap-create">Create</h2>
+        <section className="mk-sec mk-wrap" id="create" aria-labelledby="smap-create">
+          <h2 className="mk-h2" id="smap-create">Create</h2>
           {/* "components" is not in this list: the `component` group is soon:true and
               the page only ever promises what is live. */}
-          <p className="spt-sub">Build colour, type, icons, media and AI systems.</p>
+          <p className="mk-body mk-sub">Build colour, type, icons, media and AI systems.</p>
           {createGroups.map(({ group, tools }) => (
-            <div key={group.id} className="spt-group" data-hue={group.hue}>
-              <Rail icon={group.hue} hue={group.hue} label={group.label} meta={group.soon ? <SoonPill /> : null} desc={group.desc} />
-              <ul className="spt-rows">
+            <div key={group.id} className="mk-group" data-hue={group.hue}>
+              <Rail icon={group.hue} label={group.label} meta={group.soon ? <Soon /> : null} desc={group.desc} />
+              <ul className="mk-rows">
                 {tools.map((tool) => {
                   const soon = !!(group.soon || tool.soon)
                   return (
@@ -197,7 +190,7 @@ export default function SiteMap() {
                       route={tool.route}
                       note={CREATE_TOOL_SEARCH[tool.id]?.description}
                       soon={soon}
-                      thumb={<span className="spt-thumb"><ToolArt id={tool.id} size="thumb" soon={soon} /></span>}
+                      thumb={<span className="mk-thumb"><ToolArt id={tool.id} size="thumb" soon={soon} /></span>}
                     />
                   )
                 })}
@@ -207,14 +200,14 @@ export default function SiteMap() {
         </section>
 
         {/* Discover and Learn: browse and understand */}
-        <section className="spt-section" id="browse" aria-labelledby="smap-browse">
-          <h2 className="spt-h2" id="smap-browse">Discover &amp; Learn</h2>
-          <p className="spt-sub">Browse curated inspiration, then dig into the why behind it.</p>
-          <div className="spt-group" data-hue="accent" data-sitemap-section="discover">
-            <Rail icon="inspiration" hue="accent" label="Discover" meta={<>{DISCOVER_GROUPS.filter((group) => !group.soon).length} live{isAdmin && <> &middot; more coming</>}</>} />
+        <section className="mk-sec mk-wrap" id="browse" aria-labelledby="smap-browse">
+          <h2 className="mk-h2" id="smap-browse">Discover &amp; Learn</h2>
+          <p className="mk-body mk-sub">Browse curated inspiration, then dig into the why behind it.</p>
+          <div className="mk-group" data-hue="accent" data-sitemap-section="discover">
+            <Rail icon="inspiration" label="Discover" meta={<>{DISCOVER_GROUPS.filter((group) => !group.soon).length} live{isAdmin && <> &middot; more coming</>}</>} />
             {/* Nothing typed here: every row carries its own `desc` from the registry,
                 so the column cannot promise a group the registry does not list. */}
-            <ul className="spt-rows">
+            <ul className="mk-rows">
               {discoverGroups.map((g) => (
                 <MapRow key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
@@ -223,16 +216,15 @@ export default function SiteMap() {
           {/* LEARN_ROADMAP rather than LEARN_GROUPS: a delivered row carries the SAME
               route as the guide that delivered it, so listing both would put two rows
               on one data-route. */}
-          <div className="spt-group" data-hue="accent" data-sitemap-section="learn">
+          <div className="mk-group" data-hue="accent" data-sitemap-section="learn">
             <Rail
               icon="principles"
-              hue="accent"
               label="Learn"
               desc={isAdmin
                 ? 'Reference guides on colour, type, accessibility and psychology, plus the topics still to be written.'
                 : 'Reference guides on colour, type, accessibility and psychology.'}
             />
-            <ul className="spt-rows">
+            <ul className="mk-rows">
               {LEARN_ARTICLES.map((a) => (
                 <MapRow key={a.slug} label={a.title} route={`/learn/${a.slug}`} note={a.dek} />
               ))}
@@ -245,14 +237,14 @@ export default function SiteMap() {
         </section>
 
         {/* Account, help and legal: hand-kept, not in the tool tree */}
-        <section className="spt-section spt-section--last" id="account" aria-labelledby="smap-account">
-          <h2 className="spt-h2" id="smap-account">Account &amp; more</h2>
-          <p className="spt-sub">Your account, support and the fine print.</p>
-          <div className="spt-cols">
+        <section className="mk-sec mk-sec--last mk-wrap" id="account" aria-labelledby="smap-account">
+          <h2 className="mk-h2" id="smap-account">Account &amp; more</h2>
+          <p className="mk-body mk-sub">Your account, support and the fine print.</p>
+          <div className="mk-cols">
             {FLAT_SECTIONS.map((section) => (
-              <div key={section.id} className="spt-col" data-hue="none">
-                <Rail icon={section.icon} hue="none" label={section.label} desc={section.desc} />
-                <ul className="spt-rows">
+              <div key={section.id} className="mk-col" data-hue="none">
+                <Rail icon={section.icon} label={section.label} desc={section.desc} />
+                <ul className="mk-rows">
                   {section.links.map((link) => (
                     <MapRow key={link.route} {...link} />
                   ))}

@@ -36,6 +36,7 @@ async function walk(page) {
   const board = await boardColours(page)
 
   for (const [button, url] of [
+    [/^Next: Semantic colours/, /\/create\/semantic-color$/],
     [/^Next: Fonts/, /\/create\/font-pair$/],
     [/^Next: Type scale/, /\/create\/type-scale$/],
     [/^Next: Icons/, /\/create\/icons$/],
@@ -66,7 +67,7 @@ test.describe('Brand kit walkthrough: the saved project can be exported', () => 
       await expect(page.getByText('Fill the gaps')).toHaveCount(0)
       await expect(page.locator('.pjv-rail').getByText('Export project', { exact: true })).toBeVisible()
       await expect(page.getByText('5 colours')).toBeVisible()
-      await expect(page.locator('.pjv-bm').getByText('11 steps', { exact: true })).toBeVisible()
+      await expect(page.locator('.pjv-bm').getByText('Success, warning, error and info', { exact: true })).toBeVisible()
 
       const saved = await page.evaluate(() => {
         const all = Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat()

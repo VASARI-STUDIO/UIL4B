@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { loadFont } from '../../utils/googleFonts'
 
@@ -16,10 +16,12 @@ export function GoArrow({ size = 14, variant = 'ink' }) {
 
 const stack = (family) => `'${family}', system-ui, sans-serif`
 
-function PalettePlate({ part }) {
+// The palette and the semantic colours are both a row of flat stops. A semantic stop carries its role, so
+// its label says which colour is which; a palette stop is only a hex.
+function StopsPlate({ part, label }) {
   const many = part.stops.length > 6
   return (
-    <div className="db-plate pal" role="img" aria-label={`Palette: ${part.stops.map((s) => s.c).join(', ')}`}>
+    <div className="db-plate pal" role="img" aria-label={`${label}: ${part.stops.map((s) => (s.label ? `${s.label} ${s.c}` : s.c)).join(', ')}`}>
       {part.stops.map((s, i) => (
         <span key={`${s.c}-${i}`} className="db-stop" style={{ background: s.c, color: s.on }}>
           {!many && <span className="db-hex">{s.c}</span>}
@@ -55,69 +57,25 @@ function FontPlate({ part }) {
   )
 }
 
-function Ramp({ stops, cls }) {
-  return <span className={`db-ramp${cls ? ` ${cls}` : ''}`}>{stops.map((c, i) => <i key={`${c}-${i}`} style={{ background: c }} />)}</span>
-}
-
-// The one moment: the full-strength ramp unrolls over the dimmed preview on hover or focus of this part
-// or of the head pill (see dashboard.css).
-function TintsPlate({ part }) {
-  const seed = part.seed
-  return (
-    <div className="db-plate l2 tn" aria-hidden="true">
-      {!part.set && seed && (
-        <>
-          <span className="db-tstop" style={{ background: seed.c, color: seed.on }}><span className="db-hex">{seed.c}</span></span>
-          <p className="db-tnote">Preview: {part.stops.length} steps from <span className="db-mono">{seed.c}</span>.</p>
-        </>
-      )}
-      {!part.set && !seed && <p className="db-blank">{part.note}</p>}
-      {!part.set && seed && part.stops.length > 0 && <Ramp stops={part.stops} cls="rest" />}
-      {part.stops.length > 0 && <Ramp stops={part.stops} cls={part.set ? 'set' : ''} />}
-    </div>
-  )
-}
-
-// On a phone the Tints ramp unrolls once, the first time its cell is 60% in view (the CSS only draws it below
-// 1200px; from there up it is the hover and focus moment). Without IntersectionObserver it plays at once.
-function useSeen(watch) {
-  const ref = useRef(null)
-  const [seen, setSeen] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!watch || seen || !el) return undefined
-    if (typeof IntersectionObserver === 'undefined') { setSeen(true); return undefined }
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.6)) { setSeen(true); io.disconnect() }
-    }, { threshold: [0.6] })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [watch, seen])
-  return [ref, seen]
-}
-
 const HEXES_SHOWN = 6
 
 function Part({ part, face }) {
-  const isTints = part.id === 'tints'
-  const noteSeed = isTints && !part.set && part.seed
-  const [ref, seen] = useSeen(!!noteSeed && part.stops.length > 0)
   let plate
-  if (part.id === 'palette') plate = part.set ? <PalettePlate part={part} /> : <div className="db-plate l2"><p className="db-blank">{part.note}</p></div>
+  if (part.id === 'palette') plate = part.set ? <StopsPlate part={part} label="Palette" /> : <div className="db-plate l2"><p className="db-blank">{part.note}</p></div>
   else if (part.id === 'type-scale') plate = part.set ? <ScalePlate part={part} face={face} /> : <div className="db-plate l2"><p className="db-blank">{part.note}</p></div>
   else if (part.id === 'fonts') plate = part.set ? <FontPlate part={part} /> : <div className="db-plate l2"><p className="db-blank">{part.note}</p></div>
-  else plate = <TintsPlate part={part} />
-  const meta = isTints ? (part.set ? `${part.count} steps` : 'Not set') : part.set ? part.meta : 'Not set'
+  else plate = part.set ? <StopsPlate part={part} label="Semantic colours" /> : <div className="db-plate l2"><p className="db-blank">{part.note}</p></div>
+  const meta = part.set ? part.meta : 'Not set'
   const hexes = part.id === 'palette' && part.set ? part.stops.map((s) => s.c) : null
   return (
-    <div className={`db-part${isTints ? ' db-tn' : ''}${seen ? ' play' : ''}`} ref={isTints ? ref : undefined}>
+    <div className="db-part">
       {plate}
       <p className="db-cap">
         {part.set
           ? <svg className="db-tick" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
           : <i className="db-circle" aria-hidden="true" />}
         <span className="n">{part.name}</span>
-        <span className={`m${part.id === 'palette' ? ' pm' : ''}${isTints && !part.set ? ' st' : ''}`}>
+        <span className={`m${part.id === 'palette' ? ' pm' : ''}`}>
           {part.set && part.id === 'type-scale' && <span className="db-lbl">{part.label}, </span>}
           {meta}{part.set && part.mono && <span className="db-mono">{part.mono}</span>}
         </span>
@@ -125,12 +83,6 @@ function Part({ part, face }) {
           <span className="db-hexes" aria-hidden="true">
             {hexes.slice(0, HEXES_SHOWN).map((c, i) => <span key={`${c}-${i}`} className="db-mono">{c}</span>)}
             {hexes.length > HEXES_SHOWN && <span>{`+${hexes.length - HEXES_SHOWN}`}</span>}
-          </span>
-        )}
-        {noteSeed && (
-          <span className="db-tcm" aria-hidden="true">
-            <span className="a">Starts from <span className="db-mono">{part.seed.c}</span>.</span>
-            <span className="b">{`Preview: ${part.stops.length} steps from `}<span className="db-mono">{part.seed.c}</span>.</span>
           </span>
         )}
       </p>

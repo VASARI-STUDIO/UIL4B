@@ -252,7 +252,7 @@ test('print HTML, every theme: no script, no handler, no outside link, fonts as 
       assert.equal(html.match(/Content-Security-Policy/g).length, 1, label)
     }
   }
-  assert.equal(PRINT_CSP, "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'")
+  assert.equal(PRINT_CSP, "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'")
 })
 
 test('the book print edition leaves out the downloads section; the site zip keeps it, with its script', async () => {
@@ -271,4 +271,98 @@ test('the data table matches the themes: ids and names', async () => {
     assert.equal(meta.id, t.id)
     assert.equal(meta.name, t.name)
   }
+})
+
+// ── Q147: the print CSP, the document gate and the limiter fail closed ─────
+//     Break: take base-uri or form-action out of PRINT_CSP; drop the script or form test from withCsp; drop failOpen: false from the
+//     consume call in serveThemeExport; take `|| verdict.degraded` out of the refusal.
+
+// An engine that builds a print book from whatever html it is given, so withCsp sees exactly that document.
+const printEngine = (html) => ({
+  projectToBrand: () => ({ slug: 'tide' }),
+  makeCtx: () => ({}),
+  kitFiles: () => ({}),
+  bookPrintDoc: () => html,
+})
+const PRINT_BODY = () => body({ theme: '03-broadsheet', row: 'book', format: 'pdf' })
+
+test('PRINT_CSP names base-uri and form-action as none, beside the rules that were already there', () => {
+  assert.match(PRINT_CSP, /(^|; )base-uri 'none'(;|$)/)
+  assert.match(PRINT_CSP, /(^|; )form-action 'none'(;|$)/)
+  assert.match(PRINT_CSP, /(^|; )default-src 'none'(;|$)/)
+  assert.ok(!/script-src/.test(PRINT_CSP), 'no rule that lets a script run')
+})
+
+test('withCsp refuses a print document that holds a script or a form, in any case, and serves a clean one', async () => {
+  const clean = '<!doctype html><html><head><title>t</title></head><body><p>Hello</p></body></html>'
+  const ok = await ask('tok-pro', PRINT_BODY(), { engine: printEngine(clean) })
+  assert.equal(ok.code, 200)
+  assert.ok(ok.body.html.startsWith(`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${PRINT_CSP}">`))
+  const bad = {
+    'a script': clean.replace('</body>', '<script>1</script></body>'),
+    'a script with attributes': clean.replace('</body>', '<SCRIPT type="text/javascript">1</SCRIPT></body>'),
+    'a script with a newline after the name': clean.replace('</body>', '<script\nsrc="x"></script></body>'),
+    'a self-closed script': clean.replace('</body>', '<script/></body>'),
+    'a form': clean.replace('</body>', '<form action="/x"><input></form></body>'),
+    'a form in capitals': clean.replace('</body>', '<FORM method="post"></FORM></body>'),
+    'a form with a newline after the name': clean.replace('</body>', '<form\naction="/x"></form></body>'),
+  }
+  for (const [what, html] of Object.entries(bad)) {
+    const res = await ask('tok-pro', PRINT_BODY(), { engine: printEngine(html) })
+    assert.equal(res.code, 500, what)
+    assert.equal(res.body.code, 'build_failed', what)
+    assert.equal(res.body.html, undefined, `${what}: no document leaves`)
+  }
+  // A word that only starts like the tag is not the tag.
+  const near = clean.replace('<p>Hello</p>', '<p>a transcript and a formula</p><scripture-note></scripture-note>')
+  assert.equal((await ask('tok-pro', PRINT_BODY(), { engine: printEngine(near) })).code, 200)
+})
+
+test('the theme export limit is asked for with failOpen: false, keyed on the account', async () => {
+  const seen = []
+  const consume = async (opts) => { seen.push(opts); return { allowed: true } }
+  const res = await ask('tok-pro', body(), { consume, engine: { projectToBrand() { throw new Error('stop here') } } })
+  assert.equal(res.code, 500)
+  assert.equal(seen.length, 1)
+  assert.equal(seen[0].failOpen, false)
+  assert.equal(seen[0].bucket, 'export-theme')
+  assert.equal(seen[0].key, 'pro-1')
+})
+
+test('a limiter that is degraded is a refusal, even when it says allowed', async () => {
+  let built = 0
+  const engine = { projectToBrand() { built++; throw new Error('stop here') } }
+  const res = await ask('tok-pro', body(), { consume: async () => ({ allowed: true, remaining: 30, retryAfter: 0, degraded: true }), engine })
+  assert.equal(res.code, 429)
+  assert.equal(res.body.code, 'rate_limited')
+  assert.equal(res.headers['Retry-After'], '1')
+  assert.equal(built, 0, 'nothing was built')
+})
+
+test('the real limiter, with its database down, refuses a theme export (429) and does not wave it through', async () => {
+  const { consume } = await import('../../api/_lib/rateLimit.js')
+  const outage = Object.assign(new Error('db down'), { code: 'unavailable' })
+  const db = { collection: () => ({ doc: () => ({}) }), runTransaction: async () => { throw outage } }
+  const quiet = console.error
+  console.error = () => {}
+  let built = 0
+  let res
+  try {
+    res = await ask('tok-pro', body(), { consume: (opts) => consume(db, opts), engine: { projectToBrand() { built++; throw new Error('stop here') } } })
+  } finally { console.error = quiet }
+  assert.equal(res.code, 429)
+  assert.equal(res.body.code, 'rate_limited')
+  assert.equal(built, 0)
+  // The same outage on a path that did not ask for failure-closed still fails open, so the difference is the flag.
+  console.error = () => {}
+  try { assert.equal((await consume(db, { bucket: 'b', key: 'k', limit: 1, windowMs: 1000 })).degraded, true) } finally { console.error = quiet }
+})
+
+test('a limiter that throws is a bare 500', async () => {
+  const quiet = console.error
+  console.error = () => {}
+  let res
+  try { res = await ask('tok-pro', body(), { consume: async () => { throw new Error('x') } }) } finally { console.error = quiet }
+  assert.equal(res.code, 500)
+  assert.equal(res.body.code, 'build_failed')
 })

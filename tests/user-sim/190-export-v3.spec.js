@@ -20,7 +20,7 @@
 import fs from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { mockThemeApi, cleanHtml } from './export-theme-mock.js'
+import { mockThemeApi, cleanHtml, printedDoc } from './export-theme-mock.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import {
@@ -41,6 +41,7 @@ function savedProject() {
   design.typeScale.base = 17
   design.typeScale.ratio = 1.333
   design.tints.scale = ['#1F4B8E', '#2E7BB8', '#3FA9A0']
+  design.states.warning = 1 // a decision on a role: the semantic colours part is set
   const now = new Date().toISOString()
   return { id: 'harbour', name: PROJECT_NAME, design, createdAt: now, updatedAt: now }
 }
@@ -670,7 +671,7 @@ test.describe('a Pro account', () => {
     const panel = await openFromHeader(page)
     await expect(primaryButton(panel)).toBeEnabled()
     const [doc] = await Promise.all([page.context().waitForEvent('page'), primaryButton(panel).click()])
-    await expect(doc.locator('#printed-doc')).toHaveText('Stub book')
+    await expect(printedDoc(doc).locator('#printed-doc')).toHaveText('Stub book')
     expect(asked, 'the popup asks the server exactly once').toHaveLength(1)
     expect(asked[0].method).toBe('POST')
     expect(asked[0].auth).toMatch(/^Bearer .+/)
@@ -967,6 +968,7 @@ async function walkToSave(page) {
   // The arrival state is cleared by a replace navigation that would overwrite an earlier press on Next.
   await expect.poll(() => page.evaluate(() => window.history.state?.usr ?? null), 'the walkthrough has taken up its arrival').toBeNull()
   for (const [button, url] of [
+    [/^Next: Semantic colours/, /\/create\/semantic-color$/],
     [/^Next: Fonts/, /\/create\/font-pair$/],
     [/^Next: Type scale/, /\/create\/type-scale$/],
     [/^Next: Icons/, /\/create\/icons$/],

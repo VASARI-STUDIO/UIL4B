@@ -134,7 +134,7 @@ const ADDED_SELECTORS = {
   // The dashboard's own classes replace the old page's `.uh-*` hooks. Those the signed-out example
   // kit does not mount are skipped by the measure.
   '/projects': ['.db', '.db-wrap', '.db-main', '.db-head', '.db-title', '.db-today', '.db-greetw', '.db-col', '.db-sheet',
-    '.db-kit', '.db-plate', '.db-part', '.db-lbl', '.db-meta', '.db-stop', '.db-dstops', '.db-tstop', '.db-hexes', '.db-hex',
+    '.db-kit', '.db-plate', '.db-part', '.db-lbl', '.db-meta', '.db-stop', '.db-dstops', '.db-hexes', '.db-hex',
     '.db-ts', '.db-ratio', '.db-files', '.db-code', '.db-fm', '.db-fname', '.db-fsample', '.db-icons', '.db-go', '.db-ghost',
     '.db-link', '.db-open', '.db-opent', '.db-textbtn', '.db-tl', '.db-ring', '.db-bt', '.db-shelf', '.db-plan', '.db-perks',
     '.db-bar', '.db-end', '.db-status', '.db-sr', '.db-sch', '.db-circle', '.db-img', '.db-mono', '.db-group', '.db-minis',
@@ -176,10 +176,10 @@ const ADDED_SELECTORS = {
     '.tsk-route', '.tsk-rider', '.tsk-foot'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the
   // frozen list would keep only the few shell classes. These are the page's own hooks.
-  '/sitemap': ['.spm-intro', '.spm-h1', '.spm-lede', '.spt-section', '.spt-h2', '.spt-sub', '.spt-group', '.spt-rail',
-    '.spt-gtile', '.spt-gmeta', '.spt-gdesc', '.spt-rows', '.spt-row', '.spt-row--text', '.spt-thumb', '.spt-row-text',
-    '.spt-lbl', '.spt-note', '.spt-route', '.spt-route-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
-    '.spm-hero', '.spm-hero-copy', '.spm-spacer', '.sp-grain', '.spectrum', '.spt-section--last', '.spt-art', '.sp-footer-inner',
+  '/sitemap': ['.mk-intro', '.mk-intro-copy', '.mk-h1', '.mk-lead', '.mk-sec', '.mk-h2', '.mk-sub', '.mk-group', '.mk-rail',
+    '.mk-gtile', '.mk-gmeta', '.mk-gdesc', '.mk-rows', '.mk-row', '.mk-row--text', '.mk-thumb', '.mk-row-text',
+    '.mk-lbl', '.mk-note', '.mk-route', '.mk-route-seg', '.mk-row-go', '.mk-cols', '.mk-col', '.sp-footer',
+    '.mk-spacer', '.mk-wrap', '.spectrum', '.mk-sec--last', '.mk-soon', '.sp-footer-inner',
     '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-cta', '.sp-footer-col', '.sp-footer-col-h'],
   // The V3 surface index (/discover and /learn): doors, today's picks and the section heads replaced
   // the old card grid. Taken from SurfaceIndex.jsx; a class the page does not mount at a width is
@@ -216,6 +216,11 @@ const ADDED_SELECTORS = {
     '.sp-footer-col--legal', '.sp-footer-legal', '.sp-footer-copy', '.sp-footer-place', '.sp-footer-attrib',
     '.sp-footer-attrib-icon', '.sp-footer-mark', '.pl-t', '.pl-ink', '.pl-headpro', '.pl-headlabel', '.pl-pill',
     '.pl-gh', '.pl-ghin', '.pl-r', '.pl-l', '.pl-f', '.pl-p', '.pl-same',
+  ],
+  // Privacy on the single-column plain page: its own head, sections, table and aside.
+  '/privacy': [
+    '.pv3', '.lgl', '.lgl-doc', '.lgl-head', '.pv-h1', '.lgl-h', '.lgl-sec', '.lgl-p', '.lgl-list', '.lgl-a',
+    '.lgl-aside', '.lgl-updated', '.lgl-table-wrap', '.lgl-table', '.storage-table',
   ],
 }
 
