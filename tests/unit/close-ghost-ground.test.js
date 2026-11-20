@@ -71,7 +71,7 @@ test('on /tools and /mobile in the light theme the ghost is restored to the ligh
   assert.ok(ghost.length, 'home-footer.css needs a light-theme .hm-close-ghost.ui-pill-out rule')
   for (const r of ghost) {
     assert.ok(classCount(r.sel) > classCount('.ui-pill-out'), `${r.sel} must outrank .ui-pill-out`)
-    assert.match(r.sel, /\.mkt/, `${r.sel} must stay scoped to the marketing pages, so the homepage keeps its dark ghost`)
+    assert.match(r.sel, /\.mkt\b/, `${r.sel} must stay scoped to the marketing pages, so the homepage keeps its dark ghost`)
     assert.equal(decl(r.body, 'background'), 'transparent', `${r.sel} background`)
     assert.equal(decl(r.body, 'color'), 'var(--v3-ink)', `${r.sel} color`)
   }
