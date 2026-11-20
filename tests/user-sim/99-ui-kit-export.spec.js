@@ -1,6 +1,6 @@
 // The UI kit, exported from the nav's Export popup (UI kit).
 //
-// Signed out, the kit is the panel's default format and pressing Export raises
+// Signed out, the kit is picked in the panel (UI, UI kit) and pressing Export raises
 // the dialog's inline sign-in, as for every other file export, with nothing
 // asked of the server and nothing downloaded. With an account the same press asks
 // the export route (POST /api/ai?export=document, answered here by a stand-in) for
@@ -8,7 +8,7 @@
 // `{slug}-ui-kit-{theme}.zip`. The kit's contents (edition mark, embedded fonts,
 // no invented shares or slogans) are built and checked on the server; what these
 // specs hold is what the dialog asks for, what it saves, and what it says.
-import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
+import { chooseFormat, exportPanel, openDetails, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn, overlaysSettled, ready, openProjectFromDashboard } from './helpers.js'
 import { mockThemeApi } from './export-theme-mock.js'
@@ -37,9 +37,9 @@ async function openPanel(page) {
   }
   const panel = exportPanel(page)
   await expect(panel).toBeVisible()
-  // The header Export opens on the Brand book; the kit is a pick like any other.
+  // The header Export opens on the Guidelines; the kit is a pick like any other (the UI type, its UI kit tab).
   await chooseFormat(page, 'kit')
-  await expect(panel.getByRole('radio', { name: /^UI kit/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(panel.getByRole('tab', { name: /^UI kit/ })).toHaveAttribute('aria-selected', 'true')
   return panel
 }
 
@@ -157,6 +157,7 @@ test.describe('the UI kit export', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, BOARD)
     const panel = await openPanel(page)
+    await openDetails(panel)
     const identity = panel.getByRole('group', { name: 'Identity' })
     await expect(identity, 'a Pro kit offers its identity fields').toBeVisible()
     await identity.getByLabel('Name').fill('Harbour Studio')
@@ -190,6 +191,7 @@ test.describe('the UI kit export', () => {
     await page.reload()
     await ready(page, 'the palette tool after the reload')
     const again = await openPanel(page)
+    await openDetails(again)
     await expect(again.getByRole('group', { name: 'Identity' }).getByLabel('Name')).toHaveValue('Harbour Studio')
   })
 
@@ -200,6 +202,7 @@ test.describe('the UI kit export', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, BOARD)
     const panel = await openPanel(page)
+    await openDetails(panel)
     await panel.getByRole('group', { name: 'Identity' }).getByLabel('Name').fill('Harbour Studio')
     const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), primaryButton(panel).click()])
     expect(calls.map((c) => c.body.projectName), 'the route is told the kit’s name').toEqual(['Harbour Studio'])
@@ -213,6 +216,7 @@ test.describe('the UI kit export', () => {
       await signIn(page, { plan: 'pro' })
       await go(page, BOARD)
       const panel = await openPanel(page)
+      await openDetails(panel)
       const identity = panel.getByRole('group', { name: 'Identity' })
       const targets = {
         name: identity.getByLabel('Name'),
@@ -227,7 +231,7 @@ test.describe('the UI kit export', () => {
         expect(at.top, `${what} starts inside the panel: ${JSON.stringify(at)}`).toBeGreaterThanOrEqual(at.viewTop)
         expect(at.bottom, `${what} ends above the footer and the fold: ${JSON.stringify(at)}`).toBeLessThanOrEqual(at.viewBottom)
       }
-      // In the kit's Details step, under the File step and the type in the rail.
+      // In the kit's Details step (inside File details), under the File step and the type in the rail.
       const order = await panel.evaluate((el) => {
         const kit = el.querySelector('.xd-type.is-on')
         const file = [...el.querySelectorAll('.xd-step-l')].find((h) => h.textContent === 'File')
@@ -245,6 +249,7 @@ test.describe('the UI kit export', () => {
       await signIn(page, { plan: 'free' })
       await go(page, BOARD)
       const panel = await openPanel(page)
+      await openDetails(panel)
       await expect(panel.getByRole('group', { name: 'Identity' }), 'a free kit is not personalised').toHaveCount(0)
       await expect(panel.getByRole('button', { name: 'Add logo', exact: true }), 'nor asked for a logo').toHaveCount(0)
     })
@@ -297,9 +302,9 @@ test.describe('the UI kit export', () => {
     }
   }
 
-  // Under reduced motion the Theme list has to take keyboard focus, from the system's setting and from the app's own, on a wide window and on a phone.
+  // Under reduced motion the templates grid has to take keyboard focus, from the system's setting and from the app's own, on a wide window and on a phone.
   for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTION_WIDTHS) {
-    test(`reduced motion (${setting.name}), ${where}: the kit's Theme list takes focus, ArrowDown chooses the next theme and focus goes with it`, async ({ page }) => {
+    test(`reduced motion (${setting.name}), ${where}: the kit's templates grid takes focus, ArrowDown chooses the next template and focus goes with it`, async ({ page }) => {
       watch(page, `a free account choosing the kit's theme by keyboard with reduced motion on, by ${setting.name}`)
       await setting.apply(page)
       await page.setViewportSize(size)
@@ -320,6 +325,7 @@ test.describe('the UI kit export', () => {
     await signIn(page, { plan: 'free' })
     await go(page, BOARD)
     const panel = await openPanel(page)
+    await openDetails(panel)
     await expect(panel.getByRole('group', { name: 'Identity' }), 'a free kit is not personalised').toHaveCount(0)
     await expect(panel.getByRole('button', { name: 'Close export', exact: true })).toBeVisible()
     const cta = primaryButton(panel)
