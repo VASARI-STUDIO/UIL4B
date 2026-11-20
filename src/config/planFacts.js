@@ -229,6 +229,7 @@ export const PRO_POINTS = Object.freeze([
   PROMPT_LIBRARY_OPEN ? 'Every palette, gradient, prompt and brand palette' : 'Every palette, gradient and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
+  'Advanced image converter output: background fill and filename patterns',
   `${proDocumentsLine()}, and no ${MADE_WITH_LINE} on anything`,
 ])
 

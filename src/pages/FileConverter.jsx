@@ -1,6 +1,8 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { useProModal } from '../contexts/ProModalContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import JSZip from 'jszip'
 import { ToolLayout, ToolButton } from '../components/tool/ToolLayout'
@@ -33,6 +35,8 @@ import {
 } from '../utils/stillEdit'
 import { COLOURS_MAX, COLOURS_MIN, encodeIndexedPng, quantise } from '../utils/pngQuantise'
 import { KB_MAX, KB_MIN, fitSummary, fitUnderBytes, targetBytes } from '../utils/fitUnderBytes'
+import { DEFAULT_NAME_PATTERN, NAME_TOKENS, applyNamePattern, uniqueFileName, unknownTokens } from '../utils/convertNaming'
+import { makeSampleImage } from '../utils/sampleImage'
 import Segmented from '../components/converter/Segmented'
 import ToolRail from '../components/converter/ToolRail'
 import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from '../components/converter/railGroups'
@@ -86,6 +90,43 @@ const FRAME_FORMATS = OUTPUT_FORMATS.filter(f => f.id !== 'image/avif' && !f.ico
 
 const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/bmp,image/avif,image/x-icon,image/vnd.microsoft.icon,.png,.jpg,.jpeg,.webp,.gif,.svg,.bmp,.avif,.ico'
 const ACCEPT_VIDEO = 'video/*,.mp4,.webm,.mov,.avi,.gif,.webp'
+
+// What the still-image mode opens: the same list as ACCEPT_IMAGE above, named
+// for the empty state. Keep the two in step.
+const INPUT_FORMATS = ['PNG', 'JPEG', 'WebP', 'GIF', 'SVG', 'BMP', 'AVIF', 'ICO']
+const SOURCE_LABELS = { png: 'PNG', jpg: 'JPEG', jpeg: 'JPEG', webp: 'WebP', gif: 'GIF', svg: 'SVG', bmp: 'BMP', avif: 'AVIF', ico: 'ICO' }
+
+const NAME_PATTERN_MAX = 80
+
+/** The source's format as a label, from its extension and then its type. */
+function sourceFormat(file) {
+  const ext = /[.]([^.]+)$/.exec(file.name || '')?.[1]?.toLowerCase()
+  if (ext && SOURCE_LABELS[ext]) return SOURCE_LABELS[ext]
+  const sub = (file.type || '').replace('image/', '').replace('svg+xml', 'svg').replace('x-icon', 'ico').replace('vnd.microsoft.icon', 'ico')
+  return SOURCE_LABELS[sub] || null
+}
+
+/** What to do about a failed file, written to sit under the reason it failed. */
+function errorAdvice(message) {
+  const text = String(message || '')
+  if (/not supported by this browser/i.test(text)) return 'Try PNG or WebP instead.'
+  if (/timed out/i.test(text)) return 'Try a smaller size, or another format.'
+  if (/too large/i.test(text)) return 'Choose a smaller size limit or export scale.'
+  if (/could not decode/i.test(text)) return 'The file may be damaged, or not an image. Remove it and try another.'
+  return 'Remove it and try again, or try another format.'
+}
+
+/** The small lock-and-"Pro" mark that sits on a control Free can see but not use. */
+function ProTag() {
+  return (
+    <span className="fc-protag">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <rect x="3.5" y="7" width="9" height="6.5" rx="1.5" /><path d="M5.5 7V5.25a2.5 2.5 0 0 1 5 0V7" />
+      </svg>
+      Pro
+    </span>
+  )
+}
 
 // Whether this browser can encode AVIF: null until the one-off probe answers,
 // then true/false. A returning visit reads the remembered answer on first
@@ -366,6 +407,16 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
   const [renderScale, setRenderScale] = useState(1) // @1x / @2x export
   const [jpegBg, setJpegBg] = useState('#ffffff') // fill behind transparency (JPEG has no alpha)
+  // The Pro advanced output controls. What was typed is kept for everyone, but
+  // only a Pro account's values reach the encoder and the file names (see
+  // proFill and proPattern below), so a lapsed plan can never carry
+  // a Pro result out through a setting it can no longer see.
+  const { isPro, planKnown } = useSubscription()
+  const { openProModal } = useProModal()
+  const [fillOn, setFillOn] = useState(false) // fill transparency in PNG, WebP and AVIF too
+  const [namePattern, setNamePattern] = useState(DEFAULT_NAME_PATTERN)
+  const proFill = isPro && fillOn
+  const proPattern = isPro ? namePattern : DEFAULT_NAME_PATTERN
   const [busy, setBusy] = useState(false)
   const [zipping, setZipping] = useState(false)
   // The still editor's edits as one value, which Undo and Redo watch. The other
@@ -583,7 +634,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
         flipH: edit.flipH,
         flipV: edit.flipV,
         radius: edit.radius * factor,
-        background: format === 'image/jpeg' ? jpegBg : null,
+        background: (format === 'image/jpeg' || proFill) ? jpegBg : null,
       })
       return canvas
     }
@@ -627,7 +678,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       made = await lossy(quality)
     }
     return { blob: made.blob, url: URL.createObjectURL(made.blob), bytes: made.bytes, w: made.w, h: made.h, detail, missed }
-  }, [format, quality, maxDim, renderScale, jpegBg, edit, refW, refH, pngColours, fitOn, fitKb])
+  }, [format, quality, maxDim, renderScale, jpegBg, proFill, edit, refW, refH, pngColours, fitOn, fitKb])
 
   const [convertProgress, setConvertProgress] = useState({ done: 0, total: 0 })
 
@@ -701,11 +752,20 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     limit: describeCompressionLimit(draftFormat?.id ?? initialDraft.format, initialDraft.compression),
   }
 
+  // The name a converted file saves under. Free (and Pro with the default
+  // pattern) keeps the source's own name; a Pro pattern shapes it. `n` is the
+  // file's place in the queue, from 1, so it matches the order on screen.
+  const baseNameFor = useCallback((item) => {
+    if (proPattern === DEFAULT_NAME_PATTERN) return item.name.replace(/[.][^.]+$/, '')
+    return applyNamePattern(proPattern, {
+      name: item.name, ext: fmt.ext, w: item.out?.w, h: item.out?.h, n: items.indexOf(item) + 1,
+    })
+  }, [proPattern, fmt, items])
+
   const downloadOne = useCallback((item) => {
     if (!item.out) return
-    const base = item.name.replace(/\.[^.]+$/, '')
-    gatedDownload(item.out.blob, `${base}.${fmt.ext}`, 'download the converted image')
-  }, [fmt, gatedDownload])
+    gatedDownload(item.out.blob, `${baseNameFor(item)}.${fmt.ext}`, 'download the converted image')
+  }, [fmt, gatedDownload, baseNameFor])
 
   const downloadAll = useCallback(async () => {
     const ready = items.filter(it => it.out)
@@ -716,12 +776,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       const zip = new JSZip()
       const used = new Set()
       ready.forEach(it => {
-        let base = it.name.replace(/\.[^.]+$/, '')
-        let name = `${base}.${fmt.ext}`
-        let n = 1
-        while (used.has(name)) name = `${base}-${n++}.${fmt.ext}`
-        used.add(name)
-        zip.file(name, it.out.blob)
+        zip.file(uniqueFileName(baseNameFor(it), fmt.ext, used), it.out.blob)
       })
       const content = await zip.generateAsync({ type: 'blob' })
       // Awaited, and the toast is conditional on it: the gate may open a signup
@@ -733,13 +788,65 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       toast('Failed to create ZIP file', 'error')
     }
     setZipping(false)
-  }, [items, fmt, downloadOne, toast, gatedDownload])
+  }, [items, fmt, downloadOne, toast, gatedDownload, baseNameFor])
 
   const readyCount = items.filter(it => it.out).length
   const converted = items.filter(it => it.out)
   const totalOrig = converted.reduce((s, it) => s + it.file.size, 0)
   const totalOut = converted.reduce((s, it) => s + it.out.bytes, 0)
   const pct = convertProgress.total ? Math.round((convertProgress.done / convertProgress.total) * 100) : 0
+  const failedCount = items.filter(it => it.error).length
+
+  // "PNG to WebP": the choice the run is about to make, in one line. Several
+  // source formats are listed up to three, then called mixed.
+  const sourceLabels = [...new Set(items.map(it => sourceFormat(it.file)).filter(Boolean))]
+  const routeFrom = !sourceLabels.length ? 'Image' : sourceLabels.length <= 3 ? sourceLabels.join(', ') : 'Mixed formats'
+
+  // One line for where the run stands, so the visitor is never left to infer it
+  // from a button label or a toast that has already gone.
+  const total = convertProgress.total
+  let status = 'Ready to convert'
+  if (busy) status = `Converting ${Math.min(convertProgress.done + 1, total)} of ${total}`
+  else if (readyCount > 0) status = failedCount ? `${readyCount} converted, ${failedCount} failed` : readyCount > 1 ? `${readyCount} converted and ready to download` : 'Converted and ready to download'
+  else if (failedCount) status = failedCount > 1 ? `${failedCount} files failed. See the cards for why.` : '1 file failed. See its card for why.'
+
+  // A sample so a first-time visitor can watch a conversion before they have a
+  // file to hand. It goes through addFiles like any other file.
+  const trySample = useCallback(() => {
+    makeSampleImage().then(f => addFiles([f])).catch(() => toast('Could not draw the sample image', 'error'))
+  }, [addFiles, toast])
+
+  // A Free account sees the Pro rows and gets the upgrade prompt when it uses
+  // one; the prompt's buttons go to /plans. Nothing is asked of a server: the
+  // converter runs in the browser, so the gate lives here, at the control.
+  const askPro = useCallback((which) => {
+    if (!planKnown) return
+    if (which === 'background') {
+      openProModal({
+        gate: 'converter-background',
+        eyebrow: 'Pro converter controls',
+        title: 'Fill transparency in any format',
+        subtitle: 'JPEG already fills transparent areas with a colour you pick. Background fill gives PNG, WebP and AVIF the same, so a logo can sit on white or a brand colour.',
+        features: [
+          'Pick any colour to sit behind transparent areas',
+          'Works in PNG, WebP and AVIF as well as JPEG',
+          'One colour for the whole batch',
+        ],
+      })
+    } else {
+      openProModal({
+        gate: 'converter-filename',
+        eyebrow: 'Pro converter controls',
+        title: 'Name your files with a pattern',
+        subtitle: 'Free downloads keep each source name. A pattern names every file in a batch the same way, with the size and place in the queue built in.',
+        features: [
+          'Use the name, format, width, height and number',
+          'See the saved name before you download',
+          'Applies to single downloads and ZIP entries alike',
+        ],
+      })
+    }
+  }, [planKnown, openProModal])
 
   const drop = (
     <DropZone
@@ -747,8 +854,14 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       multiple
       onFiles={addFiles}
       compact={items.length > 0}
+      hero={items.length === 0}
       hint={items.length ? 'Add more images' : 'Drop images here or click to browse'}
-      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
+      overHint={items.length ? 'Drop to add' : 'Drop to convert'}
+      sub={items.length ? 'PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported' : 'Convert between image formats in your browser. Nothing is uploaded, and you can add several at once.'}
+      buttonLabel="Choose a file"
+      formats={INPUT_FORMATS}
+      makes={outputFormats.map(f => f.label.replace(' (favicon)', ''))}
+      onSample={trySample}
     />
   )
 
@@ -804,7 +917,10 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                   </div>
                   <div className="fc-name" title={it.name}>{it.name}</div>
                   {it.error ? (
-                    <div className="fc-meta fc-meta--err">{it.error}</div>
+                    <>
+                      <div className="fc-meta fc-meta--err">{it.error}</div>
+                      <div className="fc-meta fc-advice">{errorAdvice(it.error)}</div>
+                    </>
                   ) : it.out ? (
                     <>
                       <div className="fc-meta">{it.out.note || `${it.out.w}×${it.out.h}`}</div>
@@ -831,6 +947,12 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
           <div className="fc-side">
           <aside className="fc-inspector" aria-label="Output settings">
             <div className="fc-insp-sec">
+              <p className="fc-route" aria-live="polite">
+                <span className="fc-route-from">{routeFrom}</span>
+                <svg className="fc-route-arrow" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" /></svg>
+                <span className="sr-only"> to </span>
+                <span className="fc-route-to">{fmt.label.replace(' (favicon)', '')}</span>
+              </p>
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
               <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={pickedFormat} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
                 {outputFormats.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -1047,22 +1169,102 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               </>
             )}
 
+            {/* ADVANCED OUTPUT. Real controls the encoder and the file names
+                apply, for a Pro account. A Free account sees the same rows,
+                marked Pro, and the upgrade prompt opens when it uses one. */}
+            <div className="fc-insp-sec fc-adv" role="group" aria-labelledby="fc-adv-h">
+              <div className="fc-adv-head">
+                <span className="fc-eyebrow" id="fc-adv-h">Advanced output</span>
+                {!isPro && <ProTag />}
+              </div>
+
+              {!fmt.ico && format !== 'image/jpeg' && (isPro ? (
+                <div className="fc-adv-row">
+                  <div className="fc-adv-inline fc-adv-inline--between">
+                    <label className="fc-adv-k" htmlFor="fc-adv-fill">Background fill</label>
+                    <button
+                      type="button" id="fc-adv-fill" role="switch" aria-checked={fillOn}
+                      className={`fc-switch${fillOn ? ' is-on' : ''}`} disabled={busy}
+                      onClick={() => setFillOn(v => !v)}
+                    >
+                      <span className="fc-switch-knob" aria-hidden="true" />
+                      <span className="sr-only">{fillOn ? 'On' : 'Off'}</span>
+                    </button>
+                  </div>
+                  {fillOn ? (
+                    <div className="fc-row">
+                      <ColorPickerPop
+                        value={jpegBg}
+                        onChange={setJpegBg}
+                        disabled={busy}
+                        ariaLabel="Background fill colour"
+                        triggerClassName="fc-bg-pick"
+                      />
+                      <p className="fc-note">Fills transparent areas in {fmt.label}</p>
+                    </div>
+                  ) : (
+                    <p className="fc-note">Off: transparent areas stay transparent</p>
+                  )}
+                </div>
+              ) : (
+                <button type="button" className="fc-lock" aria-disabled={!planKnown || undefined} onClick={() => askPro('background')}>
+                  <span className="fc-lock-text">
+                    <span className="fc-lock-name">Background fill</span>
+                    <span className="fc-lock-desc">Put a colour behind transparency</span>
+                  </span>
+                  <ProTag />
+                </button>
+              ))}
+
+              {isPro ? (
+                <div className="fc-adv-row">
+                  <label className="fc-adv-k" htmlFor="fc-adv-name">Filename pattern</label>
+                  <input
+                    id="fc-adv-name" type="text" className="fc-field" value={namePattern} maxLength={NAME_PATTERN_MAX}
+                    autoComplete="off" spellCheck={false} disabled={busy}
+                    aria-describedby="fc-adv-name-note"
+                    onChange={e => setNamePattern(e.target.value)}
+                  />
+                  <p className="fc-note" id="fc-adv-name-note">
+                    Tokens: {NAME_TOKENS.map(t => `{${t}}`).join(' ')}
+                  </p>
+                  {unknownTokens(namePattern).length > 0 && (
+                    <p className="fc-note fc-note--warn">Not a token, so left out: {unknownTokens(namePattern).join(' ')}</p>
+                  )}
+                  {items[0] && (
+                    <p className="fc-note fc-adv-saves" aria-live="polite">
+                      Saves as: <strong>{applyNamePattern(namePattern, { name: items[0].name, ext: fmt.ext, w: items[0].out?.w || sized[0]?.out.w, h: items[0].out?.h || sized[0]?.out.h, n: 1 })}.{fmt.ext}</strong>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <button type="button" className="fc-lock" aria-disabled={!planKnown || undefined} onClick={() => askPro('filename')}>
+                  <span className="fc-lock-text">
+                    <span className="fc-lock-name">Filename pattern</span>
+                    <span className="fc-lock-desc">Name every file the same way</span>
+                  </span>
+                  <ProTag />
+                </button>
+              )}
+            </div>
+
           </aside>
 
           {/* The run's action bar: under the settings in the side card, and
               pinned to the bottom of the screen on a one-column bench. */}
           <div className="fc-actionbar fc-actions">
             <div className="fc-actionbar-row">
-              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convertAll} disabled={busy}>
+              <button type="button" className={`fc-btn fc-btn--wide${readyCount > 0 ? '' : ' fc-btn--primary'}`} onClick={convertAll} disabled={busy}>
                 {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
               </button>
               {readyCount > 0 && (
-                <button type="button" className="fc-btn" onClick={downloadAll} disabled={zipping}>
+                <button type="button" className="fc-btn fc-btn--primary" onClick={downloadAll} disabled={zipping}>
                   {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
                 </button>
               )}
               <button type="button" className="fc-btn" onClick={clearAll} disabled={busy}>Clear</button>
             </div>
+            <p className={`fc-status${failedCount ? ' fc-status--warn' : ''}`} role="status">{status}</p>
             {busy && items.length > 1 && (
               <div className="fc-progress" role="progressbar" aria-label="Images converted" aria-valuemin={0} aria-valuemax={convertProgress.total} aria-valuenow={convertProgress.done}>
                 <div className="fc-progress-bar" style={{ '--fc-pct': `${pct}%` }} />

@@ -108,6 +108,8 @@ const GATE_META = {
   'icon-export-size': { lock: 'Custom export sizes are Pro', reason: 'export at a custom size' },
   'icon-pro-preview': { lock: 'These export settings are Pro', reason: 'export your Pro settings' },
   'type-save-type-scale': { lock: 'Another saved type system is Pro', reason: 'save another type system' },
+  'converter-background': { lock: 'Background fill is Pro', reason: 'fill transparency in this format' },
+  'converter-filename': { lock: 'Filename patterns are Pro', reason: 'name your files with a pattern' },
 }
 
 const UI_SYSTEM_META = { lock: 'Editing the UI system is Pro', reason: 'change the UI system' }
