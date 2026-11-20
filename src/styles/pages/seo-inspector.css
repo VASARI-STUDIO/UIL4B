@@ -143,6 +143,8 @@
 
 .seo-page .seo-field textarea { line-height: 1.5; resize: vertical; }
 
+.seo-page .seo-field :is(input, textarea) { border-color: var(--tl-line); }
+
 .seo-page .seo-field :is(input, textarea):focus-visible { border-color: var(--tl-line); box-shadow: none; }
 
 .seo-page .seo-meter { display: block; height: 4px; overflow: hidden; background: var(--tl-card2); border-radius: 999px; }
