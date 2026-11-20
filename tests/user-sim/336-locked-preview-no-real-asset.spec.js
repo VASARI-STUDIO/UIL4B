@@ -15,7 +15,7 @@
 // or in PromptLockedCard.jsx use promptPosterSrc in place of promptStandinSrc.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { chooseFormat, exportPanel } from './export-rows.js'
+import { chooseFormat, chooseTemplate, expectTemplate, exportPanel } from './export-rows.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 // Not preceded by locked-images: the stand-in's path ends in the same /export-themes/<file> and must not count as the real one.
@@ -38,16 +38,10 @@ async function openExport(page, plan, file) {
   return panel
 }
 
-/** Pick a theme from the inline list. Where the list is folded under a "Theme: <name> · <brand>" row (a phone, or a window under
-    1024 x 900), open it first, as a person would; a pick folds it again and the row then names the theme. */
+/** Pick a template the way a person does: View templates, then the card; the dialog returns to the preview with it chosen. */
 async function chooseTheme(page, panel, name) {
-  const toggle = panel.getByRole('button', { name: /^Theme:/ })
-  const folded = (await toggle.count()) > 0
-  if (folded && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
-  const themes = panel.getByRole('radiogroup', { name: 'Theme' })
-  await themes.getByRole('radio').filter({ hasText: new RegExp(`^${name}`) }).click()
-  if (folded) await expect(toggle).toHaveAccessibleName(new RegExp(`^Theme: ${name}\\b`))
-  else await expect(themes.getByRole('radio', { checked: true })).toHaveText(new RegExp(`^${name}`))
+  await chooseTemplate(panel, name)
+  await expectTemplate(panel, name)
 }
 
 test.describe('export dialog theme previews', () => {
