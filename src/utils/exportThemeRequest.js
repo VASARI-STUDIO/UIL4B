@@ -92,33 +92,54 @@ export async function requestThemeExport({ theme, row, format, design, projectNa
 }
 
 // What a print document must look like before it is written into a window: the CSP meta first in the head, no script element, no
-// inline handler. The server guarantees this; the check keeps a stray or tampered 200 from ever reaching a window.
+// form element, no inline handler. The server guarantees this; the check keeps a stray or tampered 200 from ever reaching a window.
 export function isPrintSafe(html) {
   if (typeof html !== 'string' || !html) return false
   const head = html.indexOf('<head>')
   if (head < 0 || head > 200) return false
   if (!html.startsWith('<meta http-equiv="Content-Security-Policy"', head + '<head>'.length)) return false
-  return !/<script[\s>]/i.test(html) && !/\son[a-z]+\s*=/i.test(html)
+  return !/<script[\s>/]/i.test(html) && !/<form[\s>/]/i.test(html) && !/\son[a-z]+\s*=/i.test(html)
 }
 
 // ── The print window ───────────────────────────────────────────────────────
-// The window is reserved inside the click (exportDocument.js reservePrintWindow) and written here with the document. The
-// document runs no script (its CSP allows none), and nothing is loaded from a URL, so there is no same-origin blob to execute.
-// print() is called from this page, after the fonts have loaded.
+// The window is reserved inside the click (exportDocument.js reservePrintWindow). It gets a small shell page of our own, script-free,
+// holding one full-viewport iframe whose srcdoc is the print document. The iframe is sandboxed with allow-same-origin (so this page
+// can reach it to wait for its fonts and print it) and allow-modals (so print() may open the dialog), and never allow-scripts: the
+// document cannot run script even if its CSP were stripped, and it cannot reach the opener. Nothing is loaded from a URL, so there is
+// no same-origin blob to execute. print() is called from this page, on the iframe's window, after its fonts have loaded.
 
-/** Writes a print document into a reserved window and prints it. Returns false when there is no usable window. */
+export const PRINT_FRAME_SANDBOX = 'allow-same-origin allow-modals'
+const PRINT_SHELL = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title></title>'
+  + '<style>html,body{margin:0;padding:0;overflow:hidden;background:#fff}iframe{display:block;margin:0;padding:0;border:0;width:100vw;height:100vh;background:#fff}</style>'
+  + '</head><body></body></html>'
+
+/** Writes a print document into a sandboxed iframe in a reserved window and prints it. Returns false when there is no usable window. */
 export function printInWindow(win, html, { title = '' } = {}) {
   try {
     if (!win || win.closed || !isPrintSafe(html)) return false
     const doc = win.document
     doc.open()
-    doc.write(html)
+    doc.write(PRINT_SHELL)
     doc.close()
+    // The outer document's title is the one the print dialog offers as the file name.
     if (title && /^[a-z0-9-]+$/.test(title)) doc.title = title
-    const go = () => { try { win.focus(); win.print() } catch { /* the window was closed */ } }
-    const ready = doc.fonts?.ready
-    if (ready && typeof ready.then === 'function') ready.then(() => setTimeout(go, 200), () => setTimeout(go, 200))
-    else setTimeout(go, 400)
+    const frame = doc.createElement('iframe')
+    frame.setAttribute('sandbox', PRINT_FRAME_SANDBOX)
+    frame.setAttribute('title', 'Print preview')
+    let printed = false
+    frame.addEventListener('load', () => {
+      const inner = frame.contentWindow
+      const go = () => {
+        if (printed) return
+        printed = true
+        try { inner.focus(); inner.print() } catch { /* the window was closed */ }
+      }
+      const ready = inner?.document?.fonts?.ready
+      if (ready && typeof ready.then === 'function') ready.then(() => setTimeout(go, 200), () => setTimeout(go, 200))
+      else setTimeout(go, 400)
+    })
+    frame.srcdoc = html
+    doc.body.appendChild(frame)
     return true
   } catch {
     return false

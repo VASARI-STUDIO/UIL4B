@@ -122,7 +122,7 @@ test.describe('an account change under a send', () => {
 
     await expect(page.locator('#fb-message')).toHaveValue('')
     await expect(page.locator('#fb-subject')).toHaveValue('')
-    await expect(page.locator('[role="radio"][aria-checked="true"]')).not.toHaveText('Bug report')
+    await expect(page.locator('[role="radio"][aria-checked="true"]')).not.toHaveAccessibleName('Bug report')
   })
 
   test('signing out clears what was typed on /feedback', async ({ page }) => {

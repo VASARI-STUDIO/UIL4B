@@ -254,12 +254,14 @@ test.describe('settings on a phone: the back bar', () => {
 
   test('the All settings bar stays under the site header after a scroll', async ({ page }) => {
     watch(page, 'a person scrolling a long section on a phone')
+    await stubPrices(page)
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
-    await page.locator('#settab-language').click()
-    await expect(page.locator('#set-language')).toBeVisible()
+    // Plan and billing: the tallest section, so a wheel always moves it.
+    await page.locator('#settab-support').click()
+    await expect(page.locator('#set-support .sub-tier-pro')).toBeVisible()
 
-    const scrolled = await wheelToRest(page, 320, 'the Language section')
+    const scrolled = await wheelToRest(page, 320, 'the Plan and billing section')
     // POSITIVE CONTROL: the page moved, so a bar that stayed put was held there.
     expect(scrolled, 'the section did not scroll, so this proves nothing').toBeGreaterThan(100)
 
@@ -551,6 +553,8 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
     await page.getByRole('button', { name: 'Delete account', exact: true }).tap()
     const actions = page.locator('.danger-confirm-actions')
     await expect(actions).toBeVisible()
+    // The sheet slides up; measure once it has settled, all in one frame.
+    await actions.evaluate((el) => Promise.all(el.closest('.stg-dlg').getAnimations({ subtree: true }).map((a) => a.finished)))
     const m = await actions.evaluate((el) => {
       const btns = [...el.querySelectorAll(':scope > .btn')]
       // Top to bottom as drawn, whatever the page order is.
@@ -561,12 +565,12 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
         gap: Math.round(second.r.top - first.r.bottom), widthGap: Math.abs(first.r.width - second.r.width),
         fill: Math.round(first.r.width), room: Math.round(sheet.width - 32), heights: btns.map((x) => Math.round(x.getBoundingClientRect().height)),
         clipped: btns.some((x) => x.scrollWidth > x.clientWidth + 1),
+        stacked: first.r.bottom <= second.r.top + 1,
       }
     })
     expect(m.n).toBe(2)
     expect(m.order, 'Permanently delete should be drawn first, Cancel under it').toEqual(['Permanently delete', 'Cancel'])
-    const [del, cancel] = await Promise.all([page.getByRole('button', { name: 'Permanently delete' }).boundingBox(), actions.getByRole('button', { name: 'Cancel' }).boundingBox()])
-    expect(del.y + del.height, 'Permanently delete is not above Cancel').toBeLessThanOrEqual(cancel.y + 1)
+    expect(m.stacked, 'Permanently delete is not above Cancel').toBe(true)
     expect(m.sameColumn, 'the two buttons are not in one column').toBe(true)
     expect(m.gap, 'the two buttons are too close').toBeGreaterThanOrEqual(8)
     expect(m.widthGap, 'the pair should be equal width').toBeLessThan(2)
@@ -621,7 +625,7 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
     watch(page, 'a person choosing a language on a phone')
     await openLanguage(page, 390)
     const rows = await tiles(page)
-    expect(rows.length, 'POSITIVE CONTROL: the language list is there').toBeGreaterThanOrEqual(8)
+    expect(rows.length, 'POSITIVE CONTROL: the two English rows are there').toBe(2)
     rows.forEach((row, i) => {
       expect(row.sides, `row ${i} has a bordered edge`).toEqual([0, 0, 0])
       expect(row.foot, `row ${i} has a border under it`).toBe(0)
@@ -648,8 +652,7 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
     expect(grid[0].sides, 'the 1440 tiles gained a border').toEqual([0, 0, 0])
     expect(grid[0].radius, 'the 1440 tiles lost their corners').toBeGreaterThan(0)
     expect(grid[0].lines, 'the English (AU) tile prints its name twice').toEqual(['English (AU)'])
-    const koreanLines = grid.map((t) => t.lines).find((l) => l.includes('한국어'))
-    expect(koreanLines, 'a tile with a different native name lost its second line').toEqual(['한국어', 'Korean'])
+    expect(grid.map((t) => t.lines), 'launch offers English (AU) and English (US) only').toEqual([['English (AU)'], ['English (US)']])
     const lefts = new Set(grid.map((t) => Math.round(t.left)))
     expect(lefts.size, 'the tiles are not in two columns').toBe(2)
   })

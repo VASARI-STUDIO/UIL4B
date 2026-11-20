@@ -2,24 +2,24 @@
 //
 // ── The defect this ends ────────────────────────────────────────────────────
 //
-// /create/icons renders glyphs from twenty-five third-party sets. Four of them
+// /create/icons renders glyphs from the third-party sets in iconPackTiers.js. Four of them
 // are Creative Commons Attribution sets — `solar` and `fa6-solid` (CC-BY-4.0),
 // `twemoji` (CC-BY-4.0) and `openmoji` (CC-BY-SA-4.0) — and attribution is a
 // CONDITION of those licences, not a courtesy. Two of the four sit on the FREE
-// tier (see src/data/iconPackTiers.js), so the obligation is owed to a
-// signed-out visitor, on first paint, with no account.
+// tier (see src/data/iconPackTiers.js), so the obligation is owed to anyone
+// with a free account, on first paint.
 //
 // Until this file existed the app carried exactly ONE attribution string: a
 // `<p className="ig-attrib">` in IconLibrary.jsx rendered only when
 // `pack === 'logodev'`. Every other set was uncredited, and the one credit that
 // did exist disappeared the moment the visitor changed packs — including
-// logo.dev's own, whose free tier requires the link wherever its logos appear.
+// logo.dev's own, whose free tier asks for a link back on a page where its logos appear.
 //
 // ── Why this table is a FALLBACK and not the answer ─────────────────────────
 //
 // Iconify's `/collection?prefix=<pack>&info=1` response carries the licence as
 // data — `info.license = { title, spdx, url }` — and the pack's author with it.
-// IconLibrary.jsx asks for `info=1` on the twenty-five requests it was already
+// IconLibrary.jsx asks for `info=1` on the per-pack requests it was already
 // making, so on a normal visit the licence a visitor reads is the one the
 // registry is publishing TODAY. A pack that relicenses is credited correctly on
 // the next page load, with nobody editing anything.
@@ -60,7 +60,7 @@ import { ICON_PACK_TIERS } from './iconPackTiers.js'
  * `required` is the narrow legal question: does this licence make crediting a
  * CONDITION of the grant? Where it is false we credit anyway; the field exists
  * so /credits can say which rows are an obligation and which are manners,
- * rather than implying all twenty-five are the same kind of thing.
+ * rather than implying every row is the same kind of thing.
  */
 export const LICENCES = {
   'CC-BY-4.0': {
@@ -152,7 +152,7 @@ export const ICON_PACK_CREDITS = {
 
   mdi: { name: 'Material Design Icons', author: 'Pictogrammers', url: 'https://github.com/Templarian/MaterialDesign', copyright: 'Pictogrammers. The upstream licence file prints no copyright line.', spdx: 'Apache-2.0' },
   'material-symbols': { name: 'Material Symbols', author: 'Google', url: 'https://github.com/google/material-design-icons', copyright: 'Google. The upstream licence file prints no copyright line.', spdx: 'Apache-2.0' },
-  // ── One of the two CC-BY sets a signed-out visitor can see. ──
+  // ── One of the two CC-BY sets anyone with a free account can see. ──
   solar: { name: 'Solar', author: '480 Design', url: 'https://www.figma.com/community/file/1166831539721848736', copyright: '480 Design', spdx: 'CC-BY-4.0' },
   // ── The other. Font Awesome's FREE icons are CC-BY-4.0; the Pro sets are not
   //    here at all. ──
@@ -194,11 +194,11 @@ export const ICON_PACK_CREDITS = {
   // ── The animated sets (Pro). All three MIT, read out of the Iconify registry. ──
   'line-md': { name: 'Material Line Icons', author: 'Vjacheslav Trushkin', url: 'https://github.com/cyberalien/line-md', copyright: 'Copyright 2020 Vjacheslav Trushkin', spdx: 'MIT' },
   'svg-spinners': { name: 'SVG Spinners', author: 'Utkarsh Verma', url: 'https://github.com/n3r4zzurr0/svg-spinners', copyright: 'Copyright (c) Utkarsh Verma', spdx: 'MIT' },
-  meteocons: { name: 'Meteocons', author: 'Bas Milius', url: 'https://github.com/basmilius/weather-icons', copyright: 'Copyright (c) 2020-present Bas Milius', spdx: 'MIT' },
+  meteocons: { name: 'Meteocons', author: 'Bas Milius', url: 'https://github.com/basmilius/weather-icons', copyright: 'Copyright (c) 2020-2024 Bas Milius', spdx: 'MIT' },
 
   /* THE ONE PACK THAT IS NOT ICONIFY AT ALL, and the one whose attribution was
      already here. img.logo.dev is a commercial API on our publishable token,
-     and its free tier's condition is a visible link back to logo.dev wherever
+     and its free tier asks for a visible link back to logo.dev on a page where
      its logos are shown. `spdx: 'proprietary'` is not a licence id — it is this
      module saying, in the one field that could have quietly implied otherwise,
      that there is no open licence behind these marks. The live path can never
@@ -209,7 +209,7 @@ export const ICON_PACK_CREDITS = {
     url: 'https://logo.dev',
     copyright: null,
     spdx: 'proprietary',
-    note: 'Company logos are the trademarks of their owners, served through the Logo.dev API. Its free tier requires this link wherever the logos appear.',
+    note: 'Company logos are the trademarks of their owners, served through the Logo.dev API. The Logo.dev free tier asks for a link back to Logo.dev on a page where its logos appear.',
   },
 }
 
@@ -284,7 +284,7 @@ export function allPackCredits() {
 /**
  * The credit rows for a list of pack prefixes: name, link and licence name.
  *
- * A pack with no row above is one a Pro search reached outside the twenty-five
+ * A pack with no row above is one a Pro search reached outside the sets
  * this product curates (the /search endpoint answers from the whole registry
  * when it is left unscoped). It is credited by its prefix and linked to the
  * Iconify set page, which states that set's licence. `liveOf(prefix)` is the

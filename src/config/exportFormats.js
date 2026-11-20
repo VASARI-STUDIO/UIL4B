@@ -173,7 +173,7 @@ export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_G
 
 // ── Export themes ────────────────────────────────────────────────────────────
 //
-// Twelve designed looks for the brand documents: the ten in the homepage showcase, and the Free pair. They are their own data, NOT
+// Twenty-two designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, ten more Pro looks, and the Free pair. They are their own data, NOT
 // entries in EXPORT_FORMATS: a format listed there as `pro` must be `live`
 // (assertFormatsCoherent). The export panel's Theme row picks one of them.
 
@@ -185,7 +185,7 @@ export const EXPORT_THEMES_LIVE = true
 
 // ships with the export themes
 // The page shapes a theme can print at.
-export const EXPORT_THEME_SHAPES = Object.freeze(['16:9', '5:4', 'A4 landscape', 'A4'])
+export const EXPORT_THEME_SHAPES = Object.freeze(['16:9', '5:4', '4:5', '3:2', '1:1', 'A4 landscape', 'A4'])
 
 // ships with the export themes
 // The four things every theme makes. `proOnly` marks an export that needs Pro in
@@ -218,6 +218,16 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '08-monograph', name: 'Riso', brand: 'Long Room', tier: 'pro', shape: 'A4' }),
   Object.freeze({ id: '09-blueprint', name: 'Blueprint', brand: 'Plumbline', tier: 'pro', shape: 'A4' }),
   Object.freeze({ id: '10-inuse', name: 'In use', brand: 'Shallow End', tier: 'pro', shape: 'A4' }),
+  Object.freeze({ id: '21-presentation', name: 'Keynote', brand: 'Kerbside', tier: 'pro', shape: '16:9', showcase: false }),
+  Object.freeze({ id: '22-ticket', name: 'Stub', brand: 'Encore', tier: 'pro', shape: '16:9', showcase: false }),
+  Object.freeze({ id: '23-broadsheet', name: 'Front Page', brand: 'Saltbush', tier: 'pro', shape: 'A4', showcase: false }),
+  Object.freeze({ id: '24-standards', name: 'Standards Plate', brand: 'Two Shores', tier: 'pro', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '26-notebook', name: 'Notebook', brand: 'Offcut', tier: 'pro', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '28-riso', name: 'Print Shop', brand: 'Long Room', tier: 'pro', shape: 'A4', showcase: false }),
+  Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet', brand: 'Plumbline', tier: 'pro', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '30-fluted', name: 'Fluted', brand: 'Northern Current', tier: 'pro', shape: '4:5', showcase: false }),
+  Object.freeze({ id: '31-contact', name: 'Contact', brand: 'Plumbline', tier: 'pro', shape: '3:2', showcase: false }),
+  Object.freeze({ id: '32-dieline', name: 'Dieline', brand: 'Kerbside', tier: 'pro', shape: '1:1', showcase: false }),
   // The Free pair: the brand guidelines, and nothing else.
   Object.freeze({ id: '25-label', name: 'Label', brand: 'Margin', tier: 'free', shape: '5:4', makes: Object.freeze(['brand-guidelines']), showcase: false }),
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', brand: 'Northern Current', tier: 'free', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),

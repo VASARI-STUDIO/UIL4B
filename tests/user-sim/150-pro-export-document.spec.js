@@ -16,7 +16,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, exportPanel, actionLabel } from './export-rows.js'
-import { mockThemeApi, cleanHtml } from './export-theme-mock.js'
+import { mockThemeApi, cleanHtml, printedDoc } from './export-theme-mock.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
 
@@ -61,7 +61,7 @@ for (const id of ['book', 'guidelines']) {
       ])
       // The window is reserved inside the click, so it exists before the answer
       // arrives: the document itself is what proves the round trip finished.
-      await expect(doc.locator('#printed-doc')).toBeVisible()
+      await expect(printedDoc(doc).locator('#printed-doc')).toBeVisible()
 
       expect(asked, 'the panel must ask the server exactly once').toHaveLength(1)
       expect(asked[0].method).toBe('POST')
@@ -121,7 +121,7 @@ test('a 401 on a stale token is retried once and the document still opens', asyn
     context.waitForEvent('page'),
     exportPanel(page).getByRole('button', { name: actionLabel('book'), exact: true }).click(),
   ])
-  await expect(doc.locator('#printed-doc')).toBeVisible()
+  await expect(printedDoc(doc).locator('#printed-doc')).toBeVisible()
   expect(asked).toHaveLength(2)
   await context.close()
 })

@@ -103,8 +103,9 @@ test('an outline-only built-in in the Recent rail is not drawn as a filled wedge
   await go(page, '/create/icons')
   const tick = page.locator('.ig-rail-item svg').first()
   await expect(tick).toBeVisible({ timeout: 20_000 })
-  expect(await tick.getAttribute('fill'), 'drawn as an outline').toBe('none')
-  expect(await tick.getAttribute('stroke')).toBe('currentColor')
+  // The fill is re-read from the built-in set once it loads, so wait for that rather than read the first paint.
+  await expect(tick, 'drawn as an outline').toHaveAttribute('fill', 'none', { timeout: 20_000 })
+  await expect(tick).toHaveAttribute('stroke', 'currentColor')
 })
 
 // Every glyph file the page can draw an icon from: the .svg of one icon, and the batched
