@@ -128,3 +128,24 @@ export async function expectTemplate(panelOrPage, name) {
   await expect(templateCard(panel, name)).toHaveAttribute('aria-pressed', 'true')
   await panel.getByRole('button', { name: 'Back to preview' }).click()
 }
+
+/** The grid as a person reads it: the card names in order, the ones that carry the Pro mark, and the chosen one. Goes back to the preview. */
+export async function readTemplates(panelOrPage) {
+  const panel = rootOf(panelOrPage)
+  const grid = await openTemplates(panel)
+  const read = await grid.locator('.xd-tpl-card').evaluateAll((cards) => ({
+    names: cards.map((c) => c.querySelector('.xd-tpl-n').textContent),
+    pro: cards.filter((c) => c.querySelector('.xd-tpl-pro')).map((c) => c.querySelector('.xd-tpl-n').textContent),
+    chosen: cards.filter((c) => c.getAttribute('aria-pressed') === 'true').map((c) => c.querySelector('.xd-tpl-n').textContent),
+  }))
+  await panel.getByRole('button', { name: 'Back to preview' }).click()
+  await grid.waitFor({ state: 'detached' })
+  return read
+}
+
+/** Open "File details" (the file list, the name, logo and identity fields) if it is closed, and return it. */
+export async function openDetails(panelOrPage) {
+  const more = rootOf(panelOrPage).locator('details.xd-more')
+  if ((await more.getAttribute('open')) === null) await more.locator('summary').click()
+  return more
+}
