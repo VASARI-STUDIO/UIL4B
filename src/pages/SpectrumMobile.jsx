@@ -7,10 +7,11 @@ import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { useTheme } from '../contexts/ThemeContext'
 import '../styles/pages/home-tokens.css'
 
-// /mobile: three real captures of the app on a phone, in a row on wide screens
-// and a swipe strip under 768px. The pictures are the app's own screens, cropped
-// to the top of each; the strip snaps to one phone at a time (the snapping is in
-// v3-marketing.css). The buttons and the "N of 3" line follow the scroll position.
+// /mobile: three real captures of the app on a phone, in a row from 768px and a
+// swipe strip under it. The pictures are the app's own screens, shown whole inside
+// a phone drawn in CSS (the drawing, the sizes and the snapping are in
+// v3-marketing.css); the strip snaps to one phone at a time. The buttons and the
+// "N of 3" line follow the scroll position.
 // Colours follow the theme: the Palette and Icon screens have a dark and a light
 // capture, swapped in CSS. The workspace is dark in every theme, so it has one.
 
@@ -39,6 +40,26 @@ const SCREENS = [
     light: '/mobile-screens/projects-dark.jpg',
   },
 ]
+
+// The status bar of the drawn phone: the time, then signal, wifi and battery. Decoration only.
+function StatusBar() {
+  return (
+    <span className="mk-status" aria-hidden="true">
+      <span className="mk-time">9:41</span>
+      <svg viewBox="0 0 62 12" fill="currentColor">
+        <rect x="0" y="8" width="3" height="4" rx=".8" />
+        <rect x="4.5" y="5.5" width="3" height="6.5" rx=".8" />
+        <rect x="9" y="3" width="3" height="9" rx=".8" />
+        <rect x="13.5" y="0.5" width="3" height="11.5" rx=".8" />
+        <path d="M23.5 4.6a9.5 9.5 0 0 1 13 0M25.8 7.3a6 6 0 0 1 8.4 0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <circle cx="30" cy="10.3" r="1.2" />
+        <rect x="42.5" y="1.5" width="16" height="9.5" rx="3" fill="none" stroke="currentColor" strokeOpacity=".5" />
+        <rect x="44.2" y="3.2" width="12.6" height="6.1" rx="1.6" />
+        <rect x="59.6" y="4.5" width="1.6" height="3.5" rx=".8" fillOpacity=".5" />
+      </svg>
+    </span>
+  )
+}
 
 function Chevron({ d }) {
   return (
@@ -95,23 +116,26 @@ export default function SpectrumMobile() {
             onScroll={onScroll}
           >
             {SCREENS.map((s) => (
-              <figure key={s.id} className="mk-fig">
+              <figure key={s.id} className={`mk-fig mk-fig--${s.id}`}>
                 <div className="mk-frame">
-                  <div className="mk-shot">
-                    {s.dark === s.light ? (
-                      <img src={s.dark} alt={s.alt} width="780" height="1424" loading="eager" decoding="async" />
-                    ) : (
-                      <>
-                        <img className="mk-img-dark" src={s.dark} alt={s.alt} width="780" height="1424" loading={light ? 'lazy' : 'eager'} decoding="async" />
-                        <img className="mk-img-light" src={s.light} alt={s.alt} width="780" height="1424" loading={light ? 'eager' : 'lazy'} decoding="async" />
-                      </>
-                    )}
+                  <div className="mk-chassis">
+                    <div className="mk-shot">
+                      <StatusBar />
+                      {s.dark === s.light ? (
+                        <img src={s.dark} alt={s.alt} width="780" height="1424" loading="eager" decoding="async" />
+                      ) : (
+                        <>
+                          <img className="mk-img-dark" src={s.dark} alt={s.alt} width="780" height="1424" loading={light ? 'lazy' : 'eager'} decoding="async" />
+                          <img className="mk-img-light" src={s.light} alt={s.alt} width="780" height="1424" loading={light ? 'eager' : 'lazy'} decoding="async" />
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <figcaption>{s.caption}<span>The live app, cropped to the tool.</span></figcaption>
+                <figcaption>{s.caption}<span>The live app, as captured.</span></figcaption>
               </figure>
             ))}
-            <p className="mk-live">Captured from the live app and cropped to the top of each screen.</p>
+            <p className="mk-live">Captured from the live app, each screen shown whole.</p>
           </div>
           <div className="mk-bar">
             <p className="mk-pos mk-mono" aria-live="polite">{pos + 1} of {SCREENS.length}</p>

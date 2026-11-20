@@ -193,13 +193,36 @@
 
 /* ── /mobile ── */
 .mkt .mk-phones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 64px; }
-.mkt .mk-fig { display: grid; justify-items: center; align-content: start; gap: 16px; margin: 0; min-width: 0; }
-.mkt .mk-frame { width: min(100%, 410px); padding: 10px 10px 0; border-radius: 50px 50px 0 0; background: var(--mk-l2); box-shadow: 0 0 0 1px var(--mk-edge); overflow: hidden; }
-.mkt .mk-shot { aspect-ratio: 390 / 700; border-radius: 40px 40px 0 0; overflow: hidden; background: var(--sp-page); }
-.mkt .mk-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.mkt .mk-fig { container-type: inline-size; display: grid; justify-items: center; align-content: start; gap: 16px; margin: 0; min-width: 0; }
 .mkt .mk-fig figcaption { font-size: 15px; line-height: 1.4; color: var(--mk-sec); text-align: center; }
 .mkt .mk-fig figcaption span { display: none; }
 .mkt .mk-live { grid-column: 1 / -1; margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--mk-sec); text-align: center; }
+
+/* The phone is drawn in CSS, whole: a metal ring, a black bezel, a screen with a status
+   band and a dynamic island, three buttons down the left edge and one down the right.
+   Every size is in em, and 1em is one hundredth of the phone's width, so the same drawing
+   holds at any size (the figure is a size container; the phone is at most 3.4px to the em).
+   .mk-frame is the whole box, side buttons included, so nothing is drawn outside it and a
+   scroll strip cannot clip a button. The two pictures are the app's own screens, shown whole. */
+.mkt .mk-frame {
+  --hw-outline: oklch(1 0 0 / .16); --hw-ring: oklch(.42 .004 260); --hw-edge: oklch(.16 0 0); --hw-btn: oklch(.34 .004 260);
+  --hw-bezel: oklch(.07 0 0); --hw-ind: oklch(.97 0 0 / .94); --hw-ind-edge: oklch(.1 0 0 / .45);
+  position: relative; width: 102em; font-size: 3px; font-size: min(.98cqw, 3.4px);
+}
+[data-theme="light"] .mkt .mk-frame { --hw-outline: oklch(0 0 0 / .22); --hw-ring: oklch(.86 .006 95); --hw-edge: oklch(.66 .006 95); --hw-btn: oklch(.72 .006 95); }
+.mkt .mk-chassis { position: relative; margin-inline: 1em; padding: 3.2em; border-radius: 15em; background: var(--hw-bezel); box-shadow: inset 0 0 0 .3em var(--hw-outline), inset 0 0 0 1em var(--hw-ring), inset 0 0 0 1.3em var(--hw-edge); }
+.mkt .mk-shot { --band: rgb(5, 5, 5); --band-ink: rgb(245, 245, 243); position: relative; overflow: hidden; border-radius: 11.8em; padding-top: 11em; background: var(--band); }
+[data-theme="light"] .mkt .mk-fig:not(.mk-fig--projects) .mk-shot { --band: rgb(245, 245, 243); --band-ink: rgb(18, 20, 24); }
+.mkt .mk-shot img { display: block; width: 100%; height: auto; }
+.mkt .mk-shot::before { content: ""; position: absolute; z-index: 2; top: 2.6em; left: 50%; width: 22em; height: 6.6em; margin-left: -11em; border-radius: 3.3em; background: #000; }
+.mkt .mk-shot::after { content: ""; position: absolute; z-index: 2; bottom: 2.2em; left: 50%; width: 30em; height: 1.1em; margin-left: -15em; border-radius: 1em; background: var(--hw-ind); box-shadow: 0 0 0 .25em var(--hw-ind-edge); }
+.mkt .mk-status { position: absolute; z-index: 1; inset: 0 0 auto 0; height: 11em; display: flex; align-items: center; justify-content: space-between; padding: 0 9.5em 0 11em; color: var(--band-ink); }
+.mkt .mk-time { font-size: 4.3em; font-weight: 600; line-height: 1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.mkt .mk-status svg { display: block; width: 21.7em; height: 4.2em; }
+.mkt .mk-frame::before, .mkt .mk-frame::after, .mkt .mk-chassis::before { content: ""; position: absolute; width: .9em; border-radius: .4em; background: var(--hw-btn); }
+.mkt .mk-frame::before { left: .1em; top: 42em; height: 9em; box-shadow: 0 13em 0 0 var(--hw-btn); }
+.mkt .mk-frame::after { right: .1em; top: 50em; height: 15em; }
+.mkt .mk-chassis::before { left: -.9em; top: 27em; height: 5em; }
 .mkt .mk-shot img.mk-img-light { display: none; }
 [data-theme="light"] .mkt .mk-shot img.mk-img-dark { display: none; }
 [data-theme="light"] .mkt .mk-shot img.mk-img-light { display: block; }
@@ -244,15 +267,18 @@
   .mkt .mk-lead-card .mk-ramp { min-height: 168px; }
   .mkt .mk-seeds { gap: 8px; }
 
-  .mkt .mk-phones { display: flex; gap: 16px; margin-top: var(--section-y-compact); overflow-x: auto; padding: 0 var(--gutter-x); margin-inline: calc(-1 * var(--gutter-x)); scroll-snap-type: x mandatory; scroll-padding: 0 var(--gutter-x); overscroll-behavior-x: contain; scrollbar-width: none; }
+  .mkt .mk-phones { margin-top: var(--section-y-compact); }
+}
+/* Up to 767px the three phones are a swipe strip, one phone to a slide, so a phone is whole
+   inside the screen at every width. The two buttons and the "N of 3" line follow it. */
+@media (max-width: 767px) {
+  .mkt .mk-phones { display: flex; gap: 16px; overflow-x: auto; padding: 0 var(--gutter-x); margin-inline: calc(-1 * var(--gutter-x)); scroll-snap-type: x mandatory; scroll-padding: 0 var(--gutter-x); overscroll-behavior-x: contain; scrollbar-width: none; }
   .mkt .mk-phones::-webkit-scrollbar { display: none; }
-  .mkt .mk-fig { flex: 0 0 76%; scroll-snap-align: start; scroll-snap-stop: always; gap: 0; }
-  .mkt .mk-frame { width: 100%; padding: 6px; border-radius: 32px 32px 12px 12px; aspect-ratio: 402 / 724; }
-  .mkt .mk-shot { aspect-ratio: auto; height: auto; border-radius: 26px 26px 6px 6px; background: var(--sp-page); }
-  .mkt .mk-shot img { height: auto; object-fit: initial; }
-  /* The caption starts at the phone's left edge, as the first slide does. */
+  .mkt .mk-fig { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+  /* The caption starts at the phone's left edge, as the first slide does; on a wider slide the pair is centred. */
   .mkt .mk-fig { justify-items: stretch; }
-  .mkt .mk-fig figcaption { margin-top: 16px; text-align: left; }
+  .mkt .mk-frame { justify-self: start; }
+  .mkt .mk-fig figcaption { text-align: left; }
   .mkt .mk-fig figcaption span { display: block; font-size: 13px; color: var(--mk-ter); }
   .mkt .mk-live { display: none; }
   .mkt .mk-bar { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; }
@@ -263,6 +289,10 @@
   .mkt .mk-arrows button[aria-disabled="true"] { color: var(--mk-ter); opacity: .5; cursor: default; }
   .mkt .mk-arrows button[aria-disabled="true"]:active { transform: none; }
   .mkt .mk-arrows svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+}
+@media (min-width: 480px) and (max-width: 767px) {
+  .mkt .mk-frame { justify-self: center; }
+  .mkt .mk-fig figcaption { text-align: center; }
 }
 @media (max-width: 374px) {
   /* A narrower thumb keeps the row's text readable on a small phone. */

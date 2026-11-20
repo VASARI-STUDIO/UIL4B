@@ -341,6 +341,90 @@ test.describe('the phone row', () => {
   })
 })
 
+test.describe('the phones are drawn whole and never cut off', () => {
+  // The founder's report: the phones "are cut off" and "don't feel like real phones". Each frame is a phone drawn in CSS
+  // (ring, bezel, screen, island, buttons), and at every width the whole of it has to be on the screen and inside every
+  // ancestor that clips: the strip scrolls sideways and the phone on show must not touch its edges, and the next one must
+  // be wholly out of sight, not a sliver.
+  const measure = (page) => page.evaluate(() => {
+    const vp = document.documentElement.clientWidth
+    return [...document.querySelectorAll('.mk-frame')].map((frame) => {
+      const r = frame.getBoundingClientRect()
+      const body = frame.querySelector('.mk-chassis').getBoundingClientRect()
+      const img = [...frame.querySelectorAll('.mk-shot img')].find((i) => getComputedStyle(i).display !== 'none').getBoundingClientRect()
+      const clips = []
+      for (let el = frame.parentElement; el && el !== document.documentElement; el = el.parentElement) {
+        const cs = getComputedStyle(el)
+        if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue
+        const a = el.getBoundingClientRect()
+        clips.push({ cls: el.className, left: a.left, right: a.right, top: a.top, bottom: a.bottom })
+      }
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height, bodyLeft: body.left, bodyRight: body.right, bodyWidth: body.width, imgHeight: img.height, imgWidth: img.width, bezel: (img.left - body.left), vp, clips }
+    })
+  })
+
+  const whole = (m, what) => {
+    expect(m.left, `${what}: its left edge is off the screen`).toBeGreaterThanOrEqual(0)
+    expect(m.right, `${what}: its right edge is off the screen (${Math.round(m.right)} of ${m.vp})`).toBeLessThanOrEqual(m.vp + 0.5)
+    for (const c of m.clips) {
+      expect(m.left, `${what}: clipped on the left by .${c.cls}`).toBeGreaterThanOrEqual(c.left - 0.5)
+      expect(m.right, `${what}: clipped on the right by .${c.cls}`).toBeLessThanOrEqual(c.right + 0.5)
+      expect(m.top, `${what}: clipped at the top by .${c.cls}`).toBeGreaterThanOrEqual(c.top - 0.5)
+      expect(m.bottom, `${what}: clipped at the bottom by .${c.cls}`).toBeLessThanOrEqual(c.bottom + 0.5)
+    }
+    // A phone, not a card: the body is taller than twice its width less a little, and the side buttons sit inside the frame.
+    expect(m.height / m.bodyWidth, `${what}: not phone-shaped`).toBeGreaterThan(1.8)
+    expect(m.bodyLeft, `${what}: no room for the side buttons`).toBeGreaterThan(m.left)
+    expect(m.bodyRight).toBeLessThan(m.right)
+    // The bezel is a thin rim, not a slab: a stray font-size on the body (a shared `.mk-body` text rule once did this) scales every em
+    // beneath it, and the phone turned into a stadium with a 48px frame.
+    expect(m.bezel, `${what}: the bezel is the wrong thickness (${Math.round(m.bezel)}px)`).toBeLessThan(m.bodyWidth * 0.06)
+    expect(m.bezel).toBeGreaterThan(m.bodyWidth * 0.015)
+    // The picture is shown whole at its own proportions (780 x 1424), not cropped to a box.
+    expect(m.imgHeight / m.imgWidth, `${what}: the screen is cropped`).toBeCloseTo(1424 / 780, 1)
+  }
+
+  for (const theme of ['light', 'dark']) {
+    for (const w of [360, 375, 390]) {
+      test(`at ${w}px (${theme}) each phone is whole on its slide and the next one is out of sight`, async ({ browser }) => {
+        const { ctx, page } = await ctxAt(browser, w, { theme, reducedMotion: 'reduce' })
+        await go(page, '/mobile')
+        const next = page.getByRole('button', { name: 'Next screen' })
+        for (let i = 0; i < 3; i += 1) {
+          if (i > 0) {
+            await next.click()
+            await expect(page.locator('.mk-pos')).toHaveText(`${i + 1} of 3`)
+          }
+          // Let the snap settle: the slide's left edge is on the strip's padded start.
+          await expect.poll(() => page.locator('.mk-fig').nth(i).evaluate((f) => Math.abs(f.getBoundingClientRect().left - f.parentElement.getBoundingClientRect().left - parseFloat(getComputedStyle(f.parentElement).paddingLeft)))).toBeLessThan(2)
+          const all = await measure(page)
+          // Mutation: set `.mk-fig` back to `flex: 0 0 76%` in v3-marketing.css -> the next phone shows as a cut-off sliver.
+          // Mutation: give `.mk-frame` a fixed `width: 410px` -> the phone runs past the right edge at 360 and 375.
+          whole(all[i], `phone ${i + 1} at ${w}px ${theme}`)
+          all.forEach((m, j) => {
+            if (j === i) return
+            const out = m.right <= 0.5 || m.left >= m.vp - 0.5
+            expect(out, `phone ${j + 1} shows as a sliver beside phone ${i + 1} at ${w}px ${theme} (${Math.round(m.left)} to ${Math.round(m.right)})`).toBe(true)
+          })
+        }
+        await ctx.close()
+      })
+    }
+
+    for (const w of [768, 1440]) {
+      test(`at ${w}px (${theme}) all three phones are whole, side by side, with no strip`, async ({ browser }) => {
+        const { ctx, page } = await ctxAt(browser, w, { theme })
+        await go(page, '/mobile')
+        const all = await measure(page)
+        expect(all).toHaveLength(3)
+        all.forEach((m, i) => whole(m, `phone ${i + 1} at ${w}px ${theme}`))
+        for (let i = 1; i < 3; i += 1) expect(all[i].left, `phone ${i + 1} overlaps the one before`).toBeGreaterThanOrEqual(all[i - 1].right)
+        await ctx.close()
+      })
+    }
+  }
+})
+
 test.describe('the closing band and footer, light and dark', () => {
   // The light page ends light: the closing band and the home-style footer take the page ground and ink,
   // the wash is dimmed, the dark theme's screen-blend core is gone and the horizon band is halved.
