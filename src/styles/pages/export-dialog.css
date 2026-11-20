@@ -98,10 +98,10 @@
 .xd-man-t:active{background:var(--bg-2)}
 @media (hover:hover){.xd-man-t:hover{background:var(--hvr)}}
 
-/* Reused pieces, fitted to the column. Their own captions are replaced by the step labels. The switch takes no negative margin: it
-   would push the column wider than the sheet on a phone. */
+/* Reused pieces, fitted to the column. Their own captions are replaced by the step labels. The switch pulls its 4px padding back out on
+   the left so the first pill lines up with the column's edge; max-width adds that 4px back so the right edge still stops at the column. */
 .xd .exp-switch-label{display:none}
-.xd .exp-switch{padding:var(--s-1);margin:0;max-width:100%;min-width:0}
+.xd .exp-switch{padding:var(--s-1);margin:0 0 0 calc(-1 * var(--s-1));max-width:calc(100% + var(--s-1));min-width:0}
 .xd .exp-pill{flex:0 0 auto}
 .xd .exp-logo{padding:0;border-top:0}
 .xd .exp-identity{padding:0;border-top:0}
@@ -230,6 +230,13 @@
 .xd-card[data-kbd] .xd-dock--signin{display:block}
 .xd-card[data-kbd]:has(.xd-dock--signin) :is(.xd-nav,.xd-scroll,.xd-tabs){display:none}
 .xd-card[data-kbd] .xd-signin{max-height:none}
+
+/* The tablet dock: the status line on its own full-width row, the buttons on the row under it. With three buttons (View templates,
+   Export another file, Done) a line beside them would be squeezed to nothing, and a notice that wraps onto a new row would push
+   Export up; here the notice never changes the number of rows. */
+.xd[data-layout="menu"] .xd-dock{flex-wrap:wrap;justify-content:flex-end;gap:var(--s-2) var(--s-4)}
+.xd[data-layout="menu"] .xd-dock-line{order:-2;flex:1 0 100%}
+.xd[data-layout="menu"] .xd-templates{margin-right:auto}
 
 /* The phone sheet: the price line, then the way out, then the buttons side by side. */
 .xd[data-layout="strip"] .xd-dock{flex-wrap:wrap;align-items:stretch;gap:var(--s-2);padding:var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom))}
