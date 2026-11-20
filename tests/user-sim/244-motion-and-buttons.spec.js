@@ -6,7 +6,7 @@
 //   - remove `transition: none` for reduced motion in tool-layout.css -> "reduced motion"
 //   - put .tl-select back to its 12px radius in a toolbar          -> "toolbar controls share a height and a radius"
 //   - put the dock padding back to var(--tl-pad)                   -> "Copy size keeps the page gutter"
-//   - default ToolBack to /projects                                -> "Back goes to the tools index"
+//   - default ToolBack to /tools                                   -> "Back goes to the dashboard"
 //   - hide .grd-pro-tag at 360                                     -> "Tints shows Pro at 360"
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -87,13 +87,14 @@ test.describe('360px', () => {
 })
 
 test.describe('Back', () => {
-  test('Back goes to the tools index', async ({ page }) => {
+  test('Back goes to the dashboard when nothing in the app is behind it', async ({ page }) => {
     watch(page, 'designer leaving a tool')
     await go(page, '/create/palette')
+    // a fresh load is history entry 0: nothing in the app behind it
     await go(page, '/create/aspect-ratio')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
-    await expect(back).toHaveAttribute('href', '/tools')
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to dashboard' })
+    await expect(back).toHaveAttribute('href', '/projects')
     await back.click()
-    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page).toHaveURL(/\/projects$/)
   })
 })

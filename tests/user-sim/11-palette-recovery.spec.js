@@ -426,15 +426,15 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   }
 
   // Every tool's toolbar opens on the design's drawn back
-  // button, which returns to the tools index. What is held here is that the tool
+  // button, which returns to where the person was (the dashboard from a fresh load). What is held here is that the tool
   // offers an immediate way out, at the start of its toolbar.
   test('Tint offers an immediate route back, at the start of its toolbar', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
     await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to dashboard' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page).toHaveURL(/\/projects$/)
   })
 })
 

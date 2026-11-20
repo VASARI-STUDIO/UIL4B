@@ -199,10 +199,10 @@ test.describe('Palette Builder to Contrast Checker', () => {
     await expect(bgField(page)).toHaveValue('#FFFFFF')
     await expect(backLink(page)).toHaveCount(0)
     await expect(root(page)).not.toHaveAttribute('data-from', /.*/)
-    // With no hand-off the toolbar's Back is the default: the tools index.
-    const toolsBack = page.getByRole('link', { name: 'Back to all tools', exact: true })
+    // With no hand-off the toolbar's Back is the default: the dashboard.
+    const toolsBack = page.getByRole('link', { name: 'Back to dashboard', exact: true })
     await expect(toolsBack).toBeVisible()
-    await expect(toolsBack).toHaveAttribute('href', '/tools')
+    await expect(toolsBack).toHaveAttribute('href', '/projects')
 
     // A shared pair (no `from`) is a direct visit too.
     await go(page, '/create/contrast?fg=0B1220&bg=F7F7F4')

@@ -1,5 +1,5 @@
 // Tool chrome and menus:
-//   · a tool's back arrow always leads to the tools index
+//   · a tool's back arrow goes to the dashboard when nothing in the app is behind it
 //   · the controls on one toolbar row share a height and a corner radius
 //   · PageUp / PageDown / Home / End move the highlight in a styled dropdown
 //   · the lock icon on a Pro mark
@@ -66,29 +66,29 @@ const rightClickPrevented = (el) => el.evaluate((node) => !node.dispatchEvent(
 ))
 
 // ── Back arrow ─────────────────────────────────────────────────────────────
-test.describe('The back arrow goes to the tools index', () => {
-  // MUTATION: in PaletteBuilder.jsx give the back item `<ToolBack to="/projects" />` again.
+test.describe('The back arrow goes to the dashboard when nothing in the app is behind it', () => {
+  // MUTATION: in PaletteBuilder.jsx give the back item `<ToolBack to="/tools" />`.
   for (const path of ['/create/palette', '/create/gradient', '/create/type-scale']) {
     test(`${path} (1440)`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 1440, { path })
-      const back = page.locator(BAR).getByRole('link', { name: 'Back to all tools', exact: true })
+      const back = page.locator(BAR).getByRole('link', { name: 'Back to dashboard', exact: true })
       await expect(back).toBeVisible()
-      await expect(back).toHaveAttribute('href', '/tools')
+      await expect(back).toHaveAttribute('href', '/projects')
       await back.click()
-      await expect(page).toHaveURL(/\/tools$/)
+      await expect(page).toHaveURL(/\/projects$/)
       await ctx.close()
     })
   }
 
-  // MUTATION: in PaletteBuilder.jsx point the back item's menu `onSelect` at '/projects'.
+  // MUTATION: in PaletteBuilder.jsx point the back item's menu `onSelect` at '/tools'.
   test('the palette back item in Extra tools goes there too (390)', async ({ browser }) => {
     const { ctx, page } = await at(browser, 390)
     await expect(page.locator('.plb-col')).toHaveCount(5)
     await page.getByRole('button', { name: 'Extra tools', exact: true }).click()
     const panel = page.getByRole('dialog', { name: 'Extra tools' })
     await expect(panel).toBeVisible()
-    await panel.getByRole('button', { name: 'Back to all tools', exact: true }).click()
-    await expect(page).toHaveURL(/\/tools$/)
+    await panel.getByRole('button', { name: 'Back to dashboard', exact: true }).click()
+    await expect(page).toHaveURL(/\/projects$/)
     await ctx.close()
   })
 })

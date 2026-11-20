@@ -2,8 +2,8 @@
 //
 // Four things were wrong, found on the live Tint page:
 //   · the toolbar's back arrow went to /projects even when the person had just
-//     come from the Palette Builder ("Open in Tint Generator"). It now always goes
-//     to the tools index (/tools), the browser history never decides it;
+//     come from the Palette Builder ("Open in Tint Generator"). It now steps back
+//     to the page before when the app has one, else goes to the dashboard;
 //   · at 1440, scrolling with the picker open left the panel pinned under the nav
 //     over "Copy variables" while its trigger scrolled away;
 //   · at 390 the picker was clamped under the nav, covered the tool header and
@@ -12,9 +12,8 @@
 //     screen, and the black preset vanished into the dark panel.
 //
 // MUTATIONS (each should fail the test named after it):
-//   · ToolBack: default `history` back to true (or `to` to /projects) -> "back arrow … tools index"
-//     (the history-aware back and the redirect-landing case now belong to a tool that opts in with
-//      `history`; no tool does today, so there is no test for them here)
+//   · ToolBack: default `history` back to false -> "back arrow … steps back to the palette"
+//     (the redirect-landing and fallback cases are held in 432-back-arrow-menu)
 //   · usePopover: drop `closeWhenAnchorLeaves` from the picker -> "scrolling … closes"
 //   · global.css: delete the `@media(max-width:767px)` cpk sheet block
 //                                                              -> "390 · the picker is a sheet …"
@@ -57,7 +56,7 @@ async function openWithRecent(page) {
 }
 
 test.describe('the Tint back arrow', () => {
-  test('back arrow from palette -> tint still goes to the tools index', async ({ page }) => {
+  test('back arrow from palette -> tint steps back to the palette', async ({ page }) => {
     watch(page, 'designer sending a palette colour to the Tint tool and changing their mind')
     await go(page, '/create/palette')
     await page.locator('.plb-ramp').first().click()
@@ -65,22 +64,21 @@ test.describe('the Tint back arrow', () => {
     await page.getByRole('button', { name: 'Open in Tint Generator' }).click()
     await expect(page).toHaveURL(/\/create\/tint$/)
 
-    // Always the tools index, not the browser history.
+    // The palette is behind this page inside the app, so the arrow steps back to it.
     const toolbar = page.locator('[data-tool-toolbar]')
-    await expect(toolbar.getByRole('link', { name: 'Back to previous page' })).toHaveCount(0)
-    const back = toolbar.getByRole('link', { name: 'Back to all tools' })
-    await expect(back).toHaveAttribute('href', '/tools')
+    await expect(toolbar.getByRole('link', { name: 'Back to dashboard' })).toHaveCount(0)
+    const back = toolbar.getByRole('link', { name: 'Back to previous page' })
     await back.click()
-    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page).toHaveURL(/\/create\/palette$/)
   })
 
-  test('a direct landing on Tint goes to the tools index', async ({ page }) => {
+  test('a direct landing on Tint goes to the dashboard', async ({ page }) => {
     watch(page, 'designer opening Tint from a bookmark')
     await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
-    await expect(back).toHaveAttribute('href', '/tools')
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to dashboard' })
+    await expect(back).toHaveAttribute('href', '/projects')
     await back.click()
-    await expect(page).toHaveURL(/\/tools$/)
+    await expect(page).toHaveURL(/\/projects$/)
   })
 })
 

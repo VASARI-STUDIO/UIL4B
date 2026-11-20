@@ -29,12 +29,17 @@
 //     to the button), on a press outside, and on tabbing past either end.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
 import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { requestFeedbackDialog } from '../../utils/errorReport'
 import { lockScroll } from '../../utils/scrollLock'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
+import FoldersGlyph from '../nav/FoldersGlyph'
+import Menu from '../menu/Menu'
+import { keyboardPoint } from '../menu/menuModel'
+import { invokedByPointer } from '../../utils/elementSignature'
+import { DASHBOARD_PATH, useToolBack } from './backTarget'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
 import '../../styles/pages/tool-layout.css'
@@ -190,8 +195,9 @@ export function ToolLayout({
 // titleId      optional id for the h1
 // showTitle    false → the h1 is sr-only
 // back         { to, label, text, hint, history } | false (see ToolBack).
-//              Default /tools, "Back to all tools": the tools index, never the
-//              browser history.
+//              Default: history back when the app has a page behind this one,
+//              else the dashboard ("Back to dashboard"); right-click adds a
+//              "Go to dashboard" menu. See backTarget.js.
 //              A tool that wants the back button to collapse on a phone passes
 //              false and adds <ToolBack/> as an item instead.
 // items        the tool's actions, in row order:
@@ -224,7 +230,7 @@ export function ToolToolbar({
   feedback = true, onOpenChange, sheetPage,
 }) {
   const navigate = useNavigate()
-  const backProps = back === false ? null : { to: '/tools', label: 'Back to all tools', history: false, ...(back || {}) }
+  const backProps = back === false ? null : (back || {})
   const rowRef = useRef(null)
   const widths = useRef(new Map())
   const [hidden, setHidden] = useState(() => new Set())
@@ -476,45 +482,79 @@ export function ToolToolbar({
 // ── ToolBack ──────────────────────────────────────────────────────────────
 // The 36px hairline square with the left arrow.
 //
-// A tool's back arrow goes to the tools index (/tools) by default, wherever the
-// person came from. A tool that names a different destination (the Contrast
-// Checker opened from the Palette Builder) passes its own `to`.
+// A click goes to the page the person was just on: when the page before this one
+// is inside the app (history.state.idx > 0, see backTarget.js) the arrow steps
+// back to it. With nothing behind it (a bookmark, a shared link, a new tab) it
+// goes to the dashboard, which is also the plain link's href, so a modified click
+// (new tab, new window) opens the dashboard rather than a page that may not exist.
+// A tool that names a different place (the Contrast Checker opened from the
+// Palette Builder) passes its own `to` and `history: false`, and keeps it.
 //
-// `history` opts in to the browser's own back. React Router writes an `idx` into
-// history.state: 0 for the entry a tab first loads on, one higher for every
-// in-app push. A replace keeps the idx, so a redirect landing is still 0 and has
-// nothing in the app behind it. So with `history`, idx > 0 means the page before
-// this one is inside the app and the arrow steps back to it. A modified click
-// (new tab, new window) keeps the plain link.
-const hasAppHistory = () => typeof window !== 'undefined' && window.history.state?.idx > 0
-
+// A right-click (or Shift+F10, or the Menu key) opens a small menu with
+// "Go to dashboard", so the dashboard is always one gesture away. Shift+right-click
+// gives the browser's own menu back, as it does everywhere else in the app.
+//
 // `text` draws the destination's name beside the arrow (the 36px hairline pill
 // instead of the square), and `hint` replaces the tooltip that repeats `label`
 // with a sentence a screen reader gets as the description.
-export function ToolBack({ to = '/tools', label = 'Back to all tools', history = false, text, hint }) {
+export function ToolBack({ to = DASHBOARD_PATH, label = 'Back to dashboard', history = true, text, hint }) {
   const navigate = useNavigate()
-  // history.state is read on every render; subscribing to the location makes
-  // each navigation render this again.
-  useLocation()
-  const stepBack = history && hasAppHistory()
-  const name = stepBack ? 'Back to previous page' : label
+  const { stepBack, name } = useToolBack({ to, label, history })
+  // { point, opener, viaKeyboard }. It stays set after a close so the menu keeps its
+  // content while it plays its exit.
+  const [at, setAt] = useState(null)
+  const [open, setOpen] = useState(false)
+  const openMenu = (opener, point, viaKeyboard) => { setAt({ point, opener, viaKeyboard }); setOpen(true) }
   const onClick = (event) => {
     if (!stepBack || event.defaultPrevented || event.button !== 0) return
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     navigate(-1)
   }
+  const onContextMenu = (event) => {
+    const fromPointer = invokedByPointer(event)
+    // Shift+right-click is the way back to the browser's menu (open in new tab).
+    if (fromPointer && event.shiftKey) return
+    event.preventDefault()
+    if (fromPointer) openMenu(event.currentTarget, { x: event.clientX, y: event.clientY }, false)
+    else openMenu(event.currentTarget, keyboardPoint(event.currentTarget), true)
+  }
+  // Not every browser synthesises `contextmenu` from the Menu key or Shift+F10.
+  const onKeyDown = (event) => {
+    if (event.key !== 'ContextMenu' && !(event.key === 'F10' && event.shiftKey)) return
+    event.preventDefault()
+    openMenu(event.currentTarget, keyboardPoint(event.currentTarget), true)
+  }
+  const items = [
+    { id: 'dashboard', label: 'Go to dashboard', icon: <FoldersGlyph size={16} />, onSelect: () => navigate(DASHBOARD_PATH) },
+  ]
   return (
-    <Link
-      to={to}
-      className={text ? 'tl-btn tl-btn--quiet tl-btn--back' : 'tl-btn tl-btn--square'}
-      aria-label={name}
-      title={hint || name}
-      onClick={onClick}
-    >
-      <ToolIcon name="arrow-left" size={15} className={text ? 'tl-btn-ico' : undefined} />
-      {text && <span className="tl-btn-label">{text}</span>}
-    </Link>
+    <>
+      <Link
+        to={to}
+        className={text ? 'tl-btn tl-btn--quiet tl-btn--back' : 'tl-btn tl-btn--square'}
+        aria-label={name}
+        title={hint || name}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        onKeyDown={onKeyDown}
+      >
+        <ToolIcon name="arrow-left" size={15} className={text ? 'tl-btn-ico' : undefined} />
+        {text && <span className="tl-btn-label">{text}</span>}
+      </Link>
+      {at && (
+        <Menu
+          open={open}
+          onClose={() => setOpen(false)}
+          point={at.point}
+          returnTo={at.opener}
+          viaKeyboard={at.viaKeyboard}
+          label="Back button options"
+          items={items}
+          className="tl-back-menu"
+        />
+      )}
+    </>
   )
 }
 

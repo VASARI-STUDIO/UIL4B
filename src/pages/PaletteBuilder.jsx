@@ -10,6 +10,7 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import {
   ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode, SlidePills,
 } from '../components/tool/ToolLayout'
+import { useToolBack } from '../components/tool/backTarget'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
   autoTonalFromSeed, contrastRatio, generateHarmony, hctToHex,
@@ -870,6 +871,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
 
   const navigate = useNavigate()
+  // The back item in Extra tools does what the arrow does: step back, else the dashboard.
+  const toolBack = useToolBack()
 
   // Read the incoming state ONCE, on first mount — the board owns it from then
   // on. `queryColors` is a shared ?c= link (already-final colours, so it lands
@@ -3224,7 +3227,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     {
       id: 'back', priority: 2,
       render: () => <ToolBack />,
-      menu: { label: 'Back to all tools', icon: 'arrow-left', onSelect: () => navigate('/tools') },
+      menu: { label: toolBack.name, icon: 'arrow-left', onSelect: toolBack.go },
     },
     { id: 'seed', priority: 4, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
     ...(FROM_IMAGE_LIVE ? [{
