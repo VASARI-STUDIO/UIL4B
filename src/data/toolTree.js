@@ -367,9 +367,16 @@ const DISCOVER_SPEC = [
   // glyph and its hover moment are keyed on it.
   { id: 'inspiration', label: 'Community', desc: 'Browse design inspiration, save your favourites and submit your own.', route: '/community', soon: false, library: false },
   // The Prompt Library (/discover/prompts) is parked behind the admin gate, so
-  // no public list names it. Add its row back here when it opens up.
+  // no public list names it. Add its row back here when it opens up, and turn
+  // on PROMPT_LIBRARY_OPEN below.
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
+
+/**
+ * Whether the Prompt Library is open to everyone. While it is false the route
+ * is admin-only and the plan facts make no claim about prompts.
+ */
+export const PROMPT_LIBRARY_OPEN = false
 
 export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
   if (!row.tool) return row

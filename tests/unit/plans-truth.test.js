@@ -381,6 +381,7 @@ import { buildCodeFile, CODE_FILES } from '../../src/utils/codeFiles.js'
 import { COMMUNITY_PROMPT_ROWS } from '../../src/data/communityPrompts.js'
 import { LIBRARY_PALETTE_ROWS } from '../../src/data/paletteLibrary.js'
 import { LIBRARY_GRADIENT_ROWS } from '../../src/data/gradientLibrary.js'
+import { PROMPT_LIBRARY_OPEN } from '../../src/data/toolTree.js'
 
 const valueRow = (label) => PRO_VALUE.flatMap((g) => g.rows).find((r) => r.label === label)
 
@@ -394,9 +395,11 @@ test('PRO_VALUE rows quote the limits the product enforces', () => {
   assert.equal(valueRow('Icon export size').pro, `Any size from ${CUSTOM_SIZE_MIN} to ${CUSTOM_SIZE_MAX}px`)
   assert.equal(valueRow('Saved projects').free, String(FREE_SAVE_LIMITS.projects))
   assert.equal(valueRow('Icon line styles').pro, `Plus ${LINE_STYLES.filter((s) => s.pro).map((s) => s.name).join(' and ')}`)
-  const libs = valueRow('Palette, gradient and prompt libraries')
+  const libs = valueRow(PROMPT_LIBRARY_OPEN ? 'Palette, gradient and prompt libraries' : 'Palette and gradient libraries')
   assert.match(libs.free, new RegExp(`First ${GALLERY_TIER_LIMITS.free} of each, ${GALLERY_TIER_LIMITS.anonymous} when signed out`))
-  assert.match(libs.pro, new RegExp(`${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`))
+  assert.match(libs.pro, PROMPT_LIBRARY_OPEN
+    ? new RegExp(`${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`)
+    : new RegExp(`${LIBRARY_TOTALS.palettes} palettes and ${LIBRARY_TOTALS.gradients} gradients$`))
 })
 
 test('"first N of each" is true: every library has at least N rows a Free account may open', () => {
