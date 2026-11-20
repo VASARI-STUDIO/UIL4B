@@ -332,7 +332,8 @@ test.describe('the sizes the spec names', () => {
   })
 
   test.describe('at 768', () => {
-    test.use({ viewport: { width: 768, height: 1024 } })
+    // A tablet is a coarse pointer: the 44px target rule is the one that applies (a fine pointer gets 36px gallery buttons).
+    test.use({ viewport: { width: 768, height: 1024 }, hasTouch: true })
     test('the rail is 148px and every target is at least 44px tall', async ({ page }) => {
       watch(page, 'a designer exporting at 768px')
       await go(page, WORKED_BOARD)
@@ -342,7 +343,8 @@ test.describe('the sizes the spec names', () => {
         await category.go(panel)
         const small = await panel.evaluate((card) => [...card.querySelectorAll('button, [role=radio], a[href], input:not([type=hidden]), select')]
           .filter((el) => el.offsetParent !== null && !el.closest('[inert]'))
-          .map((el) => ({ what: el.getAttribute('aria-label') || el.textContent.trim().slice(0, 30), h: Math.round(el.getBoundingClientRect().height) }))
+          // A checkbox is tapped through its label, so the label is the target; the 18px box is only the mark.
+          .map((el) => ({ what: el.getAttribute('aria-label') || el.textContent.trim().slice(0, 30), h: Math.round((el.type === 'checkbox' ? el.closest('label') || el : el).getBoundingClientRect().height) }))
           .filter((t) => t.h > 2 && t.h < 44))
         expect(small, `${category.name}: targets under 44px tall`).toEqual([])
       }
@@ -385,6 +387,8 @@ test.describe('the sizes the spec names', () => {
       await expect(toggle).toHaveAttribute('aria-expanded', 'false')
       await expect(panel.locator('.xd-man-row').first(), 'folded rows are not shown').toBeHidden()
       expect(Math.round((await toggle.boundingBox()).height), 'the fold is one 44px line').toBeGreaterThanOrEqual(44)
+      // Bring the fold into view first, so the click does not scroll the column and move what is measured.
+      await toggle.scrollIntoViewIfNeeded()
       const above = await panel.getByRole('radiogroup', { name: /file type/i }).boundingBox()
       await toggle.click()
       await expect(toggle).toHaveAttribute('aria-expanded', 'true')
