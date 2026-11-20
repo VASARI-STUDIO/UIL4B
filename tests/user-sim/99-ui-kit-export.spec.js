@@ -269,7 +269,8 @@ test.describe('the UI kit export', () => {
         const panel = await openPanel(page)
         await panel.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((animation) => animation.finished)))
         // The export button must not move when the notice appears: the dock keeps
-        // its height and the line sits beside the button, so a notice never shoves it.
+        // its rows: below 1024px wide the line has a full-width row of its own above the buttons, and from 1024px it sits beside them,
+        // so a notice never changes the dock's height or shoves the button.
         const readActions = (el) => {
           const right = el.querySelector('.xd-primary').getBoundingClientRect().toJSON()
           return { scrollTop: el.querySelector('.xd-scroll').scrollTop, buttons: { top: right.top, bottom: right.bottom, height: right.height } }

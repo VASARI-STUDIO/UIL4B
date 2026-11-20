@@ -289,8 +289,10 @@
 @media (max-height:499.98px){
   .xd[data-layout="menu"]{padding:0}
   .xd[data-layout="menu"] .xd-card{height:100dvh;border:0;border-radius:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-  .xd[data-layout] .xd-dock{flex-direction:row;flex-wrap:nowrap;align-items:center;min-height:56px;padding-block:var(--s-2)}
-  .xd[data-layout] .xd-dock-line{order:1;flex:1}
+  /* The status keeps a full-width row of its own above the buttons, as in the tablet and phone docks, so the buttons can never squeeze it. */
+  .xd[data-layout] .xd-dock{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--s-1) var(--s-4);min-height:56px;padding-block:var(--s-2)}
+  .xd[data-layout] .xd-dock-line{order:-2;flex:1 0 100%}
+  .xd[data-layout] .xd-templates{margin-right:auto}
   .xd[data-layout] .xd-wayout{order:2;flex:0 1 auto}
   .xd[data-layout] .xd-dock-acts > .xd-act{flex:none;min-height:44px}
   .xd[data-layout="strip"] .xd-dock{padding-bottom:calc(var(--s-2) + env(safe-area-inset-bottom))}
