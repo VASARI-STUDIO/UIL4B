@@ -22,22 +22,21 @@ async function openFromHeader(page) {
   return panel
 }
 
-/** The theme in use: the checked row of the inline list, or the folded "Theme: <name> · <brand>" row on a phone or a
-    window under 1024 x 900. */
+/** The template in use: read from the pressed card in the templates grid. */
 async function expectTheme(panel, name) {
   await expectTemplate(panel, name)
 }
 
-/** Pick a theme the way Flow B offers it: from the inline list, opening the folded "Theme:" row first where it is folded. */
+/** Pick a template the way Flow B offers it: View templates, then the card. */
 async function chooseTheme(page, panel, name) {
   await chooseTemplate(panel, name)
   await expectTheme(panel, name)
 }
 
-/** The free start: the brand guidelines as slides, PDF. */
+/** The free start: the Guidelines tab on the PDF file. */
 async function expectFreeStart(panel, why) {
-  await expect(categoryRadio(panel, 'Slides'), why).toHaveAttribute('aria-checked', 'true')
-  await expect(fileGroup(panel, 'Slides').getByRole('radio', { name: /^PDF/ }), why).toHaveAttribute('aria-checked', 'true')
+  await expect(categoryRadio(panel, 'Guidelines'), why).toHaveAttribute('aria-selected', 'true')
+  await expect(fileGroup(panel, 'Guidelines').getByRole('radio', { name: /^PDF/ }), why).toHaveAttribute('aria-checked', 'true')
 }
 
 const SIZES = [
@@ -115,7 +114,7 @@ test.describe('signed out, signing in from the dialog', () => {
     await signIn(page, { plan: 'free', lateSignIn: true, returning: false })
     await go(page, BOARD)
     const panel = await openFromHeader(page)
-    // The Theme row and the formats are usable before any sign-in.
+    // The templates and the formats are usable before any sign-in.
     await chooseFormat(panel, 'css')
     await chooseFormat(panel, 'kit')
     await primaryButton(panel).click()
