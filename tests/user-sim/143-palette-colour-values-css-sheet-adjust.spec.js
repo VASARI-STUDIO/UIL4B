@@ -180,6 +180,8 @@ test.describe('Palette CSS', () => {
     await expect(sheet).toBeVisible()
 
     // The sheet is a bottom sheet: there is backdrop left above it to tap.
+    // Measure once the slide-up has finished, or the box is still off-screen.
+    await sheet.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
     const box = await sheet.boundingBox()
     expect(box.y, 'backdrop is showing above the sheet').toBeGreaterThan(80)
     expect(Math.round(box.y + box.height), 'the sheet sits on the bottom edge').toBeGreaterThanOrEqual(840)
