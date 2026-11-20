@@ -7,6 +7,7 @@ import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 import { onboardingDestination, knownProfile, localOnboardingFlag, SIGNED_IN_HOME } from '../utils/onboardingState'
 import { BrandLockup } from '../components/BrandLogo'
 import { isLocalPath } from '../utils/localPath'
+import { routeLabel } from '../data/toolTree'
 import { loadFont } from '../utils/googleFonts'
 import {
   BRANDS, KERBSIDE, RAIL_SIZES, DEFAULT_PROJECT_NAME,
@@ -31,6 +32,17 @@ const L6_CHECKOUT = 'Not now, take me to checkout'
 
 // /checkout itself, with or without a plan, but not /checkout/return.
 const isCheckoutTarget = (target) => target === '/checkout' || (typeof target === 'string' && target.startsWith('/checkout?'))
+
+// The tool a sign-up began in (a download or save gate stashes the page it was
+// on), named as the tool tree names it. Null for anything that is not a tool.
+export const resumeToolName = (target) => (
+  isLocalPath(target) && !isCheckoutTarget(target) ? routeLabel(target.split(/[?#]/)[0]) : null
+)
+export const skipLabel = (target) => {
+  if (isCheckoutTarget(target)) return L6_CHECKOUT
+  const tool = resumeToolName(target)
+  return tool ? `Not now, back to ${tool}` : L6
+}
 
 // Record completion on the ACCOUNT, with localStorage as a fast local mirror.
 // The account copy is what stops onboarding reappearing on a second device.
@@ -136,6 +148,7 @@ export default function Onboarding() {
   const [status, setStatus] = useState('')
   const [resumeTarget] = useState(stashedTarget)
   const checkoutStashed = isCheckoutTarget(resumeTarget)
+  const resumeTool = resumeToolName(resumeTarget)
 
   const debounceRef = useRef(0)
   const moveRef = useRef(0)
@@ -302,6 +315,7 @@ export default function Onboarding() {
   if (saving) statusText = 'Saving your kit…'
   else if (errored) statusText = 'Your kit didn’t save. Check your connection and try again. Everything you picked is still here.'
   else if (checkoutStashed) statusText = 'After this, you’ll go on to checkout.'
+  else if (resumeTool) statusText = `After this, you’ll go back to ${resumeTool}.`
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const focusSoon = (selector) => {
@@ -373,8 +387,8 @@ export default function Onboarding() {
     setLeaving(true)
     persist({ firstWin: 'palette' })
     recordFirstWin('palette')
-    const resume = takeResumeTarget()
-    navigate(isCheckoutTarget(resume) ? resume : '/create/palette')
+    // A sign-up that began in a tool goes back to it; the kit is saved either way.
+    navigate(takeResumeTarget() || '/create/palette')
   }
 
   const press = () => {
@@ -434,11 +448,11 @@ export default function Onboarding() {
         {/* One screen of choices, and one way out. "Not now" does the same as every other leave: onboarding is done, and the person goes on to their projects (or the checkout they came to pay for). */}
         <a
           className={`ob-skip${saving ? ' is-full' : ''}`}
-          href={checkoutStashed ? resumeTarget : FIRST_RUN_DESTINATION}
+          href={checkoutStashed || resumeTool ? resumeTarget : FIRST_RUN_DESTINATION}
           data-skip="1"
           onClick={link(skipFirstWin)}
         >
-          {checkoutStashed ? L6_CHECKOUT : L6}
+          {skipLabel(resumeTarget)}
         </a>
       </header>
 
