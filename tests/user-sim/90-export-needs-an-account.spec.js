@@ -26,6 +26,7 @@
 // this measurement did.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { categoryRadio } from './export-rows.js'
 
 const PERSONA = 'someone trying the tools before signing up for anything'
 
@@ -134,10 +135,9 @@ test.describe('a file needs a free account', () => {
     // called Export.
     const panel = page.locator('[role="dialog"]').filter({ hasText: /export/i }).first()
     await expect(panel, 'the export panel never opened').toBeVisible({ timeout: 15000 })
-    // The popup opens on the free UI kit; the style guide is another free file a
+    // The popup opens on the free Guidelines PDF; the style guide is another free file a
     // visitor can build, so that one has to ask for an account too.
-    await panel.getByRole('radio', { name: /^Brand book/ }).click()
-    await panel.getByRole('radio', { name: /^Style guide/ }).click()
+    await categoryRadio(panel, 'Style guide').click()
     const run = panel.getByRole('button', { name: /^export/i }).last()
     await expect(run, 'the export panel never rendered its own export action')
       .toBeVisible({ timeout: 15000 })
