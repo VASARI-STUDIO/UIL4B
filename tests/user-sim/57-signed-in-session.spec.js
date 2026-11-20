@@ -188,10 +188,10 @@ test.describe('the export gate, driven', () => {
     await openExportPanel(page)
 
     await expect(
-      categoryRadio(page, 'Book').locator('.xd-pro'),
-      'the Book category must carry its Pro badge for a free account',
+      categoryRadio(page, 'Brand book').locator('.xd-pro'),
+      'the Brand book category must carry its Pro badge for a free account',
     ).toBeVisible()
-    await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
+    await expect(categoryRadio(page, 'Brand book'), 'and its name says Pro').toHaveAccessibleName('Brand book, A4 pages, Pro')
     await expect(page.locator('.xd-stage-pro'), 'the preview is locked').toHaveText(/Pro template/)
 
     const action = page.getByRole('button', { name: /Upgrade to Pro/i })
