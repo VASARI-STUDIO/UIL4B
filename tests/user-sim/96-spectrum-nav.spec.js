@@ -111,7 +111,7 @@ test.describe('the marketing bar', () => {
     await expect(page.locator('.spnav')).toHaveAttribute('data-nav-hidden', '1')
     await page.evaluate(() => window.scrollTo(0, 700))
     // There is a deliberate beat before it returns, so a stray wheel nudge
-    // does not flash the bar.
+    // does not flash the bar (the scroll-return spec holds the detail).
     await expect(page.locator('.spnav')).toHaveAttribute('data-nav-hidden', '0')
   })
 
@@ -128,7 +128,7 @@ test.describe('the marketing bar', () => {
     await page.evaluate((y) => window.scrollTo(0, y), stage.top + 300)
     await page.evaluate((y) => window.scrollTo(0, y), stage.top + 600)
     await expect(nav).toHaveAttribute('data-nav-hidden', '1')
-    // Up, still inside the stage. The bar's return delay is 140ms, so 600ms is
+    // Up, still inside the stage. The bar's return delay is 200ms, so 600ms is
     // long past when it would have come back.
     await page.evaluate((y) => window.scrollTo(0, y), stage.top + 450)
     await page.waitForTimeout(600)
@@ -222,7 +222,7 @@ for (const motion of MOTIONS) {
             expect(await scrollNow(page), 'precondition: the viewport top is inside the box').toBeGreaterThan(box.top)
             await expect(nav, `the bar showed at ${share} of the way down ${name}`).toHaveAttribute('data-nav-hidden', '1')
             await expect.poll(() => barBottom(page), { message: `the bar is still on screen at ${share} of the way down ${name}` }).toBeLessThanOrEqual(0)
-            // Longer than the bar's 140ms return delay: a late return would show by now.
+            // Longer than the bar's 200ms return delay: a late return would show by now.
             await page.waitForTimeout(400)
             expect(await barBottom(page), `the bar came back at ${share} of the way down ${name}`).toBeLessThanOrEqual(0)
           }

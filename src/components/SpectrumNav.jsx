@@ -101,17 +101,24 @@ function QuietLink({ href, label, className, current, mi, index, onClick, onHash
 }
 
 // The bar hides going down and comes back coming up: nothing hides in the
-// first 120px, a downward move of more than 2px hides it, and an upward move
-// waits 140ms before bringing it back so a stray wheel nudge does not flash
-// the bar. The menu being open pins it visible, and so does keyboard focus
-// inside the bar: a bar that hides while a control in it holds focus leaves
-// the focus indicator off screen (WCAG 2.4.7 / 2.4.11).
+// first 120px and a downward move of more than 2px hides it.
+//
+// COMING BACK IS EARNED. An upward move has to add up to RETURN_DISTANCE and
+// then holds for RETURN_DELAY before the bar returns, and ANY downward move
+// (even one pixel) cancels both. So a trackpad's tail, a one-pixel wobble of
+// the wheel or a reader easing back a line does not flash the bar over the
+// text; only a clear scroll up does.
+//
+// The menu being open pins it visible, and so does keyboard focus inside the
+// bar: a bar that hides while a control in it holds focus leaves the focus
+// indicator off screen (WCAG 2.4.7 / 2.4.11).
 //
 // IT KEEPS A FLAG, NOT A STYLE. The flag goes on `data-nav-hidden` and the CSS
 // decides what that means, so the reduced-motion companion is a media query
 // beside the animation it cancels.
 const HIDE_AFTER = 120
-const RETURN_DELAY = 140
+const RETURN_DELAY = 200
+const RETURN_DISTANCE = 24
 
 // A pinned stage (the tools column, the exports stack) marks its root with
 // `data-pins`. While the top of the viewport is inside one, the bar is hidden
@@ -155,6 +162,8 @@ export default function SpectrumNav() {
   const sheetRef = useRef(null)
   const lastY = useRef(0)
   const returnTimer = useRef(null)
+  // How far the page has moved up in one unbroken run, in px.
+  const upRun = useRef(0)
   const openRef = useRef(false)
 
   useEffect(() => { openRef.current = open }, [open])
@@ -189,15 +198,22 @@ export default function SpectrumNav() {
       const focusInBar = !!(focused && navRef.current?.contains(focused) && focused.matches(':focus-visible'))
       const inPinnedBox = y >= HIDE_AFTER && !openRef.current && !focusInBar && viewportTopInPinnedBox()
       setPinHidden(inPinnedBox)
+      if (dy >= 0) upRun.current = 0
+      else upRun.current -= dy
       if (y < HIDE_AFTER || openRef.current || focusInBar) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
+        upRun.current = 0
         setHidden(false)
       } else if (dy > 2 || (dy < -2 && inPinnedBox)) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(true)
-      } else if (dy < -2 && !returnTimer.current) {
+      } else if (dy > 0) {
+        // Any downward move, however small, takes back the walk to a return.
+        clearTimeout(returnTimer.current)
+        returnTimer.current = null
+      } else if (dy < 0 && upRun.current >= RETURN_DISTANCE && !returnTimer.current) {
         returnTimer.current = setTimeout(() => {
           returnTimer.current = null
           if (!viewportTopInPinnedBox()) setHidden(false)
