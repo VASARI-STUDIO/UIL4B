@@ -1272,6 +1272,18 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The clean page previews of a Pro export theme ─────────────────────────
+  // GET /api/ai?export=preview&theme=&row=&n=&dpr=2. The bearer header is the check, so there is no signed URL; the
+  // picture is the 2x of a page of a Pro pair, sent to a Pro account only. See api/_lib/exportPreview.js.
+  if (req.method === 'GET' && req.query?.export === 'preview') {
+    const { serveExportPreview } = await import('./_lib/exportPreview.js')
+    return serveExportPreview(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      credentialProblem,
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── The soft stand-in for a locked palette ─────────────────────────────
   // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
   // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.

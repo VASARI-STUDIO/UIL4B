@@ -123,7 +123,7 @@ const TOKEN_REFUSALS = new Set([
 // sending the caller to /plans).
 const KEY_FETCH_FAILURE = /fetching public keys|Error while making request|timeout of \d+ms|ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|EAI_AGAIN/i
 
-function isTokenRefusal(err) {
+export function isTokenRefusal(err) {
   if (!TOKEN_REFUSALS.has(err?.code)) return false
   if (err.code === 'auth/argument-error' && KEY_FETCH_FAILURE.test(String(err.message || ''))) return false
   return true
@@ -239,7 +239,7 @@ const FILE_FORMATS = Object.freeze({
  *                builders? -> a BUILDERS-shaped table (tests) }
  */
 // The caller's plan, from their user document. Only a Firebase-verified email may claim an admin entitlement.
-async function planOf(decoded, readUser) {
+export async function planOf(decoded, readUser) {
   const user = (await readUser(decoded.uid)) || {}
   return planForUser({
     subscription: user.subscription || null,
