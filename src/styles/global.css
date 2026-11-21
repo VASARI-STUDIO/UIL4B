@@ -3515,6 +3515,11 @@ html.lenis{scroll-behavior:auto!important}
    padding also clears the fixed header, which the design's sticky one did not
    need to. */
 .app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;padding:calc(var(--chrome-h) + clamp(14px,2.6vw,32px)) max(clamp(12px,3vw,36px),env(safe-area-inset-right,0px)) clamp(44px,6vw,80px) max(clamp(12px,3vw,36px),env(safe-area-inset-left,0px))}
+/* Maintenance page: the logo sits where the nav's logo would, at the nav's
+   height, so .app-page's chrome padding still clears it. Not a link. */
+.maint-head{position:absolute;top:0;left:0;right:0;z-index:1;display:flex;align-items:center;height:calc(var(--nav-top) + var(--nav-h));padding:var(--nav-top) max(clamp(16px,2vw,22px),env(safe-area-inset-right,0px)) 0 max(clamp(16px,2vw,22px),env(safe-area-inset-left,0px))}
+.maint-logo{display:block;padding:4px 2px;font-size:19px;color:rgb(var(--ink-rgb))}
+.maint-logo .brand-logo{display:block;height:.85em}
 .app-page>*{min-width:0}
 /* The full-screen view of a library (?view=full, utils/libraryView.js): the shell
    renders no PillNav and no AppFooter, so the nav's height leaves the offsets that
