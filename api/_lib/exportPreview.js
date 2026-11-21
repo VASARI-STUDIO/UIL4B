@@ -19,19 +19,17 @@ import fs from 'node:fs'
 import { assertThemeAccess } from './themeAccess.js'
 import { isTokenRefusal, planOf } from './exportDocument.js'
 import { THEME_ROW_FORMATS, isThemeExportPro } from '../../src/data/exportThemes.js'
-import manifest from '../../src/config/exportPreviews.json' with { type: 'json' }
+import { previewPages } from '../../src/config/exportPreviews.js'
 
 const MAX_N = /^[1-9]\d{0,3}$/
 
 // The one value of a query field that is a plain string (an array or a missing field is not one).
 const one = (v) => (typeof v === 'string' ? v : undefined)
 
-/** The manifest's page for a request, or null: every part is looked up in the manifest, never built from the request. */
+/** The manifest's page for a request, or null: every part is looked up in the manifest (via the dialog's own previewPages), never built from the request. */
 function pageOf(theme, row, n) {
-  if (!Object.hasOwn(manifest.themes, theme)) return null
-  const rows = manifest.themes[theme]
-  if (!Object.hasOwn(rows, row) || !Object.hasOwn(THEME_ROW_FORMATS, row)) return null
-  return rows[row].find((p) => String(p.n) === n) || null
+  if (!Object.hasOwn(THEME_ROW_FORMATS, row)) return null
+  return previewPages(theme, row).find((p) => String(p.n) === n) || null
 }
 
 const fileFor = (theme, row, n) => new URL(`./pro/export-previews/${theme}/${row}/${n}.webp`, import.meta.url)

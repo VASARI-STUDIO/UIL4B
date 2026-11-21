@@ -1,4 +1,7 @@
-{
+// The page pictures of every export theme, row by row: { n, id, label, w, h } per page, w and h the 1x display size.
+// Written by `node scripts/library/exportThemePreviews.mjs --pages`; do not edit by hand. A module, not JSON, so the
+// `src/config/export*s.js` glob in vercel.json includeFiles carries it into the function with no new entry.
+export default {
   "version": 1,
   "themes": {
     "01-presentation": {

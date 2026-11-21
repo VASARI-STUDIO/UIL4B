@@ -1,8 +1,8 @@
-// The export theme page previews (src/config/exportPreviews.json, src/config/exportPreviews.js, api/_lib/exportPreview.js).
+// The export theme page previews (src/config/exportPreviewPages.js, src/config/exportPreviews.js, api/_lib/exportPreview.js).
 //
 // What is pinned, and the change that makes each fail:
 //  1. THE MANIFEST IS COMPLETE: every theme in EXPORT_THEMES has every row it has, each with pages numbered 1..n and a label and size.
-//     Break: delete a theme or a row from src/config/exportPreviews.json.
+//     Break: delete a theme or a row from src/config/exportPreviewPages.js.
 //  2. EVERY PAGE HAS ITS PUBLIC FILE: a webp under public/export-themes/pages for each page (a Free pair at 1x and 2x, a Pro pair at 1x).
 //     Break: delete public/export-themes/pages/01-presentation/slides/1.webp.
 //  3. NO CLEAN 2x IN PUBLIC: a Pro pair has no `@2x` file under public/, and its server copy is in api/_lib. A Free pair has none in api/_lib.
@@ -16,6 +16,8 @@
 //     Break: remove the setHeader calls.
 //  7. THE CLIENT SEES NO SERVER PATH: nothing under src/ imports api/_lib, and publicPreviewSrc never names a clean Pro 2x.
 //     Break: return the `@2x` path for a Pro pair in publicPreviewSrc.
+//  8. EVERY PICTURE IS ITS SIZE: each webp's header says the manifest's w by h at 1x and twice that at 2x (the server copy when it is here).
+//     Break: change one page's w in src/config/exportPreviewPages.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -91,6 +93,34 @@ test('every page has its public file, and a Free pair has its 2x beside it', () 
       }
     }
   }
+})
+
+// The width and height a webp says it is, from its first chunk header: VP8X (extended), VP8L (lossless) or VP8 (lossy).
+const webpSize = (file) => {
+  const b = Buffer.alloc(30)
+  const fd = fs.openSync(file, 'r')
+  try { fs.readSync(fd, b, 0, 30, 0) } finally { fs.closeSync(fd) }
+  const chunk = b.toString('latin1', 12, 16)
+  if (chunk === 'VP8X') return [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)]
+  if (chunk === 'VP8L') { const v = b.readUInt32LE(21); return [(v & 0x3fff) + 1, ((v >>> 14) & 0x3fff) + 1] }
+  if (chunk === 'VP8 ') return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff]
+  return null
+}
+
+test('every picture is drawn at the size the manifest gives: 1x at w by h, 2x at twice that', () => {
+  let seen = 0
+  for (const { theme, row, free } of pairs) {
+    for (const p of previewPages(theme, row)) {
+      const files = [[path.join(PUBLIC, theme, row, `${p.n}.webp`), 1]]
+      if (free) files.push([path.join(PUBLIC, theme, row, `${p.n}@2x.webp`), 2])
+      else if (HAVE_CLEAN) files.push([path.join(SERVER, theme, row, `${p.n}.webp`), 2])
+      for (const [file, k] of files) {
+        assert.deepEqual(webpSize(file), [p.w * k, p.h * k], `${path.relative(ROOT, file)} is not ${p.w * k} by ${p.h * k}`)
+        seen++
+      }
+    }
+  }
+  assert.ok(seen >= 500, `the walk must read every picture (${seen})`)
 })
 
 test('a Pro pair has no clean 2x under public, and its server copy is there; a Free pair has none on the server', () => {
@@ -261,10 +291,15 @@ test('a broken session service is a server fault, not a verdict on the caller', 
   assert.equal(out.json.error, 'auth_unavailable')
 })
 
-test('the function is told to ship the server folder and the manifest', () => {
+test('the function ships the server folder and the manifest without new includeFiles entries', () => {
+  // Vercel's file tracer follows a `new URL(`./literal/${x}...`, import.meta.url)` to every file under the literal folder, so the clean
+  // pictures ride along as long as the endpoint builds their path that way. The pages module is reached through
+  // src/config/exportPreviews.js, which the `config/export*s` glob names (function-include-files.test.js checks the glob).
+  const endpoint = fs.readFileSync(path.join(ROOT, 'api/_lib/exportPreview.js'), 'utf8')
+  assert.match(endpoint, /new URL\(`\.\/pro\/export-previews\/\$\{theme\}\/\$\{row\}\/\$\{n\}\.webp`, import\.meta\.url\)/)
+  assert.match(endpoint, /from '\.\.\/\.\.\/src\/config\/exportPreviews\.js'/)
   const vercel = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'))
-  assert.match(vercel.functions['api/ai.js'].includeFiles, /api\/_lib\/pro\/export-previews\/\*\*/)
-  assert.match(vercel.functions['api/ai.js'].includeFiles, /src\/config\/exportPreviews\.json/)
+  assert.match(vercel.functions['api/ai.js'].includeFiles, /config\/export\*s/, 'the config/export*s glob carries the pages module')
   const ai = fs.readFileSync(path.join(ROOT, 'api/ai.js'), 'utf8')
   assert.match(ai, /export === 'preview'[\s\S]{0,200}import\('\.\/_lib\/exportPreview\.js'\)/)
 })

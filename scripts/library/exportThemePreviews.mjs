@@ -32,7 +32,7 @@
 //   Free pair   public/export-themes/pages/<id>/<row>/<n>.webp and <n>@2x.webp
 //   Pro pair    public/export-themes/pages/<id>/<row>/<n>.webp   1x, with a tiled "UIL4B Pro preview" watermark baked in
 //               api/_lib/pro/export-previews/<id>/<row>/<n>.webp   the clean 2x (gitignored; publish to the private data repository), never under public/ (api/_lib/exportPreview.js serves it)
-// and src/config/exportPreviews.json, the ordered pages per theme and row. A page is a .pg[data-page] section of a document, the
+// and src/config/exportPreviewPages.js, the ordered pages per theme and row. A page is a .pg[data-page] section of a document, the
 // first screen of each page of a theme's multi-page site, or a section of the brand book.
 //
 // Needs Playwright's Chromium. A picture is never kept if its page printed a missing value or a left-over placeholder; the
@@ -262,6 +262,11 @@ const sitePages = (map) => {
   return [...new Set(['index.html', ...linked, ...all.sort()])].filter((f) => all.includes(f))
 }
 
+// The pages file is a module (`export default {...}`) so includeFiles' `src/config/export*s.js` glob carries it; its body is plain JSON.
+const PAGES_HEAD = "// The page pictures of every export theme, row by row: { n, id, label, w, h } per page, w and h the 1x display size.\n// Written by `node scripts/library/exportThemePreviews.mjs --pages`; do not edit by hand. A module, not JSON, so the\n// `src/config/export*s.js` glob in vercel.json includeFiles carries it into the function with no new entry.\n"
+const PAGES_PREFIX = 'export default '
+const readPages = (text) => JSON.parse(text.slice(text.indexOf(PAGES_PREFIX) + PAGES_PREFIX.length))
+
 const pagesJson = (themes) => {
   const lines = ['{', '  "version": 1,', '  "themes": {']
   const ids = Object.keys(themes)
@@ -289,7 +294,7 @@ export async function writePagePreviews(themeIds, opts = {}) {
     tmp, quality = 0.82, maxPages = 9, engineRoot = ROOT,
     outPublic = path.join(OUT, 'pages'),
     outServer = path.join(ROOT, 'api/_lib/pro/export-previews'),
-    manifestPath = path.join(ROOT, 'src/config/exportPreviews.json'),
+    manifestPath = path.join(ROOT, 'src/config/exportPreviewPages.js'),
   } = opts
   const et = path.join(engineRoot, 'api/_lib/exportThemes')
   const { EXPORT_THEMES, isThemeExportPro } = await import(href(path.join(ROOT, 'src/data/exportThemes.js')))
@@ -300,7 +305,7 @@ export async function writePagePreviews(themeIds, opts = {}) {
   const problems = []
   const tally = { files: 0, publicBytes: 0, serverBytes: 0, lowered: 0 }
   let manifest = {}
-  try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')).themes || {} } catch { /* a first run */ }
+  try { manifest = readPages(fs.readFileSync(manifestPath, 'utf8')).themes || {} } catch { /* a first run */ }
   const browser = await chromium.launch()
   try {
     const codec = await browser.newPage()
@@ -436,7 +441,7 @@ export async function writePagePreviews(themeIds, opts = {}) {
   const ordered = {}
   for (const t of EXPORT_THEMES) if (manifest[t.id]) ordered[t.id] = manifest[t.id]
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true })
-  fs.writeFileSync(manifestPath, pagesJson(ordered))
+  fs.writeFileSync(manifestPath, PAGES_HEAD + PAGES_PREFIX + pagesJson(ordered))
   return { tally, problems }
 }
 

@@ -1,4 +1,4 @@
-// The page pictures of each export theme, row by row. The pages themselves (ids, labels, sizes) are src/config/exportPreviews.json,
+// The page pictures of each export theme, row by row. The pages themselves (ids, labels, sizes) are src/config/exportPreviewPages.js,
 // written by `node scripts/library/exportThemePreviews.mjs --pages`; this module reads it and says which file to show.
 //
 // A Free pair (isThemeExportPro false) has its pictures in public/export-themes/pages/<theme>/<row>/, at 1x (`<n>.webp`) and 2x
@@ -7,7 +7,7 @@
 // path to a clean Pro picture, whatever density is asked for.
 
 import { isThemeExportPro, themeHasRow } from '../data/exportThemes.js'
-import manifest from './exportPreviews.json' with { type: 'json' }
+import manifest from './exportPreviewPages.js'
 
 /** The routes' rows, in the order the dialog lists its files. */
 export const PREVIEW_ROWS = Object.freeze(['slides', 'ui-kit', 'book'])

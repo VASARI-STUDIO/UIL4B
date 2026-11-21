@@ -18,7 +18,7 @@ import fs from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { serveExportPreview } from '../../api/_lib/exportPreview.js'
-import manifest from '../../src/config/exportPreviews.json' with { type: 'json' }
+import manifest from '../../src/config/exportPreviewPages.js'
 import { isThemeExportPro } from '../../src/data/exportThemes.js'
 
 const ACCOUNTS = {
