@@ -298,7 +298,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-close:hover{border-color:var(--v3-hl20);background:var(--v3-rowh);color:var(--v3-ink)}
 
 /* Recents rail */
-.ig-rail{margin:8px 0 28px}
+.ig-rail{margin:0 0 20px}
 .ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--v3-sec);margin-bottom:10px}
 .ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--v3-t56);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .ig-rail-clear:hover{color:var(--v3-ink);border-color:var(--v3-hair);background:var(--v3-raised)}

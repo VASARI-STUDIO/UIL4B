@@ -5368,58 +5368,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           element since deleted from every tool masthead it reached. A retired motif that cannot be rendered still
           reads as live code to the next person to open the file. */}
 
-      {visibleRecents.length > 0 && !isMyIcons && (
-        <div className="ig-rail">
-          <div className="ig-rail-head">
-            Recent
-            <button
-              type="button"
-              className="ig-rail-clear"
-              aria-label="Clear recent icons"
-              title="Clear recent"
-              onClick={() => { clearRecentIcons(); setRecents([]) }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              Clear
-            </button>
-          </div>
-          <div className="ig-rail-track rail-overflow">
-            {visibleRecents.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                className="ig-rail-item"
-                aria-label={`${r.action === 'edit' ? 'Edited' : 'Copied'} ${r.name} — open to customise`}
-                onClick={() => handleIconClick(r)}
-              >
-                {r.cdn ? (
-                  // NEVER `src=""`. The browser resolves an empty src against the
-                  // document URL, fetches the HTML page, fails to decode it as an
-                  // image and fires onError — which here is `noteGlyphFailure`, so
-                  // a rail waiting one tick for its tranche would have counted
-                  // itself past the eight-failure threshold and thrown the whole
-                  // library into its refused state.
-                  glyphDataUri(r.pack, r.name) ? (
-                    <img src={glyphDataUri(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
-                  ) : (
-                    <span className="ig-glyph-wait" aria-hidden="true" />
-                  )
-                ) : (
-                  <svg viewBox="0 0 24 24" fill={r.filled ? 'currentColor' : 'none'} stroke={r.filled ? 'none' : 'currentColor'} aria-hidden="true"><path d={r.d} /></svg>
-                )}
-                <span className={`ig-rail-badge ig-rail-badge--${r.action === 'edit' ? 'edit' : 'copy'}`} aria-hidden="true">
-                  {r.action === 'edit' ? (
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                  ) : (
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                  )}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="sub">
         {/* THE SHARED BROWSE LANGUAGE. This was the fourth implementation of a
             Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed
@@ -5487,6 +5435,58 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         {/* The result count is announced, not drawn: the row has no room for it. */}
         <p id="ig-result-count" className="sr-only" role="status">{toolbarCount || ''}</p>
         </div>
+
+        {visibleRecents.length > 0 && !isMyIcons && (
+          <div className="ig-rail">
+            <div className="ig-rail-head">
+              Recent
+              <button
+                type="button"
+                className="ig-rail-clear"
+                aria-label="Clear recent icons"
+                title="Clear recent"
+                onClick={() => { clearRecentIcons(); setRecents([]) }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                Clear
+              </button>
+            </div>
+            <div className="ig-rail-track rail-overflow">
+              {visibleRecents.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  className="ig-rail-item"
+                  aria-label={`${r.action === 'edit' ? 'Edited' : 'Copied'} ${r.name} — open to customise`}
+                  onClick={() => handleIconClick(r)}
+                >
+                  {r.cdn ? (
+                    // NEVER `src=""`. The browser resolves an empty src against the
+                    // document URL, fetches the HTML page, fails to decode it as an
+                    // image and fires onError — which here is `noteGlyphFailure`, so
+                    // a rail waiting one tick for its tranche would have counted
+                    // itself past the eight-failure threshold and thrown the whole
+                    // library into its refused state.
+                    glyphDataUri(r.pack, r.name) ? (
+                      <img src={glyphDataUri(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
+                    ) : (
+                      <span className="ig-glyph-wait" aria-hidden="true" />
+                    )
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill={r.filled ? 'currentColor' : 'none'} stroke={r.filled ? 'none' : 'currentColor'} aria-hidden="true"><path d={r.d} /></svg>
+                  )}
+                  <span className={`ig-rail-badge ig-rail-badge--${r.action === 'edit' ? 'edit' : 'copy'}`} aria-hidden="true">
+                    {r.action === 'edit' ? (
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    ) : (
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isMyIcons ? (
           // ── My Icons: two distinct collections, each independently clearable ──
