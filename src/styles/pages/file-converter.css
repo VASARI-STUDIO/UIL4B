@@ -816,6 +816,9 @@
 
 .fc .fc-crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 
+/* The censor box marks a patch, not what is kept, so it does not dim the rest of the picture. */
+.fc .fc-crop-box[data-tone="censor"] { outline-style: dashed; outline-width: 2px; box-shadow: none; }
+
 .fc .fc-crop-box[data-disabled] { cursor: not-allowed; }
 
 /* Four corner handles. Each is a 44 px hit area sitting inside its corner, so
@@ -876,6 +879,13 @@
 }
 
 .fc .fc-scrub:disabled { opacity: .55; cursor: not-allowed; }
+
+/* The Look group: one labelled slider per adjustment, its value read out on the label's row. */
+.fc .fc-adj { display: grid; gap: 0; min-width: 0; }
+.fc .fc-adj-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fc .fc-adj-val { font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.fc .fc-adj .fc-adj-range { flex: none; width: 100%; }
+.fc .fc-adj + .fc-btn { justify-self: start; }
 
 .fc .fc-source-card {
   display: flex;

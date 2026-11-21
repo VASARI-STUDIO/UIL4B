@@ -55,6 +55,27 @@
  * below, and none should be added.
  */
 
+/* ── The V3 retoken (2026-11-15) ───────────────────────────────────────────────
+ * content.css resolves the shared --cpg-* aliases to the old --bg, --t and --card
+ * ladder. On this page they resolve to the V3 roles instead (the tool-layout.css
+ * pattern), so every rule below, and the shared rd-end/rd-next blocks, read V3.
+ * .cpg.prn is two classes, so it wins whichever sheet loads last. --cpg-sec is
+ * spacing, not a colour, and is left alone. Nothing here touches the five inline
+ * measurements listed above. */
+.cpg.prn {
+  --cpg-page: var(--v3-ground);
+  --cpg-card: var(--v3-raised);
+  --cpg-ink: var(--v3-ink);
+  --cpg-dim: var(--v3-sec);
+  --cpg-faint: var(--v3-t56);
+  --cpg-quiet: var(--v3-t56);
+  --cpg-line: var(--v3-hair);
+  --cpg-line-strong: var(--v3-hl20);
+  --cpg-hair: var(--v3-hair);
+  --cpg-wash: var(--v3-wash);
+  --cpg-wash-2: var(--v3-wash);
+}
+
 /* The sign-up block sits one flex gap below its sibling, so its own margin is
  * the board's gap less that. */
 .prn > .rd-end { margin-top: calc(var(--rd-gap) - var(--cpg-sec)); }
@@ -162,11 +183,13 @@
   margin-top: var(--s-1);
   font-size: 14px;
   font-weight: 540;
-  color: var(--accent-text);
-  text-decoration: none;
+  color: var(--cpg-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .2em;
 }
 @media (pointer: coarse) { .prn-go { min-height: 44px; } }
-.prn-go:hover { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; }
+.prn-go:hover { text-decoration-thickness: 2px; }
 .prn-go span { transition: transform var(--dur-2) var(--cpg-ease); }
 .prn-go:hover span, .prn-go:focus-visible span { transform: translateX(3px); }
 
@@ -176,18 +199,17 @@
  * bordered, rounded box around each `.prn-cx-row` and each `.prn-sn-fig`,
  * which put two and three equally weighted rounded rectangles inside a figure
  * that had no frame at all. Spectrum's own figures are the opposite shape: one
- * `--radius-3xl` panel on `--card` with `--shadow-l`, divided by rules.
- * `--radius-2xl` (18px) rather than 3xl here, because these panels are half the
- * width of the front door's. */
+ * panel on the raised ground, divided by rules. V3: radius 16, a hairline and no
+ * elevation shadow (the shadow was the last thing on the page that read as a card
+ * lifted off it). */
 .prn-proof { min-width: 0; }
 .prn-proof > figure {
   margin: 0;
   min-width: 0;
   padding: clamp(18px, 2.2vw, 26px);
   border: 1px solid var(--cpg-line);
-  border-radius: var(--radius-2xl);
+  border-radius: 16px;
   background: var(--cpg-card);
-  box-shadow: var(--shadow-m);
 }
 
 /* The caption under every computed proof — small, quiet, and the place the
@@ -246,7 +268,7 @@
   min-height: 240px;
   padding: var(--s-6);
   border-radius: var(--radius-xl);
-  background: var(--card);
+  background: var(--cpg-page);
 }
 .prn-cx-sample {
   font-size: clamp(36px, 7vw, 64px);
@@ -256,9 +278,9 @@
   white-space: nowrap;
   cursor: default;
 }
-.prn-cx-read { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; font-size: 15px; line-height: 1.4; color: var(--t1); }
-.prn-cx-ratio { font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -.04em; color: var(--t0); font-variant-numeric: tabular-nums; }
-.prn-cx-hex { font-family: var(--mono); font-size: 12px; color: var(--t1); }
+.prn-cx-read { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; font-size: 15px; line-height: 1.4; color: var(--cpg-dim); }
+.prn-cx-ratio { font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -.04em; color: var(--cpg-ink); font-variant-numeric: tabular-nums; }
+.prn-cx-hex { font-family: var(--mono); font-size: 12px; color: var(--cpg-dim); }
 
 /* Phone-only parts of the two tile pairs; the desktop figures do not show them. */
 .prn-cx-name, .prn-cx-verdict, .prn-cx-small,
@@ -302,7 +324,7 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-xl);
-  background: var(--card);
+  background: var(--cpg-card);
 }
 .prn-ty-row {
   display: grid;
@@ -316,12 +338,12 @@
   transition: opacity 300ms var(--ty-ease), transform 300ms var(--ty-ease);
   transition-delay: var(--dl, 0ms);
 }
-.prn-ty-row + .prn-ty-row { border-top: 1px solid var(--border); }
-.prn-ty-spec { font-family: var(--display); font-weight: 600; color: var(--t0); line-height: 1.1; letter-spacing: -.04em; }
-.prn-ty-name { font-size: 15px; color: var(--t1); }
+.prn-ty-row + .prn-ty-row { border-top: 1px solid var(--cpg-hair); }
+.prn-ty-spec { font-family: var(--display); font-weight: 600; color: var(--cpg-ink); line-height: 1.1; letter-spacing: -.04em; }
+.prn-ty-name { font-size: 15px; color: var(--cpg-dim); }
 .prn-ty-step { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); min-width: 0; }
-.prn-ty-px { font-family: var(--mono); font-size: 13px; color: var(--t0); font-variant-numeric: tabular-nums; }
-.prn-ty-x { font-family: var(--mono); font-size: 13px; color: var(--t1); transition: opacity 300ms var(--ty-ease); transition-delay: var(--dl, 0ms); }
+.prn-ty-px { font-family: var(--mono); font-size: 13px; color: var(--cpg-ink); font-variant-numeric: tabular-nums; }
+.prn-ty-x { font-family: var(--mono); font-size: 13px; color: var(--cpg-dim); transition: opacity 300ms var(--ty-ease); transition-delay: var(--dl, 0ms); }
 .prn-ty-rows[data-play="armed"] .prn-ty-row { opacity: 0; transform: translateY(12px); }
 .prn-ty-rows[data-play="armed"] .prn-ty-x { opacity: 0; }
 
@@ -422,18 +444,18 @@
     border-radius: var(--s-3);
     box-shadow: inset 0 0 0 1px var(--cpg-line);
   }
-  .prn-cx-cell { background: var(--bg-0); }
+  .prn-cx-cell { background: var(--cpg-page); }
   .prn-th-panel:first-child,
   .prn-th-panel:last-child { border-radius: var(--s-3); }
   .prn-cx-name, .prn-cx-verdict, .prn-cx-small,
   .prn-th-sample, .prn-th-verdict { display: block; }
   .prn-cx-big, .prn-th-aa { display: none; }
-  .prn-cx-name { order: 1; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--t0); }
+  .prn-cx-name { order: 1; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--cpg-ink); }
   .prn-cx-read { order: 2; display: contents; }
   .prn-cx-ratio { order: 2; margin-top: var(--s-2); font-size: 24px; line-height: 1.2; color: var(--cx-ink); }
-  .prn-cx-hex { order: 3; margin-top: var(--s-1); color: var(--t0); }
+  .prn-cx-hex { order: 3; margin-top: var(--s-1); color: var(--cpg-ink); }
   .prn-cx-sample { order: 4; margin-top: var(--s-2); font-size: 17px; line-height: 1.3; font-weight: 400; letter-spacing: 0; white-space: normal; }
-  .prn-cx-verdict { order: 5; margin-top: 2px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--t0); }
+  .prn-cx-verdict { order: 5; margin-top: 2px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--cpg-ink); }
 
   .prn-th-theme { order: 1; }
   .prn-th-read { order: 2; display: contents; }
@@ -456,31 +478,27 @@
   .prn-ty-step { display: contents; }
   .prn-ty-name { grid-area: name; padding: 10px 0; font-size: 12px; }
   .prn-ty-spec { grid-area: spec; padding: 10px 0; letter-spacing: -.03em; line-height: 1; }
-  .prn-ty-px { grid-area: px; justify-self: end; padding: 10px 0; font-size: 12px; color: var(--t1); }
-  .prn-ty-x { grid-area: x; padding: 2px 0 2px calc(32px + var(--s-3)); font-size: 12px; color: var(--t1); }
+  .prn-ty-px { grid-area: px; justify-self: end; padding: 10px 0; font-size: 12px; color: var(--cpg-dim); }
+  .prn-ty-x { grid-area: x; padding: 2px 0 2px calc(32px + var(--s-3)); font-size: 12px; color: var(--cpg-dim); }
 
   /* The export lists, as the board's .fmt: a quiet label, plain rows, no rule. */
   .prn-ex-cols { gap: 20px; }
   .prn-ex-d { display: none; }
   .prn-ex-m { display: inline; }
-  .prn-ex-h { margin: 0 0 var(--s-1); padding-bottom: 0; border-bottom: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--t1); }
+  .prn-ex-h { margin: 0 0 var(--s-1); padding-bottom: 0; border-bottom: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--cpg-dim); }
   .prn-ex-col ul,
   .prn-ex-col[data-unbuilt="true"] ul { gap: 0; font-size: 15px; line-height: 1.4; color: var(--cpg-ink); }
   .prn-ex-col li { padding: var(--s-1) 0; gap: var(--s-2); }
-  .prn-ex-col .soon-badge { padding: 0; border: 0; background: none; font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--t1); }
+  .prn-ex-col .soon-badge { padding: 0; border: 0; background: none; font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--cpg-dim); }
 
-  /* "Open ..." links: ink, underlined, no arrow. */
+  /* "Open ..." links: the same ink underline as the desktop rule (colour and thickness come
+   from it), the phone only sets the size and a wider offset, and drops the arrow. */
   .prn-go {
     margin-top: calc(var(--s-2) - var(--s-4));
     font-size: 15px;
     font-weight: 500;
-    color: var(--t0);
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, var(--t0) 35%, transparent);
-    text-decoration-thickness: 1px;
     text-underline-offset: 4px;
   }
-  .prn-go:hover { color: var(--t0); text-decoration-color: var(--t0); }
   .prn-go > span { display: none; }
 }
 
