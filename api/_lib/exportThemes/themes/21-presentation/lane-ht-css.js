@@ -231,6 +231,7 @@ export function htCss(ctx) {
 .ht-wm--st{flex-direction:column;gap:.15em}
 .ht-wm--st .ht-wm__s{font-size:1.9em;line-height:1}
 .ht-wm--st span{font-size:.55em;letter-spacing:.04em;text-transform:uppercase}
+.ht-mk .ht-wm{justify-content:flex-start}
 .ht-wm__s{font-weight:inherit}
 .ht-notes--bare{grid-template-columns:minmax(0,1fr)}
 .ht-notes--narrow{display:none}
@@ -252,7 +253,7 @@ export function htCss(ctx) {
 .ht-mks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:40px 32px;align-items:start}
 .ht-mk{display:flex;flex-direction:column;gap:12px;min-width:0}
 .ht-mk figcaption{font-size:14px;line-height:1.5;color:var(--s)}
-.ht-mk figcaption b{color:var(--t);font-weight:600}
+.ht-mk figcaption b{display:block;color:var(--t);font-weight:600}
 .ht-mk__card,.ht-mk__sign{container-type:inline-size;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:8cqw;width:100%;max-width:420px;box-sizing:border-box}
 .ht-mk__card{aspect-ratio:90/55}
 .ht-mk__sign{aspect-ratio:3/2;max-width:480px;padding:8% 8% 14%}

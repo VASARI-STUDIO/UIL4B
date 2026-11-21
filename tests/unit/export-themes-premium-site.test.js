@@ -209,3 +209,23 @@ test('a brand with nothing written yet gets a guide and a kit with no dashed box
     }
   }
 })
+
+test('theme 21 sites print no empty page, no editor words, no stock sample copy and no void closing tags, with or without a design', async () => {
+  for (const design of [DESIGN, {}]) {
+    for (const row of ['slides', 'ui-kit']) {
+      const res = fakeRes()
+      await serveExportDocument({ headers: { authorization: 'Bearer tok' }, body: { theme: '21-presentation', row, format: row === 'slides' ? 'html' : 'zip', design } }, res, deps())
+      assert.equal(res.code, 200, row)
+      const zip = await JSZip.loadAsync(res.buffer)
+      const names = Object.keys(zip.files)
+      for (const name of names.filter((n) => /^[^/]+\/[^/]+\.html$/.test(n) && !/example\.html$/.test(n))) {
+        const html = await zip.files[name].async('string')
+        assert.doesNotMatch(html, /Not written yet\.|Item 1|Main action|Example Street|undefined|NaN/, `${row} ${name}`)
+        assert.doesNotMatch(html, /&lt;\/input&gt;|class=&quot;&quot;/, `${row} ${name}: a void closing tag or an empty class in the markup shown`)
+      }
+      // every page the contents lists is in the zip: a page left out of the build is left out of the contents too
+      const root = names[0].split('/')[0], index = await zip.files[`${root}/index.html`].async('string')
+      for (const m of index.matchAll(/href="([^"#:]+\.html)"/g)) assert.ok(zip.files[`${root}/${m[1]}`], `${row}: the contents links to ${m[1]}, which is not in the zip`)
+    }
+  }
+})
