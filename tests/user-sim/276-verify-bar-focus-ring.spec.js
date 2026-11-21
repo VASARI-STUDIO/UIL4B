@@ -94,15 +94,14 @@ test.describe('a mouse at 1280px', () => {
 })
 
 // The styled dropdowns' closed trigger and the app's other controls share one
-// focus ring colour. Spec 243 pins it on the Type Scale trigger; this pins it
-// on the Icon Library pack menu, whose trigger carries its own class. A library
-// surface uses the V3 ink focus ring (--v3-ink), not the link colour.
-// FAILS IF: `.lbry-select:focus-visible` goes back to `var(--accent)` or
-// `var(--link)`, or sets its own outline colour.
+// focus ring colour (--link). Spec 243 pins it on the Type Scale trigger; this
+// pins it on the Icon Library pack menu, whose trigger carries its own class.
+// FAILS IF: `.menu-select-trigger:focus-visible` goes back to `var(--accent)`,
+// or `.lbry-select` sets its own outline colour.
 test.describe('the Icon pack trigger ring', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('is the V3 ink focus ring, as the other library controls', async ({ page }) => {
+  test('is the link colour, as the other controls', async ({ page }) => {
     watch(page, 'a keyboard user on the Icon pack menu')
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible()
@@ -113,8 +112,8 @@ test.describe('the Icon pack trigger ring', () => {
     await expect(trigger).toBeFocused()
     const ring = await trigger.evaluate((el) => {
       const probe = document.createElement('span')
-      probe.style.color = 'var(--v3-ink)'
-      // Beside the trigger, so it reads --v3-ink in the same scope (a library
+      probe.style.color = 'var(--link)'
+      // Beside the trigger, so it reads --link in the same scope (a library
       // surface can set its own).
       el.parentElement.append(probe)
       const link = getComputedStyle(probe).color
