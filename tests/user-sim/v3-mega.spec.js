@@ -8,8 +8,10 @@
 // MUTATIONS (each should fail the named test, then be put back):
 //   · In PillNav.jsx make a click on a hover-opened trigger close it (toggle ignores `openedBy`):
 //     "hover then click pins the menu" fails.
-//   · In v3-shell.css widen `.pnav-menu` back to `width:min(1100px,...)` or drop the
+//   · In v3-shell.css widen `.pnav-menu` to `width:min(1440px,...)` or drop the
 //     `left` placement effect (useLayoutEffect in PillNav.jsx): "the panel sits under its trigger" fails.
+//   · Give one menu its own width again (e.g. `.pnav-menu[data-menu="discover"]{width:640px}`), or drop
+//     the desktop `.pnav-menu-cols` min-height: "all three menus are one size" fails.
 //   · Remove `aria-current` from the row for the page (isHere in PillNav.jsx):
 //     "the row for this page is marked" fails.
 //   · Delete the 2x16 bar rule `.pnav-tool[aria-current="page"]::before`: the same test fails on the bar.
@@ -112,9 +114,29 @@ test.describe('desktop menus at 1440', () => {
       expect(p.x <= t.x + t.w).toBe(true)
       await page.keyboard.press('Escape')
     }
-    expect(widths.Create).toBeGreaterThan(widths.Discover)
-    expect(widths.Learn).toBeGreaterThan(widths.Discover)
     await ctx.close()
+  })
+
+  test('all three menus are one size on desktop, so switching menus never jumps', async ({ browser }) => {
+    for (const w of [1440, 1280, 1024]) {
+      const { ctx, page } = await open(browser, { width: w, height: 900 })
+      const sizes = {}
+      for (const name of ['Create', 'Discover', 'Learn']) {
+        await trig(page, name).click()
+        await expect(panel(page)).toBeVisible()
+        await page.waitForTimeout(300)
+        const p = await box(panel(page))
+        sizes[name] = { w: Math.round(p.w), h: Math.round(p.h) }
+        await page.keyboard.press('Escape')
+      }
+      for (const name of ['Discover', 'Learn']) {
+        expect(Math.abs(sizes[name].w - sizes.Create.w), `${name} width matches Create at ${w}`).toBeLessThanOrEqual(1)
+        expect(Math.abs(sizes[name].h - sizes.Create.h), `${name} height matches Create at ${w}`).toBeLessThanOrEqual(1)
+      }
+      // Wider than the old 960px Create menu wherever the screen has room for it.
+      if (w >= 1280) expect(sizes.Create.w, `menu width at ${w}`).toBeGreaterThan(960)
+      await ctx.close()
+    }
   })
 
   test('hover from closed opens a menu, and hovering a neighbour swaps it', async ({ browser }) => {

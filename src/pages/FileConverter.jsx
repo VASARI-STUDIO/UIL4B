@@ -39,11 +39,12 @@ import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from 
 import CropBox from '../components/converter/CropBox'
 import ResultPreview from '../components/converter/ResultPreview'
 import {
-  ANIMATION_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, ANIMATION_FORMATS, AUDIO_FORMATS, CENSOR_DEFAULTS, CENSOR_MODES, CENSOR_STRENGTH, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
   FPS_MAX, FPS_MIN, FRAME_EXPORTS, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
   MAX_ANIMATION_SIDE, MAX_FRAMES as ENGINE_MAX_FRAMES, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TRANSPARENT, TURNS,
-  animatedImageSeconds, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
-  outputFrames, outputSize, resolveFill, reverseFits, spriteFits, spriteLayout, splitPngStream, videoToAnimationArgs,
+  adjustChanged, adjustCss, animatedImageSeconds, clampAdjust, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
+  KEY_DEFAULTS, KEY_TOLERANCE, fileHasSound, isHexColour, outputFrames, outputSize, resolveFill, reverseFits, soundState, spriteFits, spriteLayout, splitPngStream,
+  VIDEO_FILE_FORMATS, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
 import {
@@ -1106,7 +1107,13 @@ function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, fact
           ) : (
             <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} onError={onError} />
           )}
-          {editor.box && size ? (
+          {editor.censor && size && (
+            <CropBox
+              box={editor.censor.box} size={size} onChange={editor.censor.onBox} disabled={editor.disabled}
+              ariaLabel="Censor box. Arrow keys move it, Alt with the arrow keys resizes it." tone="censor"
+            />
+          )}
+          {!editor.censor && editor.box && size ? (
             <CropBox box={editor.box} size={size} onChange={editor.onBox} disabled={editor.disabled} />
           ) : crop && size && (
             <div
@@ -1220,11 +1227,11 @@ const READ_TIMEOUT_MS = 5000
 // ── Mode 3: Video → an animated file ─────────────────────────────────────────
 // This was "Video → GIF". The engine it already loaded writes four more
 // formats for the cost of a different argument list (utils/mediaEncode.js), so
-// the same panel now offers GIF, animated WebP, APNG, MP4 and WebM. GIF stays
-// the default and its command is unchanged for the default settings, which
-// tests/unit/media-encode.test.js pins. Sound is dropped in every format:
-// these are loops for a page, and saying so is better than a silent track
-// that sometimes survives.
+// the same panel now offers GIF, animated WebP, APNG, MP4, WebM, MOV and MKV,
+// plus the sound alone as MP3. GIF stays the default and its command is
+// unchanged for the default settings, which tests/unit/media-encode.test.js
+// pins. Sound is kept in the video files when "Keep sound" is on (AAC in MP4,
+// MOV and MKV, Opus in WebM); GIF, WebP and APNG cannot hold it, and say so.
 //
 // It is also a small editor: crop to a shape, turn and flip, change speed, play
 // forward, backward or as a boomerang, and (for GIF) choose colours and
@@ -1261,6 +1268,11 @@ function VideoConvert({ toast }) {
   const [flipV, setFlipV] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [direction, setDirection] = useState('forward')
+  const [adjust, setAdjust] = useState(ADJUST_DEFAULTS) // the Look group: colour, hue, blur, fades
+  const [censor, setCensor] = useState(CENSOR_DEFAULTS) // the Add group: one region pixelated or blurred
+  const [colourKey, setColourKey] = useState(KEY_DEFAULTS) // the Add group: one colour made clear
+  const [sound, setSound] = useState(true) // keep the clip's sound where the format can hold it
+  const [soundProbe, setSoundProbe] = useState({ file: null, has: null }) // what the file's header says about sound
   const [colours, setColours] = useState(SIZE_DEFAULTS.colours)
   const [dither, setDither] = useState(SIZE_DEFAULTS.dither)
   // The tool rail: which group of controls is open, and where the rail sits.
@@ -1277,8 +1289,8 @@ function VideoConvert({ toast }) {
   // The edits as one value, for Undo and Redo. The controls above stay plain
   // state; stepping back writes an earlier recipe into them all at once.
   const recipe = useMemo(
-    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction }),
-    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction],
+    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust, censor, colourKey }),
+    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust, censor, colourKey],
   )
   const history = useEditHistory(recipe, (r) => {
     setTrimStart(r.trimStart)
@@ -1296,6 +1308,9 @@ function VideoConvert({ toast }) {
     setFlipV(r.flipV)
     setSpeed(r.speed)
     setDirection(r.direction)
+    setAdjust(r.adjust)
+    setCensor(r.censor)
+    setColourKey(r.colourKey)
   }, !!srcUrl && !job)
   const resetEdits = history.reset
   const videoRef = useRef(null)
@@ -1354,6 +1369,15 @@ function VideoConvert({ toast }) {
     return () => { live = false }
   }, [file, isImage])
 
+  // Whether the file has a sound track: read from the container's header, as a
+  // browser will not say. null (could not tell) leaves the toggle on.
+  useEffect(() => {
+    if (!file || isImage) return undefined
+    let live = true
+    fileHasSound(file).catch(() => null).then(has => { if (live) setSoundProbe({ file, has }) })
+    return () => { live = false }
+  }, [file, isImage])
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -1379,7 +1403,9 @@ function VideoConvert({ toast }) {
     setFit('crop')
     setView('before')
     // The edits above are the new file's starting point, not steps to undo.
-    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop' })
+    // The censor box is in this file's pixels, so it does not carry over.
+    setCensor(CENSOR_DEFAULTS)
+    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop', censor: CENSOR_DEFAULTS })
   }, [srcUrl, result, toast, resetEdits])
 
   // Picking Custom starts a box a tenth in from every edge, so there is
@@ -1406,7 +1432,19 @@ function VideoConvert({ toast }) {
   const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop: plan.frame, turn, width }) : null
   // Transparent only where the format can hold it; MP4 gets the colour.
   const outside = resolveFill(fmt, fill === TRANSPARENT && fmt.alpha ? TRANSPARENT : fillColour)
-  const outsideShown = !!pad || cut !== 'none'
+  // Censor and colour key apply to the picture, so a sound-only output has neither. The censor
+  // box is held to the picture here, so a stale box can never reach the encoder.
+  const censorOn = censor.on
+  const censorMode = censor.mode
+  const censorStrength = censor.strength
+  const censorBox = censor.box
+  const soundOnlyOut = fmt.kind === 'audio'
+  const cen = useMemo(() => {
+    const held = !soundOnlyOut && censorOn && censorBox && srcSize ? clampBox(censorBox, srcSize.w, srcSize.h) : null
+    return held ? { on: true, mode: censorMode, strength: censorStrength, box: held } : null
+  }, [soundOnlyOut, censorOn, censorMode, censorStrength, censorBox, srcSize])
+  const keyOn = !soundOnlyOut && colourKey.on && isHexColour(colourKey.colour) ? colourKey : null
+  const outsideShown = !!pad || cut !== 'none' || !!keyOn
   const unreadable = srcFailed && !srcSize
   // The length Reverse is measured against: the clip for a video, the header's
   // sum of frame delays for a GIF or WebP. 0 means it is not known.
@@ -1421,7 +1459,8 @@ function VideoConvert({ toast }) {
       : secs <= 0 || !outSize ? 'unknown'
         : reverseFits(forwardFrames, outSize.w, outSize.h) ? null : 'long'
   const reverseOk = reverseWhy === null
-  const dir = reverseOk ? direction : 'forward'
+  const isAudio = fmt.kind === 'audio'
+  const dir = reverseOk && !isAudio ? direction : 'forward'
   // A direction that no longer fits falls back to Forward (adjusted during
   // render, the supported way to derive state from a change in other state).
   if (!reverseOk && direction !== 'forward') setDirection('forward')
@@ -1431,6 +1470,21 @@ function VideoConvert({ toast }) {
   const isFramesOut = fmt.id === 'frames'
   const isSprite = fmt.id === 'sprite'
   const isFrameExport = isFramesOut || isSprite
+  // Sound: true or false when the file's header said, null when it did not. A GIF
+  // or WebP has none to keep.
+  const hasSound = isImage ? false : soundProbe.file === file ? soundProbe.has : null
+  const snd = soundState(fmt, { hasSound, direction: dir })
+  const soundOn = isAudio || (sound && snd.ok)
+  // The Look group's values, or null while they are all untouched (then no filter is built).
+  const adj = !isAudio && adjustChanged(adjust) ? clampAdjust(adjust) : null
+  const setAdj = (id, value) => setAdjust(a => ({ ...a, [id]: value }))
+  // Turning Censor on gives it a box to drag, a third of the picture in the middle.
+  const toggleCensor = () => setCensor(c => {
+    if (c.on) return { ...c, on: false }
+    const s = srcSize
+    const box = c.box || (s ? clampBox({ x: s.w / 3, y: s.h / 3, w: s.w / 3, h: s.h / 3 }, s.w, s.h) : null)
+    return { ...c, on: true, box }
+  })
   // The sheet's grid, from how many frames the edits make (the engine writes at
   // most ENGINE_MAX_FRAMES). Not known while the clip's length is not.
   const sheet = isSprite && frames > 0 && outSize ? spriteLayout(Math.min(frames, ENGINE_MAX_FRAMES), outSize.w, outSize.h) : null
@@ -1441,6 +1495,7 @@ function VideoConvert({ toast }) {
   const sig = JSON.stringify([
     format, fps, width, isGif || isFrameExport ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir,
     isGif ? colours : 0, isGif ? dither : 0, shape === 'custom' ? box : 0, shape === 'original' ? 0 : fit, cut, cut === 'rounded' ? radius : 0, outsideShown ? outside : 0,
+    soundOn, adj, cen, keyOn,
   ])
 
   const convert = useCallback(async () => {
@@ -1492,7 +1547,7 @@ function VideoConvert({ toast }) {
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
-          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither,
+          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn, adjust: adj, seconds: outSeconds, censor: cen, key: keyOn,
           fill: outside.transparent ? TRANSPARENT : outside.colour, cut, radius, sheet, maxFrames: ENGINE_MAX_FRAMES,
         }),
         output: `output.${target.engineExt || target.ext}`,
@@ -1516,7 +1571,7 @@ function VideoConvert({ toast }) {
         blob = new Blob([bytes], { type: target.mime })
       }
       revealNext.current = true
-      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sound: soundOn && !isAudio, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
       setJob(null)
       toast(`${target.label} ready`)
     } catch (err) {
@@ -1528,7 +1583,7 @@ function VideoConvert({ toast }) {
           ? UNREADABLE_VIDEO_NOTE
           : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, adj, outSeconds, cen, keyOn, toast])
 
   const cancel = () => {
     runRef.current++
@@ -1576,7 +1631,7 @@ function VideoConvert({ toast }) {
     setView(v)
     if (v === 'after') videoRef.current?.pause()
   }
-  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable
+  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable && !isAudio
   const speedOptions = SPEEDS.map(s => ({ id: s.id, label: s.label, name: s.name }))
   const flipBtn = (axis, on, set) => (
     <button
@@ -1593,12 +1648,14 @@ function VideoConvert({ toast }) {
 
   const consequence = !srcSize
     ? (unreadable ? NO_PREVIEW_NOTE : 'Reading the file…')
-    : isSprite && sheet
+    : isAudio
+      ? (hasSound === false ? 'This file has no sound to save' : `MP3 · sound only${frames > 0 ? ` · ${outSeconds.toFixed(1)} s` : ''}`)
+      : isSprite && sheet
       ? `${sheet.cols} × ${sheet.rows} sheet · ${sheet.w} × ${sheet.h} px`
       : isFramesOut && frames > 0
         ? `${Math.min(frames, ENGINE_MAX_FRAMES)} PNG${frames === 1 ? '' : 's'} · ${outSize.w} × ${outSize.h} px each`
-        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
-  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : `Convert to ${fmt.label}`
+        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '') + (soundOn ? ' · with sound' : '')
+  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : isAudio ? 'Save sound as MP3' : `Convert to ${fmt.label}`
   const resultName = result?.format === 'frames' ? `${base}-frames.zip` : result?.format === 'sprite' ? `${base}-sprite.png` : `${base}.${resultFmt?.ext}`
   const resultNoun = FRAME_NOUN[result?.format] || resultFmt?.label
 
@@ -1606,10 +1663,10 @@ function VideoConvert({ toast }) {
   // fields and their state), so nothing is lost by closing a group; the open
   // one is the only one shown. A group with no controls is left out: the Clip
   // group only exists once the length is known.
-  const groups = presentGroups({ hasDuration: duration > 0 })
+  const groups = presentGroups({ hasDuration: duration > 0, audioOnly: isAudio })
   const openGroup = activeOf(groups, group)?.id
   const marks = groupMarks({
-    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction,
+    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction, adjust, censor, colourKey,
     fps, width, quality, plays, colours, dither,
   })
   const panel = (id, body) => (
@@ -1658,7 +1715,7 @@ function VideoConvert({ toast }) {
           accept={ACCEPT_VIDEO}
           onFiles={onFiles}
           hint="Drop a video or GIF to edit and convert"
-          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4 or WebM."
+          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4, WebM, MOV or MKV, or keep just the sound as MP3."
         />
       ) : (
         <div className="fc-bench fc-bench--rail">
@@ -1668,7 +1725,7 @@ function VideoConvert({ toast }) {
               srcUrl={srcUrl}
               videoRef={videoRef}
               imgRef={imgRef}
-              toggle={srcSize && !unreadable ? (
+              toggle={srcSize && !unreadable && !isAudio ? (
                 <Segmented id="fc-vid-view" label="Preview" options={VIEW_MODES} value={view} onChange={switchView} className="fc-seg--view" />
               ) : null}
               after={previewReady ? (
@@ -1676,6 +1733,7 @@ function VideoConvert({ toast }) {
                   mediaRef={isImage ? imgRef : videoRef} isImage={isImage} srcSize={srcSize} plan={plan}
                   turn={turn} flipH={flipH} flipV={flipV} cut={cut} radius={radius} outside={outside}
                   outSize={outSize} dir={dir} speed={speed} fps={fps} start={start} len={secs} facts={consequence}
+                  filter={adj && outSize ? adjustCss(adj, { scale: Math.min(1, 560 / outSize.w) }) : ''}
                 />
               ) : null}
               edits={<EditBar history={history} disabled={working} />}
@@ -1692,8 +1750,12 @@ function VideoConvert({ toast }) {
                 isImage,
                 size: srcSize,
                 crop,
-                box: shape === 'custom' ? box : null,
+                box: shape === 'custom' && !isAudio ? box : null,
                 onBox: setBox,
+                // The censor box is drawn only while the Add group is open, in place of the crop box.
+                censor: openGroup === 'add' && !isAudio && !isImage && censor.on && censor.box
+                  ? { box: censor.box, onBox: b => setCensor(c => ({ ...c, box: b })) }
+                  : null,
                 disabled: working,
                 hidden: previewReady,
                 onImageLoad: (w, h) => { if (w > 0 && h > 0) setSrcSize({ w, h }) },
@@ -1711,7 +1773,9 @@ function VideoConvert({ toast }) {
               <section className="fc-result" aria-label="Result" ref={resultRef}>
                 <h2 className="fc-eyebrow">Result</h2>
                 {resultFmt.kind === 'video' ? (
-                  <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
+                  <video className="fc-result-media" src={result.url} controls loop muted={!result.sound} playsInline aria-label={`${resultFmt.label} result`} />
+                ) : resultFmt.kind === 'audio' ? (
+                  <audio className="fc-result-media" src={result.url} controls aria-label={`${resultFmt.label} result`} />
                 ) : resultFmt.kind === 'frames' ? null : (
                   <img className="fc-result-media" src={result.url} alt={`${resultFmt.label} result`} />
                 )}
@@ -1719,6 +1783,9 @@ function VideoConvert({ toast }) {
                   {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
                   {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
                 </p>
+                {(result.format === 'mov' || result.format === 'mkv') && (
+                  <p className="fc-note">Some browsers can’t play {resultFmt.label.slice(0, 3)} here. The file is fine; open it in a video player.</p>
+                )}
                 {result.format === 'frames' && result.size && (
                   <p className="fc-note">{result.count} numbered PNG file{result.count === 1 ? '' : 's'}, {result.size.w} × {result.size.h} px each.</p>
                 )}
@@ -1746,6 +1813,12 @@ function VideoConvert({ toast }) {
                 <optgroup label="Animation">
                   {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </optgroup>
+                <optgroup label="Video file">
+                  {VIDEO_FILE_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
+                <optgroup label="Sound">
+                  {AUDIO_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
                 <optgroup label="Frames">
                   {FRAME_EXPORTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </optgroup>
@@ -1759,7 +1832,21 @@ function VideoConvert({ toast }) {
                         : 'Every frame the edits make, tiled in one PNG.'}
                 </p>
               )}
-              {!isFrameExport && <p className="fc-note">Sound is removed</p>}
+              {isAudio ? (
+                <p className="fc-note">{hasSound === false ? 'This file has no sound, so there is nothing to save as MP3.' : 'Saves the sound only, with no picture.'}</p>
+              ) : !isFrameExport && (
+                <>
+                  <button
+                    type="button" id="fc-vid-sound" className="fc-btn fc-toggle" aria-pressed={soundOn}
+                    disabled={working || !snd.ok} onClick={() => setSound(!sound)}
+                  >
+                    Keep sound
+                  </button>
+                  <p className="fc-note">
+                    {!snd.ok ? `${snd.why}.` : sound ? `Sound is kept as ${fmt.sound}.` : 'Sound is removed.'}
+                  </p>
+                </>
+              )}
             </div>
             {duration > 0 && panel('clip', (
               <div className="fc-insp-sec">
@@ -1852,7 +1939,7 @@ function VideoConvert({ toast }) {
                         value={fillColour} onChange={setFillColour} disabled={working}
                         ariaLabel="Outside colour" triggerClassName="fc-bg-pick"
                       />
-                      <p className="fc-note">{pad ? 'Colour of the bars' : 'Colour outside the cut-out'}</p>
+                      <p className="fc-note">{pad ? 'Colour of the bars' : cut !== 'none' ? 'Colour outside the cut-out' : 'Colour shown where the removed colour was'}</p>
                     </div>
                   )}
                   {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency, so the outside is filled with a colour.</p>}
@@ -1871,20 +1958,111 @@ function VideoConvert({ toast }) {
               {(turn !== 0 || flipH || flipV) && <p className="fc-note">Turn and flip show in the result, not the preview.</p>}
             </div>
             ))}
+            {panel('look', (
+            <div className="fc-insp-sec">
+              {ADJUST_FIELDS.map(f => {
+                const v = clampAdjust(adjust)[f.id]
+                return (
+                  <div className="fc-adj" key={f.id}>
+                    <div className="fc-adj-head">
+                      <label className="fc-eyebrow" htmlFor={`fc-vid-adj-${f.id}`}>{f.label}</label>
+                      <output className="fc-adj-val" htmlFor={`fc-vid-adj-${f.id}`}>{f.signed && v > 0 ? '+' : ''}{v}{f.unit}</output>
+                    </div>
+                    <input
+                      id={`fc-vid-adj-${f.id}`} type="range" className="fc-scrub fc-adj-range"
+                      min={f.min} max={f.max} step={f.step} value={v} disabled={working}
+                      onChange={e => setAdj(f.id, Number(e.target.value))}
+                    />
+                  </div>
+                )
+              })}
+              <button type="button" className="fc-btn fc-btn--quiet" onClick={() => setAdjust(ADJUST_DEFAULTS)} disabled={working || !adjustChanged(adjust)}>
+                Reset adjustments
+              </button>
+              <p className="fc-note">
+                {adjustChanged(adjust) ? 'Colour, hue and blur show in the After preview (blur is approximate). ' : ''}
+                Fades show in the saved file only.
+                {clampAdjust(adjust).fadeOut > 0 && !(outSeconds > 0) ? ' Fade out needs this file’s length, which it does not give, so it is left out.' : ''}
+              </p>
+            </div>
+            ))}
+            {panel('add', (
+            <>
+            <div className="fc-insp-sec">
+              <button
+                type="button" id="fc-vid-censor" className="fc-btn fc-toggle" aria-pressed={censor.on}
+                disabled={working || !srcSize || isImage} onClick={toggleCensor}
+              >
+                Censor a region
+              </button>
+              {censor.on && (
+                <>
+                  <Segmented id="fc-vid-censor-mode" label="Style" options={CENSOR_MODES} value={censor.mode} onChange={id => setCensor(c => ({ ...c, mode: id }))} disabled={working} />
+                  <label className="fc-eyebrow" htmlFor="fc-vid-censor-strength">Strength</label>
+                  <input
+                    id="fc-vid-censor-strength" type="range" className="fc-scrub fc-adj-range"
+                    min={CENSOR_STRENGTH.min} max={CENSOR_STRENGTH.max} step={1} value={censor.strength} disabled={working}
+                    onChange={e => setCensor(c => ({ ...c, strength: Number(e.target.value) }))}
+                  />
+                </>
+              )}
+              <p className="fc-note">
+                {isImage ? 'Censor works on video files, not on an animated image.'
+                  : censor.on ? 'Drag the box on the preview, or move it with the arrow keys. It shows in the saved file, not the preview.'
+                    : 'Pixelate or blur one rectangle of every frame, such as a face or a plate.'}
+              </p>
+            </div>
+            <div className="fc-insp-sec">
+              <button
+                type="button" id="fc-vid-key" className="fc-btn fc-toggle" aria-pressed={colourKey.on}
+                disabled={working || isAudio} onClick={() => setColourKey(k => ({ ...k, on: !k.on }))}
+              >
+                Remove a colour
+              </button>
+              {colourKey.on && (
+                <>
+                  <div className="fc-row">
+                    <ColorPickerPop
+                      value={colourKey.colour} onChange={c => setColourKey(k => ({ ...k, colour: c }))} disabled={working}
+                      ariaLabel="Colour to remove" triggerClassName="fc-bg-pick"
+                    />
+                    <p className="fc-note">The colour made clear, such as a green screen</p>
+                  </div>
+                  <div className="fc-adj-head">
+                    <label className="fc-eyebrow" htmlFor="fc-vid-key-tol">Tolerance</label>
+                    <output className="fc-adj-val" htmlFor="fc-vid-key-tol">{colourKey.tolerance}%</output>
+                  </div>
+                  <input
+                    id="fc-vid-key-tol" type="range" className="fc-scrub fc-adj-range"
+                    min={KEY_TOLERANCE.min} max={KEY_TOLERANCE.max} step={1} value={colourKey.tolerance} disabled={working}
+                    onChange={e => setColourKey(k => ({ ...k, tolerance: Number(e.target.value) }))}
+                  />
+                </>
+              )}
+              <p className="fc-note">
+                {colourKey.on
+                  ? (outside.transparent ? 'The colour becomes clear in the saved file.' : `${fmt.label} has no transparency, so the colour is replaced by the Outside colour (set it in Crop).`)
+                  : 'Make one colour see-through, or replace it with the Outside colour where the format cannot be clear.'}
+              </p>
+            </div>
+            </>
+            ))}
             {panel('time', (
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-speed" label="Speed" options={speedOptions} value={speed} onChange={setSpeed} disabled={working} className="fc-seg--speed" />
               <p className="fc-note">{isImage ? 'Speed shows in the result.' : 'The preview plays at this speed.'}</p>
+              {!isAudio && (
               <Segmented
                 id="fc-vid-direction" label="Direction" options={DIRECTIONS} value={dir} onChange={setDirection} disabled={working}
                 isOptionDisabled={o => o.id !== 'forward' && !reverseOk}
               />
-              {reverseWhy === 'long' ? (
+              )}
+              {isAudio ? null : reverseWhy === 'long' ? (
                 <p className="fc-note">{REVERSE_OFF_NOTE}</p>
               ) : reverseWhy === 'unknown' ? (
                 <p className="fc-note">{REVERSE_UNKNOWN_NOTE}</p>
               ) : dir !== 'forward' ? (
-                <p className="fc-note">Shows in the result, not the preview.</p>
+                <p className="fc-note">Shows in the result, not the preview. The sound is removed.</p>
               ) : null}
             </div>
             ))}
@@ -1957,7 +2135,7 @@ function VideoConvert({ toast }) {
           {railLayout === 'bar' && rail}
           <div className="fc-actionbar fc-actions">
             <p className="fc-note fc-consequence" aria-live="polite">{consequence}</p>
-            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy))}>
+            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy)) || (isAudio && hasSound === false)}>
               {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : actionLabel}
             </button>
             <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />

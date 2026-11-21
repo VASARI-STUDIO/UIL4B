@@ -15,7 +15,10 @@ const CORNERS = ['nw', 'ne', 'sw', 'se']
 const KEY_STEP = 2
 const KEY_STEP_BIG = 20
 
-export default function CropBox({ box, size, onChange, disabled = false }) {
+export default function CropBox({
+  box, size, onChange, disabled = false,
+  ariaLabel = 'Crop box. Arrow keys move it, Alt with the arrow keys resizes it.', tone,
+}) {
   const drag = useRef(null)
 
   const begin = (e, handle) => {
@@ -52,7 +55,8 @@ export default function CropBox({ box, size, onChange, disabled = false }) {
       className="fc-crop-keep fc-crop-box"
       role="group"
       tabIndex={disabled ? -1 : 0}
-      aria-label="Crop box. Arrow keys move it, Alt with the arrow keys resizes it."
+      aria-label={ariaLabel}
+      data-tone={tone}
       data-disabled={disabled || undefined}
       style={{
         left: `${(box.x / size.w) * 100}%`,

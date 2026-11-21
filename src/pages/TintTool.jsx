@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import ColorPickerPop from '../components/ColorPickerPop'
 import ExportMenu from '../components/tool/ExportMenu'
 import SaveToProjectDialog from '../components/tool/SaveToProjectDialog'
+import TintPreview from '../components/tool/TintPreview'
 import { useGatedDownload } from '../components/converter/shared'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import {
@@ -21,7 +22,7 @@ import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 import { partsPresent } from '../utils/userHome'
 import { activeColour, tintsFor, tintsNeedWrite } from '../utils/projectTints'
 // The ramp is shared with the Palette Builder's swatch tints.
-import { buildRamp, LIGHTNESS_RANGE, SATURATION_MAX } from '../utils/tintRamp'
+import { buildRamp, curveIconPath, LIGHTNESS_RANGE, SATURATION_MAX } from '../utils/tintRamp'
 // The page's own sheet; every rule is scoped under `.tt`, the page root.
 import '../styles/pages/tint.css'
 
@@ -67,6 +68,9 @@ function normaliseHex(raw) {
 }
 
 const CURVES = ['Even', 'Soft ends', 'High contrast']
+// Each curve option's icon, plotted from the ramp's own lightness function.
+const CURVE_ICONS = CURVES.map((_, i) => curveIconPath(i))
+const VIEWS = [{ value: 'ramp', label: 'Ramp' }, { value: 'preview', label: 'Preview' }]
 const SPACINGS = [
   { value: 'perceived', label: 'Perceived', title: 'Steps look evenly spaced (OKLCH lightness)' },
   { value: 'linear', label: 'Linear', title: 'Steps are evenly spaced in light (linear sRGB)' },
@@ -114,11 +118,14 @@ function barRef(color, pct) {
 // note's description is the tooltip body (the head and the rows); the long help
 // paragraph sits in the card but outside it, so a screen reader is not read it
 // again on every note.
-function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, side, sideStyle, ghost }) {
+// A card that follows hover or focus is drawn through a portal into the page's
+// tooltip host and placed with `pos` (fixed offsets), so the notes list, which
+// scrolls, cannot clip it. A pinned card (a tap) is not: it sits inline, under its note.
+function ContrastTip({ id, step, open, above, inline, maxHeight, compact, side, pos, ghost, host }) {
   const notes = contrastNotes(step.hex)
-  const cls = ['tt-tip', end && 'tt-tip--end', above && 'tt-tip--above', inline && 'tt-tip--inline', compact && 'tt-tip--compact', side && `tt-tip--${side}`, ghost && 'tt-tip--ghost'].filter(Boolean).join(' ')
-  return (
-    <span className={cls} data-open={open ? 'true' : undefined} style={sideStyle}>
+  const cls = ['tt-tip', above && 'tt-tip--above', inline && 'tt-tip--inline', compact && 'tt-tip--compact', side && `tt-tip--${side}`, ghost && 'tt-tip--ghost'].filter(Boolean).join(' ')
+  const tip = (
+    <span className={cls} data-open={open ? 'true' : undefined} style={pos}>
       {/* tabIndex -1: a card that scrolls would otherwise be a Tab stop of its own. */}
       <span className="tt-tip-card" tabIndex={-1} style={maxHeight ? { maxHeight } : undefined}>
         <span id={id} role="tooltip" className="tt-tip-body">
@@ -142,17 +149,36 @@ function ContrastTip({ id, step, open, end, above, inline, maxHeight, compact, s
       </span>
     </span>
   )
+  if (inline) return tip
+  return host ? createPortal(tip, host) : null
+}
+
+// Where a hover card sits: fixed offsets from its note's rect and the placement
+// openTip chose. The card's box includes the 6px bridge padding, so it starts at
+// the note's edge. Inline (below / above) it stays inside the window's side margins.
+function tipPlacement(place, rect, end) {
+  const s = place.sideStyle
+  if (place.side === 'right') {
+    if (place.far) return { top: rect.top + s.top, left: rect.left + s.left, width: s.width, paddingLeft: s.paddingLeft }
+    return { top: rect.top + s.top, left: rect.right, width: s.width }
+  }
+  if (place.side === 'left') return { top: rect.top + s.top, right: window.innerWidth - rect.left, width: s.width }
+  const width = Math.min(TIP_WIDTH, window.innerWidth - 24)
+  const left = Math.max(12, Math.min(end ? rect.right - width : rect.left, window.innerWidth - 12 - width))
+  return place.above ? { bottom: window.innerHeight - rect.top, left, width } : { top: rect.bottom, left, width }
 }
 
 // A note's tooltip box: its card and the padding that bridges the card to the note.
 const tipBox = (label) => document.getElementById(`tt-tip-${label}`)?.closest('.tt-tip')
+// The note's wrapper. The card is in a portal, so it is found by label, not by ancestry.
+const noteWrap = (label) => document.querySelector(`.tt .tt-note-wrap[data-tip-for="${label}"]`)
 
 // The click-through card beside its note stays while the pointer is on the note
 // or anywhere in the card's box (the bridge included); the pointer on another
 // note under the card opens that note's card instead.
 function pointerHolds(e, label) {
   const tip = tipBox(label)
-  const rects = [tip?.querySelector('.tt-tip-card'), tip, tip?.closest('.tt-note-wrap')].filter(Boolean).map((n) => n.getBoundingClientRect())
+  const rects = [tip?.querySelector('.tt-tip-card'), tip, noteWrap(label)].filter(Boolean).map((n) => n.getBoundingClientRect())
   return rects.some((r) => e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom)
 }
 
@@ -199,6 +225,13 @@ export default function TintTool({ onCopy, toast }) {
   // runs out TIP_HOLD_MS after the pointer last got nearer the card. Then a
   // pointer that stays over a note opens it, and one over none lets the card go.
   const holdRef = useRef({ held: null, pending: null, timer: 0, inside: null, last: null })
+  // Ramp or Preview, in the toolbar. Not kept, like the other Tint settings.
+  // `swapped` turns the fade-in on once the person has changed it (not on open).
+  const [view, setView] = useState('ramp')
+  const [swapped, setSwapped] = useState(false)
+  // Where hover cards are drawn (see ContrastTip): a node inside `.tt`.
+  const [tipHost, setTipHost] = useState(null)
+  const listRef = useRef(null)
   const [copiedHex, setCopiedHex] = useState('')
   const [saveOpen, setSaveOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -257,6 +290,32 @@ export default function TintTool({ onCopy, toast }) {
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keptKey])
+
+  // The notes list scrolls inside its card when the window is short: a fade at the
+  // edge that has more says so. data-fade is "top", "bottom", "top bottom" or absent.
+  const stepCount = steps
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return undefined
+    const update = () => {
+      const more = el.scrollHeight - el.clientHeight > 1
+      const top = more && el.scrollTop > 1
+      const bottom = more && el.scrollTop + el.clientHeight < el.scrollHeight - 1
+      const v = top && bottom ? 'top bottom' : bottom ? 'bottom' : top ? 'top' : ''
+      if (v) el.setAttribute('data-fade', v)
+      else el.removeAttribute('data-fade')
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null
+    ro?.observe(el)
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      ro?.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [stepCount])
 
   const varName = (ri, label) => (multi ? `--tint-${ri + 1}-${label}` : `--tint-${label}`)
   const cssFor = (ri) => `:root {\n${scales[ri].steps.map((t) => `  ${varName(ri, t.label)}: ${t.hex};`).join('\n')}\n}`
@@ -390,7 +449,7 @@ export default function TintTool({ onCopy, toast }) {
         if (room < TIP_COMPACT_HEIGHT) place.maxHeight = Math.max(0, Math.floor(room))
       }
     }
-    setTip({ label, pinned, end, pointer: byPointer, ...place })
+    setTip({ label, pinned, pointer: byPointer, ...place, pos: tipPlacement(place, rect, end) })
   }
   // The hold ends TIP_HOLD_MS after the pointer last got nearer the card: the note
   // the pointer is over takes the hover, or, over no note, the card goes.
@@ -435,6 +494,34 @@ export default function TintTool({ onCopy, toast }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // A hover card is fixed to the window, so a scroll (the notes list, or the page)
+  // would leave it behind its note. It follows the note while that is still in
+  // the list's visible rect, and closes when it is not.
+  const hoverLabel = tip && !tip.pinned ? tip.label : null
+  const hoverPointer = !!tip?.pointer
+  useEffect(() => {
+    if (!hoverLabel) return undefined
+    let raf = 0
+    const onScroll = (e) => {
+      if (e.target?.closest?.('.tt-tip')) return
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const wrap = noteWrap(hoverLabel)
+        const list = wrap?.parentElement
+        if (!wrap || !list) { setTip(null); return }
+        const r = wrap.getBoundingClientRect()
+        const v = list.getBoundingClientRect()
+        if (r.bottom <= v.top + 4 || r.top >= v.bottom - 4) setTip(null)
+        else openTip(hoverLabel, wrap, false, hoverPointer)
+      })
+    }
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
+    return () => {
+      cancelAnimationFrame(raf)
+      document.removeEventListener('scroll', onScroll, { capture: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoverLabel, hoverPointer])
   const ghostHeld = tip?.ghost && tip.pointer && !tip.pinned
   useEffect(() => {
     if (!ghostHeld) return undefined
@@ -548,12 +635,20 @@ export default function TintTool({ onCopy, toast }) {
   const lightnessTrack = `linear-gradient(90deg,${oklchToHex(0.3, trackChroma, scale.hue)},${oklchToHex(0.93, trackChroma, scale.hue)})`
   const saturationTrack = `linear-gradient(90deg,${oklchToHex(0.62, 0, scale.hue)},${oklchToHex(0.62, Math.max(0.04, scale.chroma * 1.5), scale.hue)})`
 
+  const pickView = (v) => { setSwapped(true); setView(v) }
+  const viewPills = (onPick) => <ToolPills label="View" className="tt-view" options={VIEWS} value={view} onChange={onPick} />
+
   return (
     <ToolLayout
       className="tt"
       title="Tint"
       titleId="tt-title"
-      items={[]}
+      items={[{
+        id: 'tt-view',
+        render: () => viewPills(pickView),
+        menu: (close) => viewPills((v) => { pickView(v); close() }),
+        priority: 10,
+      }]}
       primary={<ExportMenu items={exportItems} />}
     >
       {saveOpen && (
@@ -573,20 +668,33 @@ export default function TintTool({ onCopy, toast }) {
       )}
       <ToolGrid>
         <ToolMain>
-          <div className="tt-cols" data-steps={steps} role="group" aria-label={`${multi ? `Scale ${selIndex + 1}, ` : ''}${steps} steps`}>
-            {scale.steps.map((t) => (
-              <button
-                key={t.label}
-                type="button"
-                className="tt-cell"
-                ref={cellRef(t.hex)}
-                onClick={() => copyHex(t.hex)}
-                title={`${t.label} · ${t.hex}`}
-                aria-label={`Copy ${t.label} swatch ${t.hex}`}
-              >
-                <span className="tt-cell-step">{t.label}</span>
-              </button>
-            ))}
+          <div className="tt-stage" data-view={view} data-swapped={swapped ? 'true' : undefined}>
+            {view === 'preview' ? (
+              <TintPreview
+                ramp={scale.steps}
+                count={steps}
+                source={selIndex + 1}
+                sourceCount={sources.length}
+                sourceHex={selected.hex}
+              />
+            ) : (
+              <div className="tt-cols" data-steps={steps} role="group" aria-label={`${multi ? `Scale ${selIndex + 1}, ` : ''}${steps} steps`}>
+                {scale.steps.map((t) => (
+                  <button
+                    key={t.label}
+                    type="button"
+                    className="tt-cell"
+                    ref={cellRef(t.hex)}
+                    onClick={() => copyHex(t.hex)}
+                    title={`${t.label} · ${t.hex}`}
+                    aria-label={`Copy ${t.label} swatch ${t.hex}`}
+                  >
+                    <span className="tt-cell-step">{t.label}</span>
+                    <span className="tt-cell-l" aria-hidden="true">L {Math.round(t.L * 100)}%</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="tt-chart">
             <span className="tl-sec-label" id="tt-chart-label">Lightness per step</span>
@@ -602,6 +710,90 @@ export default function TintTool({ onCopy, toast }) {
             </span>
           </div>
         </ToolMain>
+
+        <div className="tt-notes" role="group" aria-labelledby="tt-notes-label">
+          <div className="tt-notes-head">
+            <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
+            <span className="tt-notes-hint">
+              <span className="tt-hint-fine">Hover a tint for its contrast. Click to copy.</span>
+              <span className="tt-hint-coarse">Tap a tint to see its contrast</span>
+            </span>
+          </div>
+          <div className="tt-notes-list" ref={listRef}>
+            {scale.steps.map((t) => {
+              const open = tip?.label === t.label
+              const pinned = open && tip.pinned
+              const tipId = `tt-tip-${t.label}`
+              const best = bestPole(t.hex)
+              return (
+                <div
+                  key={t.label}
+                  data-tip-for={t.label}
+                  className={pinned ? 'tt-note-wrap tt-note-wrap--pinned' : 'tt-note-wrap'}
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'touch' || tip?.pinned) return
+                    const h = holdRef.current
+                    h.inside = t.label
+                    // Heading for another note's far or click-through card: this note waits.
+                    if (h.held && h.held !== t.label && nearer(h.held, e)) {
+                      h.pending = { label: t.label, el: e.currentTarget }
+                      return
+                    }
+                    openTip(t.label, e.currentTarget, false, true)
+                  }}
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === 'touch') return
+                    const h = holdRef.current
+                    if (h.inside === t.label) h.inside = null
+                    if (h.pending?.label === t.label) h.pending = null
+                    // A far or click-through card holds the hover while the pointer is in its box or heading for it.
+                    if (open && tip.pointer && (tip.ghost || tip.far) && (pointerHolds(e, t.label) || nearer(t.label, e))) {
+                      startHold(t.label)
+                      return
+                    }
+                    closeTip(t.label)
+                  }}
+                  onFocus={(e) => {
+                    // A tap focuses the button too, but opens the detail on its click; only a keyboard focus opens it here.
+                    if (refocusRef.current || !e.target.matches(':focus-visible')) return
+                    if (!tip?.pinned || tip.label !== t.label) openTip(t.label, e.currentTarget)
+                  }}
+                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) closeTip(t.label) }}
+                >
+                  <button
+                    type="button"
+                    className="tt-note"
+                    onPointerDown={(e) => { pointerTypeRef.current = e.pointerType; pointerDownRef.current = true }}
+                    onPointerCancel={() => { pointerDownRef.current = false }}
+                    onKeyDown={() => { pointerTypeRef.current = 'keyboard'; pointerDownRef.current = false }}
+                    onClick={(e) => {
+                      // A click with no press before it (a screen reader's virtual click) is not a tap, whatever pointer last touched a note.
+                      if (!pointerDownRef.current || e.detail === 0) pointerTypeRef.current = 'mouse'
+                      pointerDownRef.current = false
+                      pressNote(t, e.currentTarget.parentElement)
+                    }}
+                    aria-label={`Copy ${t.label} ${t.hex}`}
+                    aria-describedby={tipId}
+                  >
+                    <span className="tt-note-sw" ref={cellRef(t.hex)} aria-hidden="true" />
+                    <span className="tt-note-step">{t.label}</span>
+                    <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
+                    <span className="tt-note-best" data-grade={best.grade} aria-hidden="true">{best.word}</span>
+                  </button>
+                  <ContrastTip id={tipId} step={t} open={open} above={open && !pinned && tip.above} maxHeight={open && !pinned ? tip.maxHeight : undefined} compact={open && !pinned && tip.compact} side={open && !pinned ? tip.side : undefined} pos={open && !pinned ? tip.pos : undefined} ghost={open && !pinned ? tip.ghost : undefined} inline={pinned} host={tipHost} />
+                  {pinned && (
+                    <div className="tt-tip-actions">
+                      <button type="button" className="tt-tip-copy" onClick={() => copyHex(t.hex)}>
+                        {copiedHex === t.hex ? 'Copied' : `Copy ${t.hex}`}
+                      </button>
+                      <button type="button" className="tt-tip-close" onClick={closePinned}>Close</button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
         <ToolPanel label="Tint controls" className="tt-panel">
           <ToolSection label={multi ? 'Sources' : 'Source'}>
@@ -703,7 +895,18 @@ export default function TintTool({ onCopy, toast }) {
             <span className="tl-sec-label" id="tt-curve-label">Curve</span>
             <ToolPills
               labelledBy="tt-curve-label"
-              options={CURVES.map((c, i) => ({ value: i, label: c }))}
+              className="tt-curve"
+              options={CURVES.map((c, i) => ({
+                value: i,
+                label: (
+                  <>
+                    <svg className="tt-curve-ic" viewBox="0 0 20 16" width="18" height="14" aria-hidden="true" focusable="false">
+                      <path d={CURVE_ICONS[i]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {c}
+                  </>
+                ),
+              }))}
               value={curve}
               onChange={setCurve}
             />
@@ -720,88 +923,7 @@ export default function TintTool({ onCopy, toast }) {
             </span>
           </ToolSection>
         </ToolPanel>
-        <div className="tt-notes" role="group" aria-labelledby="tt-notes-label">
-          <div className="tt-notes-head">
-            <span className="tl-sec-label" id="tt-notes-label">Contrast notes</span>
-            <span className="tt-notes-hint">
-              <span className="tt-hint-fine">Hover a tint for its contrast. Click to copy.</span>
-              <span className="tt-hint-coarse">Tap a tint to see its contrast</span>
-            </span>
-          </div>
-          <div className="tt-notes-list">
-            {scale.steps.map((t) => {
-              const open = tip?.label === t.label
-              const pinned = open && tip.pinned
-              const tipId = `tt-tip-${t.label}`
-              const best = bestPole(t.hex)
-              return (
-                <div
-                  key={t.label}
-                  className={pinned ? 'tt-note-wrap tt-note-wrap--pinned' : 'tt-note-wrap'}
-                  onPointerEnter={(e) => {
-                    if (e.pointerType === 'touch' || tip?.pinned) return
-                    const h = holdRef.current
-                    h.inside = t.label
-                    // Heading for another note's far or click-through card: this note waits.
-                    if (h.held && h.held !== t.label && nearer(h.held, e)) {
-                      h.pending = { label: t.label, el: e.currentTarget }
-                      return
-                    }
-                    openTip(t.label, e.currentTarget, false, true)
-                  }}
-                  onPointerLeave={(e) => {
-                    if (e.pointerType === 'touch') return
-                    const h = holdRef.current
-                    if (h.inside === t.label) h.inside = null
-                    if (h.pending?.label === t.label) h.pending = null
-                    // A far or click-through card holds the hover while the pointer is in its box or heading for it.
-                    if (open && tip.pointer && (tip.ghost || tip.far) && (pointerHolds(e, t.label) || nearer(t.label, e))) {
-                      startHold(t.label)
-                      return
-                    }
-                    closeTip(t.label)
-                  }}
-                  onFocus={(e) => {
-                    // A tap focuses the button too, but opens the detail on its click; only a keyboard focus opens it here.
-                    if (refocusRef.current || !e.target.matches(':focus-visible')) return
-                    if (!tip?.pinned || tip.label !== t.label) openTip(t.label, e.currentTarget)
-                  }}
-                  onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) closeTip(t.label) }}
-                >
-                  <button
-                    type="button"
-                    className="tt-note"
-                    onPointerDown={(e) => { pointerTypeRef.current = e.pointerType; pointerDownRef.current = true }}
-                    onPointerCancel={() => { pointerDownRef.current = false }}
-                    onKeyDown={() => { pointerTypeRef.current = 'keyboard'; pointerDownRef.current = false }}
-                    onClick={(e) => {
-                      // A click with no press before it (a screen reader's virtual click) is not a tap, whatever pointer last touched a note.
-                      if (!pointerDownRef.current || e.detail === 0) pointerTypeRef.current = 'mouse'
-                      pointerDownRef.current = false
-                      pressNote(t, e.currentTarget.parentElement)
-                    }}
-                    aria-label={`Copy ${t.label} ${t.hex}`}
-                    aria-describedby={tipId}
-                  >
-                    <span className="tt-note-sw" ref={cellRef(t.hex)} aria-hidden="true" />
-                    <span className="tt-note-step">{t.label}</span>
-                    <span className="tt-note-hex">{copiedHex === t.hex ? 'Copied' : t.hex}</span>
-                    <span className="tt-note-best" data-grade={best.grade} aria-hidden="true">{best.word}</span>
-                  </button>
-                  <ContrastTip id={tipId} step={t} open={open} end={open && tip.end} above={open && tip.above} maxHeight={open && !pinned ? tip.maxHeight : undefined} compact={open && !pinned && tip.compact} side={open && !pinned ? tip.side : undefined} sideStyle={open && !pinned ? tip.sideStyle : undefined} ghost={open && !pinned ? tip.ghost : undefined} inline={pinned} />
-                  {pinned && (
-                    <div className="tt-tip-actions">
-                      <button type="button" className="tt-tip-copy" onClick={() => copyHex(t.hex)}>
-                        {copiedHex === t.hex ? 'Copied' : `Copy ${t.hex}`}
-                      </button>
-                      <button type="button" className="tt-tip-close" onClick={closePinned}>Close</button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <div ref={setTipHost} className="tt-tips" />
       </ToolGrid>
     </ToolLayout>
   )

@@ -255,6 +255,9 @@
 .cm-sub-name { overflow: hidden; font-size: 16px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .cm-sub-meta, .cm-sub-status { font-size: 14px; color: var(--v3-sec); }
 .cm-sub-actions { display: flex; gap: 4px; }
+/* Approved work on the owner's Made tab: the same row, one link where Withdraw was. */
+.cm-live { grid-template-columns: 48px minmax(0, 1fr) auto; }
+.cm-live-go { min-height: 44px; white-space: nowrap; }
 .cm-note-line { margin-top: 16px; font-size: 14px; color: var(--v3-t56); }
 
 /* ── Dialogs (rendered in a portal, under .cm-dialog) ───────────────────── */
