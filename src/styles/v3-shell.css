@@ -47,7 +47,7 @@
   --focus-halo:var(--v3-on-ink);          /* the inner tone of the two-tone ring */
   --focus-w:2px;
   --focus-offset:2px;
-  --focus-offset-inset:-2px;
+  --sel-tr:color var(--dur-1) var(--v3-ease),background-color var(--dur-1) var(--v3-ease),border-color var(--dur-1) var(--v3-ease); /* one transition list for selectable controls */
   --focus-ring-media:0 0 0 var(--focus-offset) var(--focus-halo); /* fills the offset gap on photo or colour grounds */
   --sel-ink:var(--v3-ink);
   --sel-edge:var(--v3-ink);                /* 1px edge, 2px underline, swatch ring */

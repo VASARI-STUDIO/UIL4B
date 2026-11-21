@@ -775,6 +775,8 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
   color:var(--sel-ink);background:var(--sel-wash);border-color:transparent;
 }
 /* The selected row is --sel-wash (theme-aware) plus a 16px check, so it needs no dark restatement. */
+.lbry-filtermenu .lbry-filter[data-active="true"]::after{content:"";flex:0 0 16px;height:16px;background:var(--sel-ink);-webkit-mask:var(--sel-check) center/contain no-repeat;mask:var(--sel-check) center/contain no-repeat}
+.lbry-filtermenu .lbry-filter[data-active="true"]:not(:has(.lbry-filter-count))::after{margin-left:auto}
 /* RESTATED, not inherited: the base floors are (0,1,0) and everything above is
    (0,3,0), so without this the touch target would have gone from 44 to 40. */
 @media(pointer:coarse){
