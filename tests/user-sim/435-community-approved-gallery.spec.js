@@ -3,12 +3,13 @@
 // A reviewer approving a gradient or a palette flips `status` on the queue
 // document. The Gradient and Palette Libraries read approved documents back and
 // show them as Community rows, open at every tier; pending and rejected ones
-// never appear there. On the member's own profile, Your submissions lists what
-// is still waiting or was turned down, and drops what was approved; the Made tab lists that approved work instead.
+// never appear there. On the member's own profile, Your submissions lists every
+// submission with its status (approved ones read Approved), and the Made tab
+// lists the approved work as well.
 //
 // ── MUTATIONS ───────────────────────────────────────────────────────────────
-// 1. Let `waitingRows` keep approved rows (approvedSubmissions.js): the Your
-//    submissions test fails because the approved palette stays listed.
+// 1. Make `visibleRows` drop approved rows (approvedSubmissions.js): the Your
+//    submissions test fails because the approved palette is no longer listed.
 // 2. Make `approvedRows` return nothing: the Your submissions test fails because
 //    Made no longer lists the approved palette.
 // 3. Drop the approved check from the Firestore query (listApproved), from
@@ -79,7 +80,7 @@ test.describe('community · approved work in the libraries', () => {
       'a rejected palette must not appear in the library').toHaveCount(0)
   })
 
-  test('Your submissions keeps pending and rejected work; approved work moves to Made', async ({ page }) => {
+  test('Your submissions keeps every status with its tag; approved work is in Made too', async ({ page }) => {
     watch(page, 'a member reading their own queue')
     await signIn(page, {
       plan: 'free',
@@ -104,8 +105,8 @@ test.describe('community · approved work in the libraries', () => {
       'a pending design stays in Your submissions').toHaveCount(1)
     await expect(queued.locator('.cm-sub', { hasText: 'Turned Down Palette' }),
       'a rejected palette stays in Your submissions').toHaveCount(1)
-    await expect(queued.locator('.cm-sub', { hasText: 'Tidepool Set' }),
-      'an approved palette has joined the library and leaves Your submissions').toHaveCount(0)
+    await expect(queued.locator('.cm-sub', { hasText: 'Tidepool Set' }).locator('.cm-sub-status'),
+      'an approved palette stays in Your submissions and reads Approved').toHaveText('Approved')
 
     const made = page.locator('#cm-tabpanel')
     await expect(made.getByRole('list', { name: 'Approved work' }).getByText('Tidepool Set'),

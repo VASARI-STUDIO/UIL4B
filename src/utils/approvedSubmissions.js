@@ -148,12 +148,12 @@ export function createApprovedLoader({ list, keepMs = 5 * 60 * 1000, now = Date.
 }
 
 /**
- * The hub's waiting list: what is not hidden and not yet approved (an approved
- * piece has joined the gallery). Pending and rejected ones stay.
+ * The hub's Your submissions list: everything not hidden, whatever its status.
+ * An approved piece stays listed with its Approved tag (and is in Made too).
  */
-export function waitingRows(rows, hiddenIds) {
+export function visibleRows(rows, hiddenIds) {
   const hidden = hiddenIds instanceof Set ? hiddenIds : new Set()
-  return (Array.isArray(rows) ? rows : []).filter((s) => s && !hidden.has(s.id) && s.status !== 'approved')
+  return (Array.isArray(rows) ? rows : []).filter((s) => s && !hidden.has(s.id))
 }
 
 /** The hub's approved list, for the profile's Made tab. */

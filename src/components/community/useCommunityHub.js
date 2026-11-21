@@ -8,7 +8,7 @@ import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../..
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../../utils/communityQueueApi'
 import { isPostLimit } from '../../utils/communityLimits'
 import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
-import { approvedRows, waitingRows } from '../../utils/approvedSubmissions'
+import { approvedRows, visibleRows } from '../../utils/approvedSubmissions'
 import { handleProblem, readStoredHandle } from '../../utils/communityHandle'
 import { TOAST_ACTION_MIN_MS } from '../../utils/toastDuration'
 import { appendIconSubmission, buildIconPayload, readIconSubmissions, removeIconSubmission } from '../../utils/iconSubmission'
@@ -178,10 +178,10 @@ export default function useCommunityHub(toast) {
   const iconsRead = !uid || listsRead.icon
 
   /**
-   * One list for Your submissions, newest first. An approved piece has joined the
-   * gallery, so it leaves this waiting list; pending and rejected ones stay, with Withdraw.
+   * One list for Your submissions, newest first, every status with its tag. An
+   * approved piece stays here as Approved and is listed under Made as well.
    */
-  const rows = useMemo(() => waitingRows([
+  const rows = useMemo(() => visibleRows([
     ...icons.map((s) => ({ ...s, kind: 'icon' })),
     ...designs.map((s) => ({ ...s, kind: Array.isArray(s.colors) ? 'palette' : 'design' })),
     ...uploads.map((s) => ({ ...s, kind: 'image', synced: false })),

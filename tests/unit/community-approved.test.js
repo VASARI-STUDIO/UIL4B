@@ -13,7 +13,7 @@ import path from 'node:path'
 import {
   filterApproved, communityGradientRows, communityPaletteRows,
   newCommunityRows, withCommunityOpen, COMMUNITY_ID_PREFIX,
-  createApprovedLoader, waitingRows, approvedRows,
+  createApprovedLoader, visibleRows, approvedRows,
 } from '../../src/utils/approvedSubmissions.js'
 import { filterNoun } from '../../src/utils/galleryFilterNoun.js'
 import { paletteHaystack } from '../../src/utils/paletteSearch.js'
@@ -209,11 +209,12 @@ test('the loader re-reads on a sign-in, a sign-out or an account switch', async 
   assert.equal(reads, 4, 'same key again is a hit')
 })
 
-test('the hook is wired to the loader and does not skip the read when signed out', () => {
+test('the hook is wired to the loader and skips the read when signed out', () => {
   const src = read('src/hooks/useApprovedSubmissions.js')
   assert.match(src, /createApprovedLoader\(/)
   assert.match(src, /kinds: \['gradient', 'palette'\]/)
-  assert.doesNotMatch(src, /if \(!uid\)/)
+  assert.match(src, /if \(key === 'signed-out'\) return undefined/)
+  assert.match(src, /load\(key\)/)
 })
 
 test('both galleries merge the approved rows, de-duplicated, outside the cap', () => {
@@ -229,23 +230,23 @@ test('both galleries merge the approved rows, de-duplicated, outside the cap', (
   assert.match(pals, /kind === 'community'/)
 })
 
-test('Your submissions drops approved items and keeps pending and rejected ones', () => {
+test('the hub lists every status in Your submissions and approved work under Made', () => {
   const grad = read('src/pages/GradientGallery.jsx')
   assert.match(grad, /s\.status !== 'withdrawn' && s\.status !== 'approved'/)
   const hub = read('src/components/community/useCommunityHub.js')
-  assert.match(hub, /waitingRows\(\[/)
+  assert.match(hub, /visibleRows\(\[/)
   assert.match(hub, /approvedRows\(\[/)
 })
 
-test('the hub filters: waitingRows drops approved and hidden, approvedRows keeps only approved and not hidden', () => {
+test('the hub filters: visibleRows drops only hidden, approvedRows keeps only approved and not hidden', () => {
   const rows = [
     { id: 'a', status: 'approved' }, { id: 'b', status: 'pending' }, { id: 'c', status: 'rejected' },
     { id: 'd', status: 'approved' }, null,
   ]
   const hidden = new Set(['d'])
-  assert.deepEqual(waitingRows(rows, hidden).map((r) => r.id), ['b', 'c'])
+  assert.deepEqual(visibleRows(rows, hidden).map((r) => r.id), ['a', 'b', 'c'])
   assert.deepEqual(approvedRows(rows, hidden).map((r) => r.id), ['a'])
-  assert.deepEqual(waitingRows(rows).map((r) => r.id), ['b', 'c'], 'no hidden set')
+  assert.deepEqual(visibleRows(rows).map((r) => r.id), ['a', 'b', 'c', 'd'], 'no hidden set')
   assert.deepEqual(approvedRows(undefined, hidden), [])
 })
 
