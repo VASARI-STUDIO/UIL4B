@@ -10,7 +10,7 @@ import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
 import { docOf, siteCtx, servedCtx } from './lane-ht-clean.js';
 
-import { screenContent as SC, deliveryRows, noPrices } from './once.js';
+import { screenContent as SC, deliveryRows, noPrices, tally } from './once.js';
 
 const docName = (ctx) => docOf(ctx, 'UI kit');
 // the engine writes a trailing space where a class list is empty (`ui-input `, `type="button" >`): the pages show the markup without it
@@ -154,7 +154,7 @@ function screen(ctx, dark, mobile) {
   const tabs = E.tabs && E.tabs.length ? u.tabs(E.tabs, 0) : '';
   const scr = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}>${bar}<div class="hk-scr__body"><header class="hk-scr__h"><h2 class="hk-scr__t">${A(title)}</h2>${tabs}</header>
 <div class="hk-scr__a">${u.card({ ...card, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })}<div>${u.btn(S.form.book, { iconRight: 'arrow-right', block: mobile })}</div></div>
-<div class="hk-scr__b">${deliveryRows(ctx, mobile ? 4 : 6)}</div></div></div>`;
+<div class="hk-scr__b">${deliveryRows(ctx, mobile ? 4 : 6, tally(ctx).open)}</div></div></div>`;
   const h = mobile ? `<div class="hk-phone">${scr}</div>` : scr;
   return { lede: mobile ? `${title}, at phone width.` : `${title}, built from the kit's components only.`, live: `<div class="hk-col">${h}</div>`, code: [] };
 }
@@ -188,7 +188,7 @@ function body(ctx0, K) {
 // index.html: the kit's title slide (the logo on its dark ground, a live set of components), then the contents stripes
 function cover(ctx0, K) {
   const ctx = siteCtx(ctx0), B = ctx.brand, rev = B.logo.colourways.reversed, S = SC(ctx), F = S.form, u = ctx.ui, dk = darkF(ctx);
-  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(cardAction(ctx), { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(S.deliveries[0].status)} <span class="ui-badge">${S.deliveries.length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}${item(u.card({ meta: S.status, title: S.eta, text: S.pickup }), 'Card', 'hk-i--w')}`;
+  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(cardAction(ctx), { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(S.deliveries[0].status)} <span class="ui-badge">${S.deliveries.filter((d) => d.status === S.deliveries[0].status).length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}${item(u.card({ meta: S.status, title: S.eta, text: S.pickup }), 'Card', 'hk-i--w')}`;
   const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320 })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, ['UI kit'], 0.94, stepPx(ctx, 'display', 48), 32)}">UI kit</h1>${B.product ? `<p class="hk-title__l">${A(B.product)}</p>` : ''}<p class="hk-title__v">${A(ctx.versionLine)}</p></div>
 <div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live">${live}</div></section>`;

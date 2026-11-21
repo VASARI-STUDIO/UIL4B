@@ -23,6 +23,13 @@ const ORDERS = [
   ['Lena Fischer', 'Order 1043, due 1:30 pm', '$58.20'],
   ['Dev Patel', 'Order 1044, due 2:15 pm', '$93.65'],
 ];
+// Each order's status id (the brand's status list: new, active, waiting, closed), in the order of ORDERS. once.js applies it to the rows, so the
+// chip on a row, the card, the tabs' counts and the pages' copy all read one status: 1042 and 1041 are being packed, 1040 is late, 1039 is
+// closed, 1043 and 1044 are new.
+export const ORDER_STATUS = ['active', 'active', 'waiting', 'closed', 'new', 'new'];
+// which tab an order sits under: a late order is only under Late, a closed one only under Closed, every other is Open
+const TAB_OF = { new: 'Open', active: 'Open', waiting: 'Late', closed: 'Closed' };
+const TABS = ['Open', 'Late', 'Closed'].map((t) => `${t} ${ORDER_STATUS.filter((s) => TAB_OF[s] === t).length}`);
 const UI_SAMPLE = {
   'ui.screen.title': 'Orders',
   'ui.screen.content.status': 'Packing',
@@ -66,8 +73,8 @@ const UI_SAMPLE = {
   'ui.screen.content.example.danger': 'Cancel order',
   'ui.screen.content.example.small': 'Add note',
   'ui.screen.content.example.statLabel': 'Orders today',
-  // the account item names a link already in the bar, so the bar is not given a fourth
-  'ui.screen.content.example.account': 'Shop',
+  // the account field is disabled and names who is signed in (the value is the person packing)
+  'ui.screen.content.example.account': 'Packed by',
 };
 const UI_LIST = {
   'ui.screen.content.form.sizes': ['Standard', 'Express', 'Pick up'],
@@ -75,10 +82,10 @@ const UI_LIST = {
   'ui.screen.content.example.switches': ['Text me when it is packed', 'Email receipts'],
   'ui.screen.content.example.radios': ['Standard', 'Express'],
   'ui.screen.content.example.crumbs': ['Orders', 'Order 1042'],
-  'ui.screen.content.example.tabs': ['Open', 'Late', 'Closed'],
+  'ui.screen.content.example.tabs': TABS,
 };
 const LINKS = ['Orders', 'Customers', 'Shop'];
-const STATUS = ['New order', 'Active', 'Late', 'Closed'];
+const STATUS = ['New order', 'Packing', 'Late', 'Closed'];
 const ORDER_FIELD = { to: 0, when: 1, price: 2 };
 
 export function realCopy(path, value) {

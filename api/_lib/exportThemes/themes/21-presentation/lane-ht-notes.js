@@ -6,7 +6,7 @@
 import { A, L, lower, nameOfHex, fieldStyle, darkF, actF, panelF, fitSize, words, inkOn, cwFor, byRole } from './lane-ht-lib.js';
 import { onceRe, sayOnce } from './lane-g3-kit.js';
 import { distinctColours, servedFamily, ratioText, clearTimes } from './helpers.js';
-import { screenContent, exampleDemo } from './once.js';
+import { screenContent, exampleDemo, tally } from './once.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -15,7 +15,7 @@ const keep = (ctx, t) => (ok(ctx, t) ? t : '');
 const lead = (ctx) => { const B = ctx.brand; return ok(ctx, B.lines.primary) ? B.lines.primary : (B.lines.others.find((t) => ok(ctx, t)) || B.name || ''); };
 const NONE = { big: '', html: '' };
 const VOICE_PAIRS = [
-  ['Order 1042 is packed. It should reach you by 11:40 am.', 'Your order has been processed and will be dispatched in due course.'],
+  ['Order 1042 is packing. It will be ready by 11:40 am.', 'Your order has been processed and will be dispatched in due course.'],
   ['We could not take that card. Check the details and try again.', 'Error 402: payment declined.'],
 ];
 // A photograph the brand has still to choose is shown as a drawn scene in its own colours (a market stall at work), so a frame is never
@@ -146,11 +146,11 @@ const mockups = (ctx, { spread = false } = {}) => {
 // 8.5: the website on a laptop and on a phone, drawn from the palette and the shared sample order
 const digitalFigs = (ctx) => {
   const act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], ph = L(ctx).sunken;
-  const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' });
+  const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' }), TL = tally(ctx);
   const btn = (c) => `<p class="ht-dg__b" style="${fieldStyle(ctx, c, 'site mock-up website button')}">${ORDER.action}</p>`;
   const hero = (cls) => `<div class="ht-dg__hero ${cls}" style="${fieldStyle(ctx, dk, 'site mock-up website hero')}"><p class="ht-d ht-dg__h">Where is my order?</p><p class="ht-dg__t">${ORDER.id} is packing. ${ORDER.due}.</p>${btn(act)}</div>`;
   const stat = (n, t) => `<div class="ht-dg__st" style="${fieldStyle(ctx, ph, 'site mock-up website stat')}"><p class="ht-d ht-dg__n">${n}</p><p class="ht-dg__t">${t}</p></div>`;
-  const laptop = `<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat('4', 'Open')}${stat('1', 'Late')}${stat('1', 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
+  const laptop = `<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
   const phone = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}</div>`;
   const fig = (cls, body, t, n) => `<figure class="ht-mk ${cls}">${body}<figcaption><b>${A(t)}</b> ${A(n)}</figcaption></figure>`;
   return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', phone, 'On a phone', 'The same lead, one column.')}</div>`;
@@ -160,7 +160,7 @@ const digitalFigs = (ctx) => {
 const PRICE = '$84.35';
 const typeInUse = (ctx) => {
   const T = ctx.brand.type, B = ctx.brand, step = (t) => T.scale.find((x) => x.token === t), name = B.name || '';
-  const line = lead(ctx) || name || 'Headline', body = keep(ctx, B.product) || `${name ? `${name}: ` : ''}order 1042 is packed and due at 11:40 am.`, capt = `Total ${PRICE}`;
+  const line = lead(ctx) || name || 'Headline', body = keep(ctx, B.product) || `${name ? `${name}: ` : ''}order 1042 is packing, due at 11:40 am.`, capt = `Total ${PRICE}`;
   const rows = [['headline', line], ['body', body], ['caption', capt]].map(([t, text]) => [step(t), text]).filter(([x]) => x);
   return { big: line, html: `<ol class="ht-scale">${rows.map(([x, text]) => `<li><p class="ht-k">${A(x.token === 'body' ? 'Paragraph' : cap1(x.token))}<span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span></p><p class="ht-scale__s ${x.face === 'display' ? 'ht-d' : ''}" style="font-size:${x.size}px;line-height:${x.line < 3 ? x.line : (x.line / x.size).toFixed(2)};font-weight:${x.weight};${x.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(text)}</p></li>`).join('')}</ol>` };
 };
@@ -202,7 +202,7 @@ const sizeFig = (ctx) => {
 // 6.2: three slides as the deck lays them out, drawn from the shared orders story (the count, the total and the late order are read
 // from the same sample the kit's lists use). Each is a 16:9 field whose type is in container units, so it reflows at any width.
 const layoutSlides = (ctx) => {
-  const S = screenContent(ctx), n = S.deliveries.length, late = S.deliveries.filter((d) => /late/i.test(d.when || '')).length;
+  const S = screenContent(ctx), n = S.deliveries.length, late = tally(ctx).late.length;
   const money = (exampleDemo(ctx).stat || [])[0], dk = darkF(ctx), act = actF(ctx), pn = panelF(ctx);
   const sl = (hex, what, inner, t, d) => `<figure class="ht-slf"><div class="ht-sl" style="${fieldStyle(ctx, hex, `site layout ${what}`)}"><div class="ht-sl__in">${inner}</div></div><figcaption><b>${A(t)}.</b> ${A(d)}</figcaption></figure>`;
   const tally = `${words(n)} orders${late ? `, ${words(late).toLowerCase()} late` : ''}.`;
