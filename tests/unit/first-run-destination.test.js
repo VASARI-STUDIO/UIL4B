@@ -60,8 +60,9 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // liveToolRoutes(); this asserts the page still takes them from there rather
   // than spelling a path of its own.
   assert.match(src, /navigate\(isCheckoutTarget\(resume\) \? resume : win\.route\)/)
-  // Save lands in the Palette Builder; a stashed page other than checkout is never the target.
-  assert.match(src, /navigate\(isCheckoutTarget\(resume\) \? resume : '\/create\/palette'\)/)
+  // Save goes back to the page the sign-up began on when one was stashed (a tool or a checkout),
+  // and otherwise lands in the Palette Builder.
+  assert.match(src, /navigate\(takeResumeTarget\(\) \|\| '\/create\/palette'\)/)
   assert.match(src, /FIRST_WINS\.filter\(/)
 
   assert.ok(!/navigate\('\/home'\)/.test(src),
