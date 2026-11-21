@@ -7,10 +7,13 @@
 //     Break: make syncPreviewOwner return before clearPreviewCache().
 //  3. A request that began for the previous account is never stored for the next.
 //     Break: drop the `current` check before remember().
+//  4. THE KEY A SCREEN HOLDS ITS OWN ANSWER UNDER CARRIES THE OWNER (useLivePage), so it never shows the last account's page.
+//     Break: build ownedPreviewKey without the uid or plan, or switch useLivePage back to previewKey.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import {
-  EXPORT_PREVIEW_URL, cachedPreview, clearPreviewCache, fetchPagePreview, syncPreviewOwner,
+  EXPORT_PREVIEW_URL, brandHash, cachedPreview, clearPreviewCache, fetchPagePreview, ownedPreviewKey, syncPreviewOwner,
 } from '../../src/components/export/exportPreviewClient.js'
 
 const BRAND = { name: 'Tide & Co.', design: { palette: { colors: ['#2F6F5E'] } } }
@@ -80,6 +83,30 @@ test('3. a request begun for the previous account is not stored for the next', a
   release()
   await pending
   assert.equal(cachedPreview('04-standards', 'kitScreen', BRAND), null, 'the old account\'s page was stored for the new one')
+})
+
+test('4. the key a screen holds its own answer under follows the owner, so a copy kept for one account is never read for another', () => {
+  reset()
+  const hash = brandHash(BRAND)
+  syncPreviewOwner('a', true)
+  const asA = ownedPreviewKey('04-standards', 'kitScreen', hash)
+  syncPreviewOwner('a', true)
+  assert.equal(ownedPreviewKey('04-standards', 'kitScreen', hash), asA, 'the same owner keeps its key')
+  syncPreviewOwner('b', true)
+  assert.notEqual(ownedPreviewKey('04-standards', 'kitScreen', hash), asA, 'another account')
+  syncPreviewOwner('b', false)
+  const asBFree = ownedPreviewKey('04-standards', 'kitScreen', hash)
+  assert.notEqual(asBFree, ownedPreviewKey('04-standards', 'kitScreen', brandHash({ ...BRAND, name: 'Other' })), 'a new brand is a new key')
+  syncPreviewOwner('a', true)
+  assert.notEqual(asBFree, ownedPreviewKey('04-standards', 'kitScreen', hash))
+  syncPreviewOwner(null, false)
+  assert.notEqual(ownedPreviewKey('04-standards', 'kitScreen', hash), asA, 'a sign-out')
+})
+
+test('useLivePage holds its answer under that owner key', () => {
+  const source = fs.readFileSync('src/components/export/useLivePage.js', 'utf8')
+  assert.match(source, /ownedPreviewKey\(/, 'the hook must key its state on the owner')
+  assert.doesNotMatch(source, /\bpreviewKey\(/, 'the bare key ignores who is signed in')
 })
 
 test('a signed-out viewer asks for nothing', async () => {

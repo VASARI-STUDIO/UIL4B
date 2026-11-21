@@ -58,6 +58,12 @@ export function syncPreviewOwner(uid, pro) {
   clearPreviewCache()
 }
 
+/**
+ * The key a component holds an answer under: the request's key behind the owner the cache holds now. An answer kept under one
+ * owner's key is never read back under another's, so a screen that keeps its own copy cannot show the last account's page.
+ */
+export const ownedPreviewKey = (theme, page, hash) => `${owner.uid ?? ''}|${owner.pro ? 'pro' : 'free'}|${previewKey(theme, page, hash)}`
+
 /** The stored answer for a request, or null. */
 export const cachedPreview = (theme, page, brand) => cache.get(previewKey(theme, page, brandHash(brand))) || null
 

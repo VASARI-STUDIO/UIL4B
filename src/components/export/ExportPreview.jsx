@@ -18,8 +18,7 @@ import { brandOf, syncPreviewOwner } from './exportPreviewClient'
 // A themed file (the guidelines, the book, the UI kit) shows one page of the chosen template. It is drawn with the person's brand
 // from the server (useLivePage) when that is on offer; "Show the default template" swaps to the stock picture, and the box is ticked
 // and disabled when only the stock picture exists (signed out, a Pro template on a free plan, or no live preview yet). A template
-// the account cannot export is never drawn from the real picture: a book or guidelines page is the blurred stand-in, and the UI kit,
-// which has no stand-in, is shown as it is with the Pro mark.
+// the account cannot export is never drawn from the real picture: every page, the UI kit's included, is the blurred stand-in.
 // A file with no templates shows its own preview in the stage, and has no gallery.
 function PlainPreview({ cat, file, name, fileProject, isPro, design, chosen }) {
   const kind = cat.preview
@@ -50,15 +49,15 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   const [carousel, dispatch] = usePageCarousel(pages.length, `${themeId}|${cat.id}`)
   const page = pages[Math.min(carousel.index, pages.length - 1)] || null
 
-  // Whether the viewer may export this template. The UI kit has no stand-in pictures, so it stays sharp; the other two are blurred.
+  // Whether the viewer may export this template. A template they cannot export is drawn from its stand-in, in every document.
   const proTemplate = themed && !isPro && themedFileIsPro(file, themeId)
   const [stock, setStock] = useState(false)
   const brand = useMemo(() => brandOf(design, name), [design, name])
   const live = useLivePage({ enabled: Boolean(user) && !proTemplate && !checking && themed && !stock, theme: themeId, page: page?.id, brand })
   // The server's 403 is the account's real plan. When it disagrees with the plan this screen holds, the page is treated as a Pro
-  // template: the stand-in (or the kit's own picture) with the Pro mark, and the default template one click away.
+  // template: the stand-in with the Pro mark, and the default template one click away.
   const refused = live.status === 'upgrade'
-  const standin = (proTemplate || refused) && kind !== 'kit'
+  const standin = proTemplate || refused
   const noLive = !user || proTemplate || checking || live.status === 'unavailable' || refused
   const showStock = stock || noLive
 

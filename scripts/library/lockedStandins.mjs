@@ -11,11 +11,11 @@
 // with a mild CSS blur, which reads as the same soft wash the heavy blur gave.
 //
 // Reads  public/previews/prompts/poster/<id>.webp
-//        public/export-themes/<theme>-(book|guideCover|guidePalette).webp
+//        public/export-themes/<theme>-(book|guideCover|guidePalette|kitScreen|kitButtons).webp
 // Writes public/locked-images/prompts/<id>.webp
 //        public/locked-images/export-themes/<theme>-<key>.webp
 //
-// The UI kit pictures are not here: the kit is previewed sharp in every theme.
+// The UI kit pages are here too: a Pro kit template is never drawn from its real picture for a viewer who cannot export it.
 //
 // Needs Playwright's Chromium, which does the resize and the WebP encoding on a
 // canvas. Run it after a poster or a theme picture changes; the test checks every
@@ -33,7 +33,7 @@ export const STANDIN_MAX_W = 48
 export const PROMPT_W = 32
 export const THEME_W = 40
 const QUALITY = 0.6
-export const THEME_KEYS = Object.freeze(['book', 'guideCover', 'guidePalette'])
+export const THEME_KEYS = Object.freeze(['book', 'guideCover', 'guidePalette', 'kitScreen', 'kitButtons'])
 
 /** Every { from, to, width } job, as repo-relative paths. */
 export function standinJobs() {

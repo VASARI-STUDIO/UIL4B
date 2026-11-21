@@ -7,8 +7,8 @@
 //      content type and the first bytes are read).
 //   2. The stage draws the pictures of the chosen template, one page at a time (the gallery thumbnails pick the page), and their
 //      alt names that template and its sample brand.
-//   3. For a free account the book and slides previews are blurred with a "Pro export" lock; the UI kit preview is sharp in a
-//      Pro theme and the dock says "Pro theme". A Pro account sees none of it blurred.
+//   3. For a free account the book, slides and UI kit previews in a Pro theme are blurred with a "Pro export" lock (the kit's dock
+//      says "Pro theme"). A Pro account sees none of it blurred.
 //   4. At 390 neither the preview nor the templates grid pushes the page or the dialog sideways.
 //
 // MUTATION
@@ -112,12 +112,14 @@ test.describe('blur and lock', () => {
     }
   }
 
-  test('free: the UI kit preview is sharp even in a Pro template, with the Pro mark on it, and the dock says Pro theme', async ({ page }) => {
+  test('free: the UI kit preview in a Pro template is the blurred stand-in, with the Pro mark on it, and the dock says Pro theme', async ({ page }) => {
     watch(page, 'a free account looking at the kit in a Pro theme')
     const panel = await open(page, 'free', 'kit')
     await choose(page, panel, 'Studio')
-    await expect(panel.locator('.xd-box')).not.toHaveClass(/is-locked/)
-    expect(await panel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter)).toBe('none')
+    await expect(panel.locator('.xd-box')).toHaveClass(/is-locked/)
+    const img = panel.locator('.xd-box img').first()
+    expect(await img.evaluate((el) => getComputedStyle(el).filter)).toMatch(/blur\(\d+px\)/)
+    await expect(img, 'the real kit picture never reaches the page').toHaveAttribute('src', /^\/locked-images\/export-themes\/06-studio-kit(Screen|Buttons)\.webp$/)
     await expect(panel.locator('.xd-stage-pro')).toHaveText('Pro template')
     await expect(panel.locator('.xd-dock')).toContainText('Pro theme.')
   })
