@@ -1559,3 +1559,6 @@ html[data-reduced-motion="true"] .fc .fc-rail-sheet { animation: none; }
 .fc .snapv input[type="range"]::-moz-range-thumb { border-color: var(--v3-ink); }
 .fc .snapv input[type="range"]:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 .fc .fc-progress-bar { background: var(--v3-ink); }
+.fc .fc-next { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-soft); }
+.fc .fc-next a { color: var(--tl-ink); text-decoration: underline; text-underline-offset: 2px; }
+.fc .fc-next a:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }

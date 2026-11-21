@@ -1276,6 +1276,11 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 <Delta orig={totalOrig} out={totalOut} />
               </p>
             )}
+            {readyCount > 0 && !busy && (
+              <p className="fc-next">
+                Next: <Link to="/create/aspect-ratio">check the size and aspect ratio</Link> or <Link to="/create/alt-text">write alt text for it</Link>.
+              </p>
+            )}
           </div>
           </div>
         </section>
