@@ -13,6 +13,8 @@ import {
   labelPrintWindow, releasePrintWindow, requestExportDocument, reservePrintWindow,
   showInPrintWindow, withPrintBootstrap,
 } from '../utils/exportDocument'
+import { requestExportFile, fileRefusal, zipBlob } from '../utils/exportFiles'
+import { bundleDate } from '../utils/appBundlePaths'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
@@ -195,9 +197,20 @@ const showDocument = (html, filename, win, title) => {
  *                                 downloaded ('' when nothing did), `opened` is a print window showing it
  *   retryIn                       whole seconds left of a 429's Retry-After (0 when there is no wait)
  */
+// A server refusal for want of a Pro plan (a 403 and no file), told apart from every other failure.
+const proRefusal = (line) => Object.assign(new Error(line), { proRequired: true })
+
+// Which pick a refusal was for: the file, and the theme only when the file takes one.
+export const refusedKey = (formatId, theme) => `${formatId}|${theme && themedFile(formatId) ? theme : ''}`
+
 export default function useExportRunner() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // The file (and theme) the SERVER refused for want of a Pro plan, as refusedKey() spells it; '' until one is.
+  // The server's 403 is the verdict, not this page's plan read: once it has said no, the dialog shows the one
+  // Upgrade offer for that pick, and the next click on it goes to checkout or /plans instead of asking again.
+  // It outlives reset(): the answer stays true for as long as this dialog is open.
+  const [refused, setRefused] = useState('')
   // A finished export that still has something to say (a font it could not
   // embed, a print window the browser blocked). { lead, detail }: the lead says
   // what happened, the detail what follows from it. Announced politely, and
@@ -317,6 +330,8 @@ export default function useExportRunner() {
     const themed = theme && themedFile(format) ? themedFile(format) : null
     const needsPro = themed ? themedFileIsPro(format, theme) : Boolean(fmt.pro)
     if (needsPro && !isPro) return goUpgrade(format, projectId, Boolean(user))
+    // A pick the server has already refused goes the same way, whatever the plan read here says.
+    if (refused === refusedKey(format, theme)) return goUpgrade(format, projectId, Boolean(user))
 
     // ── OFFLINE. ───────────────────────────────────────────────────────────
     // The server builds the book and the slides and the kit fetches its fonts, so
@@ -398,6 +413,7 @@ export default function useExportRunner() {
         if (answer.status !== 'ok') {
           // A 429 that said how long to wait: the button counts it down instead of staying live for a click that will be refused again.
           if (answer.retryAfter) { limitLine.current = answer.line; setRetryIn(answer.retryAfter) }
+          if (answer.code === 'pro-required') throw proRefusal(answer.line)
           throw new Error(answer.line)
         }
         if (answer.zip) {
@@ -413,14 +429,22 @@ export default function useExportRunner() {
           }
         }
       } else if (bookPng) {
-        // The book as page images, drawn on a canvas like the style guide PNG (see
-        // the note at the top of utils/bookRaster.js). Loaded on demand: the pages,
-        // the zip writer and the font wait cost nothing to anyone who never exports
-        // them. The plan check above has already passed.
+        // The book as page images. The server lays the pages out (Pro only) and answers with draw
+        // operations; utils/bookPainter.js measures the fonts for it and then paints them on a canvas.
+        // Loaded on demand: the painter, the zip writer and the font wait cost nothing to anyone who
+        // never exports them.
         activation = PRO_DOCUMENT.book.activation
         setStage('pages')
-        const { renderBookPng } = await import('../utils/bookRaster')
-        const blob = await renderBookPng(design, { projectName, watermark: !proNow })
+        const { measureBookFaces, paintBookPng } = await import('../utils/bookPainter')
+        const { metrics, missingFonts } = await measureBookFaces(design)
+        const answer = await requestExportFile({
+          format: 'book-png', design, projectName,
+          extra: { metrics, missingFonts, date: new Date().toISOString().slice(0, 10), watermark: !proNow },
+        }, { loadAuth: loadAuthSdk })
+        if (!mounted.current) return { status: 'unmounted' }
+        const refusal = fileRefusal(answer, PRO_DOCUMENT.book.noun)
+        if (refusal) throw answer.status === 'pro-required' ? proRefusal(refusal) : new Error(refusal)
+        const blob = await paintBookPng(answer.book)
         savedFile = download(blob, formatFileName(fileProject, 'book-png'))
       } else if (proDocument) {
         // The book and the brand guidelines, as a PDF or as HTML. The server checks the plan and builds
@@ -434,12 +458,11 @@ export default function useExportRunner() {
         // it). Nobody is left to read a result, so close the blank window that was
         // reserved and touch nothing else.
         if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
-        // A refusal stays in the dialog and says so. It is not sent to /plans: this
-        // account passed the Pro check on this page a moment ago, so the likely
-        // cause is a plan that just ended or a stale read, and a pricing page
-        // that may say "you are on Pro" is the wrong answer to that person.
+        // A refusal stays in the dialog and says so, and the button becomes the one Upgrade offer
+        // (see the catch below). Nothing navigates on its own: this account passed the plan read on
+        // this page a moment ago, so the person reads why before choosing Upgrade or the free option.
         if (answer.status === 'pro-required') {
-          throw new Error(`We couldn’t find a Pro plan on this account, so the ${doc.noun} wasn’t made.`)
+          throw proRefusal(`We couldn’t find a Pro plan on this account, so the ${doc.noun} wasn’t made.`)
         }
         if (answer.status === 'signed-out') {
           throw new Error(`You’re signed out. Sign in again, then export the ${doc.noun}.`)
@@ -470,12 +493,18 @@ export default function useExportRunner() {
           }
         }
       } else if (appBundle) {
-        // One zip with a folder per app (utils/appBundle.js). Loaded on demand with
-        // its writers and the zip library. The plan check above has already passed.
+        // One zip with a folder per app. The server builds it (Pro only, api/_lib/exportDocument.js)
+        // and sends it as base64; the date and name go with the request so the folder is named as the
+        // panel's preview shows it.
         activation = 'app-ready-bundle'
-        const { buildAppBundle, bundleDate } = await import('../utils/appBundle')
-        const blob = await buildAppBundle(design, { date: bundleDate(new Date()), name: fileProject })
-        savedFile = download(blob, formatFileName(fileProject, 'app-bundle'))
+        const answer = await requestExportFile({
+          format: 'app-bundle', design, projectName,
+          extra: { date: bundleDate(new Date()), name: fileProject },
+        }, { loadAuth: loadAuthSdk })
+        if (!mounted.current) return { status: 'unmounted' }
+        const refusal = fileRefusal(answer, 'app bundle')
+        if (refusal) throw answer.status === 'pro-required' ? proRefusal(refusal) : new Error(refusal)
+        savedFile = download(zipBlob(answer.zip), formatFileName(fileProject, 'app-bundle'))
       } else if (tokenFile) {
         // The token, Tailwind and contrast files all read one token list
         // (utils/designTokens.js), so they carry the same names and values. Built by
@@ -527,6 +556,12 @@ export default function useExportRunner() {
       setBusy(false)
       setStage('')
       setError(err?.message || FAILED_LINE)
+      // The server said this file needs Pro (a 403, no file). That answer, not the plan read on this
+      // page, is what counts: the dialog turns this pick's button into the Upgrade offer, with the free option beside it.
+      if (err?.proRequired) {
+        setRefused(refusedKey(format, theme))
+        return { status: 'pro-required' }
+      }
       return { status: 'failed' }
     }
   }
@@ -573,5 +608,8 @@ export default function useExportRunner() {
     setRetryIn(0)
   }
 
-  return { run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn }
+  // True when the server refused this file (in this theme) for want of a Pro plan while this dialog was open.
+  const isRefused = (formatId, theme) => Boolean(refused) && refused === refusedKey(formatId, theme)
+
+  return { run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn, isRefused }
 }

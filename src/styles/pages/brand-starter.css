@@ -11,18 +11,16 @@
  * wall as a strip on the composer rather than a modal (the Mobbin references
  * for each are in the comments below, unchanged). What moved:
  *
- *   - `--accent-strong`, all three (the Beta tag's ink, the wall's link, the
- *     bands' "Open in …" links). It is a per-theme literal beside `--accent`,
- *     not derived from it. Link ink is `--accent-mid` now; the Beta tag is a
- *     neutral hairline mono tag like the converter's Alpha, because a status
- *     word is not the next action.
+ *   - The wall's link and the bands' "Open in …" links are ink, underlined on
+ *     hover; the Beta tag is a neutral hairline mono tag like the converter's
+ *     Alpha, because a status word is not the next action.
  *   - The hero is the Spectrum step (clamp 38-72px / 600 / -.045em) that
  *     /create/tint and /create/gradient use, instead of the global `.sec-h`.
  *   - The Generate and Try again buttons were the global `.btn` family. They
- *     are pills here (--radius-pill) over a hairline, one filled action in
- *     --accent-mid on --accent-ink (tint's measured pair).
+ *     are pills here over a hairline, one filled action in ink (--v3-on-ink on
+ *     --v3-ink, --v3-ink-hover on hover).
  *   - Manrope-era 650 weights are Geist's 560; the sample chip's rgba() inset
- *     is a color-mix() of --t0 so it follows the theme.
+ *     is a color-mix() of --tl-ink so it follows the theme.
  *
  * The four remaining inline styles in BrandStarter.jsx carry DATA — a
  * generated swatch's hex, a generated family/weight/size — and stay inline. */
@@ -41,10 +39,10 @@
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--t2);
+  color: var(--tl-dim);
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
 }
 
 /* What beta MEANS, next to the word, rather than left for the reader to guess.
@@ -65,29 +63,29 @@
   font-size: 13.5px;
   font-weight: 540;
   line-height: 1.2;
-  color: var(--t0);
+  color: var(--tl-ink);
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
   cursor: pointer;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) cubic-bezier(.23, 1, .32, 1);
 }
 
-.bs-page .bs-btn:hover:not(:disabled) { background: var(--hvr); border-color: var(--bh); }
+.bs-page .bs-btn:hover:not(:disabled) { background: var(--tl-wash-2); border-color: var(--tl-line-on); }
 
 .bs-page .bs-btn:active:not(:disabled) { transform: scale(.98); }
 
-.bs-page .bs-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bs-page .bs-btn:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .bs-page .bs-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-.bs-page .bs-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: transparent; }
+.bs-page .bs-btn--primary { color: var(--v3-on-ink); background: var(--v3-ink); border-color: transparent; }
 
-.bs-page .bs-btn--primary:hover:not(:disabled) { background: var(--accent-fill-hover); border-color: transparent; }
+.bs-page .bs-btn--primary:hover:not(:disabled) { background: var(--v3-ink-hover); border-color: transparent; }
 
 /* A primary that is off is a neutral surface with its label in secondary ink, not
-   the accent faded to a pale tint: the label stays at 3:1 or better in both themes. */
-.bs-page .bs-btn--primary:disabled { opacity: 1; color: var(--t2); background: var(--bg-3); border-color: var(--border); }
+   the ink fill faded to a pale tint: the label stays at 3:1 or better in both themes. */
+.bs-page .bs-btn--primary:disabled { opacity: 1; color: var(--v3-t56); background: var(--tl-card2); border-color: var(--tl-line); }
 
 /* ── The workbench ────────────────────────────────────────────────────────── */
 
@@ -106,14 +104,14 @@
   margin: 0;
   padding-bottom: 12px;
   font-size: var(--fs-caption);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--tl-line);
 }
 
-.bs-page .bs-allowance-plan { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--t3); }
+.bs-page .bs-allowance-plan { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
 
-.bs-page .bs-allowance-figure { color: var(--t1); }
+.bs-page .bs-allowance-figure { color: var(--tl-soft); }
 
-.bs-page .bs-allowance-left { margin-left: auto; font-family: var(--font); color: var(--t2); font-variant-numeric: tabular-nums; }
+.bs-page .bs-allowance-left { margin-left: auto; font-family: var(--font); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
 /* THE QUOTA WALL. A strip attached to the composer, not a modal over the tool.
    Mobbin: Base44 puts the month-limit notice on the top edge of the prompt
@@ -129,13 +127,13 @@
   align-items: flex-start;
   gap: 8px 20px;
   padding: 14px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-s);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-left: 3px solid var(--tl-ink);
+  border-radius: 8px;
 }
 
-.bs-page .bs-wall-text { flex: 1 1 260px; margin: 0; font-size: var(--fs-body-s); line-height: 1.55; color: var(--t1); }
+.bs-page .bs-wall-text { flex: 1 1 260px; margin: 0; font-size: var(--fs-body-s); line-height: 1.55; color: var(--tl-soft); }
 
 .bs-page .bs-wall-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; }
 
@@ -149,16 +147,16 @@
   min-height: 24px;
   font-size: var(--fs-body-s);
   font-weight: 560;
-  color: var(--accent-mid);
+  color: var(--tl-ink);
   white-space: nowrap;
-  border-radius: var(--radius-xs);
+  border-radius: 8px;
 }
 
 .bs-page .bs-wall-link:hover,
-.bs-page .bs-band-open:hover { color: var(--accent-text); }
+.bs-page .bs-band-open:hover { color: var(--tl-ink); text-decoration: underline; text-underline-offset: 3px; }
 
 .bs-page .bs-wall-link:focus-visible,
-.bs-page .bs-band-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bs-page .bs-band-open:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .bs-page .bs-wall-close {
   display: inline-flex;
@@ -167,22 +165,22 @@
   padding: 0;
   font: inherit;
   font-size: var(--fs-caption);
-  color: var(--t2);
+  color: var(--tl-dim);
   background: none;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   cursor: pointer;
 }
 
-.bs-page .bs-wall-close:hover { color: var(--t0); }
+.bs-page .bs-wall-close:hover { color: var(--tl-ink); }
 
-.bs-page .bs-wall-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bs-page .bs-wall-close:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .bs-page .bs-composer { display: flex; flex-direction: column; gap: 8px; }
 
-.bs-page .bs-label { font-size: var(--fs-h5); font-weight: 560; color: var(--t0); }
+.bs-page .bs-label { font-size: var(--fs-h5); font-weight: 560; color: var(--tl-ink); }
 
-.bs-page .bs-hint { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--t2); }
+.bs-page .bs-hint { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-dim); }
 
 .bs-page .bs-field {
   width: 100%;
@@ -191,20 +189,20 @@
   font: inherit;
   font-size: var(--fs-body);
   line-height: 1.6;
-  color: var(--t0);
-  background: var(--inp);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  color: var(--tl-ink);
+  background: var(--tl-wash);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
   resize: vertical;
   max-height: 50vh;
   overflow-y: auto;
 }
 
-.bs-page .bs-field:hover:not(:disabled) { border-color: var(--bh); }
+.bs-page .bs-field:hover:not(:disabled) { border-color: var(--tl-line-on); }
 
-.bs-page .bs-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.bs-page .bs-field:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; border-color: var(--tl-ink); }
 
-.bs-page .bs-field::placeholder { color: var(--t3); }
+.bs-page .bs-field::placeholder { color: var(--tl-faint); }
 
 .bs-page .bs-field:disabled { opacity: .6; cursor: not-allowed; }
 
@@ -214,16 +212,16 @@
    A field that silently stops accepting characters reads as broken, so the cap
    is rendered rather than only enforced.
    https://mobbin.com/flows/64163e57-f2de-456b-89d8-e6ff18316f55 */
-.bs-page .bs-count { font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
+.bs-page .bs-count { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
-.bs-page .bs-note { max-width: 70ch; margin: 0; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
+.bs-page .bs-note { max-width: 70ch; margin: 0; font-size: var(--fs-caption); line-height: 1.55; color: var(--tl-dim); }
 
 .bs-page .bs-note--warn { color: var(--warn-strong); }
 
 /* Status in words, not in motion. The anti-slop bar names "loading effects
    imply intelligence without explaining system state" — so this says what is
    being done and roughly how long, and animates nothing. */
-.bs-page .bs-working { margin: 0; padding: 14px 16px; font-size: var(--fs-body-s); line-height: 1.55; color: var(--t1); border: 1px dashed var(--bh); border-radius: var(--radius-s); }
+.bs-page .bs-working { margin: 0; padding: 14px 16px; font-size: var(--fs-body-s); line-height: 1.55; color: var(--tl-soft); border: 1px dashed var(--tl-line-on); border-radius: 8px; }
 
 .bs-page .bs-error {
   display: flex;
@@ -231,40 +229,40 @@
   align-items: flex-start;
   gap: 12px 20px;
   padding: 14px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
   border-left: 3px solid var(--err);
-  border-radius: var(--radius-s);
+  border-radius: 8px;
 }
 
-.bs-page .bs-error-text { flex: 1 1 260px; margin: 0; font-size: var(--fs-body-s); line-height: 1.55; color: var(--t1); }
+.bs-page .bs-error-text { flex: 1 1 260px; margin: 0; font-size: var(--fs-body-s); line-height: 1.55; color: var(--tl-soft); }
 
 /* ── The result ───────────────────────────────────────────────────────────── */
 /* The radius is declared AT REST, not in the :focus-visible rule. A focus
    style that changes geometry is what tests/unit/focus-ring-geometry.test.js
    exists to refuse. */
-.bs-page .bs-result { display: flex; flex-direction: column; gap: 0; border-radius: var(--radius-s); }
+.bs-page .bs-result { display: flex; flex-direction: column; gap: 0; border-radius: 8px; }
 
-.bs-page .bs-result:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+.bs-page .bs-result:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 6px; }
 
 .bs-page .bs-result-h { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-bottom: 6px; }
 
-.bs-page .bs-result-name { margin: 0; font-size: var(--fs-h3); font-weight: 600; letter-spacing: -.02em; color: var(--t0); }
+.bs-page .bs-result-name { margin: 0; font-size: var(--fs-h3); font-weight: 600; letter-spacing: -.02em; color: var(--tl-ink); }
 
-.bs-page .bs-rationale { max-width: 70ch; margin: 0 0 4px; font-size: var(--fs-body-s); line-height: 1.6; color: var(--t1); }
+.bs-page .bs-rationale { max-width: 70ch; margin: 0 0 4px; font-size: var(--fs-body-s); line-height: 1.6; color: var(--tl-soft); }
 
 /* Bands, not cards. Mono numeral + label on a hairline rule, which is the
    orientation language the User Home settled on.
    Mobbin: Bloom's "Design Language" section sets Colors / Fonts / Tone under
    plain labels with the artefacts themselves as the only visual weight.
    https://mobbin.com/flows/ffbc50b7-dbf3-433c-a294-55e03799a693 */
-.bs-page .bs-band { padding: 22px 0; border-top: 1px solid var(--border); }
+.bs-page .bs-band { padding: 22px 0; border-top: 1px solid var(--tl-line); }
 
 .bs-page .bs-band-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 16px; }
 
-.bs-page .bs-band-n { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--t3); font-variant-numeric: tabular-nums; }
+.bs-page .bs-band-n { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--tl-faint); font-variant-numeric: tabular-nums; }
 
-.bs-page .bs-band-label { margin: 0; font-size: var(--fs-h5); font-weight: 560; color: var(--t0); }
+.bs-page .bs-band-label { margin: 0; font-size: var(--fs-h5); font-weight: 560; color: var(--tl-ink); }
 
 .bs-page .bs-band-open { margin-left: auto; }
 
@@ -274,79 +272,79 @@
 
 /* A swatch is a real object, so it is the one thing here that gets a border and
    a radius. 56px tall rather than a dot: a colour has to be judged at a size. */
-.bs-page .bs-chip { display: block; width: 100%; height: 56px; border: 1px solid var(--border); border-radius: var(--radius-s); }
+.bs-page .bs-chip { display: block; width: 100%; height: 56px; border: 1px solid var(--tl-line); border-radius: 8px; }
 
-.bs-page .bs-swatch-role { font-size: 12px; font-weight: 560; line-height: 1.3; color: var(--t1); }
+.bs-page .bs-swatch-role { font-size: 12px; font-weight: 560; line-height: 1.3; color: var(--tl-soft); }
 
-.bs-page .bs-swatch-hex { font-family: var(--mono); font-size: 11px; color: var(--t2); }
+.bs-page .bs-swatch-hex { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
 
 /* The measured fact under the palette. Not a badge and not a tick — a sentence
    with a number in it, because the number is the evidence. */
-.bs-page .bs-measure { max-width: 74ch; margin: 16px 0 0; font-size: var(--fs-caption); line-height: 1.6; color: var(--t2); }
+.bs-page .bs-measure { max-width: 74ch; margin: 16px 0 0; font-size: var(--fs-caption); line-height: 1.6; color: var(--tl-dim); }
 
-.bs-page .bs-measure strong { font-weight: 600; color: var(--t0); }
+.bs-page .bs-measure strong { font-weight: 600; color: var(--tl-ink); }
 
-.bs-page .bs-specimen { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.bs-page .bs-specimen { padding: 14px 0; border-bottom: 1px solid var(--tl-line); }
 
 .bs-page .bs-specimen:last-of-type { border-bottom: 0; }
 
 /* The specimen is set in the REAL family, loaded on arrival. A name rendered in
    the page's own face is a claim about a typeface nobody can see. */
-.bs-page .bs-specimen-face { margin: 0 0 6px; line-height: 1.25; color: var(--t0); overflow-wrap: anywhere; }
+.bs-page .bs-specimen-face { margin: 0 0 6px; line-height: 1.25; color: var(--tl-ink); overflow-wrap: anywhere; }
 
-.bs-page .bs-specimen-meta { margin: 0; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--t2); }
+.bs-page .bs-specimen-meta { margin: 0; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--tl-dim); }
 
-.bs-page .bs-scale-figure { margin: 0 0 14px; font-family: var(--font); font-size: var(--fs-body-s); color: var(--t1); }
+.bs-page .bs-scale-figure { margin: 0 0 14px; font-family: var(--font); font-size: var(--fs-body-s); color: var(--tl-soft); }
 
 .bs-page .bs-ladder { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
 
 .bs-page .bs-ladder li { display: flex; align-items: baseline; gap: 16px; }
 
-.bs-page .bs-ladder-px { flex: 0 0 68px; font-family: var(--mono); font-size: 11px; text-align: right; color: var(--t2); }
+.bs-page .bs-ladder-px { flex: 0 0 68px; font-family: var(--mono); font-size: 11px; text-align: right; color: var(--tl-dim); }
 
-.bs-page .bs-ladder-sample { overflow: hidden; line-height: 1.2; color: var(--t0); text-overflow: ellipsis; white-space: nowrap; }
+.bs-page .bs-ladder-sample { overflow: hidden; line-height: 1.2; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
 
 /* Said out loud, at the end, because "did this just change my project?" is the
    question a generator has to answer before the user asks it. */
-.bs-page .bs-result-foot { max-width: 74ch; margin: 0; padding-top: 20px; font-size: var(--fs-caption); line-height: 1.6; color: var(--t2); border-top: 1px solid var(--border); }
+.bs-page .bs-result-foot { max-width: 74ch; margin: 0; padding-top: 20px; font-size: var(--fs-caption); line-height: 1.6; color: var(--tl-dim); border-top: 1px solid var(--tl-line); }
 
 /* ── The signed-out example ──────────────────────────────────────────────────
    Shown under the brief to a signed-out visitor, so they can see what the
    tool returns before being asked for an account. It reads as a specimen, not as a result:
    the three bands in the same 01/02/03 order the generator uses. */
-.bs-page .bs-sample { margin: 0; padding: 22px 0 0; border-top: 1px solid var(--border); }
+.bs-page .bs-sample { margin: 0; padding: 22px 0 0; border-top: 1px solid var(--tl-line); }
 
-.bs-page .bs-sample-h { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
+.bs-page .bs-sample-h { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
 
-.bs-page .bs-sample-note { margin: 4px 0 18px; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
+.bs-page .bs-sample-note { margin: 4px 0 18px; font-size: var(--fs-caption); line-height: 1.55; color: var(--tl-dim); }
 
 .bs-page .bs-sample-bands { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
 
 .bs-page .bs-sample-band { min-width: 0; }
 
-.bs-page .bs-sample-n { font-family: var(--font); font-size: var(--fs-caption); font-weight: 500; letter-spacing: normal; color: var(--t3); font-variant-numeric: tabular-nums; }
+.bs-page .bs-sample-n { font-family: var(--font); font-size: var(--fs-caption); font-weight: 500; letter-spacing: normal; color: var(--tl-faint); font-variant-numeric: tabular-nums; }
 
-.bs-page .bs-sample-label { display: inline; margin: 0 0 0 8px; font-size: 12.5px; font-weight: 560; color: var(--t1); }
+.bs-page .bs-sample-label { display: inline; margin: 0 0 0 8px; font-size: 12.5px; font-weight: 560; color: var(--tl-soft); }
 
 .bs-page .bs-sample-swatches { display: flex; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 
 .bs-page .bs-sample-swatches li { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 
-.bs-page .bs-sample-chip { width: 100%; min-width: 34px; height: 34px; border-radius: var(--radius-s); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t0) 12%, transparent); }
+.bs-page .bs-sample-chip { width: 100%; min-width: 34px; height: 34px; border-radius: 8px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tl-ink) 12%, transparent); }
 
-.bs-page .bs-sample-role { font-size: 12px; font-weight: 560; color: var(--t2); white-space: nowrap; }
+.bs-page .bs-sample-role { font-size: 12px; font-weight: 560; color: var(--tl-dim); white-space: nowrap; }
 
-.bs-page .bs-sample-hex { font-family: var(--mono); font-size: 12px; color: var(--t2); }
+.bs-page .bs-sample-hex { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); }
 
-.bs-page .bs-sample-pair { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--t1); }
+.bs-page .bs-sample-pair { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--tl-soft); }
 
-.bs-page .bs-sample-pair strong { color: var(--t0); }
+.bs-page .bs-sample-pair strong { color: var(--tl-ink); }
 
 .bs-page .bs-sample-scale { display: flex; flex-direction: column; gap: 4px; margin: 12px 0 0; padding: 0; list-style: none; }
 
-.bs-page .bs-sample-scale li { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--t1); }
+.bs-page .bs-sample-scale li { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--tl-soft); }
 
-.bs-page .bs-sample-px { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--t2); }
+.bs-page .bs-sample-px { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-dim); }
 
 /* ── Widths, touch, motion ────────────────────────────────────────────────── */
 

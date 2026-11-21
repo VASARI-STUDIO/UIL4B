@@ -1198,6 +1198,18 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
   .lib-surface .ig .ic-name{margin-top:6px}
   .lib-surface .ig .ig-skel-labels{margin-top:6px}
 }
+/* Phones: a 4-up name box is about 75px, too narrow for a long name on one line.
+   Give a pack icon its name on two lines and drop the pack line, as touch screens
+   already do, so the label band stays 30px and no name is cut off. */
+@media(max-width:640px){
+  .lib-surface .ig .ic span.ic-pack{display:none}
+  .lib-surface .ig .ic.has-pack .ic-name{min-height:30px;-webkit-line-clamp:2;line-clamp:2}
+}
+/* 360-400px: at 12px the longest names (arrow-down-on-square-stack) need a third
+   line. 11px keeps them to two. */
+@media(min-width:360px) and (max-width:400px){
+  .lib-surface .ig .ic-name{font-size:11px;line-height:15px}
+}
 /* Below 360px a 4-up name box is 60px, too narrow for long names on two lines. */
 @media(max-width:359px){
   .lib-surface .ig{grid-template-columns:repeat(3,minmax(0,1fr))}

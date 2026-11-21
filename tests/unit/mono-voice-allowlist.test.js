@@ -61,6 +61,9 @@ const ALLOWED = {
     '.adm-stripe-env': 'token',
     '.adm-stripe-input input': 'code',
   },
+  'deferred/colour-picker.css': {
+    '.cpk-hint-value': 'hex',
+  },
   'deferred/colour.css': {
     '.plb-picker-hex': 'hex',
     '.plb-tint-hex': 'hex',
@@ -68,6 +71,9 @@ const ALLOWED = {
   'deferred/library.css': {
     '.ig-attrib code': 'code',
     '.pl-modal-prompt pre': 'ask',
+  },
+  'deferred/menu-moments.css': {
+    '.pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2': 'glyph',
   },
   'deferred/overlay.css': {
     '.cp-kbd': 'kbd',
@@ -89,7 +95,6 @@ const ALLOWED = {
     '.adm-table .mono': 'code',
     '.code': 'code',
     '.cpk-hex': 'hex',
-    '.cpk-hint-value': 'hex',
     '.fnote-todo-where code': 'code',
     '.hcmd-kbd kbd': 'kbd',
     '.pgal-hex': 'hex',

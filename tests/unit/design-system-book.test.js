@@ -356,7 +356,7 @@ test('the gate goes to /plans, and asks for no account first', () => {
 test('a free user is told what they are hitting before they click', () => {
   // Every gate is EXPLICIT rather than silent. The
   // button says so itself, so the modal is a confirmation and not a surprise.
-  assert.match(STEPS, /else if \(locked\) label = .*'Unlock with Pro'/)
+  assert.match(STEPS, /else if \(locked\) label = .*'Upgrade to Pro'/)
 })
 
 test('the book reports its own activation, not the style guide’s', () => {

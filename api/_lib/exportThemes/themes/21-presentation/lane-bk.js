@@ -185,7 +185,7 @@ function voice(ctx, st) {
     { cls: 'pz-bp', html: `<h3 class="pz-l">In 50 words</h3><p class="pz-t">${A(dropSay(ctx, V.boilerplate50))}</p>${copyBtn('Copy text', V.boilerplate50, '50-word boilerplate')}<h3 class="pz-l pz-bp__nh">Writing the name</h3><p class="pz-t">${A(V.nameRules)}</p>` },
   ], { cls: 'pz-split--2' });
   // the lines as the deck's statement slide: the primary line across the band, the others under it
-  const lines = band(ctx, st, sec, 'Lines in use', `<p class="pz-d pz-state__h" style="font-size:${fitSize(ctx, [sayLine(ctx)], 0.7, 128)}">${A(sayLine(ctx))}</p>${B.lines.others.length ? `<ul class="pz-state__o">${B.lines.others.map((l) => `<li class="pz-d">${A(l)}</li>`).join('')}</ul>` : ''}`, { cls: 'pz-state' });
+  const lines = band(ctx, st, sec, 'Lines in use', `<p class="pz-d pz-state__h" style="font-size:${fitSize(ctx, [sayLine(ctx)], 0.7, 96)}">${A(sayLine(ctx))}</p>${B.lines.others.length ? `<ul class="pz-state__o">${B.lines.others.map((l) => `<li class="pz-d">${A(l)}</li>`).join('')}</ul>` : ''}`, { cls: 'pz-state' });
   return section(sec, opener + rules + wtn + boiler + lines);
 }
 

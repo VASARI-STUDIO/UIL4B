@@ -87,6 +87,14 @@ for (const id of ['book', 'guidelines']) {
       // The window reserved for the document is closed again.
       await expect.poll(() => context.pages().filter((p) => !p.isClosed()).length, 'a blank window was left open').toBe(1)
       expect(asked).toHaveLength(1)
+      // The server's 403 is the verdict: the button becomes the one Upgrade offer, and pressing it
+      // goes to the upgrade path instead of asking the server again for a file it has refused.
+      const upgrade = exportPanel(page).getByRole('button', { name: 'Upgrade to Pro', exact: true })
+      await expect(upgrade, 'after a 403 the button is the Upgrade offer').toBeVisible()
+      await expect(exportPanel(page).getByRole('button', { name: actionLabel(id), exact: true })).toHaveCount(0)
+      await upgrade.click()
+      await expect.poll(() => page.url(), 'Upgrade leaves for checkout or the plans page').not.toBe(before)
+      expect(asked, 'no second request for a refused file').toHaveLength(1)
       await context.close()
     })
 
@@ -148,7 +156,7 @@ test('a Free account is sent to /plans and the server is never asked', async ({ 
   const popups = []
   context.on('page', (p) => popups.push(p))
 
-  await exportPanel(page).getByRole('button', { name: /Unlock with Pro/i }).click()
+  await exportPanel(page).getByRole('button', { name: /Upgrade to Pro/i }).click()
 
   await expect(page).toHaveURL(/\/plans(\?|$)/)
   expect(asked, 'a Free account must not even reach the endpoint').toHaveLength(0)

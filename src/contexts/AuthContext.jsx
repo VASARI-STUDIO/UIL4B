@@ -35,6 +35,7 @@ import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurre
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
 import { needsEmailVerification, reloadVerified, sendVerificationLink } from '../utils/emailVerification'
 import { createAccountRetry } from '../utils/accountRetry'
+import { runSignOutHooks } from '../utils/signOutHooks'
 
 const AuthContext = createContext()
 const PROFILE_CACHE_KEY = 'vs-profile-cache'
@@ -279,6 +280,8 @@ export function AuthProvider({ children }) {
         accountRetry = createAccountRetry({ load: hydrate })
         accountRetry.start()
       } else {
+        // Whatever else the signed-in account left in memory (the export preview cache) goes now, not on the next request.
+        runSignOutHooks()
         setFirebaseUser(null)
         setEmailVerified(false)
         setSignupVerification(null)

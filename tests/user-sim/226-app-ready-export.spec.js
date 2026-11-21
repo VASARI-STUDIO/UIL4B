@@ -1,6 +1,6 @@
 // APP-READY EXPORT: the export dialog's fourth type, one Pro category ("App-ready
 // bundle", format id app-bundle) that downloads <slug>-app-ready.zip, built in the
-// browser by src/utils/appBundle.js.
+// server (api/_lib/exportDocument.js, format app-bundle; src/utils/appBundle.js builds it).
 //
 // What a person does here: open Export, pick App-ready, and either get the zip (Pro)
 // or the Pro gate (free or signed out). The zip is read back with jszip and its
@@ -11,12 +11,12 @@
 // .xfp box with data-kind="bundle".
 //
 // MUTATIONS (each break must fail the test named after it):
-//   - Change the root folder in appBundle.js (UIL4B- to anything else): "the zip root" fails.
+//   - Change the root folder in src/utils/appBundlePaths.js (UIL4B- to anything else): "the zip root" fails.
 //   - Drop the dark rule from buildTokensCss: "the CSS has a .dark block" fails.
 //   - Write the dark Figma file from the light tokens: "light and dark differ" fails.
 //   - Give the apps category pro:false: every free-account test fails.
 //   - Skip the Pro check for app-bundle in useExportRunner.run: "no download" fails.
-//   - Remove 'apps' from EXPORT_TYPES: the keyboard test fails at the App-ready radio.
+//   - Remove 'apps' from the UI type's categories: the keyboard test fails at the App-ready bundle tab.
 //
 // Screenshots: set APP_READY_CAPTURES to a folder and the preview tests save viewport
 // shots there; with it unset they save nothing.
@@ -25,13 +25,44 @@ import path from 'node:path'
 import JSZip from 'jszip'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { exportPanel, typeRadio, primaryButton, dockStatus, dockError } from './export-rows.js'
+import { exportPanel, typeRadio, categoryRadio, primaryButton, dockStatus, dockError } from './export-rows.js'
+import { serveExportDocument } from '../../api/_lib/exportDocument.js'
 
 const PRIMARY = '#1F4B8E'
 const WORKED_BOARD = `/create/palette?c=${PRIMARY.slice(1)},2E7BB8,3FA9A0`
 const SLUG = 'untitled'
 const ZIP_NAME = `${SLUG}-app-ready.zip`
 const CAPTURES = process.env.APP_READY_CAPTURES || ''
+
+// `vite preview` has no /api, so the export route is answered by the REAL serveExportDocument with the
+// account the signed-in test holds. Only its verifyIdToken, readUser and consume are stand-ins (as in 432).
+const ACCOUNTS = {
+  free: {},
+  pro: { subscription: { status: 'active', interval: 'monthly', currentPeriodEnd: Date.now() + 10 * 86_400_000 } },
+}
+async function serveExportAs(page, plan) {
+  await page.route((url) => url.pathname === '/api/ai' && url.searchParams.get('export') === 'document', async (route) => {
+    const req = route.request()
+    const reply = { status: 200, headers: {}, body: null, bytes: null }
+    const res = {
+      setHeader: (k, v) => { reply.headers[k] = v },
+      status: (code) => { reply.status = code; return res },
+      json: (b) => { reply.body = b; return res },
+      send: (b) => { reply.bytes = b; return res },
+    }
+    await serveExportDocument({ headers: req.headers(), body: req.postDataJSON() }, res, {
+      verifyIdToken: async () => ({ uid: plan, email_verified: true }),
+      readUser: async (uid) => ACCOUNTS[uid],
+      consume: async () => ({ allowed: true, remaining: 10, retryAfter: 0 }),
+    })
+    return route.fulfill({
+      status: reply.status,
+      headers: reply.headers,
+      contentType: reply.bytes ? reply.headers['Content-Type'] : 'application/json',
+      body: reply.bytes || JSON.stringify(reply.body ?? {}),
+    })
+  })
+}
 
 const SIZES = [
   { label: '1440', viewport: { width: 1440, height: 900 }, touch: false },
@@ -52,11 +83,12 @@ async function openFromHeader(page) {
   return settled(page)
 }
 
-/** Open the popup and choose App-ready. */
+/** Open the popup and choose the App-ready bundle: the UI type, then its App-ready bundle tab. */
 async function openAppReady(page) {
   const panel = await openFromHeader(page)
-  await typeRadio(panel, 'App-ready').click()
-  await expect(typeRadio(panel, 'App-ready')).toHaveAttribute('aria-checked', 'true')
+  await typeRadio(panel, 'UI').click()
+  await categoryRadio(panel, 'App-ready bundle').click()
+  await expect(categoryRadio(panel, 'App-ready bundle')).toHaveAttribute('aria-selected', 'true')
   return panel
 }
 
@@ -154,6 +186,7 @@ for (const size of SIZES) {
     test('chooses App-ready and exports a zip with a folder per app', async ({ page }) => {
       watch(page, `a Pro subscriber exporting the app-ready bundle at ${size.label}`)
       await signIn(page, { plan: 'pro' })
+      await serveExportAs(page, 'pro')
       await go(page, WORKED_BOARD)
       const panel = await openAppReady(page)
       await expect(primaryButton(panel)).toHaveText('Export app-ready bundle')
@@ -207,7 +240,7 @@ test.describe('a free signed-in account', () => {
           }
         })
         const panel = await openAppReady(page)
-        await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+        await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
         await expect(dockStatus(panel)).toContainText('Pro unlocks the app-ready bundle.')
 
         await primaryButton(panel).click()
@@ -299,7 +332,7 @@ test.describe('signed out', () => {
     page.on('download', (d) => downloads.push(d.suggestedFilename()))
     await go(page, WORKED_BOARD)
     const panel = await openAppReady(page)
-    await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+    await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     await expect(panel.locator('.xfp[data-kind="bundle"] .xfp-box')).toHaveAttribute('data-state', 'ready')
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
@@ -314,6 +347,7 @@ test.describe('with the keyboard', () => {
   test('arrow keys reach App-ready, Tab reaches the primary, Enter exports and focus comes back to the opener', async ({ page }) => {
     watch(page, 'a keyboard user exporting the app-ready bundle')
     await signIn(page, { plan: 'pro' })
+    await serveExportAs(page, 'pro')
     await go(page, WORKED_BOARD)
     const opener = page.locator('.pnav-export')
     await opener.focus()
@@ -321,12 +355,15 @@ test.describe('with the keyboard', () => {
     const panel = await settled(page)
     await expect(panel.getByRole('heading', { level: 2 }), 'focus starts on the title').toBeFocused()
 
-    await typeRadio(panel, 'Brand book').focus()
-    for (const next of ['UI kit', 'Code', 'App-ready']) {
-      await page.keyboard.press('ArrowDown')
-      await expect(typeRadio(panel, next)).toBeFocused()
-      await expect(typeRadio(panel, next)).toHaveAttribute('aria-checked', 'true')
-    }
+    await typeRadio(panel, 'Branding').focus()
+    await page.keyboard.press('ArrowDown')
+    await expect(typeRadio(panel, 'UI')).toBeFocused()
+    await expect(typeRadio(panel, 'UI')).toHaveAttribute('aria-checked', 'true')
+    // UI opens on its UI kit tab; the arrow along the tabs reaches the App-ready bundle.
+    await categoryRadio(panel, 'UI kit').focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(categoryRadio(panel, 'App-ready bundle')).toBeFocused()
+    await expect(categoryRadio(panel, 'App-ready bundle')).toHaveAttribute('aria-selected', 'true')
     await expect(primaryButton(panel)).toHaveText('Export app-ready bundle')
     await expect(panel.locator('.xfp[data-kind="bundle"] .xfp-box')).toHaveAttribute('data-state', 'ready')
 

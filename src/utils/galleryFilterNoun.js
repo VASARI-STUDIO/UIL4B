@@ -34,6 +34,8 @@ export function filterNoun(kind, filters = {}, count = 2) {
   let noun
   if (kind === 'palettes' && collection === 'brand') {
     noun = single ? 'brand system' : 'brand systems'
+  } else if (kind === 'palettes' && collection === 'community') {
+    noun = `community ${single ? base.one : base.many}`
   } else if (kind === 'palettes' && collection === 'curated') {
     noun = `curated ${single ? base.one : base.many}`
   } else {

@@ -72,6 +72,16 @@ function fallbackShots(ctx, T) {
 // and section references. T is the theme module, kind 'guidelines' or 'uikit', loaders the reads the engine may make
 // (fontFile, icon, logoPlugin). data is the brand's data; it defaults to the sample brand the theme is written for.
 export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].data) {
+  // a theme may re-tone a status of the slot edition's generated brand (meta.statusTones { id: tone }): the brand's own action colour can be a
+  // green beside the house success green, and two chips of one hue family read as one status. A tone named there that has a house default
+  // (info) is the house one: the generated brand's information colour takes the primary's hue, which for a green brand is another green.
+  // A colour the design chose itself (ui.infoOwn) stays the brand's own.
+  const tones = edition === 'slot' && T.meta.statusTones;
+  if (tones && data.ui && Array.isArray(data.ui.status)) {
+    const house = [...new Set(Object.values(tones))].filter((t) => ['success', 'warning', 'danger', 'info'].includes(t) && !(t === 'info' && data.ui.infoOwn));
+    const strip = (m) => (m ? Object.fromEntries(Object.entries(m).filter(([k]) => !house.includes(k))) : m);
+    data = { ...data, ui: { ...data.ui, light: strip(data.ui.light), dark: strip(data.ui.dark), status: data.ui.status.map((s) => (tones[s.id] && !s.fg ? { ...s, tone: tones[s.id] } : s)) } };
+  }
   const ctx = loadBrand(data, loaders);
   ctx.edition = edition; ctx.theme = T.meta; ctx.kind = kind;
   ctx.logo = makeLogo(ctx); ctx.ui = makeUi(ctx);

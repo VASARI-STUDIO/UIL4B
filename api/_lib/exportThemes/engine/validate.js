@@ -60,7 +60,7 @@ const CLOSED = {
   'ui.radius': ['control', 'card', 'button', 'input', 'chip'],
 };
 CLOSED['fonts.body'] = CLOSED['fonts.display']; CLOSED['fonts.mono'] = CLOSED['fonts.display'];
-const BOOL = new Set(['fonts.display.standIn', 'fonts.body.standIn', 'fonts.mono.standIn']);
+const BOOL = new Set(['fonts.display.standIn', 'fonts.body.standIn', 'fonts.mono.standIn', 'ui.infoOwn']);
 const ACTION_EXEMPT = /^ui[.](light|dark)[.]actionExempt$/;
 
 // Text the brand wrote: control characters and private-use code points go (the slot edition's placeholder sentinels live in that range, so

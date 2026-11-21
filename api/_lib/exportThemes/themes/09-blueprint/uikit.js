@@ -195,7 +195,7 @@ ${rv('left:-40px;top:0;height:132px', 44, 'l')}${rh('left:0;top:-28px;width:72px
 ${fig}
 <p class="kc-cap">Drawn at 3×. Label: ${A(B.fonts.body.family)} ${ctl.size} / ${ctl.weight}, ${A(hexName(ctx, R.actionLabel))} on ${A(hexName(ctx, R.action))}, ${rt(ctx, R.actionLabel, R.action)}.</p>
 <div class="kc-grow"></div>
-<div class="tb"><div class="tbl"><div class="cell kc-logo"><span class="k">Logo, drawn at 1×</span><div class="kc-lg">${ctx.logo.html('colour', { width: 300, label: 'Your logo goes here' })}${rh('left:0;bottom:-14px;width:300px', 300, 'u')}</div></div>${[['Drawing', 'UI kit', true], ['Project', `${B.name}, renovation builders, ${B.city}`], ['Scale', '1×, 3× and 4×. Every label is the 1× value.'], ['Date', `${ctx.date}. Example project.`]].map(([k, v, big]) => `<div class="cell"><span class="k">${A(k)}</span>${big ? `<span class="big">${A(v)}</span>` : A(v)}</div>`).join('')}</div>
+<div class="tb"><div class="tbl"><div class="cell kc-logo"><span class="k">Logo, drawn at 1×</span><div class="kc-lg">${ctx.logo.html('colour', { width: 300, label: 'Your logo goes here' })}${rh('left:0;bottom:-14px;width:300px', 300, 'u')}</div></div>${[['Drawing', 'UI kit', true], ['Project', `${B.name}, renovation builders, ${B.city}`], ['Scale', '1×, 3× and 4×. Every label is the 1× value.'], ['Date', `${ctx.date}. ${B.name}.`]].map(([k, v, big]) => `<div class="cell"><span class="k">${A(k)}</span>${big ? `<span class="big">${A(v)}</span>` : A(v)}</div>`).join('')}</div>
 <div class="tbr"><span class="k">Sections</span><ul class="sh">${sheets}</ul></div></div>
 </section>`;
   },

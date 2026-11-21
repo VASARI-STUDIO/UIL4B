@@ -102,6 +102,19 @@ export function paletteCols(ctx, { ground, W = 1080, actionHex, snap = 12, minW 
   // the last field is the remainder, so it too is held to minW (its edge steps left a reed at a time, taking the width from the field before it)
   const L = out[out.length - 1], P = out[out.length - 2];
   if (minW && P && real(L)) while (L.w < minW) { L.x -= snap; L.w += snap; P.w -= snap; }
+  // that step can leave the field before the last under minW: while a field that carries text is short, one reed of width moves to it from the widest field that can spare it
+  // (never below minW), every edge between the two stepping a reed along, so each edge is still on a reed's centre
+  if (minW) {
+    for (let guard = 0; guard < 200; guard += 1) {
+      const j = out.findIndex((c) => c.w < minW && real(c));
+      if (j < 0) break;
+      let d = -1;
+      out.forEach((c, i) => { if (i !== j && c.w - snap >= minW && (d < 0 || c.w > out[d].w)) d = i; });
+      if (d < 0) break;
+      if (d < j) { out[d].w -= snap; for (let i = d + 1; i < j; i += 1) out[i].x -= snap; out[j].x -= snap; out[j].w += snap; }
+      else { out[d].x += snap; out[d].w -= snap; for (let i = j + 1; i < d; i += 1) out[i].x += snap; out[j].w += snap; }
+    }
+  }
   return out;
 }
 

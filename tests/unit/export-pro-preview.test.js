@@ -170,7 +170,7 @@ test('the logo is drawn on the guidelines covers that carry one, and a book neve
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
 
 test('the strip is drawn for every template: the dialog passes the chosen one and keeps no default-only gate', () => {
-  const steps = read('src/components/export/ExportSteps.jsx')
+  const steps = read('src/components/export/ExportPreview.jsx')
   // The one default is the book as PNG pages, which has a single layout (the
   // Layout step says so); every other file passes the template picked for its list.
   assert.equal(steps.match(/defaultTemplate\(/g)?.length, 1, 'the strip no longer hides for a non-default template')

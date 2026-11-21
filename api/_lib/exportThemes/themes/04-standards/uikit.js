@@ -132,13 +132,19 @@ const whenHtml = (d) => { const [t, rest] = split(d.when), now = d.status === 'l
 // ---- status words: light and dark pairs, measured. The ratio is the words on the page ground
 const chipPairs = (ctx, mode) => { const M = colourMap(ctx, mode); const o = Object.fromEntries(ctx.status.map((s) => [s.id, [statusText(ctx, mode, s).hex, M.surface]])); o.departed = [M.quiet, M.surface]; return o; };
 
+// the headline band is two display words and a status chip on one line: 80 px for a time and a short place, smaller as the words get longer so the line stays inside the page (never under 36 px)
+const bandSize = (a, b) => Math.max(36, Math.min(80, Math.floor(960 / (0.58 * (String(a).length + String(b).length)))));
+
 export const uikit = {
   // the construction sheet: the logo on a drawn grid of x (one cell per x, a heavier line every 4x), its clear space dimensioned in x
   cover(ctx) {
     const B = ctx.brand, S = sc(ctx), rev = B.logo.colourways.reversed, slot = ctx.edition === 'slot', d = S.deliveries[0], L = ctx.logo, g = L.geos.reversed, mn = L.minSize;
     const sections = ctx.sections.map((s) => `<li><span>${s.n}</span>${A(s.title)}</li>`).join('');
-    const xs = 8, ux = L.geo.x || L.geo.cap / 10, s = xs / ux, lw = g.w * s, lh = g.h * s, X = L.geo.unit * s, zw = lw + 2 * X, zh = lh + 2 * X;
-    const SW = 700, SH = 252, ox = 64, oy = 46, minor = mixHex(rev.ground, rev.name, 0.1), major = mixHex(rev.ground, rev.name, 0.26);
+    const SW = 700, ox = 64, oy = 46, ux = L.geo.x || L.geo.cap / 10;
+    // x is 8 px on the sheet. A long wordmark beside a tile (a project's own logo) would run past the sheet and into the spec column, so x shrinks until the clear zone and its dimension marks fit the width, and the sheet grows taller to hold the lockup.
+    const xs = Math.max(3, Math.min(8, (SW - ox - 56) / ((g.w + 2 * L.geo.unit) / ux))), s = xs / ux, lw = g.w * s, lh = g.h * s, X = L.geo.unit * s, zw = lw + 2 * X, zh = lh + 2 * X;
+    const SH = Math.max(252, Math.ceil(oy + zh + 44));
+    const minor = mixHex(rev.ground, rev.name, 0.1), major = mixHex(rev.ground, rev.name, 0.26);
     const mk = (n) => `${+(n / xs).toFixed(1)}x`, f1 = (n) => +(n).toFixed(1);
     const hm = (x1, x2, y, t) => `<path d="M${f1(x1)} ${y - 4}v8M${f1(x2)} ${y - 4}v8M${f1(x1)} ${y}H${f1(x2)}"/><text x="${f1((x1 + x2) / 2)}" y="${y - 8}" text-anchor="middle">${t}</text>`;
     const vm = (y1, y2, x, t, anchor = 'end') => `<path d="M${x - 4} ${f1(y1)}h8M${x - 4} ${f1(y2)}h8M${x} ${f1(y1)}V${f1(y2)}"/><text x="${anchor === 'end' ? x - 8 : x + 8}" y="${f1((y1 + y2) / 2 + 4)}" text-anchor="${anchor}">${t}</text>`;
@@ -149,9 +155,9 @@ export const uikit = {
 <rect x="${ox}" y="${oy}" width="${f1(zw)}" height="${f1(zh)}" class="kc-zone"/><rect x="${f1(ox + X)}" y="${f1(oy + X)}" width="${f1(lw)}" height="${f1(lh)}" class="kc-prot"/><g class="kc-dim">${marks}</g></svg><div class="kc-logo" style="left:${f1(ox + X)}px;top:${f1(oy + X)}px;width:${f1(lw)}px">${slot ? L.html('reversed', { width: Math.floor(lw), color: rev.name, label: 'Your logo goes here' }) : L.html('reversed', { width: Math.floor(lw) })}</div></div>`;
     const unit = slot ? `x is ${L.clearShare}% of the logo's height.` : `x is the stroke of the wake, ${L.clearShare}% of the logo's height.`;
     const spec = `<ol class="kc-spec"><li><span>1</span><p>Keep a clear zone round the logo, ${+(L.geo.unit / ux).toFixed(1)}x on every side. ${A(unit)}</p></li><li><span>2</span><p>Measure from the edge of the logo, on all four sides.</p></li><li><span>3</span><p>On screen, ${mn.screenPx} px wide. The wake is ${f1(ux * mn.screenPx / g.w)} px thick.</p></li></ol>`;
-    return `<section class="pg pg--kcover" data-page="cover"><div class="cv-top"><div><h1>Interface standards manual</h1><p>${A(B.name)}, river ferry, ${A(B.city)}. ${A(B.product)}<br>${A(ctx.versionLine)}.</p></div><ul class="sec">${sections}</ul></div>
+    return `<section class="pg pg--kcover" data-page="cover"><div class="cv-top"><div><h1>Interface standards manual</h1><p>${A(B.name)}, ${A(B.city)}. ${A(B.product)}<br>${A(ctx.versionLine)}.</p></div><ul class="sec">${sections}</ul></div>
 <div class="kc-row">${sheet}${spec}</div>
-<div class="kc-band"><span class="disp num">${A(split(d.when)[0])}</span><span class="disp kc-to">${A(d.to)}</span><span class="kc-chip">${A((ctx.status.find((x) => x.id === d.status) || ctx.status[0]).label)}</span></div>
+<div class="kc-band" style="--kcs:${bandSize(split(d.when)[0], d.to)}px"><span class="disp num">${A(split(d.when)[0])}</span><span class="disp kc-to">${A(d.to)}</span><span class="kc-chip">${A((ctx.status.find((x) => x.id === d.status) || ctx.status[0]).label)}</span></div>
 <div class="cv-bot"><p>On screen, x is fixed at ${base(ctx)} px.<br>Every space and height is a whole number of x.</p></div></section>`;
   },
 

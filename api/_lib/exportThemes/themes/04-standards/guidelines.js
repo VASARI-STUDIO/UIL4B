@@ -27,7 +27,7 @@ const own = {
     for (let k = 0; k * b <= right; k++) { const X = k * b, big = k % 16 === 0, mid = k % 4 === 0; tick += `M${X} 0v${big ? 12 : mid ? 8 : 4}`; if (big && k) num += `<text x="${X}" y="26" text-anchor="middle">${k}</text>`; }
     const ruler = `<svg class="g-ruler" width="${right}" height="30" viewBox="-1 0 ${right + 2} 30" aria-hidden="true"><path d="${tick}"/><path d="M0 0H${right}"/>${num}<text x="${right}" y="26" text-anchor="end">x</text></svg>`;
     const tabs = `<ol class="g-tabs" aria-label="Sections">${ctx.sections.map((s) => `<li>${s.n}</li>`).join('')}</ol>`;
-    return `<section class="pg pg--cover g-cv" data-page="cover" style="position:relative">${tabs}<div class="cv-top"><div><h1>Graphic standards manual</h1><p>Brand guidelines for ${A(B.name)}, river ferry, ${A(B.city)}. ${A(ctx.versionLine)}.</p></div><ul class="sec">${secs}</ul></div>
+    return `<section class="pg pg--cover g-cv" data-page="cover" style="position:relative">${tabs}<div class="cv-top"><div><h1>Graphic standards manual</h1><p>Brand guidelines for ${A(B.name)}, ${A(B.city)}. ${A(ctx.versionLine)}.</p></div><ul class="sec">${secs}</ul></div>
 <div class="g-cvm" style="height:${top + LH + 4}px"><svg class="g-cvd" width="${W}" height="${top + LH + 4}" viewBox="0 0 ${W} ${top + LH + 4}" aria-hidden="true">${dims}</svg><div class="g-cvl" style="left:0;top:${top}px">${logo}</div><p class="g-cvn">Every size in this manual is given in x,<br>the stroke of the wake.</p></div>${ruler}</section>`;
   },
 

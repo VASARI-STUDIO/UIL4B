@@ -2,7 +2,7 @@
 // Every page is laid out in px on the 1280 x 720 page from the spec (11_specs/21-presentation.md). Colours come by role, never by id;
 // text is measured with the brand's own font files so a fitted size is a real fit. Styles: css-r1.js (classes r-).
 import { plateImg } from '../../engine/plate.js';
-import { A } from './helpers.js';
+import { A, distinctColours, servedFamily, softOnDark } from './helpers.js';
 import { screenContent } from './once.js';
 import { outline, capHeight } from '../../engine/logo.js';
 import { loadFont } from '../../engine/nodeFont.js';
@@ -27,6 +27,8 @@ const nameOfHex = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) => c.hex
 const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
 // chrome rule: the brand's quiet tone that reaches 4.5:1 on the ground; else the best of the text colour, the page ground and the dark soft text
 const chromeOn = (ctx, hex) => {
+  const soft = softOnDark(ctx, hex);
+  if (soft) return soft;
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
   return q || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
 };
@@ -171,7 +173,7 @@ function lineMapBase(ctx) {
 function timetable(ctx, x, y, ink) {
   const B = ctx.brand, c = screenContent(ctx), tone = (id) => (B.ui.status.find((s) => s.id === id) || {}).tone;
   const rows = (c.deliveries || []).filter((d) => tone(d.status) !== 'danger').slice(0, 4);
-  if (rows.length < 2) return '';
+  if (rows.length < 2 || ctx.edition === 'slot') return ''; // the slot edition's rows are placeholders: they sit on the product screen that uses them, not on the cover
   const dw = dispW(ctx), rowH = 44, cx = [0, 296, 592, 888].map((v) => x + v), isT = (t) => /\d\s?[ap]m/i.test(t || ''), W = ctx.size.w - 112;
   const bt = (cxi, base, cls, t) => box(cxi, topForBaseline(ctx, 'body', 400, 15, 1.6, base), 280, 0, `color:${ink}`, `<p class="r-t15 ${cls}">${A(t)}</p>`);
   const y0 = y + 40;
@@ -194,7 +196,7 @@ const sceneK = (ctx, id, artW, pageK) => { const qs = ctx.sceneInfo(id).quads; r
 // (k is the scale the art is shown at). The label is "Your logo goes here" where that fits and "Logo" alone where it does not; the ink is the ground's own.
 // min is the width the frame needs to hold a label at all, used only on the smallest objects (the slot edition's frame grows there; the logo's does not).
 const logoAt = (ctx, id, width, { k = 1, ink, colourway, min = 0, minH = 0 } = {}) => {
-  if (ctx.edition !== 'slot') return ctx.logo.html(id, { width, colourway, color: ink });
+  if (ctx.edition !== 'slot' || ctx.logo.drawn) return ctx.logo.html(id, { width, colourway, color: ink });
   const g = ctx.logo.geos[id], w = Math.max(width, Math.min(min, 3 * width)), h = Math.max((w * g.h) / g.w, minH / k), line = +(1.5 / k).toFixed(2);
   const bw = ctx.brand.fonts.body.weights.includes(500) ? 500 : ctx.brand.fonts.body.weights[0], per = (t) => textW(ctx, 'body', bw, t, 100, 0) / 100;
   const room = w - 2 * line - 8 / k, high = h - 2 * line;
@@ -294,9 +296,12 @@ export const r1 = {
 
   palette(ctx) {
     const B = ctx.brand, V = B.voice.principles, act = byRole(ctx, 'action'), gr = L(ctx).surface, W = ctx.size.w;
-    const rank = { text: 0, panel: 1, accent: 2, ground: 4 };
-    const rest = ctx.colours.filter((c) => c !== act).sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3));
-    const cs = [act, ...rest], onAct = ctx.pairs.filter((p) => p.bgHex === act.hex), fgs = onAct.filter((p) => !p.large).map((p) => nameOfHex(ctx, p.fgHex)), big = onAct.find((p) => p.large);
+    // each colour once (the label on the action repeats the canvas where they match); the slot edition keeps the brand's own order so the
+    // colours read Colour 1, 2, 3 ... left to right, a finished brand puts the grounds last
+    const rank = { text: 0, panel: 1, accent: 2, ground: 4 }, slot = ctx.edition === 'slot';
+    const all = distinctColours(ctx), lead0 = all.find((c) => c.hex.toLowerCase() === act.hex.toLowerCase()), others = all.filter((c) => c !== lead0);
+    const rest = slot ? others : others.sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3));
+    const cs = [lead0, ...rest], onAct = ctx.pairs.filter((p) => p.bgHex === act.hex), fgs = onAct.filter((p) => !p.large).map((p) => nameOfHex(ctx, p.fgHex)), big = onAct.find((p) => p.large);
     const lead = `${cs.length} colours, each named for where it lands. ${act.name} is the one people see us by.${fgs.length ? ` ${fgs[0]} type goes on it${big ? `, and ${nameOfHex(ctx, big.fgHex)} type only from ${big.minSize} px` : ''}.` : ''}`;
     const sentences = [null, V[0].example, V[1].example, V[3 % V.length].example];
     const leadW = W * 0.4, otherW = (W - leadW) / (cs.length - 1), hlLine = lineMap(ctx).palHead;
@@ -306,7 +311,7 @@ export const r1 = {
       const w = i === 0 ? leadW : otherW, tx = i === 0 ? 56 : x + 24, tw = i === 0 ? 400 : w - 48, ink = inkOn(ctx, c.hex), ch = chromeOn(ctx, c.hex);
       const nameSize = i === 0 ? 40 : 26, edge = c.role === 'ground' ? 'box-shadow:inset 1px 0 0 ' + L(ctx).divider : '';
       const html = box(x, 128, w, 592, `background:${c.hex};${edge}`) +
-        (i === 0 ? box(tx, 160, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : box(tx, 160, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
+        (i === 0 ? box(tx, 160, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : box(tx, 160, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${slot ? `The ${A(c.roleText || c.role)} colour.` : A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
         box(tx, topForBaseline(ctx, 'display', dispW(ctx), nameSize, 1.05, 580), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${A(c.name)}</p>`) +
         box(tx, 592, tw, 48, `color:${ch}`, `<p class="r-t12">${A(c.lands)}</p>`) + box(tx, 656, tw, 16, `color:${ink}`, `<p class="r-mono num">${A(c.hex)}</p>`) +
         box(tx, 676, tw, 16, `color:${ch}`, `<p class="r-t12 r-nw num">${values(c)}</p>`);
@@ -316,23 +321,23 @@ export const r1 = {
   },
 
   typefaces(ctx) {
-    const B = ctx.brand, F = B.fonts, d = F.display, b = F.body, m = F.mono, sc = B.type.scale, ground = byRole(ctx, 'text').hex, W = ctx.size.w;
+    const B = ctx.brand, F = B.fonts, d = F.display, b = F.body, m = F.mono, dn = servedFamily(d), bn = servedFamily(b), mn = servedFamily(m), sc = B.type.scale, ground = byRole(ctx, 'text').hex, W = ctx.size.w;
     const white = L(ctx).surface, soft = ctx.roles.dark.textSoft, ch = chromeOn(ctx, ground), wname = { 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Extra bold' };
     const toks = (f) => sc.filter((s) => s.face === f).map((s) => s.token).join(', ');
     const hair = ctx.ratio(L(ctx).textSoft, ground) > 1.3 ? L(ctx).textSoft : ctx.roles.dark.divider;
-    const dw = dispW(ctx), name = d.family, size = fitSize(ctx, 'display', dw, [name], 200, 140, 1000, 1, -0.02);
+    const dw = dispW(ctx), name = dn, size = fitSize(ctx, 'display', dw, [name], 200, 140, 1000, 1, -0.02);
     const f = loadFont(face(ctx, 'display', dw).stem), lsb = outline(f, name[0], size, 0).x1, capTop = topForBaseline(ctx, 'display', dw, size, 0.9, 160 + capHeight(f, size));
     const one = lineMap(ctx).specimen; // one sentence, so each weight sample sets on one line
     const weights = b.weights.slice(0, 3).map((w, i) => box([352, 648, 944][i], 500, 264, 0, `color:${ch}`, `<p class="r-t12">${wname[w] || w} ${w}</p><p class="r-t18 r-nw" style="color:${white};font-weight:${w}">${A(one)}</p>`)).join('');
     const note = `Weight ${d.weights.join(', ')}${d.stretch ? `, width ${d.stretch}` : ''}.${d.italics ? ` Italic ${d.italics.join(', ')} too.` : ''} Used for ${toks('display')}.`;
-    const inner = box(56, 72, 560, 48, `color:${soft}`, `<p class="r-t15">${lineHtml(wrapLines(ctx, 'body', 400, `Two faces do the work. ${d.family} sets the line you read first. ${b.family} carries everything after it.`, 15, 560, 0, false))}</p>`) +
+    const inner = box(56, 72, 560, 48, `color:${soft}`, `<p class="r-t15">${lineHtml(wrapLines(ctx, 'body', 400, `Two faces do the work. ${dn} sets the line you read first. ${bn} carries everything after it.`, 15, 560, 0, false))}</p>`) +
       box(944, 72, 280, 32, `color:${ch}`, `<p class="r-t12 r-w600" style="color:${white}">Display</p><p class="r-t12">${A(note)}</p>`) +
       box(56 - lsb, capTop, 0, 0, `color:${white};font-size:${size}px;line-height:0.9;letter-spacing:-0.02em`, `<h2 class="disp r-nw" style="letter-spacing:-0.02em">${A(name)}</h2>`) +
       box(56, 352, 860, 90, `color:${white}`,`<p class="disp r-set">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p>`) +
       box(56, 480, W - 112, 1, `background:${hair}`) +
-      box(56, 500, 260, 0, `color:${ch}`, `<p class="r-t22" style="color:${white}">${A(b.family)}</p><p class="r-t12 r-w600" style="color:${white}">Body</p><p class="r-t12">Used for ${A(toks('body'))}.</p>`) + weights +
-      box(944, 352, 280, 0, `color:${ch}`,`<p class="r-mono r-t22 num" style="color:${white}">${A(L(ctx).action)}</p><p class="r-t12 r-w600" style="color:${white}">${A(m.family)}</p><p class="r-t12">Only for a hex, a token or a code string.</p>`) +
-      box(56, 648, 560, 32, `color:${ch}`, `<p class="r-t12">${A(d.family)}, ${A(b.family)} and ${A(m.family)} are open source under the SIL Open Font Licence. ${A(onceRe(ctx)?.test('Free to use in print and on screen, and free to download from Google Fonts.') ? 'Use them in print and on screen, and download them from Google Fonts.' : 'Free to use in print and on screen, and free to download from Google Fonts.')}</p>`) +
+      box(56, 500, 260, 0, `color:${ch}`, `<p class="r-t22" style="color:${white}">${A(bn)}</p><p class="r-t12 r-w600" style="color:${white}">Body</p><p class="r-t12">Used for ${A(toks('body'))}.</p>`) + weights +
+      box(944, 352, 280, 0, `color:${ch}`,`<p class="r-mono r-t22 num" style="color:${white}">${A(L(ctx).action)}</p><p class="r-t12 r-w600" style="color:${white}">${A(mn)}</p><p class="r-t12">Only for a hex, a token or a code string.</p>`) +
+      box(56, 648, 560, 32, `color:${ch}`, `<p class="r-t12">${A(dn)}, ${A(bn)} and ${A(mn)} are open source under the SIL Open Font Licence. ${A(onceRe(ctx)?.test('Free to use in print and on screen, and free to download from Google Fonts.') ? 'Use them in print and on screen, and download them from Google Fonts.' : 'Free to use in print and on screen, and free to download from Google Fonts.')}</p>`) +
       head(ctx, 'typefaces', { left: ground });
     return page('typefaces', 'r-dark', inner, ground);
   },

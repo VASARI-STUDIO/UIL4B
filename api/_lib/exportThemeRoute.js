@@ -16,7 +16,8 @@
 //
 // Every file name comes from brand.slug (limited to [a-z0-9-] by the engine) and the theme id, never from the project name.
 
-import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeExportPro, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
+import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
+import { assertThemeAccess } from './themeAccess.js'
 
 export const MAX_THEME_BODY_CHARS = 256 * 1024
 // First in the head of every print document. Inline styles and data: fonts and images are all a print document holds. base-uri and
@@ -78,10 +79,11 @@ function withCsp(html) {
 }
 
 // One document of every page, for printing (fonts embedded) or for a zip (fonts beside it).
-function pagesDoc(E, T, ctx, kind, standalone) {
+function pagesDoc(E, T, ctx, kind, standalone, only) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
-  const list = kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES
+  // `only` is one page id: the preview draws a single page and not the whole document.
+  const list = (kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES).filter((p) => only === undefined || p.id === only)
   // A theme draws only the pages it has written (a guidelines-only theme has twelve); the engine's list keeps their order.
   // A page whose layout cannot hold this brand's words (a theme checks every fit and throws) is left out rather than failing the
   // whole file; only a document with no page at all is a failed build.
@@ -93,6 +95,29 @@ function pagesDoc(E, T, ctx, kind, standalone) {
   if (!pages.length) throw new Error(`no ${kind} page could be drawn`)
   const title = `${ctx.brand.name} ${kind === 'uikit' ? 'UI kit' : 'brand guidelines'}`
   return E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+}
+
+// The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
+// A site that cannot be laid out for this brand gives null, and the caller serves the stacked document instead.
+async function premiumSite(kind, ctx, T, dirs) {
+  try {
+    const files = kind === 'kit' ? (await import('./exportThemes/engine/kit-site-build.js')).kitSiteFiles(ctx, T)
+      : (await import('./exportThemes/engine/guide-site-build.js')).guideSiteFiles(ctx, T)
+    return relinkSites(files, dirs)
+  } catch (err) { console.warn(`[export] ${kind} site not built (${err?.name || 'Error'}); serving the single document`); return null }
+}
+
+// The themes link the guide and the kit to each other as sibling folders named ui-kit-html and guidelines-html (the engine's
+// layout). Each export is its own zip with its own top folder, so those links are pointed at the other zip's top folder: they
+// work when both zips are unpacked in the same place, which is where a browser saves them.
+export function relinkSites(files, { guide, kit }) {
+  const out = {}
+  for (const [path, body] of Object.entries(files)) {
+    out[path] = typeof body === 'string' && /\.html$/.test(path)
+      ? body.replaceAll('../ui-kit-html/', `../${kit}/`).replaceAll('../guidelines-html/', `../${guide}/`)
+      : body
+  }
+  return out
 }
 
 // A file map as a zip with one top folder.
@@ -112,6 +137,15 @@ async function bookSite(E, T, brand, slug) {
   return { ctx, files: E.bookFiles(ctx, T, { kit, kitName, zip: kitZip, outside: false }) }
 }
 
+// A published site has no editor to fill a box in: a project that has not named the brand is shown under a plain name, the same in the
+// titles, the stylesheet comments, the README and the logo. (The print documents keep the unwritten name as a box to fill.)
+export const UNNAMED_BRAND = 'Your brand'
+export const SITE_NAME = 'Your name'
+export function siteBrand(brand) {
+  if (brand.name !== UNNAMED_BRAND) return brand
+  return { ...brand, name: SITE_NAME, logo: { ...brand.logo, showcase: { ...brand.logo.showcase, wordmark: SITE_NAME } } }
+}
+
 /** Builds one export. Returns { zip: Buffer, name } or { html } (a print document, with its CSP meta). */
 export async function renderThemeExport({ theme, row, format, design, projectName }, engine) {
   const E = engine || await loadEngine()
@@ -119,20 +153,37 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   const brand = E.projectToBrand({ design, projectName })
   const slug = brand.slug
   const T = await THEMES[theme]()
+  const dirs = { guide: `${slug}-brand-guidelines-${theme}`, kit: `${slug}-ui-kit-${theme}` }
   if (row === 'ui-kit') {
-    const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, brand)
-    const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }
-    return { name: `${slug}-ui-kit-${theme}.zip`, zip: await zipOf(E, files, `${slug}-ui-kit-${theme}`) }
+    const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, T.kitSite ? siteBrand(brand) : brand)
+    const site = T.kitSite ? await premiumSite('kit', ctx, T, dirs) : null
+    const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), ...(site || { 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }) }
+    return { name: `${dirs.kit}.zip`, zip: await zipOf(E, files, dirs.kit) }
   }
   if (row === 'slides') {
-    const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand)
-    if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, ctx, 'guidelines', true)) }
-    const files = { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
-    return { name: `${slug}-brand-guidelines-${theme}.zip`, zip: await zipOf(E, files, `${slug}-brand-guidelines-${theme}`) }
+    if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand), 'guidelines', true)) }
+    const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, T.guideSite ? siteBrand(brand) : brand)
+    const site = T.guideSite ? await premiumSite('guide', ctx, T, dirs) : null
+    const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
+    return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
   const { files } = await bookSite(E, T, brand, slug)
   return { name: `${slug}-brand-book-${theme}.zip`, zip: await zipOf(E, files, `${slug}-brand-book-${theme}`) }
+}
+
+/**
+ * One page of a theme for the live preview, drawn the way renderThemeExport draws it for a print document (stand-alone, fonts
+ * embedded, CSP meta first). `kind` is 'uikit' or 'guidelines' and `page` an engine page id; kind 'book' is the book's first
+ * screen and takes no page. Returns { html }.
+ */
+export async function renderThemePage({ theme, kind, page, design, projectName }, engine) {
+  const E = engine || await loadEngine()
+  const brand = E.projectToBrand({ design, projectName })
+  const T = await THEMES[theme]()
+  if (kind === 'book') return { html: withCsp(bookPrint(E, T, brand, brand.slug)) }
+  const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand)
+  return { html: withCsp(pagesDoc(E, T, ctx, kind, true, page)) }
 }
 
 const safePath = (p) => (typeof p === 'string' && /^[A-Za-z0-9_.[\]-]{1,120}$/.test(p) ? p : undefined)
@@ -162,8 +213,11 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
   const { theme, row, format } = body
   const problem = themeRequestProblem(body)
   if (problem) return res.status(400).json(problem)
-  if (plan.id !== 'pro' && isThemeExportPro(row, theme)) {
-    return res.status(403).json({ error: 'Pro plan required', code: 'pro_required', row, theme })
+  const access = assertThemeAccess(plan, { theme, row, format })
+  if (!access.ok) {
+    return res.status(access.status).json(access.code === 'pro_required'
+      ? { error: 'Pro plan required', code: 'pro_required', row, theme }
+      : { error: 'Export not available', code: access.code })
   }
 
   // The stated length first: an oversize request costs no limiter write and no stringify.

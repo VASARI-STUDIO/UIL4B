@@ -305,7 +305,8 @@ test('neither palette nor design flow claims a review it did not queue', () => {
 test('the community hub reads the account, not just this browser', () => {
   const src = read(HUB)
   assert.match(src, /listMySubmissions\(uid, 'design'\)/)
-  assert.match(src, /mergeSubmissions\(designServer, designLocal\)/)
+  assert.match(src, /listMySubmissions\(uid, 'palette'\)/)
+  assert.match(src, /mergeSubmissions\(\[\.\.\.designServer, \.\.\.paletteServer\], designLocal\)/)
 })
 
 test('the hub no longer tells submitters their work stays in this browser', () => {

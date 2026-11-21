@@ -10,7 +10,7 @@ import { formatFileName, hasFormatFile } from '../../src/utils/exportFileName.js
 import { EXPORT_TEMPLATES, assertTemplatesCoherent } from '../../src/config/exportTemplates.js'
 import {
   DEFAULT_PRESET, EXPORT_TYPES, LAST_PICK_KEY, exportLocation, galleryPick, needsNetwork,
-  FREE_START, pickIsFree, presetFromGalleryPick, readLastPick, readLastTheme, resolvePreset, resolveUpgradeTarget, startFor, storeLastPick,
+  FREE_START, freeWayOut, pickIsFree, presetFromGalleryPick, readLastPick, readLastTheme, resolvePreset, resolveUpgradeTarget, startFor, storeLastPick,
 } from '../../src/config/dialogExport.js'
 import { GALLERY_CHECKOUT, GALLERY_DESIGNS, GALLERY_FORMATS, normalisePick } from '../../src/utils/kitGalleryPick.js'
 import { codeFileName, CODE_FILES, isCodeFile, buildCodeFile } from '../../src/utils/codeFiles.js'
@@ -35,12 +35,15 @@ test('every live format is in exactly one category, and no category lists a form
   }
 })
 
-test('the rail is Brand book (Book, Slides, Style guide), UI kit, Code and App-ready, and only Brand book has sub-rows', () => {
-  assert.deepEqual(EXPORT_TYPES.map((t) => t.id), ['brand', 'kit', 'code', 'apps'])
-  assert.deepEqual(EXPORT_TYPES[0].categories.map((c) => c.id), ['book', 'slides', 'guide'])
-  assert.equal(EXPORT_TYPES[1].categories.length, 1)
-  assert.equal(EXPORT_TYPES[2].categories.length, 1)
-  assert.equal(EXPORT_TYPES[3].categories.length, 1)
+test('the rail is Branding, UI, Image and Code, each with its sub-category tabs', () => {
+  assert.deepEqual(EXPORT_TYPES.map((t) => t.id), ['branding', 'ui', 'image', 'code'])
+  assert.deepEqual(EXPORT_TYPES.map((t) => t.name), ['Branding', 'UI', 'Image', 'Code'])
+  assert.deepEqual(EXPORT_TYPES.map((t) => t.categories.map((c) => c.id)), [
+    ['slides', 'book', 'guide'],
+    ['kit', 'apps'],
+    ['guide-image', 'book-pages'],
+    ['tokens', 'contrast'],
+  ])
   const ids = allCategories.map((c) => c.id)
   assert.equal(new Set(ids).size, ids.length, 'a category id repeats')
 })
@@ -63,10 +66,11 @@ test('a category with a layout step reads a real template list, and files in a r
   for (const c of allCategories) {
     if (c.layouts) assert.ok(Object.hasOwn(EXPORT_TEMPLATES, c.layouts), `${c.id} layouts ${c.layouts} is not an export template list`)
   }
-  assert.deepEqual(allCategories.filter((c) => c.layouts).map((c) => c.layouts), ['book', 'guidelines', 'kit'])
-  // The three Pro files of the book and the two of the slides are one row each in exportFormats.js.
-  assert.deepEqual(groupFormats('book').map((f) => f.id), EXPORT_TYPES[0].categories[0].files)
-  assert.deepEqual(groupFormats('guidelines').map((f) => f.id), EXPORT_TYPES[0].categories[1].files)
+  assert.deepEqual(allCategories.filter((c) => c.layouts).map((c) => c.layouts), ['guidelines', 'book', 'kit', 'book'])
+  // The three Pro files of the book (split over the Brand book and Book pages tabs) and the two of the slides are one row each in exportFormats.js.
+  const book = [...EXPORT_TYPES[0].categories[1].files, ...EXPORT_TYPES[2].categories[1].files]
+  assert.deepEqual(groupFormats('book').map((f) => f.id).sort(), [...book].sort())
+  assert.deepEqual(groupFormats('guidelines').map((f) => f.id), EXPORT_TYPES[0].categories[0].files)
 })
 
 test('the HTML variants pass the coherence asserts and answer to the same wall as their document', () => {
@@ -98,36 +102,59 @@ test('the app-ready bundle is a live Pro row of its own, with a download name an
   assert.equal(formatFileName('Lumen', 'app-bundle'), 'lumen-app-ready.zip')
   assert.equal(formatFileName('', 'app-bundle'), 'untitled-app-ready.zip')
   const home = exportLocation('app-bundle')
-  assert.deepEqual([home.type.id, home.category.id, home.category.pro, home.category.preview], ['apps', 'apps', true, 'bundle'])
+  assert.deepEqual([home.type.id, home.category.id, home.category.pro, home.category.preview], ['ui', 'apps', true, 'bundle'])
   // The Soon row for the icon and swatch bundle is a different thing and stays unbuilt.
   assert.ok(unbuiltFormats().some((f) => f.id === 'assets'))
 })
 
 // ── Presets and the last pick ───────────────────────────────────────────────
 
-test('the default preset is Brand book, Book, PDF and resolves to itself', () => {
-  assert.deepEqual(DEFAULT_PRESET, { type: 'brand', category: 'book', file: 'book' })
-  assert.deepEqual(resolvePreset(DEFAULT_PRESET), { type: 'brand', category: 'book', file: 'book' })
-  assert.deepEqual(resolvePreset(), { type: 'brand', category: 'book', file: 'book' })
-  assert.deepEqual(resolvePreset(null), { type: 'brand', category: 'book', file: 'book' })
-  assert.deepEqual(resolvePreset('css'), { type: 'brand', category: 'book', file: 'book' })
+test('the default preset is the free guidelines and resolves to itself', () => {
+  const guidelines = { type: 'branding', category: 'slides', file: 'guidelines' }
+  assert.deepEqual(DEFAULT_PRESET, guidelines)
+  assert.deepEqual(resolvePreset(DEFAULT_PRESET), guidelines)
+  assert.deepEqual(resolvePreset(), guidelines)
+  assert.deepEqual(resolvePreset(null), guidelines)
+  assert.deepEqual(resolvePreset('css'), guidelines)
+  assert.equal(pickIsFree(DEFAULT_PRESET), true, 'the default export is always a free one')
+  assert.deepEqual(startFor(false, DEFAULT_PRESET, undefined).pick, DEFAULT_PRESET)
 })
 
 test('a preset falls back safely, part by part', () => {
   // The Tint tool's row names the type and the file only.
-  assert.deepEqual(resolvePreset({ type: 'code', file: 'css' }), { type: 'code', category: 'code', file: 'css' })
-  assert.deepEqual(resolvePreset({ type: 'code' }), { type: 'code', category: 'code', file: 'css' })
+  assert.deepEqual(resolvePreset({ type: 'code', file: 'css' }), { type: 'code', category: 'tokens', file: 'css' })
+  assert.deepEqual(resolvePreset({ type: 'code' }), { type: 'code', category: 'tokens', file: 'css' })
   // A type alone opens on its first category and its first file.
-  assert.deepEqual(resolvePreset({ type: 'brand' }), { type: 'brand', category: 'book', file: 'book' })
+  assert.deepEqual(resolvePreset({ type: 'branding' }), { type: 'branding', category: 'slides', file: 'guidelines' })
   // A missing category is the one that holds the file.
-  assert.deepEqual(resolvePreset({ type: 'brand', file: 'guidelines-html' }), { type: 'brand', category: 'slides', file: 'guidelines-html' })
-  assert.deepEqual(resolvePreset({ file: 'json' }), { type: 'code', category: 'code', file: 'json' })
+  assert.deepEqual(resolvePreset({ type: 'branding', file: 'guidelines-html' }), { type: 'branding', category: 'slides', file: 'guidelines-html' })
+  assert.deepEqual(resolvePreset({ file: 'json' }), { type: 'code', category: 'tokens', file: 'json' })
+  assert.deepEqual(resolvePreset({ file: 'contrast' }), { type: 'code', category: 'contrast', file: 'contrast' })
   // A file the category lacks is its first file.
-  assert.deepEqual(resolvePreset({ type: 'brand', category: 'slides', file: 'png' }), { type: 'brand', category: 'slides', file: 'guidelines' })
-  assert.deepEqual(resolvePreset({ type: 'brand', category: 'guide', file: 'jpeg' }), { type: 'brand', category: 'guide', file: 'jpeg' })
+  assert.deepEqual(resolvePreset({ type: 'branding', category: 'slides', file: 'png' }), { type: 'branding', category: 'slides', file: 'guidelines' })
+  assert.deepEqual(resolvePreset({ type: 'image', category: 'guide-image', file: 'jpeg' }), { type: 'image', category: 'guide-image', file: 'jpeg' })
   // Unknown ids fall to the default.
-  assert.deepEqual(resolvePreset({ type: 'nope', category: 'nope', file: 'nope' }), { type: 'brand', category: 'book', file: 'book' })
-  assert.deepEqual(resolvePreset({ type: 'kit', category: 'slides', file: 'css' }), { type: 'kit', category: 'kit', file: 'kit' })
+  assert.deepEqual(resolvePreset({ type: 'nope', category: 'nope', file: 'nope' }), { type: 'branding', category: 'slides', file: 'guidelines' })
+  assert.deepEqual(resolvePreset({ type: 'ui', category: 'slides', file: 'css' }), { type: 'ui', category: 'kit', file: 'kit' })
+})
+
+test('an id from the earlier rail (brand, kit, apps) follows its file to where it lives now', () => {
+  assert.deepEqual(resolvePreset({ type: 'brand', category: 'book', file: 'book' }), { type: 'branding', category: 'book', file: 'book' })
+  assert.deepEqual(resolvePreset({ type: 'brand', category: 'slides', file: 'guidelines-html' }), { type: 'branding', category: 'slides', file: 'guidelines-html' })
+  assert.deepEqual(resolvePreset({ type: 'brand', category: 'guide', file: 'html' }), { type: 'branding', category: 'guide', file: 'html' })
+  // The style guide's pictures moved to the Image rail.
+  assert.deepEqual(resolvePreset({ type: 'brand', category: 'guide', file: 'png' }), { type: 'image', category: 'guide-image', file: 'png' })
+  assert.deepEqual(resolvePreset({ type: 'brand', category: 'book', file: 'book-png' }), { type: 'image', category: 'book-pages', file: 'book-png' })
+  assert.deepEqual(resolvePreset({ type: 'kit', category: 'kit', file: 'kit' }), { type: 'ui', category: 'kit', file: 'kit' })
+  assert.deepEqual(resolvePreset({ type: 'apps', category: 'apps', file: 'app-bundle' }), { type: 'ui', category: 'apps', file: 'app-bundle' })
+  assert.deepEqual(resolvePreset({ type: 'code', category: 'code', file: 'contrast-json' }), { type: 'code', category: 'contrast', file: 'contrast-json' })
+  // An earlier type with no file opens on the type that replaced it.
+  assert.deepEqual(resolvePreset({ type: 'brand' }), { type: 'branding', category: 'slides', file: 'guidelines' })
+  assert.deepEqual(resolvePreset({ type: 'apps' }), { type: 'ui', category: 'kit', file: 'kit' })
+  // A stored pick from the earlier rail reads back migrated.
+  const storage = memory()
+  storage.setItem(LAST_PICK_KEY, JSON.stringify({ type: 'brand', category: 'book', file: 'book-html' }))
+  assert.deepEqual(readLastPick({ storage }), { type: 'branding', category: 'book', file: 'book-html' })
 })
 
 test('every file resolves to its own category', () => {
@@ -144,14 +171,14 @@ test('every file resolves to its own category', () => {
 test('the last pick is kept for the session, resolved, and an unreadable store reads as none', () => {
   const storage = memory()
   assert.equal(readLastPick({ storage }), null)
-  assert.equal(storeLastPick({ type: 'code', category: 'code', file: 'json' }, { storage }), true)
+  assert.equal(storeLastPick({ type: 'code', category: 'tokens', file: 'json' }, { storage }), true)
   assert.equal(storage.getItem(LAST_PICK_KEY).includes('json'), true)
-  assert.deepEqual(readLastPick({ storage }), { type: 'code', category: 'code', file: 'json' })
+  assert.deepEqual(readLastPick({ storage }), { type: 'code', category: 'tokens', file: 'json' })
   // A stored pick is made safe on the way in and on the way out.
-  storeLastPick({ type: 'brand', category: 'slides', file: 'book' }, { storage })
-  assert.deepEqual(readLastPick({ storage }), { type: 'brand', category: 'slides', file: 'guidelines' })
-  storage.setItem(LAST_PICK_KEY, JSON.stringify({ type: 'brand', category: 'guide', file: 'removed-format' }))
-  assert.deepEqual(readLastPick({ storage }), { type: 'brand', category: 'guide', file: 'html' })
+  storeLastPick({ type: 'branding', category: 'slides', file: 'book' }, { storage })
+  assert.deepEqual(readLastPick({ storage }), { type: 'branding', category: 'slides', file: 'guidelines' })
+  storage.setItem(LAST_PICK_KEY, JSON.stringify({ type: 'branding', category: 'guide', file: 'removed-format' }))
+  assert.deepEqual(readLastPick({ storage }), { type: 'branding', category: 'guide', file: 'html' })
   storage.setItem(LAST_PICK_KEY, '{not json')
   assert.equal(readLastPick({ storage }), null)
   storage.setItem(LAST_PICK_KEY, 'null')
@@ -165,34 +192,34 @@ test('the last pick is kept for the session, resolved, and an unreadable store r
 test('the theme is kept with the pick, read back only for the file it was chosen for, and dropped when it does not fit', () => {
   const storage = memory()
   assert.equal(readLastTheme('kit', { storage }), null)
-  storeLastPick({ type: 'brand', category: 'slides', file: 'guidelines' }, { storage, theme: '27-swissfield' })
+  storeLastPick({ type: 'branding', category: 'slides', file: 'guidelines' }, { storage, theme: '27-swissfield' })
   assert.equal(readLastTheme('guidelines', { storage }), '27-swissfield')
   // The pick itself still reads as a plain three-key preset.
-  assert.deepEqual(readLastPick({ storage }), { type: 'brand', category: 'slides', file: 'guidelines' })
+  assert.deepEqual(readLastPick({ storage }), { type: 'branding', category: 'slides', file: 'guidelines' })
   // Another file does not inherit it; neither does a theme that is not one.
   assert.equal(readLastTheme('kit', { storage }), null)
-  storeLastPick({ type: 'brand', category: 'slides', file: 'guidelines' }, { storage, theme: 'not-a-theme' })
+  storeLastPick({ type: 'branding', category: 'slides', file: 'guidelines' }, { storage, theme: 'not-a-theme' })
   assert.equal(readLastTheme('guidelines', { storage }), null)
   // A pick stored with no theme clears the old one.
-  storeLastPick({ type: 'brand', category: 'slides', file: 'guidelines' }, { storage })
+  storeLastPick({ type: 'branding', category: 'slides', file: 'guidelines' }, { storage })
   assert.equal(readLastTheme('guidelines', { storage }), null)
   assert.equal(readLastTheme('guidelines', { storage: { getItem() { throw new Error('denied') } } }), null)
 })
 
 test('a free account starts on a free pick: the guidelines in Label, never a Pro file or a Pro theme', () => {
-  assert.deepEqual({ ...FREE_START }, { type: 'brand', category: 'slides', file: 'guidelines' })
+  assert.deepEqual({ ...FREE_START }, { type: 'branding', category: 'slides', file: 'guidelines' })
   assert.equal(pickIsFree(FREE_START), true)
   assert.equal(pickIsFree(FREE_START, '25-label'), true)
   assert.equal(pickIsFree(FREE_START, '27-swissfield'), true)
   assert.equal(pickIsFree(FREE_START, '01-presentation'), false)
-  assert.equal(pickIsFree({ type: 'brand', category: 'book', file: 'book' }), false)
-  assert.equal(pickIsFree({ type: 'apps', category: 'apps', file: 'app-bundle' }), false)
-  assert.equal(pickIsFree({ type: 'kit', category: 'kit', file: 'kit' }, '04-standards'), true)
-  assert.equal(pickIsFree({ type: 'kit', category: 'kit', file: 'kit' }, '01-presentation'), false)
-  assert.equal(pickIsFree({ type: 'code', category: 'code', file: 'json' }), true)
+  assert.equal(pickIsFree({ type: 'branding', category: 'book', file: 'book' }), false)
+  assert.equal(pickIsFree({ type: 'ui', category: 'apps', file: 'app-bundle' }), false)
+  assert.equal(pickIsFree({ type: 'ui', category: 'kit', file: 'kit' }, '04-standards'), true)
+  assert.equal(pickIsFree({ type: 'ui', category: 'kit', file: 'kit' }, '01-presentation'), false)
+  assert.equal(pickIsFree({ type: 'code', category: 'tokens', file: 'json' }), true)
 
   // A Pro account keeps whatever it picked, theme included.
-  const book = { type: 'brand', category: 'book', file: 'book' }
+  const book = { type: 'branding', category: 'book', file: 'book' }
   assert.deepEqual(startFor(true, book, undefined), { pick: book, theme: undefined })
   assert.deepEqual(startFor(true, FREE_START, '01-presentation'), { pick: FREE_START, theme: '01-presentation' })
   // Anyone else keeps a free pick and falls back to the free start for a Pro one.
@@ -201,6 +228,40 @@ test('a free account starts on a free pick: the guidelines in Label, never a Pro
   assert.deepEqual(startFor(false, book, undefined), { pick: FREE_START, theme: undefined })
   assert.deepEqual(startFor(false, undefined, undefined), { pick: FREE_START, theme: undefined })
   assert.notEqual(startFor(false, book, undefined).pick, FREE_START, 'the start is a copy, not the frozen constant')
+})
+
+test('a Pro pick has a one-click free way out, and a free pick needs none', () => {
+  assert.equal(freeWayOut(FREE_START, undefined), null)
+  assert.equal(freeWayOut(FREE_START, '25-label'), null)
+  assert.equal(freeWayOut({ type: 'code', category: 'tokens', file: 'css' }, undefined), null)
+  // The same file in a theme it is free in.
+  const slides = freeWayOut(FREE_START, '01-presentation')
+  assert.equal(slides.pick.file, 'guidelines')
+  assert.equal(pickIsFree(slides.pick, slides.theme), true)
+  const kit = freeWayOut({ type: 'ui', category: 'kit', file: 'kit' }, '01-presentation')
+  assert.deepEqual([kit.pick.file, kit.theme], ['kit', '04-standards'])
+  // A file that is Pro in every theme falls back to the free start.
+  for (const pick of [{ type: 'branding', category: 'book', file: 'book' }, { type: 'ui', category: 'apps', file: 'app-bundle' }, { type: 'image', category: 'book-pages', file: 'book-png' }]) {
+    const out = freeWayOut(pick, undefined)
+    assert.deepEqual(out.pick, { ...FREE_START }, pick.file)
+    assert.equal(pickIsFree(out.pick, out.theme), true, pick.file)
+  }
+})
+
+test('whatever the file and the theme, the free way out is free and says where it goes', () => {
+  const files = EXPORT_TYPES.flatMap((t) => t.categories.flatMap((c) => c.files.map((file) => ({ type: t.id, category: c.id, file }))))
+  for (const pick of files) {
+    for (const theme of [undefined, '01-presentation', '04-standards', '25-label', '27-swissfield']) {
+      const out = freeWayOut(pick, theme)
+      if (!out) {
+        assert.equal(pickIsFree(pick, theme), true, `${pick.file} in ${theme}`)
+        continue
+      }
+      assert.equal(pickIsFree(pick, theme), false, `${pick.file} in ${theme}`)
+      assert.equal(pickIsFree(out.pick, out.theme), true, `${pick.file} in ${theme}: the way out is not free`)
+      assert.match(out.label, /^Use the free /, pick.file)
+    }
+  }
 })
 
 // ── The way to Pro ──────────────────────────────────────────────────────────
@@ -254,8 +315,8 @@ test('every gallery Pro file is a pick the gallery stores and reads back, and th
     seen.add(key)
     assert.deepEqual(presetFromGalleryPick(pick), resolvePreset({ file: id }))
   }
-  assert.deepEqual(presetFromGalleryPick({ design: 'kit', format: 'html' }), { type: 'kit', category: 'kit', file: 'kit' })
-  assert.deepEqual(presetFromGalleryPick({ design: 'nope' }), { type: 'brand', category: 'book', file: 'book' })
+  assert.deepEqual(presetFromGalleryPick({ design: 'kit', format: 'html' }), { type: 'ui', category: 'kit', file: 'kit' })
+  assert.deepEqual(presetFromGalleryPick({ design: 'nope' }), { type: 'branding', category: 'book', file: 'book' })
 })
 
 test('the gallery offers the book as PNG pages', () => {
@@ -308,7 +369,7 @@ test('the runner moved the gate tables over unchanged, and asks the server for t
 
 test('the runner exports one hook with the contract names, and copy() never runs the account gate', () => {
   assert.match(runner, /export default function useExportRunner\(\)/)
-  assert.match(runner, /return \{ run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn \}/)
+  assert.match(runner, /return \{ run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn, isRefused \}/)
   const copyBody = runner.slice(runner.indexOf('const copy = async'), runner.indexOf('const reset = '))
   assert.ok(copyBody.length > 100)
   assert.doesNotMatch(copyBody, /requireExportAccount|navigate|reportUpgradeGate/)
@@ -317,11 +378,11 @@ test('the runner exports one hook with the contract names, and copy() never runs
 
 // ── The Code files ──────────────────────────────────────────────────────────
 
-test('the Code category lists the five Code files, in order, and each is built by codeFiles.js', () => {
-  const code = allCategories.find((c) => c.id === 'code')
-  assert.deepEqual([...code.files], ['css', 'json', 'tailwind', 'contrast', 'contrast-json'])
-  assert.deepEqual(Object.keys(CODE_FILES), [...code.files])
-  for (const id of code.files) {
+test('the Code rail lists the five Code files, in order, and each is built by codeFiles.js', () => {
+  const code = EXPORT_TYPES.find((t) => t.id === 'code').categories.flatMap((c) => [...c.files])
+  assert.deepEqual(code, ['css', 'json', 'tailwind', 'contrast', 'contrast-json'])
+  assert.deepEqual(Object.keys(CODE_FILES), code)
+  for (const id of code) {
     assert.equal(isCodeFile(id), true, id)
     const f = EXPORT_FORMATS.find((x) => x.id === id)
     assert.equal(f.live && !f.pro, true, `${id} is live and free`)

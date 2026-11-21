@@ -16,7 +16,7 @@
  * The dialog's category filter is the shared LibraryFilterGroup, but the dialog
  * is not a `.lib-surface`, so it never received library.css's S4 fix. What it
  * rendered was global.css's base `.lbry-filter`: `border:0`, `background:
- * transparent`, on a `--bg-2` rail about two per cent off the dialog ground.
+ * transparent`, on a rail about two per cent off the dialog ground.
  * "All · Sans · Serif · Display · Script · Mono" read as six adjacent words
  * whenever the rail's sliding indicator had not yet measured itself.
  *
@@ -34,8 +34,8 @@
  * - Controls are the app file's rounded rectangle over a hairline (close,
  *   back, info, show-more), not 999px pills. The pill is kept only for the
  *   filter chips, where it is the library's own shape and the point is parity.
- * - The selected tile is an ink ring, not a `--brand` ring on a `--brand-bg`
- *   wash. Selection is ink everywhere on the Spectrum branch; the accent is
+ * - The selected tile is an ink ring, not a coloured ring on a tinted
+ *   wash. Selection is ink everywhere in V3; the primary fill is
  *   the next action ("Use this family"), not the state of a choice.
  *
  * Contrast measured on the built preview, composited, both themes — see the
@@ -50,29 +50,29 @@
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--t2);
+  color: var(--v3-sec);
   margin-bottom: 8px;
 }
 
 .typ-picker .typ-picker-trigger {
   padding: 11px 12px 11px 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--v3-raised);
+  border: 1px solid var(--v3-hair);
+  border-radius: 12px;
 }
 
 .typ-picker .typ-picker-trigger:hover:not(:disabled) {
-  border-color: var(--bh);
-  background: color-mix(in srgb, var(--t0) 3%, var(--card));
+  border-color: var(--v3-hl20);
+  background: color-mix(in srgb, var(--v3-ink) 3%, var(--v3-raised));
 }
 
 /* A real outline, like every other control on the page. The old rule was
    `outline:none` plus a 3px 8%-alpha halo, which composited to about 1.1:1 on
    the card. */
 .typ-picker .typ-picker-trigger:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--v3-ink);
   outline-offset: 2px;
-  border-color: var(--bh);
+  border-color: var(--v3-hl20);
   box-shadow: none;
 }
 
@@ -85,13 +85,13 @@
   padding: 5px 10px;
   font-size: max(var(--fs-caption), 11.5px);
   font-weight: 560;
-  color: var(--t1);
+  color: rgba(var(--v3-ink-rgb), .86);
   background: transparent;
-  border: 1px solid var(--bh);
-  border-radius: var(--radius-s);
+  border: 1px solid var(--v3-hl20);
+  border-radius: 8px;
 }
 
-.typ-picker .typ-picker-trigger:hover:not(:disabled) .typ-picker-cue { color: var(--t0); }
+.typ-picker .typ-picker-trigger:hover:not(:disabled) .typ-picker-cue { color: var(--v3-ink); }
 
 /* ── The dialog ───────────────────────────────────────────────────────────── */
 
@@ -102,9 +102,9 @@
 }
 
 .fbd-overlay .fbd-dialog {
-  background: var(--bg-0);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
+  background: var(--v3-ground);
+  border: 1px solid var(--v3-hair);
+  border-radius: 16px;
   box-shadow: 0 2px 4px -2px rgba(6, 6, 12, .12), 0 32px 80px -24px rgba(6, 6, 12, .42);
 }
 
@@ -119,10 +119,10 @@
 .fbd-overlay .fbd-back,
 .fbd-overlay .fbd-info,
 .fbd-overlay .fg-more-btn {
-  color: var(--t1);
+  color: rgba(var(--v3-ink-rgb), .86);
   background: transparent;
-  border: 1px solid var(--bh);
-  border-radius: var(--btn-radius);
+  border: 1px solid var(--v3-hl20);
+  border-radius: 999px;
   transition: color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), background var(--dur-1) var(--ease-standard);
 }
 
@@ -133,8 +133,8 @@
 .fbd-overlay .fbd-info {
   width: 40px;
   height: 40px;
-  border-radius: var(--btn-radius);
-  background: var(--card);
+  border-radius: 999px;
+  background: var(--v3-raised);
 }
 
 .fbd-overlay .fg-more-btn {
@@ -149,9 +149,9 @@
   .fbd-overlay .fbd-back:hover,
   .fbd-overlay .fbd-info:hover,
   .fbd-overlay .fg-more-btn:hover:not(:disabled) {
-    color: var(--t0);
-    border-color: color-mix(in srgb, var(--t0) 34%, transparent);
-    background: var(--hvr);
+    color: var(--v3-ink);
+    border-color: color-mix(in srgb, var(--v3-ink) 34%, transparent);
+    background: var(--v3-rowh);
   }
 }
 
@@ -161,7 +161,7 @@
 .fbd-overlay .fg-more-btn:focus-visible,
 .fbd-overlay .fbd-tile:focus-visible,
 .fbd-overlay .fbd-use:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--v3-ink);
   outline-offset: 2px;
 }
 
@@ -170,9 +170,9 @@
    dialog that is its own scroll container is neither needed nor wanted. */
 .fbd-overlay .lbry-toolbar {
   padding: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  background: var(--v3-raised);
+  border: 1px solid var(--v3-hair);
+  border-radius: 999px;
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -184,7 +184,7 @@
 }
 
 .fbd-overlay .lbry-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--v3-ink);
 }
 
 .fbd-overlay .lbry-search input { font-size: 14px; }
@@ -204,10 +204,10 @@
 .fbd-overlay .lbry-filters .lbry-filter {
   min-height: 40px;
   padding: 9px 15px;
-  border: 1px solid var(--bh);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--v3-hl20);
+  border-radius: 999px;
   background: transparent;
-  color: var(--t1);
+  color: rgba(var(--v3-ink-rgb), .86);
   font-size: max(var(--fs-caption), 12.5px);
   font-weight: 560;
   transition:
@@ -218,52 +218,52 @@
 
 @media (hover: hover) {
   .fbd-overlay .lbry-filters .lbry-filter:hover {
-    color: var(--t0);
-    border-color: color-mix(in srgb, var(--t0) 34%, transparent);
-    background: var(--hvr);
+    color: var(--v3-ink);
+    border-color: color-mix(in srgb, var(--v3-ink) 34%, transparent);
+    background: var(--v3-rowh);
   }
 }
 
 /* The pressed chip paints its own fill as well as being covered by the sliding
    one: the indicator is placed from a JS measurement and is invisible until it
-   lands, and ink text on no fill would be `--bg-0` on `--bg-0` for that frame. */
+   lands, and ink text on no fill would be ground on ground for that frame. */
 .fbd-overlay .lbry-filters .lbry-filter[data-active="true"] {
-  color: var(--bg-0);
-  border-color: var(--t0);
-  background: var(--t0);
+  color: var(--v3-on-ink);
+  border-color: var(--v3-ink);
+  background: var(--v3-ink);
 }
 
 .fbd-overlay .lbry-filters .lbry-filter-ind {
-  background: var(--t0);
-  border-radius: var(--radius-pill);
+  background: var(--v3-ink);
+  border-radius: 999px;
   box-shadow: none;
 }
 
 .fbd-overlay .lbry-filtertrig {
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid var(--bh);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--v3-hl20);
+  border-radius: 999px;
   background: transparent;
-  color: var(--t1);
+  color: rgba(var(--v3-ink-rgb), .86);
   font-size: max(var(--fs-caption), 12.5px);
   font-weight: 560;
 }
 
 @media (hover: hover) {
-  .fbd-overlay .lbry-filtertrig:hover { color: var(--t0); background: var(--hvr); }
+  .fbd-overlay .lbry-filtertrig:hover { color: var(--v3-ink); background: var(--v3-rowh); }
 }
 
 .fbd-overlay .lbry-filtertrig[aria-expanded="true"],
 .fbd-overlay .lbry-filtertrig[data-active="true"] {
-  color: var(--t0);
-  background: var(--card);
+  color: var(--v3-ink);
+  background: var(--v3-raised);
   box-shadow: none;
 }
 
 .fbd-overlay .lbry-filtermenu .lbry-filter {
   border-color: transparent;
-  border-radius: var(--radius-s);
+  border-radius: 8px;
   min-height: 38px;
   font-size: max(var(--fs-caption), 12.5px);
   font-weight: 560;
@@ -274,18 +274,12 @@
 .fbd-overlay .lbry-filtertrig-k { font-size: max(var(--fs-caption), 12px); letter-spacing: 0; text-transform: none; }
 
 .fbd-overlay .lbry-filtermenu .lbry-filter[data-active="true"] {
-  color: var(--t0);
-  background: var(--bg-2);
-  border-color: var(--border);
+  color: var(--v3-ink);
+  background: var(--v3-l2);
+  border-color: var(--v3-hair);
 }
 
-/* In dark `--bg-2` is the menu's own ground, so the chosen row needs the next
-   step up to be visible as anything but a text colour. */
-[data-theme="dark"] .fbd-overlay .lbry-filtermenu .lbry-filter[data-active="true"] {
-  background: var(--bg-3);
-}
-
-.fbd-overlay .lbry-filters .lbry-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fbd-overlay .lbry-filters .lbry-filter:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
 
 /* ── K8: the phone's category row is ONE scrolling line ──────────────────────
    LibraryToolbar keeps the first filter group on a phone as `.lbry-toolbar-quick`
@@ -321,19 +315,19 @@
 /* ── Tiles ─────────────────────────────────────────────────────────────────── */
 
 .fbd-overlay .fbd-tile {
-  border-radius: var(--radius-l);
-  background: var(--card);
+  border-radius: 12px;
+  background: var(--v3-raised);
   transition: border-color var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
 }
 
 @media (hover: hover) {
-  .fbd-overlay .fbd-tile:hover { border-color: var(--bh); }
+  .fbd-overlay .fbd-tile:hover { border-color: var(--v3-hl20); }
 }
 
 .fbd-overlay .fbd-card.is-selected .fbd-tile {
-  border-color: var(--t0);
-  background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--t0);
+  border-color: var(--v3-ink);
+  background: var(--v3-raised);
+  box-shadow: inset 0 0 0 1px var(--v3-ink);
 }
 
 .fbd-overlay .fbd-card .lbry-card-name { font-weight: 560; }
@@ -345,7 +339,7 @@
   font-size: 13px;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--t2);
+  color: var(--v3-sec);
 }
 
 /* The weight label under each cut ("400 Regular"), likewise. */
@@ -368,7 +362,7 @@
 
 .fbd-overlay .fdx-tab--on { font-weight: 560; }
 
-.fbd-overlay .fdx-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fbd-overlay .fdx-tab:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: -2px; }
 
 /* ── Touch floors, restated at this specificity ──────────────────────────── */
 

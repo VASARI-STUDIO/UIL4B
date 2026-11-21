@@ -95,7 +95,7 @@ const lockH = (ctx, id, w) => (w * ctx.logo.geos[id].h) / ctx.logo.geos[id].w;
 // The logo, or in the slot edition the theme's one frame (as in guidelines-r1.js): a dashed line that reads 1.5 px and a 12 px label as they land on the
 // page, k being the scale the art is shown at. "Your logo goes here" where it fits, "Logo" where it does not.
 function logoAt(ctx, id, width, { k = 1, ink, colourway } = {}) {
-  if (ctx.edition !== 'slot') return ctx.logo.html(id, { width, colourway, color: ink });
+  if (ctx.edition !== 'slot' || ctx.logo.drawn) return ctx.logo.html(id, { width, colourway, color: ink });
   const g = ctx.logo.geos[id], h = Math.max((width * g.h) / g.w, 20 / k), line = +(1.5 / k).toFixed(2);
   const bw = ctx.brand.fonts.body.weights.includes(500) ? 500 : ctx.brand.fonts.body.weights[0], per = (t) => textW(ctx, 'body', bw, t, 100, 0) / 100;
   const room = width - 2 * line - 8 / k, high = h - 2 * line;
