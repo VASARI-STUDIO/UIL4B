@@ -104,7 +104,7 @@ const frameMarks = (w, h, color, inset = 16, len = 16) => [[inset, inset, 'top',
 const colourwayOn = (ctx, hex) => { const e = Object.entries(ctx.brand.logo.colourways).filter(([, v]) => v.ground.toLowerCase() === hex.toLowerCase()); return (e.find(([k]) => !k.startsWith('mono')) || e[0] || [])[0]; };
 function logo(ctx, id, width, colourway, ink) {
   const g = ctx.logo.geos[id], h = (width * g.h) / g.w;
-  if (ctx.edition === 'slot') return `<div role="img" aria-label="Logo slot" style="width:${px(width)}px;height:${px(h)}px;box-sizing:border-box;border:1.5px dashed ${ink};color:${ink};display:flex;align-items:center;justify-content:center;font:500 12px/16px var(--body);white-space:nowrap">${h >= 20 ? 'Logo' : ''}</div>`;
+  if (ctx.edition === 'slot' && !ctx.logo.drawn) return `<div role="img" aria-label="Logo slot" style="width:${px(width)}px;height:${px(h)}px;box-sizing:border-box;border:1.5px dashed ${ink};color:${ink};display:flex;align-items:center;justify-content:center;font:500 12px/16px var(--body);white-space:nowrap">${h >= 20 ? 'Logo' : ''}</div>`;
   return ctx.logo.svg(id, { colourway, width });
 }
 
