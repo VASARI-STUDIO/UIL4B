@@ -52,16 +52,20 @@ export function kitCss(ctx) {
 .hk-empty{display:flex;flex-direction:column;gap:12px;align-items:flex-start;max-width:520px;padding:40px;border:1px solid var(--divider);background:var(--raised)}
 .hk-empty h3{font-size:20px;line-height:1.3;margin:0;font-weight:600}
 .hk-empty p{margin:0;color:var(--text-soft)}
-.hk-scr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 32px;align-items:start;padding:24px;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1px var(--divider);max-width:960px}
-.hk-scr--m{grid-template-columns:minmax(0,1fr);max-width:390px}
-.hk-scrs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start}
-.hk-scrs .hk-scr{grid-template-columns:minmax(0,1fr);max-width:none}
-@media (max-width:840px){.hk-scrs{grid-template-columns:minmax(0,1fr)}}
-.hk-scr__h{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hk-scr{background:var(--surface);color:var(--text);border:1px solid var(--divider);max-width:960px}
+.hk-scr__body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 32px;align-items:start;padding:24px}
+.hk-scr .ui-topbar{border-bottom:1px solid var(--divider)}
+.hk-scr__h{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px}
 .hk-scr__a{display:flex;flex-direction:column;gap:20px}
 .hk-scr .ui-row__end>span:first-child:not(.ui-chip){color:var(--text)}
-@media (max-width:700px){.hk-scr{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:700px){.hk-scr__body{grid-template-columns:minmax(0,1fr)}}
 .hk-scr__t{margin:0;font-size:20px;font-weight:600}
+.hk-phone{position:relative;box-sizing:border-box;width:min(100%,390px);aspect-ratio:9/19.5;border:10px solid var(--text);border-radius:44px;overflow:hidden;background:var(--surface);margin:0 auto}
+.hk-phone::before{content:"";display:block;width:96px;height:6px;margin:8px auto 0;border-radius:3px;background:var(--divider)}
+.hk-phone .hk-scr{border:0;max-width:none}
+.hk-phone .ui-topbar{height:auto;flex-wrap:wrap;padding:8px 16px}
+.hk-phone .ui-topbar__links{flex-wrap:wrap}
+.hk-phone .hk-scr__body{grid-template-columns:minmax(0,1fr);padding:16px}
 .hk-tok{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;margin:0}
 .hk-title__in{display:flex;flex-direction:column;gap:20px}
 .hk-top:not(.hk-top--cover) .hk-title__in{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:16px 56px;align-items:end}

@@ -64,7 +64,7 @@ const PAGES = {
     return { lede: 'Corners and edges, as the components draw them.', live: `<ul class="hk-rd">${r.map(([k, v]) => `<li><span class="hk-rd__b" style="border-radius:var(--${k})"></span>${tok(`--${k}`)}<span class="num">${A(v)}</span></li>`).join('')}${w.map(([k, v]) => `<li><span class="hk-rd__b" style="border-width:var(--${k})"></span>${tok(`--${k}`)}<span class="num">${A(v)}</span></li>`).join('')}</ul>`, code: [['Radius and border tokens', [...r, ...w].map(([k, v]) => `--${k}: ${v};`).join(String.fromCharCode(10))]] };
   },
   elevation: (ctx) => {
-    const S = SC(ctx), a = ctx.ui.card({ meta: S.status, title: S.rider, text: S.riderNote }), b = ctx.ui.card({ meta: S.deliverToLabel, title: S.deliverTo, text: S.eta, raised: true });
+    const S = SC(ctx), a = ctx.ui.card({ meta: ctx.edition === 'slot' ? 'Packed by' : S.status, title: S.rider, text: S.riderNote }), b = ctx.ui.card({ meta: S.deliverToLabel, title: S.deliverTo, text: S.eta, raised: true });
     return { lede: ctx.brand.ui.elevationNote, live: `<div class="hk-row hk-row--2">${item(a, 'Card')}${item(b, 'Raised card')}</div>`, code: [['Card', a], ['Raised card', b]] };
   },
   states: (ctx) => {
@@ -124,8 +124,9 @@ const PAGES = {
     return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="hk-empty"><h3>${A(E.title)}</h3><p>${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
-  'screen-light': (ctx) => pair(ctx, false),
-  'screen-dark': (ctx) => pair(ctx, true),
+  // the light screen on its own page and the dark on its own: each is read whole, at the width it is used at
+  'screen-light': (ctx) => screen(ctx, false, false),
+  'screen-dark': (ctx) => ({ ...screen(ctx, true, false), dark: true }),
   'screen-mobile': (ctx) => screen(ctx, false, true),
   tokens: (ctx) => {
     // one group to a row, each under its own heading with one Copy for the group (the declarations as they sit in tokens.css); a colour carries a 16 px chip
@@ -143,17 +144,18 @@ const PAGES = {
     return { lede: 'The kit ships as plain HTML and CSS: the tokens, the components and an example page.', live, code: [['Step 2: the stylesheets', links], ['Step 3: the wrapper', '<body class="ui">\n  <!-- your page -->\n</body>'], ['A button', h]] };
   },
 };
-// the screen in the page's mode beside the same screen in the other, so each is read against the other
-function pair(ctx, dark) {
-  const a = screen(ctx, dark, false), b = screen(ctx, !dark, false);
-  return { ...a, live: `<div class="hk-scrs">${a.live.replace('<div class="hk-col">', '').replace(/<\/div>$/, '')}${b.live.replace('<div class="hk-col">', '').replace(/<\/div>$/, '')}</div>`, dark: false };
-}
-// a product screen: the brand's own screen title and content, built from the components
+// a product screen: the brand's own screen title and content, built from the components. A top bar with the main links, the title over
+// its tabs, the order that is being worked on (a card and its one action) beside the day's orders, all of them
 function screen(ctx, dark, mobile) {
-  const S = SC(ctx), u = ctx.ui, E = EX(ctx), title = ctx.brand.ui.screen.title;
-  const h = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}><header class="hk-scr__h"><p class="hk-scr__t">${A(title)}</p>${u.statusChip(S.deliveries[0].status)}</header>
-<div class="hk-scr__a">${u.card({ meta: S.status, title: S.eta, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })}<div>${u.btn(S.form.book, { iconRight: 'arrow-right', block: mobile })}</div></div>
-<div class="hk-scr__b">${deliveryRows(ctx, 3)}</div></div>`;
+  const S = SC(ctx), u = ctx.ui, E = EX(ctx), title = ctx.brand.ui.screen.title, o = S.deliveries[0] || {};
+  const no = /Order \d+/.exec(o.when || '');
+  const card = no ? { meta: S.eta, title: `${no[0]} · ${S.status}` } : { meta: S.status, title: S.eta };
+  const bar = E.links && E.links.length ? `<nav class="ui-topbar" aria-label="Main"><strong class="ui-display">${A(ctx.brand.logo.showcase.wordmark)}</strong><div class="ui-topbar__links">${u.links(E.links, 0)}</div></nav>` : '';
+  const tabs = E.tabs && E.tabs.length ? u.tabs(E.tabs, 0) : '';
+  const scr = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}>${bar}<div class="hk-scr__body"><header class="hk-scr__h"><h2 class="hk-scr__t">${A(title)}</h2>${tabs}</header>
+<div class="hk-scr__a">${u.card({ ...card, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })}<div>${u.btn(S.form.book, { iconRight: 'arrow-right', block: mobile })}</div></div>
+<div class="hk-scr__b">${deliveryRows(ctx, mobile ? 4 : 6)}</div></div></div>`;
+  const h = mobile ? `<div class="hk-phone">${scr}</div>` : scr;
   return { lede: mobile ? `${title}, at phone width.` : `${title}, built from the kit's components only.`, live: `<div class="hk-col">${h}</div>`, code: [] };
 }
 

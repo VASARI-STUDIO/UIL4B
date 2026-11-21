@@ -22,9 +22,9 @@ const VOICE_PAIRS = [
 // empty: the sky is the calm part of the picture, where the type or the reversed logo goes.
 const accentFor = (ctx, ...against) => [(byRole(ctx, 'accent') || {}).hex, L(ctx).accent, ...distinctColours(ctx).map((c) => c.hex)].find((h) => h && against.every((g) => ctx.ratio(h, g) >= 1.8)) || '';
 const scene = (ctx, { sky, a, b, post, crate, fruit, ground }, label = '') => {
-  const awn = (_, i) => `<rect x="${48 + i * 38}" y="88" width="38" height="44" fill="${i % 2 ? b : a}"/><path d="M${48 + i * 38} 132h38a19 14 0 0 1-38 0z" fill="${i % 2 ? b : a}"/>`;
-  const crates = [0, 1, 2].map((i) => { const x = 76 + i * 100; return `<rect x="${x}" y="162" width="72" height="34" fill="${crate}"/><rect x="${x}" y="176" width="72" height="3" fill="${post}"/>${[14, 36, 58].map((d, k) => `<circle cx="${x + d}" cy="156" r="10" fill="${fruit[(i + k) % 2]}"/>`).join('')}`; }).join('');
-  return `<svg class="ht-scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect width="400" height="300" fill="${sky}"/><rect y="250" width="400" height="50" fill="${ground}"/><rect x="60" y="132" width="8" height="118" fill="${post}"/><rect x="332" y="132" width="8" height="118" fill="${post}"/>${Array.from({ length: 8 }, awn).join('')}<rect x="40" y="196" width="320" height="54" fill="${post}"/><rect x="34" y="190" width="332" height="10" fill="${a}"/>${crates}</svg>`;
+  const awn = (_, i) => `<rect x="${48 + i * 38}" y="88" width="38" height="30" fill="${i % 2 ? b : a}"/><path d="M${48 + i * 38} 118h38a19 14 0 0 1-38 0z" fill="${i % 2 ? b : a}"/>`;
+  const crates = [52, 120, 268].map((x, i) => { return `<rect x="${x}" y="162" width="64" height="34" fill="${crate}"/><rect x="${x}" y="176" width="64" height="3" fill="${post}"/>${[12, 32, 52].map((d, k) => `<circle cx="${x + d}" cy="156" r="10" fill="${fruit[(i + k) % 2]}"/>`).join('')}`; }).join('');
+  return `<svg class="ht-scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect width="400" height="300" fill="${sky}"/><rect y="250" width="400" height="50" fill="${ground}"/><rect x="60" y="88" width="8" height="162" fill="${post}"/><rect x="332" y="88" width="8" height="162" fill="${post}"/>${Array.from({ length: 8 }, awn).join('')}<path d="M204 196V176a22 14 0 0 1 44 0v20z" fill="${b}"/><circle cx="226" cy="150" r="11" fill="${post}"/><rect x="40" y="196" width="320" height="54" fill="${post}"/><rect x="34" y="190" width="332" height="10" fill="${a}"/>${crates}</svg>`;
 };
 // the scene on the page ground (photo direction)
 const sceneOnPage = (ctx, label) => { const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken; return scene(ctx, { sky, a: act, b: accentFor(ctx, act, sky) || dk, post: dk, crate: L(ctx).surface, fruit: [act, accentFor(ctx, L(ctx).surface, dk) || act], ground: act }, label); };
@@ -112,7 +112,7 @@ const groundTiles = (ctx) => {
     const k = cwFor(ctx, c.hex), own = cw[k] && lower(cw[k].ground) === lower(c.hex), ink = own ? cw[k].name : inkOn(ctx, c.hex);
     return { hex: c.hex, what: `site logo ground ${c.name}`, html: `<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, ...(own ? { colourway: k } : {}), color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(c.name)}</b>${cwCaption(cw, k, ctx, c.hex) ? `<br>${A(cwCaption(cw, k, ctx, c.hex))}` : ''}</p>` };
   });
-  tiles.push({ hex: dk, what: 'site logo ground photo', html: `<div class="ht-field__img">${sceneOnAction(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 150, colourway: 'reversed', color: inkOn(ctx, actF(ctx)), label: 'Logo' })}</div></div><p class="ht-field__c"><b>On a photo</b><br>Set the reversed logo on the calmest part of the picture, here the sky.</p>` });
+  tiles.push({ hex: dk, what: 'site logo ground photo', html: `<div class="ht-field__img">${sceneOnAction(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 150, colourway: 'reversed', color: inkOn(ctx, actF(ctx)), label: 'Logo' })}</div></div><p class="ht-field__c"><b>On a picture</b><br>Set the reversed logo on the calmest part of the picture, here the sky.</p>` });
   return fields(ctx, tiles, 3);
 };
 
