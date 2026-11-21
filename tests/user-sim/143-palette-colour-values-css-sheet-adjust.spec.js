@@ -273,7 +273,7 @@ test.describe('Adjust all', () => {
     // 36px below its top, read back as rows of colour.
     const ring = await page.locator('#plb-h').evaluate((el) => {
       const probe = document.createElement('span')
-      probe.style.color = 'var(--tl-link)'
+      probe.style.color = 'var(--focus-ink)'
       el.parentElement.appendChild(probe)
       const c = getComputedStyle(probe).color
       probe.remove()
@@ -314,8 +314,8 @@ test.describe('Adjust all', () => {
     const below = ringRows.filter((y) => y > bottom)
     expect(above.length, 'a ring above the track').toBeGreaterThan(0)
     expect(below.length, 'a ring below the track').toBeGreaterThan(0)
-    expect(above.some((y) => near(focused[y], ring)), 'the ring above is the link colour').toBe(true)
-    expect(below.some((y) => near(focused[y], ring)), 'the ring below is the link colour').toBe(true)
+    expect(above.some((y) => near(focused[y], ring)), 'the ring above is the focus ink').toBe(true)
+    expect(below.some((y) => near(focused[y], ring)), 'the ring below is the focus ink').toBe(true)
     // It hugs the pill: at most 3px of ground between track and ring (2px by design).
     expect(top - Math.max(...above) - 1, 'ring is within 3px of the top edge of the track').toBeLessThanOrEqual(3)
     expect(Math.min(...below) - bottom - 1, 'ring is within 3px of the bottom edge of the track').toBeLessThanOrEqual(3)

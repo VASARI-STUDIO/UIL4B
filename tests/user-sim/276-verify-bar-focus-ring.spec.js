@@ -81,7 +81,7 @@ for (const [width, height] of [[390, 800], [768, 1024], [820, 1180]]) {
 
 // The control: with a mouse the buttons keep their own size, so the pad is a
 // touch affordance and not a bigger hit area on every screen.
-// FAILS IF: the pad moves out of the coarse-pointer query to apply everywhere.
+// FAILS IF: the pack trigger's outline stops using --focus-ink,
 test.describe('a mouse at 1280px', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
@@ -94,14 +94,14 @@ test.describe('a mouse at 1280px', () => {
 })
 
 // The styled dropdowns' closed trigger and the app's other controls share one
-// focus ring colour (--link). Spec 243 pins it on the Type Scale trigger; this
+// focus ring (--focus-ink, a 2px outline). Spec 243 pins it on the Type Scale trigger; this
 // pins it on the Icon Library pack menu, whose trigger carries its own class.
-// FAILS IF: `.menu-select-trigger:focus-visible` goes back to `var(--accent)`,
+// FAILS IF: the pack trigger's outline stops using --focus-ink,
 // or `.lbry-select` sets its own outline colour.
 test.describe('the Icon pack trigger ring', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('is the link colour, as the other controls', async ({ page }) => {
+  test('is the shared ink ring, as the other controls', async ({ page }) => {
     watch(page, 'a keyboard user on the Icon pack menu')
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible()
@@ -112,17 +112,17 @@ test.describe('the Icon pack trigger ring', () => {
     await expect(trigger).toBeFocused()
     const ring = await trigger.evaluate((el) => {
       const probe = document.createElement('span')
-      probe.style.color = 'var(--link)'
-      // Beside the trigger, so it reads --link in the same scope (a library
+      probe.style.color = 'var(--focus-ink)'
+      // Beside the trigger, so it reads --focus-ink in the same scope (a library
       // surface can set its own).
       el.parentElement.append(probe)
-      const link = getComputedStyle(probe).color
+      const ink = getComputedStyle(probe).color
       probe.remove()
       const cs = getComputedStyle(el)
-      return { link, color: cs.outlineColor, width: cs.outlineWidth, matches: el.matches(':focus-visible') }
+      return { ink, color: cs.outlineColor, width: cs.outlineWidth, matches: el.matches(':focus-visible') }
     })
     expect(ring.matches, 'focus-visible').toBe(true)
     expect(ring.width).toBe('2px')
-    expect(ring.color).toBe(ring.link)
+    expect(ring.color).toBe(ring.ink)
   })
 })

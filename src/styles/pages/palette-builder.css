@@ -483,7 +483,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
    the track itself instead, hugging the pill that is visibly focused. The
    track's pill radius is on its base rule in tool-layout.css. Each engine's
    track is its own rule: a selector the browser cannot parse drops the list. */
-/* The slider ring stays the link colour, not the ink ring: tests/user-sim/143 pins it to --tl-link. */
+/* The slider ring is the shared ink ring (--focus-ink) on the track: tests/user-sim/143 pins it. */
 .plb .plb-adjust .tl-slider input[type="range"]:focus { outline: none; box-shadow: none; }
 .plb .plb-adjust .tl-slider input[type="range"]:focus::-webkit-slider-runnable-track {
   outline: 2px solid var(--focus-ink);
