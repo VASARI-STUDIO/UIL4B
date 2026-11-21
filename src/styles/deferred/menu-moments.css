@@ -4,10 +4,12 @@
    stay in global.css, so a menu opened before this sheet arrives sits still, never broken. */
 @media (hover:hover) and (pointer:fine){
   /* Exit: every moving part goes back in 150ms ease-in. */
-  .pnav-tool-label,.pnav-tool-ico svg{transition:transform var(--mm-out),color var(--mm-out)}
-  /* The name answers with the glyph: 3px along, in the row's category colour (a Soon
-     row keeps its faint ink). Palette's name paints its own rainbow over this. */
-  .pnav-tool:is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{transform:translateX(3px);transition:transform 280ms var(--mm-ease),color 200ms var(--mm-ease)}
+  .pnav-tool-label{transition:color var(--mm-out)}
+  .pnav-tool-ico svg{transition:transform var(--mm-out),color var(--mm-out)}
+  /* The name answers with the glyph in colour only: it takes the row's category colour
+     (a Soon row keeps its faint ink) and never moves, so the row reads as still.
+     Palette's name paints its own rainbow over this. */
+  .pnav-tool:is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{transition:color 200ms var(--mm-ease)}
   .pnav-tool[data-hue]:not([data-soon]):is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{color:var(--mm-s)}
   /* A row with no moment of its own: the glyph lifts 2px. */
   .pnav-tool:not([data-moment]):is(:hover,:focus-visible) .pnav-tool-ico svg{transform:translateY(-2px);transition:transform 280ms var(--mm-ease)}
