@@ -107,7 +107,7 @@
 .fc .fc-tab[aria-selected="true"] {
   color: var(--tl-ink);
   background: var(--tl-wash-on);
-  border-color: var(--tl-line-on);
+  border-color: var(--sel-edge);
 }
 
 .fc .fc-tab:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
@@ -317,7 +317,7 @@
 .fc .fc-seg-opt[aria-checked="true"] {
   color: var(--t0);
   background: var(--bg-1);
-  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
 }
 
 @media (hover: hover) {
@@ -353,7 +353,7 @@
   height: var(--si-h);
   border-radius: var(--si-r, var(--radius-pill));
   background: var(--bg-1);
-  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
   transform: translate(var(--si-x), var(--si-y));
   pointer-events: none;
 }
@@ -375,7 +375,7 @@
   color: var(--t0);
   background: var(--bg-1);
   border-color: transparent;
-  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--bh);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
 }
 
 /* Flip horizontal and vertical stay side by side at every width. */
@@ -1302,7 +1302,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 .fc .fc-rail-tab[data-active="true"] {
   color: var(--tl-ink);
   background: var(--tl-wash-on);
-  border-color: var(--tl-line-on);
+  border-color: var(--sel-edge);
 }
 
 .fc .fc-rail-tab:focus-visible,

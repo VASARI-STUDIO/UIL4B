@@ -236,7 +236,7 @@
   transition: background-color 150ms ease, color 150ms ease, transform 120ms var(--v3-ease);
 }
 .cm-tabs button:active { transform: scale(.97); }
-.cm-tabs button[aria-selected="true"] { background: var(--v3-seg-on); color: var(--v3-ink); box-shadow: 0 0 0 1px var(--v3-hair); }
+.cm-tabs button[aria-selected="true"] { background: var(--v3-seg-on); color: var(--v3-ink); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 .cm-tab-n { color: var(--v3-t56); font-variant-numeric: tabular-nums; }
 @media (hover: hover) { .cm-tabs button[aria-selected="false"]:hover { color: var(--v3-ink); } }
 .cm-tabpanel { margin-top: 32px; }

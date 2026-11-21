@@ -299,8 +299,8 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   background: var(--fg-fill);
 }
 .fg-page .tl-btn--quiet { border: 0; }
-.fg-page .tl-pills:not([data-slide]) .tl-pill.is-on { background: var(--fg-fill-sel); color: var(--tl-ink); }
-.fg-page .tl-pills.fg-cats[data-slide]::before { border: 0; background: var(--fg-fill-sel); }
+.fg-page .tl-pills:not([data-slide]) .tl-pill.is-on { background: var(--fg-fill-sel); color: var(--tl-ink); box-shadow: inset 0 0 0 1px var(--sel-edge); }
+.fg-page .tl-pills.fg-cats[data-slide]::before { background: var(--fg-fill-sel); }
 
 /* The second toolbar row (tablet and phone): search, and on a tablet the pair
    link. It never wraps. */
@@ -926,7 +926,7 @@ html[data-reduced-motion="true"] .tl-sheet-layer[data-page~="fg-page"] .tl-sheet
   cursor: pointer;
   transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard);
 }
-.fg-page .fg-sheet-pill.is-on { color: var(--fg-pill-on-ink); background: var(--fg-pill-on); }
+.fg-page .fg-sheet-pill.is-on { color: var(--fg-pill-on-ink); background: var(--fg-pill-on); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 .fg-page .fg-sheet-btn--primary { color: var(--tl-page); background: var(--tl-ink); border-color: var(--tl-ink); }
 @media (hover: hover) {
   .fg-page .fg-sheet-pill:not(.is-on):hover { background: var(--fg-pill-hover); }
@@ -1107,7 +1107,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 12
   cursor: pointer;
   transition: background-color 150ms var(--ease-standard), transform 120ms var(--ease-standard);
 }
-.fg-page .fg-chip[aria-pressed="true"] { color: var(--tl-ink); background: var(--fg-fill-sel); }
+.fg-page .fg-chip[aria-pressed="true"] { color: var(--tl-ink); background: var(--fg-fill-sel); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 .fg-page .fg-chip:active { transform: scale(.97); }
 .fg-page .fg-chip:focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
 .fg-page .fg-chiprow .fg-filt { flex: none; height: 44px; }

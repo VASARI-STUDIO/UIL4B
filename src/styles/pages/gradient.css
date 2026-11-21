@@ -364,7 +364,7 @@
   border-radius: 12px;
   background: transparent;
 }
-.grd .grd-stop.is-on { background: var(--tl-row-on); }
+.grd .grd-stop.is-on { background: var(--tl-row-on); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 /* A stop in a multi-selection: the wash above, plus a ring round its swatch, so
    the state is never the wash alone. */
 .grd .grd-stop.is-multi .grd-stop-swatch { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--tl-ink); }
@@ -437,7 +437,7 @@
   cursor: pointer;
   transition: background .16s ease, color .16s ease;
 }
-.grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); box-shadow: inset 0 0 0 1px var(--tl-line-on); }
+.grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 .grd .grd-iconbtn[disabled],
 .grd .grd-iconbtn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
 @media (hover: hover) and (pointer: fine) {
@@ -948,7 +948,7 @@
   .grd .grd-gen-chips[data-more="start"] { mask-image: linear-gradient(to left, #000 calc(100% - 20px), transparent); }
   .grd .grd-gen-chips[data-more="both"] { mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent); }
 }
-.grd .tl-pill.grd-gen-chip.is-on { box-shadow: inset 0 0 0 1px var(--tl-line-on); }
+.grd .tl-pill.grd-gen-chip.is-on { box-shadow: inset 0 0 0 1px var(--sel-edge); }
 .grd .tl-pill.grd-gen-chip:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 /* Out of reach (Palette with under two colours, and the Pro rows for a free account):
    the border steps back, the word keeps its contrast, and a press still answers. */

@@ -69,7 +69,7 @@
 .pvd-rail-scroll{display:flex;flex-direction:column;gap:var(--s-5);flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4)}
 .plb-modal--preview .pvd-seg{flex:none;width:100%;height:36px;padding:2px;gap:0;background:color-mix(in srgb,var(--t0) 6%,transparent);border:0;border-radius:var(--radius-pill)}
 .plb-modal--preview .pvd-seg .plb-mode{flex:1;min-width:0;height:32px;padding:0;font-size:13px;font-weight:500}
-.plb-modal--preview .pvd-seg .plb-mode--on{background:color-mix(in srgb,var(--t0) 16%,transparent);box-shadow:none}
+.plb-modal--preview .pvd-seg .plb-mode--on{background:var(--t0);color:var(--bg-0);box-shadow:none}
 .pvd-rail .pvd-note{flex:none;margin:0;padding:var(--s-4) var(--s-5) var(--s-5);font-size:13px;font-weight:500;line-height:1.4}
 /* "Use" on a compared palette: the ink pill, above the note. */
 .pvd-rail .pvd-use{flex:none;width:calc(100% - 2 * var(--s-4));margin:var(--s-2) var(--s-4) 0}
@@ -82,7 +82,7 @@
 .pvd-rail .pvd-group-l{margin-bottom:var(--s-1);font-weight:500}
 .pvd-rail .pvd-opt{height:32px;font-size:15px;font-weight:500;color:var(--t0)}
 .pvd-rail .pvd-opt-name{margin-right:auto}
-.pvd-rail .pvd-opt.is-on,.pvd-rail .pvd-opt.is-on:hover{background:color-mix(in srgb,var(--t0) 14%,transparent);font-weight:500}
+.pvd-rail .pvd-opt.is-on,.pvd-rail .pvd-opt.is-on:hover{background:color-mix(in srgb,var(--t0) 14%,transparent);font-weight:500;box-shadow:inset 0 0 0 1px var(--t0)}
 .pvd-rail .pvd-opt:focus-visible,.pvd-rail .pvd-state:focus-visible{outline:2px solid var(--t0);outline-offset:0}
 /* The open preview's states, nested under its row; only the chosen one has the dot. */
 .pvd-rail .pvd-states{margin:0 0 0 var(--s-3);gap:0}
@@ -92,7 +92,7 @@
 .pvd-opt{position:relative;display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;height:36px;padding:0 var(--s-3);
   font-size:var(--fs-body-s);color:var(--t1);text-align:left;background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pvd-opt.is-on{background:var(--bg-2);color:var(--t0);font-weight:600}
+.pvd-opt.is-on{background:var(--bg-2);color:var(--t0);font-weight:600;box-shadow:inset 0 0 0 1px var(--t0)}
 .pvd-opt svg{flex:none;color:var(--t2)}
 /* A slow load: a 12px ring on the chosen option. It appears 400ms in, so a fast
  * load never flashes it. */
@@ -182,7 +182,7 @@
   font-size:13px;color:var(--t0);text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 @media (hover:hover){.pvd-chip:hover{background:var(--hvr)}}
-.pvd-chip.is-on{background:var(--bg-2);border-color:var(--t2)}
+.pvd-chip.is-on{background:var(--bg-2);border-color:var(--t0)}
 .pvd-chip.is-off{color:var(--t2);cursor:default}
 .pvd-sw{flex:none;width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px oklch(0 0 0 / .14)}
 [data-theme="dark"] .pvd-sw{box-shadow:inset 0 0 0 1px oklch(1 0 0 / .18)}
@@ -230,7 +230,7 @@
 .pvd-states{display:flex;flex-direction:column;gap:2px}
 .pvd-state{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;height:36px;padding:0 var(--s-3);font-size:var(--fs-body-s);color:var(--t1);text-align:left;background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pvd-state.is-on{background:var(--bg-2);color:var(--t0);font-weight:600}
+.pvd-state.is-on{background:var(--bg-2);color:var(--t0);font-weight:600;box-shadow:inset 0 0 0 1px var(--t0)}
 @media (hover:hover){.pvd-state:hover{background:var(--hvr);color:var(--t0)}.pvd-state.is-on:hover{background:var(--bg-2)}}
 .pvd-sheet-t{margin:0 0 var(--s-2);padding:0 var(--s-4);font-size:15px;font-weight:600;color:var(--t0)}
 

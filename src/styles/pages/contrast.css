@@ -192,7 +192,7 @@
   touch-action: manipulation;
   transition: border-color .16s ease, background-color .16s ease;
 }
-.cc .cc-lg-chip[aria-pressed="true"] { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
+.cc .cc-lg-chip[aria-pressed="true"] { border-color: var(--sel-edge); background: var(--tl-wash-on); }
 .cc .cc-lg-chip.is-fail { border-color: var(--err); }
 .cc .cc-lg-name { font-size: 13px; font-weight: 500; line-height: 1.2; }
 .cc .cc-lg-need { font: 400 12px/1.15 var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-dim); }
@@ -273,7 +273,7 @@
 }
 .cc .cc-pair:active { transform: scale(.97); }
 /* The pair being checked right now. */
-.cc .cc-pair[aria-pressed="true"] { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
+.cc .cc-pair[aria-pressed="true"] { border-color: var(--sel-edge); background: var(--tl-wash-on); }
 .cc .cc-pair-chip {
   flex: 0 0 auto;
   display: grid;

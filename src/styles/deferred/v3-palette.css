@@ -116,8 +116,8 @@
   color: var(--t0);
   transition: background-color 150ms ease;
 }
-:root .cp-item:hover,
-:root .cp-item.active { background: var(--ov-tone); color: var(--t0); box-shadow: none; }
+:root .cp-item:hover { background: var(--ov-tone); color: var(--t0); }
+:root .cp-item.active { background: var(--sel-wash); color: var(--t0); }
 :root .cp-item-icon {
   width: 20px;
   height: 20px;
@@ -126,7 +126,6 @@
   background: none;
   color: var(--t1);
 }
-:root .cp-item.active .cp-item-icon { background: none; color: var(--t1); }
 :root .cp-item-icon svg { width: 20px; height: 20px; }
 :root .cp-item-body { gap: 0; }
 :root .cp-item-label { font-size: 15px; line-height: 22px; font-weight: 500; }

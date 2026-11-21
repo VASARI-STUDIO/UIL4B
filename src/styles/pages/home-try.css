@@ -164,7 +164,7 @@
   flex: 1 1 auto; height: 32px; padding: 0 14px; border: 0; border-radius: var(--btn-radius); background: transparent;
   font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; color: rgba(var(--ink), .78);
 }
-.ht-seg button[aria-checked="true"], .ht-tabs button[aria-selected="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px var(--ht-line-on); color: #EFEEEA; }
+.ht-seg button[aria-checked="true"], .ht-tabs button[aria-selected="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px #EFEEEA; color: #EFEEEA; }
 .ht-seg button:disabled { color: rgba(var(--ink), .34); cursor: not-allowed; }
 .ht-seg button:disabled[aria-checked="true"] { background: transparent; box-shadow: none; }
 .ht-btn, .ht-seg button, .ht-tabs button, .ht-go, .ht-pal-hex {
@@ -302,7 +302,7 @@
   background: transparent; color: rgba(var(--ink), .62);
   transition: transform 120ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
 }
-.ht-ic-t[aria-selected="true"] { background: var(--l3); color: #EFEEEA; }
+.ht-ic-t[aria-selected="true"] { background: var(--l3); color: #EFEEEA; box-shadow: inset 0 -2px 0 #EFEEEA; }
 .ht.ht .ht-ic-t:focus-visible { outline-offset: -2px; }
 .ht-ic-t:not(:disabled):active { transform: scale(.97); }
 .ht .ht-ic-g { width: 24px; height: 24px; }
@@ -376,7 +376,7 @@
 }
 .ht-fn-pick::after { content: ""; position: absolute; inset: -2px; }
 .ht-fn-pick .sp-ph { width: 16px; height: 16px; }
-.ht-fn-pick[aria-pressed="true"] { background: var(--l3); color: #EFEEEA; }
+.ht-fn-pick[aria-pressed="true"] { background: var(--l3); color: #EFEEEA; box-shadow: inset 0 0 0 1px #EFEEEA; }
 .ht-fn-row[aria-expanded="true"] + .ht-fn-pick { top: 16px; }
 .ht-fn-pick:active { transform: scale(.97); }
 .ht-fn-tray { flex: none; margin: 16px 0; height: 36px; display: flex; align-items: center; gap: 8px; }
@@ -673,7 +673,7 @@ html[data-reduced-motion="true"] .ht-prog { transform: scaleX(calc((var(--k, 0) 
 
 /* ── desktop details: the pressed comparison chip, the output line ────────── */
 
-.ht-chip[aria-pressed="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px var(--ht-line-on); color: #EFEEEA; }
+.ht-chip[aria-pressed="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px #EFEEEA; color: #EFEEEA; }
 .ht-chip:disabled { color: rgba(var(--ink), .34); cursor: not-allowed; }
 .ht-cv-line { margin-top: 4px; min-height: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ht-cv-line b { font-weight: 600; color: #EFEEEA; }
