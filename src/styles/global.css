@@ -4102,7 +4102,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    TILE rather than off the viewport — see .fbd-sample for why that matters. */
 .fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;container-type:inline-size;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .fbd-tile:hover{border-color:var(--bh)}
-.fbd-card.is-selected .fbd-tile{border-color:var(--accent);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--accent)}
+.fbd-card.is-selected .fbd-tile{border-color:var(--sel-edge);background:var(--sel-wash);box-shadow:inset 0 0 0 1px var(--sel-edge)}
 
 @media(pointer:coarse){
   /* The shared Library controls take their coarse-pointer sizing in the .lbry-
@@ -4612,7 +4612,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 .cq-filter{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .cq-filter:hover{color:var(--t0);border-color:var(--bh)}
-.cq-filter.is-on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fg)}
+.cq-filter.is-on{background:var(--sel-solid);border-color:var(--sel-solid);color:var(--sel-on-solid)}
 
 /* Legal page section headings. Were <h3> with inline style={{}} under a single
    <h1>, so every section on /privacy and /terms sat two levels below the title
