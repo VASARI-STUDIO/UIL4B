@@ -36,7 +36,7 @@ import { go, signIn, watch } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 
 const PERIOD_END = Date.UTC(2027, 2, 4, 12)
-const TRIAL_END = Date.UTC(2026, 10, 14, 12)
+const TRIAL_END = Date.UTC(2030, 10, 14, 12)
 
 async function openSection(page, id) {
   // On a phone the sections are a list you open and come back from.
@@ -222,7 +222,7 @@ test.describe('settings hierarchy: Plan and billing', () => {
     await go(page, '/settings')
     await openSection(page, 'support')
     const pairs = await factPairs(page)
-    expect(pairs[1]).toEqual(['Status', 'Free trial until 14 November 2026'])
+    expect(pairs[1]).toEqual(['Status', 'Free trial until 14 November 2030'])
     expect(pairs.map(([label]) => label)).not.toContain('Next payment')
   })
 

@@ -21,6 +21,7 @@
 // toggle, a gate or a pinned control failed there.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { iconCell } from './icon-grid-rows.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, isLiveIconify } from './iconify-stub.js'
 
 const WIDTHS = [1440, 768, 390]
@@ -226,7 +227,7 @@ test.describe('the page has one call to action before the footer, centred on the
         await filters.click()
         await expect(panel).toBeHidden()
       }
-      await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`)).toBeVisible({ timeout: 20_000 })
+      await expect(page.locator(iconCell(NAME(0)))).toBeVisible({ timeout: 20_000 })
       await expect(page.locator('.geg[data-gate="free"]')).toHaveCount(1)
       await expect(page.locator('.geg[data-gate="free"] .geg-h')).toHaveText('Brand marks, flags and emoji are on Pro.')
       await expect(ctaPills(page), 'one primary action in the page, and no sales close').toHaveCount(1)
