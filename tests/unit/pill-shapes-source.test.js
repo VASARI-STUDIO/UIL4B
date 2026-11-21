@@ -121,8 +121,9 @@ for (const target of SEARCH_BARS) {
       const color = declared(r.body, 'border-color')
       if (color !== null && color !== 'var(--border)') bad.push(`${r.file}: border-color:${color}`)
       const ground = declared(r.body, 'background')
-      // Dark --inp equals the toolbar card, so a dark-only rule may step up to --bg-3.
-      const darkStep = ground === 'var(--bg-3)' && r.selectors.every((sel) => sel.startsWith('[data-theme="dark"]'))
+      // Dark --inp equals the toolbar card, so a dark-only rule may step up to
+      // --bg-3, or to its V3 token --v3-l2.
+      const darkStep = (ground === 'var(--bg-3)' || ground === 'var(--v3-l2)') && r.selectors.every((sel) => sel.startsWith('[data-theme="dark"]'))
       const v3Fill = v3Header(r) && ground === 'var(--v3-l2)'
       if (ground !== null && ground !== 'var(--inp)' && !darkStep && !v3Fill) bad.push(`${r.file}: background:${ground}`)
     }

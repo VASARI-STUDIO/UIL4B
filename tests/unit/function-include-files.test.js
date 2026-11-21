@@ -255,10 +255,11 @@ test('the api functions import exactly the two internal boards and the Pro expor
   // api/_lib/exportDocument.js builds on the server (they are not in the browser
   // bundle at all), and vercel.json bundles them. The export themes' brand-from-project step adds the font
   // catalogue (fallback list and licence table), the semantic presets, the UI kit foundations and the system roles. The theme export route adds the theme list and its plan gate. The app bundle
-  // and the book page layout are built on the server too, so their builders and the palette helpers they use are here. The app bundle
   // and the book page layout are built on the server too, so their builders and the palette helpers they use are here.
+  // The theme page preview endpoint reads the preview manifest to check a query before it serves a Pro picture.
   assert.deepEqual(IMPORTED, [
     'config/exportFormats.js',
+    'config/exportPreviews.js',
     'config/exportTemplates.js',
     'data/exportThemes.js',
     'data/fallbackFonts.js',

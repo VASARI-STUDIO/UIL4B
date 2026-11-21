@@ -58,7 +58,7 @@ export { screenContent as sc } from './once.js';
 // the brand's logo for a screen header, or in the slot edition a dashed frame of the same box. k is the zoom it is shown at, so the frame's words stay 12 px on the page.
 export function logoAt(ctx, id, width, { ink, colourway, k = 1 } = {}) {
   const gid = ctx.logo.geos[id] ? id : 'colour';
-  if (ctx.edition !== 'slot') return ctx.logo.html(gid, { width, colourway, color: ink });
+  if (ctx.edition !== 'slot' || ctx.logo.drawn) return ctx.logo.html(gid, { width, colourway, color: ink });
   const g = ctx.logo.geos[gid], h = Math.max((width * g.h) / g.w, 16 / k), line = px(1.5 / k);
   return `<span class="logo-slot" role="img" aria-label="Logo slot" style="display:inline-flex;width:${px(width)}px;height:${px(h)}px;box-sizing:border-box;border:${line}px dashed ${ink};color:${ink};align-items:center;justify-content:center;font:500 ${px(Math.min(12 / k, h * 0.7))}px/1 var(--body);white-space:nowrap">Logo</span>`;
 }

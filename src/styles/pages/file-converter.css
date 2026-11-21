@@ -36,14 +36,13 @@
  *   object, decision, action in one column under 900px, which is the order
  *   the queue comment in FileConverter.jsx was measured into.
  *
- * - BUTTONS ARE PILLS (--radius-pill), as on the sales page and in the shared
+ * - BUTTONS ARE PILLS (999px), as on the sales page and in the shared
  *   ToolButton; fields keep 10px corners over a hairline. The mode tabs are
  *   real ARIA tabs drawn as pills.
  *
- * - ACCENT IS SPENT ON THE ACTION. `--accent-strong` is gone (the ALPHA tag
- *   was filled with it; the old spinner and progress bar used `--brand`). The
- *   one filled control per panel is `--accent-mid` with `--accent-ink`, the
- *   pair /create/tint measured at 5.18:1 light / 9.17:1 dark. The drop zone's
+ * - INK IS SPENT ON THE ACTION. The one filled control per panel is
+ *   `--v3-ink` with `--v3-on-ink`, the V3 primary pair; the progress bar and
+ *   the edit mark are ink too. The drop zone's
  *   icon was an accent tile; it is neutral now, because an empty state is not
  *   the next action — choosing a file is, and the whole zone is that button.
  *
@@ -53,7 +52,7 @@
 
 .fc {
   --fc-ease: cubic-bezier(.23, 1, .32, 1);
-  --fc-check: repeating-conic-gradient(var(--bg-2) 0 25%, var(--card) 0 50%) 0 0 / 16px 16px;
+  --fc-check: repeating-conic-gradient(var(--tl-card2) 0 25%, var(--tl-card) 0 50%) 0 0 / 16px 16px;
   /* The sticky tool toolbar's height (9px padding, a 36px row, the hairline);
      the side column sticks under it. */
   --fc-bar-h: 55px;
@@ -175,9 +174,9 @@
   flex-direction: column;
   min-width: 0;
   max-height: calc(100dvh - var(--chrome-h) - var(--fc-bar-h) - 24px);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 16px;
 }
 
 .fc .fc-inspector {
@@ -193,7 +192,7 @@
   display: grid;
   gap: 10px;
   padding: 14px 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--tl-line);
 }
 
 .fc .fc-actionbar-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -204,13 +203,12 @@
   display: grid;
   gap: 8px;
   padding: 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--tl-line);
 }
 
 .fc .fc-insp-sec:last-child { border-bottom: 0; }
 
-/* The app file's section label: mono, tracked, faint. --t3 on --card measured
-   5.24:1 light / 5.86:1 dark by the tint pass. */
+/* The app file's section label: mono, tracked, faint (--tl-faint on the card). */
 .fc .fc-eyebrow {
   display: block;
   margin: 0;
@@ -220,7 +218,7 @@
   line-height: 1.3;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--t3);
+  color: var(--tl-faint);
 }
 
 .fc .fc-eyebrow--sub { margin-top: 6px; }
@@ -246,7 +244,7 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
 /* ── Fields ───────────────────────────────────────────────────────────────── */
@@ -258,13 +256,13 @@
   padding: 0 12px;
   font-family: var(--font);
   font-size: 13px;
-  color: var(--t0);
-  background: var(--inp);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  color: var(--tl-ink);
+  background: var(--tl-wash);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
 }
 
-.fc .fc-field:hover:not(:disabled) { border-color: var(--bh); }
+.fc .fc-field:hover:not(:disabled) { border-color: var(--tl-line-on); }
 
 .fc .fc-field:disabled { opacity: .55; cursor: not-allowed; }
 
@@ -287,9 +285,9 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   max-width: 520px;
-  background: var(--inp);
-  border-radius: var(--radius-pill);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--tl-wash);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--tl-line);
 }
 
 .fc .fc-seg-opt {
@@ -305,23 +303,23 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
-  color: var(--t2);
+  color: var(--tl-dim);
   background: transparent;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--dur-1) ease-out, color var(--dur-1) ease-out;
 }
 
 .fc .fc-seg-opt[aria-checked="true"] {
-  color: var(--t0);
-  background: var(--bg-1);
+  color: var(--tl-ink);
+  background: var(--tl-card);
   box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
 }
 
 @media (hover: hover) {
-  .fc .fc-seg-opt:hover:not([aria-checked="true"]):not([aria-disabled="true"]) { color: var(--t0); background: var(--hvr); }
+  .fc .fc-seg-opt:hover:not([aria-checked="true"]):not([aria-disabled="true"]) { color: var(--tl-ink); background: var(--tl-wash-2); }
 }
 
 .fc .fc-seg-opt:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
@@ -351,8 +349,8 @@
   box-sizing: border-box;
   width: var(--si-w);
   height: var(--si-h);
-  border-radius: var(--si-r, var(--radius-pill));
-  background: var(--bg-1);
+  border-radius: var(--si-r, 999px);
+  background: var(--tl-card);
   box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
   transform: translate(var(--si-x), var(--si-y));
   pointer-events: none;
@@ -372,8 +370,8 @@
 /* The same selected look as a segmented option: ground, hairline and ink. */
 .fc .fc-toggle[aria-pressed="true"],
 .fc .fc-toggle[aria-pressed="true"]:hover:not(:disabled) {
-  color: var(--t0);
-  background: var(--bg-1);
+  color: var(--tl-ink);
+  background: var(--tl-card);
   border-color: transparent;
   box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
 }
@@ -399,15 +397,15 @@
 
 .fc .fc-range .fc-field { flex: 1 1 0; }
 
-.fc .fc-range-arrow { color: var(--t3); }
+.fc .fc-range-arrow { color: var(--tl-faint); }
 
 .fc .fc-bg-pick {
   width: 44px;
   height: 38px;
   padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
-  background: var(--bg-2);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
+  background: var(--tl-card2);
   cursor: pointer;
 }
 
@@ -424,15 +422,15 @@
   font-size: 13px;
   font-weight: 540;
   line-height: 1.2;
-  color: var(--t0);
+  color: var(--tl-ink);
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
   cursor: pointer;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) var(--fc-ease);
 }
 
-.fc .fc-btn:hover:not(:disabled) { background: var(--hvr); border-color: var(--bh); }
+.fc .fc-btn:hover:not(:disabled) { background: var(--tl-wash-2); border-color: var(--tl-line-on); }
 
 .fc .fc-btn:active:not(:disabled) { transform: scale(.98); }
 
@@ -440,17 +438,15 @@
 
 .fc .fc-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-/* The one filled control per panel. The hover moves to --accent-text, the
-   next step in the direction --accent-mid already travels (deeper in light,
-   lighter in dark), never --accent-hover, which mixes toward paper in both
-   themes and has undone a contrast fix on this branch before. */
+/* The one filled control per panel: ink fill, on-ink label, hover to
+   --v3-ink-hover. */
 .fc .fc-btn--primary {
-  color: var(--accent-ink);
-  background: var(--accent-fill);
+  color: var(--v3-on-ink);
+  background: var(--v3-ink);
   border-color: transparent;
 }
 
-.fc .fc-btn--primary:hover:not(:disabled) { background: var(--accent-fill-hover); border-color: transparent; }
+.fc .fc-btn--primary:hover:not(:disabled) { background: var(--v3-ink-hover); border-color: transparent; }
 
 .fc .fc-btn--wide { width: 100%; }
 
@@ -466,21 +462,21 @@
   gap: 12px;
   padding: clamp(32px, 6vw, 64px) 20px;
   text-align: center;
-  background: var(--card);
-  border: 1px dashed var(--bh);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card);
+  border: 1px dashed var(--tl-line-on);
+  border-radius: 16px;
   box-shadow: none;
   transform: none;
   cursor: pointer;
   transition: border-color var(--dur-1) ease, background var(--dur-1) ease;
 }
 
-.fc .fc-drop:hover { border-color: var(--t2); box-shadow: none; transform: none; }
+.fc .fc-drop:hover { border-color: var(--tl-ink); box-shadow: none; transform: none; }
 
 .fc .fc-drop--over,
 .fc .fc-drop--over:hover {
-  border-color: var(--accent);
-  background: var(--accent-wash);
+  border-color: var(--tl-ink);
+  background: var(--tl-wash-on);
 }
 
 .fc .fc-drop:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 3px; }
@@ -491,10 +487,10 @@
   width: 40px;
   height: 40px;
   margin: 0;
-  color: var(--t1);
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  color: var(--tl-soft);
+  background: var(--tl-card2);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
 }
 
 .fc .fc-drop-ico svg { width: 18px; height: 18px; }
@@ -506,13 +502,13 @@
   font-size: 14.5px;
   font-weight: 540;
   letter-spacing: -.01em;
-  color: var(--t0);
+  color: var(--tl-ink);
 }
 
 .fc .fc-drop-sub {
   font-size: 12px;
   line-height: 1.45;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
 /* "Add more": once the visitor's own files are on screen, the invitation
@@ -524,10 +520,10 @@
   min-height: 56px;
   padding: 10px 14px;
   text-align: left;
-  border-radius: var(--radius);
+  border-radius: 12px;
 }
 
-.fc .fc-drop--compact .fc-drop-ico { width: 32px; height: 32px; border-radius: var(--radius-s); }
+.fc .fc-drop--compact .fc-drop-ico { width: 32px; height: 32px; border-radius: 8px; }
 
 .fc .fc-drop--compact .fc-drop-hint { font-size: 13px; }
 
@@ -536,13 +532,13 @@
   padding: 10px 14px;
   font-size: var(--fs-caption);
   line-height: 1.5;
-  color: var(--t1);
-  background: var(--accent-wash);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-s);
+  color: var(--tl-soft);
+  background: var(--tl-wash-on);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
 }
 
-.fc .fc-draft-note strong { font-weight: 560; color: var(--t0); }
+.fc .fc-draft-note strong { font-weight: 560; color: var(--tl-ink); }
 
 /* ── Queue / frame cards ──────────────────────────────────────────────────── */
 
@@ -563,9 +559,9 @@
   gap: 6px;
   height: 100%;
   padding: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
 }
 
 .fc .fc-card--btn {
@@ -577,7 +573,7 @@
   transition: border-color var(--dur-1) ease;
 }
 
-.fc .fc-card--btn:hover { border-color: var(--bh); }
+.fc .fc-card--btn:hover { border-color: var(--tl-line-on); }
 
 .fc .fc-card--btn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
@@ -589,8 +585,8 @@
   aspect-ratio: 4 / 3;
   overflow: hidden;
   background: var(--fc-check);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
 }
 
 .fc .fc-thumb img { width: 100%; height: 100%; object-fit: contain; }
@@ -605,17 +601,17 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  color: var(--t1);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  color: var(--tl-soft);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
   cursor: pointer;
   transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
 
 .fc .fc-remove svg { width: 14px; height: 14px; }
 
-.fc .fc-remove:hover:not(:disabled) { color: var(--err-strong); border-color: var(--bh); }
+.fc .fc-remove:hover:not(:disabled) { color: var(--err-strong); border-color: var(--tl-line-on); }
 
 .fc .fc-remove:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
@@ -625,7 +621,7 @@
   overflow: hidden;
   font-size: 12.5px;
   font-weight: 540;
-  color: var(--t0);
+  color: var(--tl-ink);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -636,7 +632,7 @@
   font-size: var(--fs-caption);
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
 .fc .fc-meta--err { font-family: var(--font); font-size: 12px; color: var(--err-strong); }
@@ -653,7 +649,7 @@
 
 .fc .fc-delta--up { color: var(--err-strong); }
 
-.fc .fc-delta--same { color: var(--t2); }
+.fc .fc-delta--same { color: var(--tl-dim); }
 
 .fc .fc-dl { width: 100%; margin-top: auto; }
 
@@ -661,7 +657,7 @@
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--t1);
+  color: var(--tl-soft);
 }
 
 /* The output readout. One line, under the controls it explains, and quiet
@@ -672,8 +668,8 @@
   margin-top: 4px;
   padding-top: 10px;
   font-size: 12.5px;
-  color: var(--t2);
-  border-top: 1px dashed var(--border);
+  color: var(--tl-dim);
+  border-top: 1px dashed var(--tl-line);
 }
 
 /* The sizes stay on one line (the value gives way before it wraps), and the
@@ -696,32 +692,32 @@
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--t3);
+  color: var(--tl-faint);
 }
 
-.fc .fc-outsize-v { color: var(--t1); }
+.fc .fc-outsize-v { color: var(--tl-soft); }
 
-.fc .fc-outsize-v strong { font-weight: 600; color: var(--t0); }
+.fc .fc-outsize-v strong { font-weight: 600; color: var(--tl-ink); }
 
-.fc .fc-outsize-arrow { color: var(--t3); }
+.fc .fc-outsize-arrow { color: var(--tl-faint); }
 
 /* ── Progress and engine status ───────────────────────────────────────────── */
 
-/* The meter is the one pill on the page. The bar is --accent against --bg-3:
+/* The meter is the one pill on the page. The bar is --tl-ink against --tl-card2:
    a non-text boundary, where 3:1 is the bar and it clears it in both themes. */
 .fc .fc-progress {
   height: 6px;
   margin: 0;
   overflow: hidden;
-  background: var(--bg-3);
-  border-radius: var(--radius-pill);
+  background: var(--tl-card2);
+  border-radius: 999px;
 }
 
 .fc .fc-progress-bar {
   width: var(--fc-pct, 0%);
   height: 100%;
-  background: var(--accent);
-  border-radius: var(--radius-pill);
+  background: var(--tl-ink);
+  border-radius: 999px;
   transition: width var(--dur-2) var(--ease-out);
 }
 
@@ -733,7 +729,7 @@
   margin: 0;
   font-size: 12.5px;
   line-height: 1.45;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
 .fc .fc-status-err { color: var(--err-strong); }
@@ -743,7 +739,7 @@
 .fc .fc-status-bytes {
   font-family: var(--font);
   font-variant-numeric: tabular-nums;
-  color: var(--t1);
+  color: var(--tl-soft);
   white-space: nowrap;
   letter-spacing: 0;
 }
@@ -753,8 +749,8 @@
   flex-shrink: 0;
   width: 14px;
   height: 14px;
-  border: 2px solid var(--border);
-  border-top-color: var(--t1);
+  border: 2px solid var(--tl-line);
+  border-top-color: var(--tl-soft);
   border-radius: 50%;
   animation: fc-spin .7s linear infinite;
 }
@@ -767,8 +763,8 @@
   display: block;
   width: 100%;
   max-height: 420px;
-  background: var(--bg-3);
-  border-radius: var(--radius-xl);
+  background: var(--tl-card2);
+  border-radius: 16px;
 }
 
 /* The editor's stage: a box with the media's own ratio, so the crop overlay's
@@ -781,8 +777,8 @@
   width: min(100%, calc(420px * var(--src-w, 16) / var(--src-h, 9)));
   aspect-ratio: var(--src-w, 16) / var(--src-h, 9);
   margin-inline: auto;
-  background: var(--bg-3);
-  border-radius: var(--radius-xl);
+  background: var(--tl-card2);
+  border-radius: 16px;
 }
 
 .fc .fc-vstage > video,
@@ -800,8 +796,8 @@
   position: absolute;
   z-index: 1;
   pointer-events: none;
-  outline: 1px solid var(--t0);
-  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--bg-0) 62%, transparent);
+  outline: 1px solid var(--tl-ink);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--tl-page) 62%, transparent);
 }
 
 /* The custom crop box. It takes the pointer (the plain keep outline above does
@@ -835,7 +831,7 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 0 solid var(--t0);
+  border: 0 solid var(--tl-ink);
 }
 
 .fc .fc-crop-dot--nw { top: 0; left: 0; cursor: nwse-resize; }
@@ -875,7 +871,7 @@
   min-width: 0;
   height: 44px;
   margin: 0;
-  accent-color: var(--accent-mid);
+  accent-color: var(--tl-ink);
 }
 
 .fc .fc-scrub:disabled { opacity: .55; cursor: not-allowed; }
@@ -894,9 +890,9 @@
   justify-content: space-between;
   gap: 12px 20px;
   padding: 12px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
 }
 
 .fc .fc-facts {
@@ -914,7 +910,7 @@
   font-size: var(--fs-caption);
   letter-spacing: normal;
   text-transform: none;
-  color: var(--t3);
+  color: var(--tl-faint);
 }
 
 .fc .fc-facts dd {
@@ -922,7 +918,7 @@
   margin: 0;
   overflow: hidden;
   font-size: 13px;
-  color: var(--t0);
+  color: var(--tl-ink);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -932,9 +928,9 @@
   gap: 12px;
   justify-items: start;
   padding: 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 16px;
 }
 
 .fc .fc-result-media {
@@ -942,7 +938,7 @@
   max-width: 100%;
   max-height: 480px;
   background: var(--fc-check);
-  border-radius: var(--radius-s);
+  border-radius: 8px;
 }
 
 .fc .fc-frames { margin-top: var(--s-5); display: grid; gap: 12px; }
@@ -977,9 +973,9 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 16px;
 }
 
 /* The checkerboard is the one honest way to show "transparent here". */
@@ -989,7 +985,7 @@
   min-height: clamp(180px, 34vh, 360px);
   padding: 12px;
   background: var(--fc-check);
-  border-radius: var(--radius);
+  border-radius: 12px;
 }
 
 .fc .fc-stage-canvas {
@@ -1013,7 +1009,7 @@
   font-family: var(--font);
   font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
-  color: var(--t1);
+  color: var(--tl-soft);
 }
 
 .fc .fc-framebox { display: grid; gap: 10px; }
@@ -1035,9 +1031,9 @@
   list-style: none;
 }
 
-.fc .fc-strip-item { min-width: 0; border-radius: var(--radius-s); }
+.fc .fc-strip-item { min-width: 0; border-radius: 8px; }
 
-.fc .fc-strip-item--target { outline: 1px dashed var(--bh); outline-offset: 2px; }
+.fc .fc-strip-item--target { outline: 1px dashed var(--tl-line-on); outline-offset: 2px; }
 
 .fc .fc-frame {
   position: relative;
@@ -1047,19 +1043,19 @@
   padding: 0;
   overflow: hidden;
   background: var(--fc-check);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
   cursor: grab;
   transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
 }
 
 .fc .fc-frame img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 
-.fc .fc-frame:hover { border-color: var(--bh); }
+.fc .fc-frame:hover { border-color: var(--tl-line-on); }
 
 /* Selected: an ink ring drawn at rest, inside the tile, so it never changes
    the tile's size and never competes with the accent focus ring outside it. */
-.fc .fc-frame[aria-pressed="true"] { border-color: var(--t0); box-shadow: inset 0 0 0 1px var(--t0); }
+.fc .fc-frame[aria-pressed="true"] { border-color: var(--tl-ink); box-shadow: inset 0 0 0 1px var(--tl-ink); }
 
 .fc .fc-frame:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
@@ -1073,10 +1069,10 @@
   font-size: var(--fs-caption);
   line-height: 1.3;
   text-align: center;
-  color: var(--t0);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  color: var(--tl-ink);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
 }
 
 .fc .fc-frame-actions {
@@ -1090,7 +1086,7 @@
   margin-right: 4px;
   font-family: var(--font);
   font-size: var(--fs-caption);
-  color: var(--t1);
+  color: var(--tl-soft);
 }
 
 /* Visually hidden, still read: announces a move/duplicate/remove. */
@@ -1112,11 +1108,11 @@
   gap: 10px;
   min-height: 24px;
   font-size: 13px;
-  color: var(--t1);
+  color: var(--tl-soft);
   cursor: pointer;
 }
 
-.fc .fc-check input { width: 24px; height: 24px; margin: 0; accent-color: var(--accent-mid); }
+.fc .fc-check input { width: 24px; height: 24px; margin: 0; accent-color: var(--tl-ink); }
 
 .fc .fc-note--warn { color: var(--warn-strong); }
 
@@ -1133,9 +1129,9 @@
   .fc .fc-side { display: contents; }
   .fc .fc-inspector {
     overflow: visible;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2xl);
+    background: var(--tl-card);
+    border: 1px solid var(--tl-line);
+    border-radius: 16px;
   }
   /* A focused field must not end up behind the pinned action bar. */
   .fc .fc-inspector .fc-field { scroll-margin-bottom: 120px; }
@@ -1145,7 +1141,7 @@
     z-index: 20;
     margin: 0 calc(-1 * var(--fc-pad));
     padding: 10px var(--fc-pad) calc(10px + env(safe-area-inset-bottom, 0px));
-    background: color-mix(in srgb, var(--bg-0) 90%, transparent);
+    background: color-mix(in srgb, var(--tl-page) 90%, transparent);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--tl-hair);
@@ -1194,13 +1190,13 @@
    box — the button press and the spinner — stopped outright, in both
    spellings the app uses. */
 html[data-reduced-motion="true"] .fc .fc-btn:active:not(:disabled) { transform: none; }
-html[data-reduced-motion="true"] .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+html[data-reduced-motion="true"] .fc .fc-spinner { animation: none; border-top-color: var(--tl-line); }
 html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .fc .fc-seg[data-slide]::before { transition: none !important; }
   html:not([data-reduced-motion="false"]) .fc .fc-btn:active:not(:disabled) { transform: none; }
-  html:not([data-reduced-motion="false"]) .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+  html:not([data-reduced-motion="false"]) .fc .fc-spinner { animation: none; border-top-color: var(--tl-line); }
 }
 
 /* ── Edit list (Video tab) ────────────────────────────────────────────────────
@@ -1213,7 +1209,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 
 .fc .fc-editbtn svg { width: 16px; height: 16px; flex: none; }
 
-.fc .fc-btn.fc-editbtn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; background: transparent; border-color: var(--border); }
+.fc .fc-btn.fc-editbtn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; background: transparent; border-color: var(--tl-line); }
 
 .fc .fc-btn.fc-editbtn[aria-disabled="true"]:active { transform: none; }
 
@@ -1224,12 +1220,12 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   overflow: hidden;
   font-size: 12.5px;
   line-height: 1.4;
-  color: var(--t1);
+  color: var(--tl-soft);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.fc .fc-editline-k { margin-right: 6px; color: var(--t3); }
+.fc .fc-editline-k { margin-right: 6px; color: var(--tl-faint); }
 
 @media (max-width: 480px) {
   .fc .fc-editbtn { min-width: 44px; padding-inline: 0; }
@@ -1280,7 +1276,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   color: var(--tl-dim);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-l);
+  border-radius: 12px;
   cursor: pointer;
   transition: color var(--dur-1) ease, background var(--dur-1) ease, border-color var(--dur-1) ease;
 }
@@ -1295,7 +1291,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 }
 
 @media (hover: hover) {
-  .fc .fc-rail-tab:hover:not([aria-selected="true"]):not([data-active="true"]) { color: var(--tl-ink); background: var(--hvr); }
+  .fc .fc-rail-tab:hover:not([aria-selected="true"]):not([data-active="true"]) { color: var(--tl-ink); background: var(--tl-wash-2); }
 }
 
 .fc .fc-rail-tab[aria-selected="true"],
@@ -1315,7 +1311,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   right: 7px;
   width: 7px;
   height: 7px;
-  background: var(--accent);
+  background: var(--tl-ink);
   border-radius: 50%;
 }
 
@@ -1328,9 +1324,9 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
     position: sticky;
     top: calc(var(--chrome-h) + var(--fc-bar-h) + 12px);
     padding: 5px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2xl);
+    background: var(--tl-card);
+    border: 1px solid var(--tl-line);
+    border-radius: 16px;
   }
   .fc .fc-rail--side .fc-rail-tabs { display: grid; gap: 4px; }
 }
@@ -1339,9 +1335,9 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 @media (min-width: 768px) and (max-width: 960px) {
   .fc .fc-rail--row {
     padding: 5px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2xl);
+    background: var(--tl-card);
+    border: 1px solid var(--tl-line);
+    border-radius: 16px;
   }
   .fc .fc-rail--row .fc-rail-tabs {
     display: grid;
@@ -1368,7 +1364,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
     gap: 2px;
     margin: 0 calc(-1 * var(--fc-pad));
     padding: 4px var(--fc-pad);
-    background: color-mix(in srgb, var(--bg-0) 90%, transparent);
+    background: color-mix(in srgb, var(--tl-page) 90%, transparent);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--tl-hair);
@@ -1402,10 +1398,10 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   max-height: 76dvh;
   overflow-y: auto;
   padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-  background: var(--bg-1);
-  border-top: 1px solid var(--border);
+  background: var(--tl-card);
+  border-top: 1px solid var(--tl-line);
   border-radius: 16px 16px 0 0;
-  box-shadow: var(--shadow-l);
+  box-shadow: var(--v3-shadow);
   animation: menu-select-sheet-in var(--dur-2) var(--ease-entrance);
 }
 
@@ -1413,7 +1409,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 
 .fc .fc-rail-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 
-.fc .fc-rail-sheet-title { font-size: 15px; font-weight: 560; color: var(--t0); }
+.fc .fc-rail-sheet-title { font-size: 15px; font-weight: 560; color: var(--tl-ink); }
 
 .fc .fc-rail-sheet-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 
@@ -1428,11 +1424,11 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   font-family: var(--font);
   font-size: 14px;
   font-weight: 500;
-  color: var(--t0);
+  color: var(--tl-ink);
   text-align: left;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-l);
+  border-radius: 12px;
   cursor: pointer;
 }
 

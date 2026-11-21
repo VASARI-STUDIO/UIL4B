@@ -184,6 +184,10 @@ function register(pathStr, desc, n, real) {
   return entries.length - 1;
 }
 const sentinel = (id) => OPEN + encodeId(id) + CLOSE;
+// A theme may keep some words real: meta.realCopy(path, value) returns the string to print for a brand path (the project's own name and
+// colours, or specimen copy a component needs to read as a component), or undefined to leave the placeholder. A theme without realCopy
+// gets a placeholder for every string, as before.
+const realOf = (path, value) => (cur.keep ? cur.keep(path, value) : undefined);
 
 // Replace the string leaves a pattern names. n is the first "*" index plus one (null until a "*" is met).
 function walk(node, parts, i, trail, desc, n) {
@@ -192,7 +196,12 @@ function walk(node, parts, i, trail, desc, n) {
   const keys = key === '*' ? (Array.isArray(node) ? node.map((_, k) => k) : []) : [Array.isArray(node) ? Number(key) : key];
   for (const k of keys) {
     const nn = key === '*' && n == null ? k + 1 : n;
-    if (last) { if (typeof node[k] === 'string') node[k] = sentinel(register([...trail, k].join('.'), desc, nn ?? 1, node[k])); }
+    if (last) {
+      if (typeof node[k] === 'string') {
+        const at = [...trail, k].join('.'), r = realOf(at, node[k]);
+        node[k] = r === undefined ? sentinel(register(at, desc, nn ?? 1, node[k])) : r;
+      }
+    }
     else walk(node[k], parts, i + 1, [...trail, k], desc, nn);
   }
 }
@@ -204,20 +213,25 @@ const fullOf = (e) => `${e.label}: ${e.what} ${e.length}. e.g. "${e.example}"`;
 
 export function applyPlaceholders(ctx) {
   const B = ctx.brand;
-  const reg = { entries: [], idByPath: new Map() };
+  const reg = { entries: [], idByPath: new Map(), keep: typeof ctx.theme?.realCopy === 'function' ? ctx.theme.realCopy : null };
   // run fn with this ctx's registry in use, then put back whatever was in use
   const run = (fn) => { const prev = cur; cur = reg; try { return fn(); } finally { cur = prev; } };
   run(() => {
   for (const [pattern, desc] of Object.entries(DESCRIPTORS)) if (!desc.virtual) walk(B, pattern.split('.'), 0, [], desc, null);
   // a colour's role drives code (role === 'action'), so it stays as it is; roleText is the same word as a placeholder, for the line that prints it
-  for (const list of ['colours', 'tones']) (B[list] || []).forEach((k, i) => { k.roleText = sentinel(register(`${list}.${i}.roleText`, DESCRIPTORS[`${list}.*.roleText`], i + 1, k.role)); });
+  for (const list of ['colours', 'tones']) (B[list] || []).forEach((k, i) => {
+    const r = realOf(`${list}.${i}.roleText`, k.role);
+    k.roleText = r === undefined ? sentinel(register(`${list}.${i}.roleText`, DESCRIPTORS[`${list}.*.roleText`], i + 1, k.role)) : r;
+  });
   // ctx.colours and ctx.pairs are copies made before the swap: give them the same placeholder strings
   (ctx.colours || []).forEach((k, i) => Object.assign(k, { name: B.colours[i].name, lands: B.colours[i].lands, roleText: B.colours[i].roleText }));
   (ctx.pairs || []).forEach((p, i) => { p.use = B.pairs[i].use; });
+  // ctx.status is a copy too: its chips print the label the brand path now holds
+  (ctx.status || []).forEach((st, i) => { const src = B.ui?.status?.[i]; if (src && typeof src.label === 'string') st.label = src.label; });
   });
   ctx.real = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; if (!e) throw new Error('placeholders: a placeholder from another document'); return e.real; }));
   // ctx.ph(path, real): a placeholder for copy a theme hard-codes; real is the words showcase prints
-  ctx.ph = (p, real = '') => { const desc = DESCRIPTORS[p]; if (!desc) throw new Error('no placeholder descriptor ' + p); return run(() => sentinel(register(p, desc, 1, real))); };
+  ctx.ph = (p, real = '') => { const desc = DESCRIPTORS[p]; if (!desc) throw new Error('no placeholder descriptor ' + p); return run(() => { const r = realOf(p, real); return r === undefined ? sentinel(register(p, desc, 1, real)) : r; }); };
   // the registry itself stays private; finishText reaches it through run
   // label(str): str with each placeholder written as its short label, for a theme that measures what a control will print
   const label = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; return e ? e.label : m; }));

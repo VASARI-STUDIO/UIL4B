@@ -33,7 +33,7 @@ export function capHeight(font, size) {
 }
 
 // The fallback: the brand name outlined in the display face, and its first letter as the symbol.
-function plainLogo({ brand, font, outline: ol, capHeight: ch }) {
+export function plainLogo({ brand, font, outline: ol, capHeight: ch }) {
   const size = 100, track = -0.01, word = (brand.logo && brand.logo.showcase && brand.logo.showcase.wordmark) || brand.name;
   const cap = ch(font, size);
   const part = (o) => ({ w: o.x2 - o.x1, h: o.y2 - o.y1, parts: [{ d: o.d, role: 'name', tf: `translate(${(-o.x1).toFixed(2)} ${(-o.y1).toFixed(2)})` }] });

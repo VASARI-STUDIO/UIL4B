@@ -65,7 +65,7 @@ import { screenContent as sc } from './once.js';
 
 // the logo, or in the slot edition a dashed frame of the same size (as guidelines-r1.js draws it)
 function logoAt(ctx, id, width, ink) {
-  if (ctx.edition !== 'slot') return ctx.logo.html(id, { width });
+  if (ctx.edition !== 'slot' || ctx.logo.drawn) return ctx.logo.html(id, { width });
   const g = ctx.logo.geos[id], h = (width * g.h) / g.w;
   return `<div class="logo-slot" role="img" aria-label="Logo slot" style="width:${px(width)}px;height:${px(Math.max(h, 24))}px;box-sizing:border-box;border:1.5px dashed ${ink};color:${ink};display:flex;align-items:center;justify-content:center;font:500 12px/1.2 var(--body);white-space:nowrap">Your logo goes here</div>`;
 }

@@ -2,14 +2,14 @@
 // round 1 pages and are not rebuilt here. Every page is a slide of the courier's pitch deck: one idea, set on the brand's own colour fields, laid out in px
 // on the 1280 x 720 page and its 12-column grid. Colours come by role, every number from ctx, and text is measured with the brand's own font files.
 import { A, dispW, textW, lsb, capH, topForBaseline, fitOne, wrap, balance, lineHtml, L, byRole, inkOn, chromeOn, nameOfHex, px, box, colX, span, head, headRightW, page, sayOnce, sentences, pick, allowed, onceRe } from './lane-g3-kit.js';
-import { nameOf } from './helpers.js';
+import { nameOf, servedFamily } from './helpers.js';
 
 const pc = (c) => Math.round(c.share * 100);
 const disp = (ctx, size, lh, color, extra = '') => `color:${color};font-size:${size}px;line-height:${lh};letter-spacing:-0.01em;${extra}`;
 const p15 = (t, cls = '', st = '') => `<p class="r-t15 ${cls}"${st ? ` style="${st}"` : ''}>${t}</p>`;
 const p12 = (t, cls = '', st = '') => `<p class="r-t12 ${cls}"${st ? ` style="${st}"` : ''}>${t}</p>`;
 const tok = (ctx, t) => ctx.brand.type.scale.find((s) => s.token === t);
-const fam = (ctx, t) => ctx.brand.fonts[t.face].family;
+const fam = (ctx, t) => servedFamily(ctx.brand.fonts[t.face]);
 
 export const guidelines = {
   // Proportion: the page drawn to share. Each colour is a band across the full width, its height its share of the page, largest at the top.
@@ -134,16 +134,18 @@ export const guidelines = {
     const h = tok(ctx, 'headline'), bd = tok(ctx, 'body'), cp = tok(ctx, 'caption');
     const hl = pick(ctx, [S.sample.headline, ...B.lines.others, B.lines.primary]);
     const hlLines = balance(ctx, 'display', dw, hl, h.size, span(7), -0.01);
-    const para = sayOnce(ctx, S.sample.paragraph), pw = span(5), pLines = wrap(ctx, 'body', bd.weight, para, bd.size, pw);
+    // the type at work on the left (the headline at the top, the paragraph and its caption under it); the three settings in a rail at the right
+    const para = sayOnce(ctx, S.sample.paragraph), pw = span(6), pLines = wrap(ctx, 'body', bd.weight, para, bd.size, pw);
     const plh = bd.size * bd.line, pTop = Math.round(560 - pLines.length * plh - 16 - cp.size * cp.line);
     const capLines = wrap(ctx, 'body', cp.weight, sayOnce(ctx, S.sample.caption), cp.size, pw);
-    const key = [['Headline', h], ['Paragraph', bd], ['Caption', cp]].map(([n, t], i) => box(colX(i * 3), 632, span(3), 0, `color:${ch}`,
-      p12(`<span class="r-w600" style="color:${ink}">${n}</span><br>${t.size} px, line ${t.line}, ${A(fam(ctx, t))} ${t.weight}`, 'num'))).join('');
+    const rx = colX(8), rw = 1224 - rx;
+    const key = [['Headline', h], ['Paragraph', bd], ['Caption', cp]].map(([n, t], i) => box(rx, 120 + i * 88, rw, 0, `color:${ch}`,
+      p12(`<span class="r-w600" style="color:${ink}">${n}</span><br>${t.size} px, line ${t.line}<br>${A(fam(ctx, t))} ${t.weight}`, 'num'))).join('');
     const inner = box(0, 0, ctx.size.w, ctx.size.h, `background:${act}`) +
       box(56, 120, span(7), 0, disp(ctx, h.size, h.line, ink), `<h2 class="disp">${lineHtml(hlLines)}</h2>`) +
-      box(colX(7), pTop, pw, 0, `color:${ink};font:${bd.weight} ${bd.size}px/${bd.line} var(--body)`, `<p>${lineHtml(pLines)}</p>`) +
-      box(colX(7), pTop + pLines.length * plh + 16, pw, 0, `color:${ink};font:${cp.weight} ${cp.size}px/${cp.line} var(--body)`, `<p>${lineHtml(capLines)}</p>`) +
-      box(0, 608, ctx.size.w, 1, `background:${ink}`) + key + head(ctx, 'type-in-use', { left: [act] });
+      box(56, pTop, pw, 0, `color:${ink};font:${bd.weight} ${bd.size}px/${bd.line} var(--body)`, `<p>${lineHtml(pLines)}</p>`) +
+      box(56, pTop + pLines.length * plh + 16, pw, 0, `color:${ink};font:${cp.weight} ${cp.size}px/${cp.line} var(--body)`, `<p>${lineHtml(capLines)}</p>`) +
+      box(rx - 24, 72, 1, 536, `background:${ink}`) + key + head(ctx, 'type-in-use', { left: [act] });
     return page('type-in-use', '', inner, act);
   },
 

@@ -38,7 +38,7 @@
   cursor: pointer;
   transition: border-color 150ms ease;
 }
-.stc .stc-bundle.is-on { border-color: var(--sel-edge); background: color-mix(in srgb, var(--t0) 6%, var(--tl-card)); }
+.stc .stc-bundle.is-on { border-color: var(--sel-edge); background: color-mix(in srgb, var(--tl-ink) 6%, var(--tl-card)); }
 .stc .stc-bundle.is-on .stc-bundle-desc { color: var(--tl-soft); }
 @media (forced-colors: active) { .stc .stc-bundle.is-on { border-color: Highlight; } }
 .stc .stc-bundle-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
@@ -101,7 +101,7 @@
   cursor: pointer;
 }
 @media (min-width: 600px) { .stc .stc-cell { height: 56px; } }
-.stc .stc-cell.is-base { box-shadow: inset 0 0 0 2px var(--t0); }
+.stc .stc-cell.is-base { box-shadow: inset 0 0 0 2px var(--tl-ink); }
 .stc .stc-cell-tone { font-family: var(--font); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; line-height: 1; }
 .stc .stc-cell:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
@@ -113,7 +113,7 @@
   padding: 0 10px;
   border: 1px solid var(--tl-hair);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  background: color-mix(in srgb, var(--tl-ink) 4.5%, transparent);
   color: var(--tl-ink);
   font-family: var(--mono);
   font-size: 12px;
@@ -122,20 +122,28 @@
 .stc .stc-hue-err:empty { display: none; }
 
 /* ── The preview panel ───────────────────────────────────────────────────── */
-/* Its own data-theme re-scopes --card and --t0, but the --tl-* mixes were
-   resolved on .tl for the PAGE theme, so they are written again here. */
+/* Its own data-theme switches the panel's roles apart from the PAGE theme. The
+   --v3-* roles only re-scope for dark (v3-shell.css has no light selector), so
+   a light panel in a dark page redeclares the light values below, and the
+   --tl-* roles are written again here so they resolve against this element. The
+   two washes mix from the ink directly: --v3-rowh / --v3-rowc resolve once on
+   :root and would carry the page's ink into the panel. */
 .stc .stc-work {
-  --tl-ink: var(--t0);
-  --tl-dim: color-mix(in srgb, var(--t0) 68%, var(--card));
-  --tl-faint: color-mix(in srgb, var(--t0) 58%, var(--card));
-  --tl-hair: color-mix(in srgb, var(--t0) 9%, transparent);
-  --tl-line: color-mix(in srgb, var(--t0) 10%, transparent);
-  --tl-line-2: color-mix(in srgb, var(--t0) 13%, transparent);
-  --tl-line-on: color-mix(in srgb, var(--t0) 22%, transparent);
-  --tl-wash: color-mix(in srgb, var(--t0) 5%, transparent);
-  --tl-wash-2: color-mix(in srgb, var(--t0) 7%, transparent);
-  --tl-wash-on: color-mix(in srgb, var(--t0) 10%, transparent);
-  --tl-link: var(--link, var(--accent-text));
+  --tl-card: var(--v3-raised);
+  --tl-card2: var(--v3-l2);
+  --tl-ink: var(--v3-ink);
+  --tl-dim: var(--v3-sec);
+  --tl-faint: var(--v3-t56);
+  --tl-soft: rgba(var(--v3-ink-rgb), .86);
+  --tl-hair: var(--v3-hair);
+  --tl-line: var(--v3-hair);
+  --tl-line-2: var(--v3-ring);
+  --tl-line-on: var(--v3-hl20);
+  --tl-wash: var(--v3-wash);
+  --tl-wash-2: color-mix(in oklch, var(--v3-ink) 6%, transparent);
+  --tl-wash-on: color-mix(in oklch, var(--v3-ink) 9%, transparent);
+  --tl-row-on: var(--tl-wash-on);
+  --tl-focus: var(--v3-ink);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -145,9 +153,20 @@
   border-radius: 18px;
   border: 1px solid var(--tl-line);
   background: var(--card);
-  color: var(--t0);
+  color: var(--tl-ink);
 }
-.stc .stc-work[data-theme="light"] { --tl-dim: color-mix(in srgb, var(--t0) 82%, var(--card)); --tl-faint: color-mix(in srgb, var(--t0) 74%, var(--card)); }
+.stc .stc-work[data-theme="light"] {
+  --v3-raised: #FFFFFF;
+  --v3-l2: #ECEBE7;
+  --v3-ink: #121418;
+  --v3-ink-rgb: 18, 20, 24;
+  --v3-sec: rgba(18, 20, 24, .72);
+  --v3-t56: rgba(18, 20, 24, .62);
+  --v3-hair: rgba(18, 20, 24, .1);
+  --v3-hl20: rgba(18, 20, 24, .2);
+  --v3-wash: rgba(18, 20, 24, .06);
+  --v3-ring: rgba(18, 20, 24, .18);
+}
 .stc .stc-work-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
 .stc .stc-work-head strong { font-size: 13px; font-weight: 560; color: var(--tl-ink); }
 .stc .stc-work-head span { font-size: 12px; color: var(--tl-dim); }
@@ -165,7 +184,7 @@
   border-radius: 12px;
   border: 1px solid var(--stc-info, currentColor);
   background: var(--stc-info-wash, transparent);
-  color: var(--t0);
+  color: var(--tl-ink);
   font-size: 13px;
 }
 .stc .stc-sc--success { border-color: var(--stc-success, currentColor); background: var(--stc-success-wash, transparent); }
@@ -237,12 +256,12 @@
   padding: 0 12px;
   border: 1px solid var(--tl-hair);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  background: color-mix(in srgb, var(--tl-ink) 4.5%, transparent);
   color: var(--tl-ink);
   font-family: var(--font);
   font-size: 13px;
 }
-.stc .stc-save-sub { margin-top: 4px; font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--t2); }
+.stc .stc-save-sub { margin-top: 4px; font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--tl-dim); }
 .stc .stc-save-item {
   display: flex;
   align-items: center;
