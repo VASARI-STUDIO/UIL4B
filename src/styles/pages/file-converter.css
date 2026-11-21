@@ -110,7 +110,7 @@
   border-color: var(--tl-line-on);
 }
 
-.fc .fc-tab:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.fc .fc-tab:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-about {
   max-width: 78ch;
@@ -140,7 +140,7 @@
   transform: rotate(45deg);
 }
 .fc .fc-howto[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
-.fc .fc-howto summary:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.fc .fc-howto summary:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .fc .fc-howto[open] .fc-about { padding-bottom: 8px; }
 
 .fc .fc-3d-note {
@@ -324,7 +324,7 @@
   .fc .fc-seg-opt:hover:not([aria-checked="true"]):not([aria-disabled="true"]) { color: var(--t0); background: var(--hvr); }
 }
 
-.fc .fc-seg-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fc .fc-seg-opt:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 .fc .fc-seg-opt[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 
@@ -436,7 +436,7 @@
 
 .fc .fc-btn:active:not(:disabled) { transform: scale(.98); }
 
-.fc .fc-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fc .fc-btn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-btn:disabled { opacity: .5; cursor: not-allowed; }
 
@@ -483,7 +483,7 @@
   background: var(--accent-wash);
 }
 
-.fc .fc-drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.fc .fc-drop:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 3px; }
 
 .fc .fc-drop-ico {
   display: inline-grid;
@@ -579,7 +579,7 @@
 
 .fc .fc-card--btn:hover { border-color: var(--bh); }
 
-.fc .fc-card--btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fc .fc-card--btn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-thumb {
   display: flex;
@@ -617,7 +617,7 @@
 
 .fc .fc-remove:hover:not(:disabled) { color: var(--err-strong); border-color: var(--bh); }
 
-.fc .fc-remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fc .fc-remove:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-remove:disabled { opacity: .45; cursor: not-allowed; }
 
@@ -814,7 +814,7 @@
   -webkit-user-select: none;
 }
 
-.fc .fc-crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.fc .fc-crop-box:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 0; }
 
 /* The censor box marks a patch, not what is kept, so it does not dim the rest of the picture. */
 .fc .fc-crop-box[data-tone="censor"] { outline-style: dashed; outline-width: 2px; box-shadow: none; }
@@ -1061,7 +1061,7 @@
    the tile's size and never competes with the accent focus ring outside it. */
 .fc .fc-frame[aria-pressed="true"] { border-color: var(--t0); box-shadow: inset 0 0 0 1px var(--t0); }
 
-.fc .fc-frame:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fc .fc-frame:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-frame-no {
   position: absolute;
@@ -1306,7 +1306,7 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 }
 
 .fc .fc-rail-tab:focus-visible,
-.fc .fc-rail-sheet-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fc .fc-rail-sheet-item:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 /* The small filled mark: this group holds an edit. */
 .fc .fc-rail-mark {

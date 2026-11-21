@@ -103,7 +103,7 @@
 @media (min-width: 600px) { .stc .stc-cell { height: 56px; } }
 .stc .stc-cell.is-base { box-shadow: inset 0 0 0 2px var(--t0); }
 .stc .stc-cell-tone { font-family: var(--font); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; line-height: 1; }
-.stc .stc-cell:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.stc .stc-cell:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .stc .stc-hue { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding-top: 4px; }
 .stc .stc-hue .tl-slider { flex: 1; min-width: 200px; }

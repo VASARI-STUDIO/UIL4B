@@ -44,7 +44,7 @@
 }
 
 .fgd.is-dragging { transition: none; }
-.fgd:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fgd:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 @keyframes fgd-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes fgd-sheet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
@@ -140,7 +140,7 @@
   transition: background-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 }
 
-.fgd-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fgd-close:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .fgd-close:active { transform: scale(.97); }
 .fgd-close:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
@@ -487,7 +487,7 @@ html[data-reduced-motion="true"] .fgd-hero-bg { animation-duration: 120ms; anima
 .fgd-btn[aria-pressed="true"] { border-color: var(--t0); }
 
 .fgd-btn:focus-visible,
-.fgd-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fgd-menu-item:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .fgd-menu-item:focus-visible { outline-offset: -2px; }
 
 .fgd-btn:not(:disabled):active { transform: scale(.97); }

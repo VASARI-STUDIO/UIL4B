@@ -101,7 +101,7 @@
 @keyframes pvd-spin-in{from{opacity:0}to{opacity:1}}
 @keyframes pvd-spin{to{transform:rotate(360deg)}}
 @media (hover:hover){.pvd-opt:hover{background:var(--hvr);color:var(--t0)}.pvd-opt.is-on:hover{background:var(--bg-2)}}
-.pvd-opt:focus-visible,.pvd-chip:focus-visible,.pvd-menu-btn:focus-visible,.pvd-colours:focus-visible,.pvd-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pvd-opt:focus-visible,.pvd-chip:focus-visible,.pvd-menu-btn:focus-visible,.pvd-colours:focus-visible,.pvd-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* 768 to 1023: the list behind one button. */
 .pvd-pickbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);flex:none;padding:var(--s-3) var(--s-5) 0}
@@ -216,7 +216,7 @@
 .pvd-more{flex:none;display:inline-flex;align-items:center;min-height:32px;padding:0 10px;font-size:13px;font-weight:500;color:var(--t0);background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard)}
 @media (hover:hover){.pvd-more:hover{background:var(--hvr)}}
-.pvd-more:focus-visible,.pvd-state-btn:focus-visible,.pvd-state:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pvd-more:focus-visible,.pvd-state-btn:focus-visible,.pvd-state:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .pvd-more-pop{position:absolute;right:var(--s-5);bottom:calc(100% + var(--s-1));z-index:5;display:flex;flex-direction:column;gap:var(--s-2);width:min(440px,calc(100% - 2 * var(--s-5)));max-height:min(50dvh,320px);overflow-y:auto;overscroll-behavior:contain;padding:var(--s-3);
   background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
 .pvd-more-pop .pvd-chips{flex-wrap:wrap}
@@ -245,7 +245,7 @@
 .pvd-dock-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s-2);height:44px;padding:0 var(--s-4);font-size:var(--fs-body-s);font-weight:600;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard)}
 @media (hover:hover){.pvd-dock-btn:hover{background:var(--hvr)}}
-.pvd-dock-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pvd-dock-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .pvd-scenes-btn{flex:1;min-width:0;justify-content:flex-start}
 .pvd-scenes-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* The sheet opens upward, so the caret points up */

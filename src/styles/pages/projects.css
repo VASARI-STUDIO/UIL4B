@@ -73,7 +73,7 @@ div.uh.uh { padding-top: 0; }
 .uh button:active:not(:disabled),
 .uh .uh-tool:active { transform: scale(.97); }
 
-.uh :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.uh :focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 /* ── Title row ──────────────────────────────────────────────────────────── */
 .uh .uh-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }

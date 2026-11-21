@@ -80,7 +80,7 @@ html[data-reduced-motion="true"] .tsc-page .tsk-tag { transition: none; }
 .tsc-page .tsc-tight-trk i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--tl-ink); transition: transform 150ms var(--tl-ease), background-color 150ms var(--tl-ease); }
 .tsc-page .tsc-tight[aria-checked="true"] .tsc-tight-trk { background: var(--tl-ink); }
 .tsc-page .tsc-tight[aria-checked="true"] .tsc-tight-trk i { background: var(--bg-0); transform: translateX(16px); }
-.tsc-page .tsc-tight:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.tsc-page .tsc-tight:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 html[data-reduced-motion="true"] .tsc-page .tsc-tight-trk,
 html[data-reduced-motion="true"] .tsc-page .tsc-tight-trk i { transition: none; }
 @media (prefers-reduced-motion: reduce) {

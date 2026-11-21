@@ -81,11 +81,11 @@
    three are the shared Library language now (.lbry-filters / .lbry-empty).
    This page ran outlined pills for category beside a filled segment for sort —
    the same two-idioms-in-one-row fault the Gradient Library had. */
-.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .fg-more-btn:disabled{opacity:.5;cursor:not-allowed}
 .fg-compare{position:relative;width:100%;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);animation:fg-rise var(--dur-3) var(--ease-entrance)}
-.fg-compare:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-compare:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
+.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* Close button and label shared by the Compare dialog and the AI prompt page. */
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
@@ -482,7 +482,7 @@
 .bkit-card-title{margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:normal;color:var(--t0)}
 .bkit-card-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;margin:-6px -6px 0 0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease,cubic-bezier(.23,1,.32,1))}
 .bkit-card-close:active{transform:scale(.97)}
-.bkit-card-close:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.bkit-card-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 @media(hover:hover){
   .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 }
@@ -505,7 +505,7 @@
 .bkit-card-go{width:100%;height:44px;margin-top:var(--s-4);padding:0 var(--s-4);justify-content:center;font-size:15px;font-weight:560}
 /* Straight after the one sentence the body's own margin is the gap. */
 .bkit-card-body + .bkit-card-go{margin-top:0}
-.bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* The closing step: a name field in the same panel. */
 .bkit-name-form{display:flex;flex-direction:column;gap:var(--s-2)}
@@ -654,7 +654,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
    swatch (Palette Builder, the home workbench): the swatch colour is chosen by
    the user, so no single outline colour can be guaranteed to clear 3:1 against
    it — a white inner and a near-black outer means one of the two always does. */
-.snapv input[type="range"]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.snapv input[type="range"]:focus-visible{outline:2px solid var(--focus-ink);outline-offset:3px}
 .snapv--grad input[type="range"]:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 .snapv-value:disabled{cursor:not-allowed;opacity:.6}
 .snapv-input::-webkit-outer-spin-button,.snapv-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -748,7 +748,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uname--bold .uname-text{font-weight:700;letter-spacing:-.01em}
 .uname-owner{position:relative;display:inline-flex;align-items:center;gap:4px;min-width:0;border-radius:var(--radius-s);outline:none}
-.uname-owner:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.uname-owner:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .uname-crown{font-size:.85em;line-height:1;filter:saturate(1.1)}
 /* Owner tooltip — hidden until the name is hovered or keyboard-focused. */
 .uname-tip{position:absolute;bottom:calc(100% + 7px);left:0;z-index:60;padding:4px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-1);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;white-space:nowrap;box-shadow:var(--shadow-m);opacity:0;transform:translateY(3px);pointer-events:none;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
@@ -1162,7 +1162,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    has, instead of the ring's own declaration changing the shape to match
    itself. */
 .fdx-panel{border-radius:var(--radius-s)}
-.fdx-panel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fdx-panel:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 /* The slab's light is the footer's horizon (pages/home-footer.css,
    .sp-footer--home .sp-footer-horizon), so the gallery headers and the footer
    read as one brand: the same six hues in one oklch gradient, faded by the
@@ -1291,7 +1291,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    things floating beside it. It clears the WCAG 2.5.8 44px floor on its own,
    which the 38px tray option only does inside the `pointer:coarse` block. */
 .lbry-filterpop{position:relative;display:flex;flex-shrink:0}
-.lbry-filtertrig:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-filtertrig:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .lbry-filtertrig[aria-expanded="true"]>svg{transform:rotate(180deg)}
 .lbry-filtermenu[data-pop-align="end"]{left:auto;right:0}
 .lbry-filtermenu[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
@@ -1316,7 +1316,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    trigger still reports a multi-selection ("3 selected"), so nothing about the
    state is hidden — only the instruction for a gesture that is not offered. */
 .lbry-filtermenu .lbry-filter-hint{padding:6px 10px 4px;white-space:normal}
-.lbry-filter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lbry-filter:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 /* An option glyph (the Emoji Library's category emoji) and an option count
    (its "All 1,636"). Both aria-hidden — the accessible name is the label. */
 .lbry-filter-icon{font-size:13px;line-height:1;flex-shrink:0}
@@ -1405,7 +1405,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .lbry-empty-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
 .lbry-empty-actions .lbry-empty-clear{margin-top:0}
 .lbry-empty-clear:hover{background:var(--brand-soft)}
-.lbry-empty-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-empty-clear:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* 38px is deliberate density for a segmented tray on a fine pointer; on touch
    every one of these has to clear the WCAG 2.5.8 44px floor. min-WIDTH as well

@@ -193,7 +193,7 @@
 @media (forced-colors: active) {
   .grd .grd-lockmark { color: CanvasText; forced-color-adjust: none; }
 }
-.grd .grd-handle:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
+.grd .grd-handle:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 0; }
 /* The live position, over the handle while it moves. White on a near-black
    scrim is 15.9:1 whatever colour sits under it. */
 .grd .grd-handle-val {
@@ -259,7 +259,7 @@
   transition: transform .14s var(--tl-ease), background-color .16s ease, color .16s ease;
 }
 .grd .grd-copy:active { transform: scale(.97); }
-.grd .grd-copy:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-copy:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .grd .grd-copy.is-copied { color: var(--tl-ink); }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-copy:hover { background: var(--tl-wash); color: var(--tl-ink); }
@@ -348,7 +348,7 @@
   text-underline-offset: 2px;
   cursor: pointer;
 }
-.grd .grd-sel-clear:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-sel-clear:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .grd .grd-sel-clear:active { background: var(--tl-wash-on); }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-sel-clear:hover { background: var(--tl-wash-2); }
@@ -407,7 +407,7 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
-.grd .grd-stop-select:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
+.grd .grd-stop-select:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 0; }
 .grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
 .grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
 .grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
@@ -485,12 +485,12 @@
   font-size: 12px;
   transition: border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard);
 }
-.grd .grd-paint-src:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-paint-src:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-paint-src:hover { border-color: var(--tl-line-on); color: var(--tl-ink); }
 }
 .grd .grd-paint-link { display: inline-flex; align-items: center; flex: 0 0 auto; min-height: 28px; border-radius: 999px; font-size: 12px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
-.grd .grd-paint-link:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-paint-link:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-paint-link:hover { color: var(--tl-ink); }
 }
@@ -502,7 +502,7 @@
 .grd .grd-chips--shades { gap: 3px; flex-wrap: nowrap; }
 /* "+3 more": a palette past the row's cap, at chip height so the rows keep theirs. */
 .grd .grd-chips-more { display: inline-flex; align-items: center; flex: 0 0 auto; height: 28px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; white-space: nowrap; color: var(--tl-link); text-decoration: underline; text-underline-offset: 2px; }
-.grd .grd-chips-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-chips-more:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 /* On a fine pointer the word "more" is spoken, not drawn, so "+2" takes one chip's
    slot and the row stays one line; a finger's wider slots have room for it. */
 .grd .grd-chips-more { position: relative; padding: 0 3px; }
@@ -538,7 +538,7 @@
 /* 3px, so the ring clears the next chip across a 4px gap. */
 .grd .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--tl-ink); }
 .grd .grd-chips--shades .grd-chip.is-on { box-shadow: 0 0 0 1px var(--tl-card), 0 0 0 3px var(--tl-ink); }
-.grd .grd-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+.grd .grd-chip:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-chip:hover { border-color: var(--tl-line-on); }
 }
@@ -623,7 +623,7 @@
   user-select: none;
 }
 .grd .grd-wheel:active { cursor: grabbing; }
-.grd .grd-wheel:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 3px; }
+.grd .grd-wheel:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 3px; }
 .grd .grd-wheel-ticks,
 .grd .grd-wheel-tick { position: absolute; inset: 0; pointer-events: none; }
 .grd .grd-wheel-tick { transform: rotate(var(--grd-tick)); }
@@ -762,7 +762,7 @@
   font-family: var(--font);
   transition: border-color .16s ease;
 }
-.grd .grd-preset:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-preset:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .grd .grd-preset-swatch {
   display: block;
   height: 88px;
@@ -814,7 +814,7 @@
 .grd .grd-explore-chip { display: grid; gap: 6px; border-radius: 12px; color: var(--tl-dim); text-decoration: none; }
 .grd .grd-explore-swatch { display: block; height: 72px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--tl-line); }
 .grd .grd-explore-mood { font-size: 12px; line-height: 1.3; text-transform: capitalize; }
-.grd .grd-explore-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-explore-chip:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-explore-chip:hover { text-decoration: none; color: var(--tl-ink); }
 }
@@ -949,7 +949,7 @@
   .grd .grd-gen-chips[data-more="both"] { mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent); }
 }
 .grd .tl-pill.grd-gen-chip.is-on { box-shadow: inset 0 0 0 1px var(--tl-line-on); }
-.grd .tl-pill.grd-gen-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .tl-pill.grd-gen-chip:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 /* Out of reach (Palette with under two colours, and the Pro rows for a free account):
    the border steps back, the word keeps its contrast, and a press still answers. */
 .grd .tl-pill.grd-gen-chip[aria-disabled="true"] { border-color: color-mix(in srgb, var(--tl-line) 45%, transparent); cursor: not-allowed; }
@@ -973,7 +973,7 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.grd .grd-gen-more:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-gen-more:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .grd .grd-gen-more:active { background: var(--tl-wash-on); }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-gen-more:hover { background: var(--tl-wash-2); }
@@ -998,7 +998,7 @@
   cursor: pointer;
   transition: border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard);
 }
-.grd .grd-gen-lockbtn:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd .grd-gen-lockbtn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-gen-lockbtn:hover { border-color: var(--tl-line-on); color: var(--tl-ink); }
 }
@@ -1025,7 +1025,7 @@
 .grd-gen .grd-shuf-row > .grd-shuf-lock { grid-column: 1 / -1; grid-row: 2; }
 .grd-gen .grd-shuf-row > .grd-shuf-lock ~ .tl-pills { grid-row: 1; }
 .grd-gen .tl-pills { gap: 4px; flex-wrap: wrap; }
-.grd-gen .tl-pill:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.grd-gen .tl-pill:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 /* Type and Stops use the same chip as the rows above, so the section reads as one list. */
 .grd-gen .grd-shuf-row .tl-pill { justify-content: center; min-height: 28px; padding: 0 8px; border-radius: 999px; font-size: 12px; line-height: 1; }
 /* A lock has overruled this row: the pills keep the setting the person made but
@@ -1039,7 +1039,7 @@
 .grd-gen .grd-pool { display: grid; gap: 2px; max-height: 208px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0; border-block: 1px solid var(--tl-hair); }
 .grd-gen .grd-pool-opt { -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; color: var(--tl-ink); cursor: pointer; }
 .grd-gen .grd-pool-opt input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--tl-link); }
-.grd-gen .grd-pool-opt:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: -2px; }
+.grd-gen .grd-pool-opt:has(input:focus-visible) { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 .grd-gen .grd-pool-dot { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--tl-line); }
 .grd-gen .grd-pool-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grd-gen .grd-pool-count { margin: 2px 6px 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
@@ -1119,7 +1119,7 @@
    gradient behind the bar. */
 .grd .grd-ctx-opt.is-on { background: #f4f4f2; color: #0a0b0d; }
 .grd .grd-ctx-opt.is-on:focus-visible { outline-color: #f4f4f2; outline-offset: 2px; }
-.grd .grd-ctx-opt:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.grd .grd-ctx-opt:focus-visible { outline: 2px solid var(--focus-ink); box-shadow: var(--focus-ring-media); outline-offset: 1px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-ctx-opt:hover:not(.is-on) { background: rgba(255, 255, 255, .12); }
 }

@@ -406,13 +406,12 @@
 }
 
 /* ── focus ────────────────────────────────────────────────────────────────────
-   The design's ring: 2px in the link colour, offset 3px. `:focus-visible`
+   The design's ring: 2px in ink, offset 3px. `:focus-visible`
    only, so a pointer press never paints it, and no rule here removes an
    outline. No border-radius in a focus rule — an outline follows its own
    element's radius (tests/unit/focus-ring-geometry.test.js). */
 .spectrum :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-color: var(--sp-link);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 3px;
 }
 .spectrum .sp-search input.hcmd-input:focus-visible { outline-color: transparent; }

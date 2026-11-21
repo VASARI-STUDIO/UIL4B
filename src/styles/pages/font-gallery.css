@@ -247,7 +247,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   transition: border-color var(--dur-1) var(--ease-standard);
 }
 .fg-page .fg-preview-field:focus-within { border-color: var(--tl-line-on); }
-.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.fg-page .fg-preview-field:has(input:focus-visible) { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .fg-page .fg-preview-field input {
   flex: 1;
   min-width: 0;
@@ -449,7 +449,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   border-radius: 0;
   cursor: pointer;
 }
-.fg-page .fg-card-open:focus-visible { outline: 2px solid var(--tl-link); outline-offset: -2px; }
+.fg-page .fg-card-open:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 /* The name: top-left, in its own face, at band size. `--fg-fit` is the scale
    FontGallery's useFitName sets for a long name; it never goes below the floor,
