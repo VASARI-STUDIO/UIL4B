@@ -47,8 +47,8 @@ const iconDoc = (over = {}) => ({
 
 // What differs between the two kinds: how to make one. Where the author finds
 // it does not: the V3 Community page is a showcase of sample pieces, so a
-// design and an icon are both only ever a row under "Your submissions" on the
-// author's own profile.
+// design and an icon are both only ever a row on the author's own profile:
+// under "Your submissions" while waiting or turned down, under Made once approved.
 const KINDS = {
   design: { make: designDoc, subject: 'Harbour Dashboard', other: 'Pier Landing' },
   icon: { make: iconDoc, subject: 'Plus mark', other: 'Minus mark' },
@@ -57,6 +57,8 @@ const KINDS = {
 const queueRow = (page, name) => page.locator('#your-submissions .cm-sub', { hasText: name })
 // The tag the author reads for one of their own submissions.
 const authorTag = (page, name) => queueRow(page, name).locator('.cm-sub-status')
+// An approved piece, listed under the Made tab of the author's own profile.
+const liveRow = (page, name) => page.locator('#cm-tabpanel').getByRole('list', { name: 'Approved work' }).getByRole('listitem').filter({ hasText: name })
 
 const adminRow = (page, name) => page.locator('.cq-item', { hasText: name })
 const docOf = (page, id) => page.evaluate((k) => {
@@ -104,7 +106,8 @@ for (const [kind, k] of Object.entries(KINDS)) {
       expect((await docOf(page, 's-1')).status, 'the stored document must say approved').toBe('approved')
 
       await asAuthor(page)
-      await expect(authorTag(page, k.subject), 'the author reads it as approved').toHaveText('Approved')
+      await expect(liveRow(page, k.subject), 'the author finds it under Made').toBeVisible()
+      await expect(queueRow(page, k.subject), 'and no longer under Your submissions').toHaveCount(0)
     })
 
     // MUTATION: in src/components/admin/CommunityQueue.jsx make `decide` write
@@ -146,7 +149,7 @@ for (const [kind, k] of Object.entries(KINDS)) {
 
       // The author has it to begin with, so its absence later means something.
       await asAuthor(page)
-      await expect(queueRow(page, k.subject)).toBeVisible()
+      await expect(liveRow(page, k.subject)).toBeVisible()
       await asAdmin(page)
 
       await page.getByRole('tab', { name: /^Approved/ }).click()
@@ -159,8 +162,8 @@ for (const [kind, k] of Object.entries(KINDS)) {
       expect(await docOf(page, 's-2'), 'the other document must stay').not.toBeNull()
 
       await asAuthor(page)
-      await expect(queueRow(page, k.other), 'the account has answered').toBeVisible()
-      await expect(queueRow(page, k.subject), 'the removed one is off the author page').toHaveCount(0)
+      await expect(liveRow(page, k.other), 'the account has answered').toBeVisible()
+      await expect(liveRow(page, k.subject), 'the removed one is off the author page').toHaveCount(0)
     })
   })
 }
