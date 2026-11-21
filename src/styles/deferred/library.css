@@ -209,6 +209,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-modal-view:hover{color:var(--v3-ink)}
 .pl-modal-view.is-on{color:var(--sel-on-solid);background:var(--sel-solid);box-shadow:none}
 .pl-modal-view:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.pl-modal-view.is-on:focus-visible{outline-color:var(--sel-on-solid)}
 @media(pointer:coarse){.pl-modal-view{min-height:44px}}
 
 /* ── The live output ──────────────────────────────────────────────────────
@@ -1482,9 +1483,9 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 }
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter:hover{background:transparent;color:var(--v3-ink)}
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter[data-active="true"]{
-  background:color-mix(in srgb,var(--v3-ink) 9%,transparent);color:var(--v3-ink);border:0;
+  background:var(--sel-solid);color:var(--sel-on-solid);border:0;
 }
-.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter-ind{background:color-mix(in srgb,var(--v3-ink) 9%,transparent)}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter-ind{background:var(--sel-solid)}
 @media(pointer:coarse){.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter{min-height:44px}}
 /* The Mood pill (line 237): a 5% ground over an 8% hairline, the key dim at
    12.5, the value in ink at 13.5/540. */

@@ -2999,6 +2999,7 @@ html.lenis{scroll-behavior:auto!important}
 .theme-seg-btn:hover{color:var(--t0)}
 .theme-seg-btn[aria-pressed="true"]{background:var(--sel-solid);color:var(--sel-on-solid)}
 .theme-seg-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
+.theme-seg-btn[aria-pressed="true"]:focus-visible{outline-color:var(--sel-on-solid)}
 .toggle-row .theme-seg{flex:0 0 auto;width:250px}
 
 /* ══ THE MEGA MENU — `UIL4B App.dc.html` lines 127-216, as ONE surface ═══════

@@ -512,6 +512,7 @@ html[data-reduced-motion="true"] .ied-gochip>.b{visibility:hidden}
   .ied-seg{height:44px;padding:0;gap:0;overflow:hidden}
   .ied-seg button{height:44px;border-radius:0;font-size:14px}
   .ied-seg button:focus-visible{outline-offset:-2px}
+  .ied-seg button[aria-checked="true"]:focus-visible{outline-color:var(--ied-surface)}
   .ied-in{height:44px;padding:0 14px;border-radius:12px;font-size:16px;line-height:24px}
   .ied-ta{height:160px;padding:12px 14px;border-radius:12px;font-size:16px;line-height:24px}
   .ied-tile{min-height:124px}

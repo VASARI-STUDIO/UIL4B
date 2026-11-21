@@ -65,10 +65,8 @@
 
 @media (forced-colors:active){
   :focus-visible{outline-color:Highlight;box-shadow:none}
-  .focus-media:focus-visible{box-shadow:none;outline:2px solid Highlight}
-  :is([aria-pressed=true],[aria-checked=true],[aria-selected=true]):is(.sel-chip,.sel-seg,.sel-row){border:2px solid Highlight}
   /* Selected marks itself with an inset Highlight outline; :where() and :not(:focus-visible) keep it from outranking the focus ring. */
-  :where(button,[role=tab],[role=radio],[role=option],[role=menuitemradio]):where([aria-pressed=true],[aria-checked=true],[aria-selected=true]):not(:focus-visible){outline:2px solid Highlight;outline-offset:-2px}
+  :where(button,[role=tab],[role=radio],[role=option],[role=menuitemradio]):where([aria-pressed=true],[aria-checked=true],[aria-selected=true],.is-on,.is-active,.active):not(:focus-visible){outline:2px solid Highlight;outline-offset:-2px}
   :is([class*=menu-row][aria-pressed=true],.lbry-filtermenu .lbry-filter[data-active=true])::after{forced-color-adjust:none;background:CanvasText}
 }
 @property --mi-a{syntax:'<angle>';inherits:false;initial-value:0deg}

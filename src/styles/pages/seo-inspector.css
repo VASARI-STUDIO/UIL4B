@@ -87,7 +87,7 @@
 
 .seo-page .seo-tab:hover { color: var(--tl-ink); }
 
-.seo-page .seo-tab.is-active { color: var(--sel-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); box-shadow: var(--sel-line); }
+.seo-page .seo-tab.is-active { color: var(--sel-ink); background: var(--tl-wash-on); border-color: var(--sel-edge); box-shadow: none; }
 
 .seo-page .seo-tab:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 

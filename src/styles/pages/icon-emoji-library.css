@@ -248,6 +248,7 @@
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .iel-page .ig-weight-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
+.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline-color:var(--bg-0)}
 @media(pointer:coarse){
   .iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span,.iel-page .ig-weight-status{min-height:44px}
 }
