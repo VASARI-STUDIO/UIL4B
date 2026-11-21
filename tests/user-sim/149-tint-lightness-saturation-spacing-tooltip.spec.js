@@ -401,8 +401,9 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
       if (!m.capped) expect(m.scrollH, `note ${i}: a card that fits does not scroll`).toBeLessThanOrEqual(m.clientH + 1)
       expect(await page.evaluate(() => document.documentElement.scrollHeight), `note ${i}: the page grew`).toBeLessThanOrEqual(docH0)
     }
-    // 1440x900 leaves 70px under the lowest row of notes: a compact card below for the upper notes, a side card for the rest.
-    expect([...kinds].sort(), 'the squeezed placements seen at 1440x900').toEqual(['below compact', 'beside right'])
+    // The page fills the window now, so at 1440x900 the notes end 12px above its foot and
+    // nothing has room below: every card is the compact one beside its note.
+    expect([...kinds].sort(), 'the squeezed placements seen at 1440x900').toEqual(['beside right'])
   })
 
   // ── Walking the pointer along the notes ──────────────────────────────────
@@ -415,6 +416,8 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
   const walkNotes = async (page, order) => {
     let under = 0
     for (const i of order) {
+      // Where the notes scroll inside their card (a short window), a person scrolls the one they want into view first.
+      await note(page, i).scrollIntoViewIfNeeded()
       const c = await centreOf(page, i)
       const hid = await openTip(page).count() ? await openTip(page).locator('.tt-tip-card').evaluate((el, p) => { const r = el.getBoundingClientRect(); return p.x >= r.left && p.x < r.right && p.y >= r.top && p.y < r.bottom }, c) : false
       if (hid) under++
@@ -599,16 +602,28 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
 
   test.describe('in a tall window', () => {
     test.use({ viewport: { width: 1440, height: 1300 } })
-    test('every hover card has room, opens below its note, whole, with its help', async ({ page }) => {
+    // The page fills a tall window too, so the notes sit at its foot with 5 rows and a
+    // card has room below only for the top rows. Wherever it goes, it is whole and in the window.
+    test('every hover card is whole, inside the window, and clear of its note', async ({ page }) => {
       await openTint(page, 'someone pointing along the notes in a tall window')
       for (let i = 0; i < 11; i++) {
         await settle(page, i)
         const m = await cardFit(page, i)
-        expect(m.roomBelow, `note ${i}: a 1300px window leaves room for the whole card`).toBeGreaterThanOrEqual(FULL)
-        expect(m.card.top, `note ${i}: the card opens below the note`).toBeGreaterThanOrEqual(m.note.bottom - 2)
-        expect(m.above || m.compact || m.side || m.capped, `note ${i}: no flip, squeeze, side or cap`).toBeFalsy()
-        expect(m.helpShown, `note ${i}: the help paragraph is shown`).toBe(true)
-        expect(m.scrollH, `note ${i}: nothing to scroll`).toBeLessThanOrEqual(m.clientH)
+        expect(m.rows, `note ${i}: both rows`).toHaveLength(2)
+        // Only the compact card drops its help; any other card carries it.
+        if (!m.compact) expect(m.helpShown, `note ${i}: a whole card shows its help`).toBe(true)
+        for (const r of m.rows) {
+          expect(r.top, `note ${i}: a row is cut off at the card's top`).toBeGreaterThanOrEqual(m.card.top - 1)
+          expect(r.bottom, `note ${i}: a row is cut off at the card's foot`).toBeLessThanOrEqual(m.card.bottom + 1)
+        }
+        expect(m.card.top, `note ${i}: the card rises into the toolbar`).toBeGreaterThanOrEqual((m.bar?.bottom ?? 0) - 1)
+        expect(m.card.bottom, `note ${i}: past 12px from the window's foot`).toBeLessThanOrEqual(m.winH - 12 + 1)
+        expect(m.card.left, `note ${i}: past the window's left edge`).toBeGreaterThanOrEqual(-1)
+        expect(m.card.right, `note ${i}: past the window's right edge`).toBeLessThanOrEqual(m.winW - 12 + 1)
+        expect(meets(m.card, m.note), `note ${i}: the card sits on its own note`).toBe(false)
+        // The notes sit at the window's foot, so the room under the notes header can be a few
+        // pixels short of the compact card: its bottom padding may be cut, never a row.
+        expect(m.scrollH, `note ${i}: more than its padding to scroll`).toBeLessThanOrEqual(m.clientH + 8)
       }
     })
   })
@@ -727,7 +742,11 @@ test.describe('the contrast tooltip with a mouse and a keyboard', () => {
     const failMarks = new Set()
     const largeMarks = new Set()
     for (let i = 0; i < 11; i++) {
-      const rows = await page.locator('.tt-note-wrap').nth(i).locator('.tt-tip-row').evaluateAll((els) => els.map((e) => ({
+      // A card exists only while its note is open (it is drawn outside the notes list).
+      await page.mouse.move(5, 5)
+      await note(page, i).hover()
+      await expect(openTip(page).locator('.tt-tip-card'), `step ${i}`).toBeVisible()
+      const rows = await openTip(page).locator('.tt-tip-row').evaluateAll((els) => els.map((e) => ({
         who: e.querySelector('.tt-tip-who').textContent,
         ratio: e.querySelector('.tt-tip-ratio').textContent,
         word: e.querySelector('.tt-tip-grade').textContent,
@@ -1067,10 +1086,23 @@ for (const width of [390, 768]) {
         'the Spacing pills': page.getByRole('group', { name: 'Spacing', exact: true }),
         'the first note': note(page, 0),
       }
+      // On a phone the notes come before the controls, so an open card pushes the pills down
+      // by design: only what sits above the notes is held still there.
+      if (width < 768) { delete watched['the Curve pills']; delete watched['the Spacing pills'] }
+      // At 768 the notes scroll inside their card; the pinned card makes the list scroll to keep
+      // its note in view, which moves the first note. The header, hint and pills stay put.
+      if (width === 768) delete watched['the first note']
+      // Bring the note into view first (the notes scroll inside their card at 768); a tap would
+      // otherwise scroll them after the "before" boxes were read.
+      await note(page, 6).scrollIntoViewIfNeeded()
       const look = async () => Object.fromEntries(await Promise.all(Object.entries(watched).map(async ([k, loc]) => [k, await docBox(loc)])))
       const before = await look()
       const wrapBefore = await docBox(page.locator('.tt-note-wrap').nth(6))
       const noteBefore = await docBox(note(page, 6))
+      // Where the notes scroll inside their card (768), the list may scroll to show the pinned
+      // card: read the note's place inside the list, not on the page, so that scroll is allowed.
+      const listScroll = () => page.locator('.tt-notes-list').evaluate((el) => el.scrollTop)
+      const scrollBefore = await listScroll()
 
       await note(page, 6).tap()
       const card = page.locator('.tt-tip--inline .tt-tip-card')
@@ -1082,6 +1114,8 @@ for (const width of [390, 768]) {
       // The note keeps its place and height. On a wide touch screen its wrap spans the
       // row while pinned, so the note may grow wider (never narrower); on a phone it does not.
       const noteNow = await docBox(note(page, 6))
+      const scrolled = (await listScroll()) - scrollBefore
+      noteNow.y += scrolled
       expect({ x: noteNow.x, y: noteNow.y, h: noteNow.h }, 'the pinned note moved').toEqual({ x: noteBefore.x, y: noteBefore.y, h: noteBefore.h })
       if (width >= 768) expect(noteNow.w, 'the pinned note got narrower').toBeGreaterThanOrEqual(noteBefore.w)
       else expect(noteNow.w, 'the pinned note changed width on a phone').toBe(noteBefore.w)
@@ -1091,11 +1125,12 @@ for (const width of [390, 768]) {
       const cardBox = await docBox(card)
       const wrapAfter = await docBox(page.locator('.tt-note-wrap').nth(6))
       if (width >= 768) {
-        const list = await docBox(page.locator('.tt-notes-list'))
-        expect(wrapAfter.w, 'a pinned wrap spans the whole row on a wide touch screen').toBeGreaterThanOrEqual(list.w - 1)
+        // The row is the list's content box: its stable scrollbar gutter is not part of it.
+        const rowW = await page.locator('.tt-notes-list').evaluate((el) => { const cs = getComputedStyle(el); return el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) })
+        expect(wrapAfter.w, 'a pinned wrap spans the whole row on a wide touch screen').toBeGreaterThanOrEqual(rowW - 1)
       }
       expect(wrapAfter.h, 'the cell grew to hold the card').toBeGreaterThanOrEqual(wrapBefore.h + cardBox.h - 1)
-      expect(cardBox.y, 'the card starts at or below the note').toBeGreaterThanOrEqual(noteBefore.y + noteBefore.h - 1)
+      expect(cardBox.y + scrolled, 'the card starts at or below the note').toBeGreaterThanOrEqual(noteBefore.y + noteBefore.h - 1)
       for (const [what, box] of Object.entries(before)) {
         if (what === 'the first note') continue
         expect(overlap(cardBox, box), `the card sits on ${what}`).toBe(false)
