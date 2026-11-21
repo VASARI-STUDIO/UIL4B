@@ -214,13 +214,16 @@ test.describe('/tools layout', () => {
     })
   }
 
-  for (const [width, stacked] of [[390, false], [375, false], [374, true], [320, true]]) {
-    test(`the hero ramp is ${stacked ? 'one swatch per line' : 'five across'} at ${width}px`, async ({ page }) => {
+  // The hero's Palette preview repeats the Palette card below it, so a phone does not draw it.
+  // Its five-across and one-per-line ramps went with it; the card's own nine steps are the ramp there.
+  for (const width of [390, 375, 374, 320]) {
+    test(`the hero ramp is not drawn at ${width}px and the Palette card's ramp is`, async ({ page }) => {
       watch(page, PERSONA)
       await page.setViewportSize({ width, height: 844 })
       await go(page, '/tools')
-      const cols = await page.locator('.mk-pal .mk-ramp').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)
-      expect(cols).toBe(stacked ? 1 : 5)
+      // Mutation: delete `.mkt .mk-pal { display: none }` in v3-marketing.css -> the hero ramp is drawn again.
+      await expect(page.locator('.mk-pal')).toBeHidden()
+      await expect(page.locator('.mk-lead-card .mk-ramp')).toBeVisible()
     })
   }
 
