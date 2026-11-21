@@ -165,17 +165,20 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 @media(hover:hover){.pnav-pop-item[aria-disabled="true"]:hover{background:none}}
 
 /* ── The mega menus ────────────────────────────────────────────────────── */
-.pnav-menu{top:calc(var(--chrome-h) + 8px);left:24px;right:auto;width:min(960px,calc(100vw - 48px));border:0;border-radius:16px;background:var(--v3-raised);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 0 0 1px var(--v3-hair),var(--v3-mgsh);isolation:isolate;transform-origin:0 0;animation:v3-mg-in 180ms var(--v3-ease) both}
-.pnav-menu[data-menu="discover"]{width:min(640px,calc(100vw - 48px))}
-.pnav-menu[data-menu="learn"]{width:min(840px,calc(100vw - 48px))}
+.pnav-menu{top:calc(var(--chrome-h) + 8px);left:24px;right:auto;width:min(1120px,calc(100vw - 48px));border:0;border-radius:16px;background:var(--v3-raised);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 0 0 1px var(--v3-hair),var(--v3-mgsh);isolation:isolate;transform-origin:0 0;animation:v3-mg-in 180ms var(--v3-ease) both}
 @keyframes v3-mg-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
 @keyframes v3-mg-fade{from{opacity:0}to{opacity:1}}
 .pnav-menu-body{padding:20px}
 .pnav-menu-cols{flex-wrap:wrap;gap:0}
-.pnav-grid{flex:0 0 auto;gap:12px}
-.pnav-menu[data-menu="create"] .pnav-grid[data-cols]{grid-template-columns:176px 176px 240px}
-.pnav-menu[data-menu="discover"] .pnav-grid[data-cols]{grid-template-columns:160px 140px}
-.pnav-menu[data-menu="learn"] .pnav-grid[data-cols]{grid-template-columns:300px 180px}
+/* One frame for all three menus: the same width, and on desktop the same height, so switching menus never jumps. */
+@media(min-width:980px){.pnav-menu-cols{min-height:348px;flex-wrap:nowrap}}
+/* 980-1023: the brand kit pane wraps to more lines, so every menu takes its taller height. */
+@media(min-width:980px) and (max-width:1023px){.pnav-menu-cols{min-height:384px}}
+.pnav-grid{flex:1 1 auto;gap:12px}
+.pnav-menu[data-menu="create"] .pnav-grid[data-cols]{grid-template-columns:minmax(176px,1fr) minmax(176px,1fr) minmax(240px,1.3fr)}
+.pnav-menu[data-menu="discover"] .pnav-grid{flex:0 0 auto}
+.pnav-menu[data-menu="discover"] .pnav-grid[data-cols]{grid-template-columns:240px}
+.pnav-menu[data-menu="learn"] .pnav-grid[data-cols]{grid-template-columns:minmax(380px,1.8fr) minmax(180px,1fr)}
 .pnav-colstack{padding:0;border-right:0}
 .pnav-col{margin-bottom:0}
 .pnav-col + .pnav-col{margin-top:24px}
@@ -208,13 +211,26 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 .pnav-menu[data-menu="learn"] .pnav-tool-nm{line-height:20px}
 
 /* The right-hand pane. */
-.pnav-editorial{flex:1 1 220px;min-width:0;gap:0;margin-left:20px;padding:0 0 0 20px;border-left:1px solid var(--v3-hair);display:flex}
+.pnav-editorial{flex:0 0 340px;min-width:0;gap:0;margin-left:20px;padding:0 0 0 20px;border-left:1px solid var(--v3-hair);display:flex}
+/* Discover has the fewest rows, so its list is one column and its pane takes the spare width: from 980px the counts sit on the left and the pick on the right. */
+.pnav-menu[data-menu="discover"] .pnav-editorial{flex:1 1 0}
+.pnav-menu[data-menu="discover"] .pnav-editorial-blurb{max-width:52ch}
+@media(min-width:768px){
+  .pnav-menu[data-menu="discover"] .pnav-dside{width:100%;display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+  .pnav-menu[data-menu="discover"] .pnav-dside .pnav-reco{margin-top:0;padding-top:20px;border-top:1px solid var(--v3-hair)}
+}
+@media(min-width:980px){
+  .pnav-menu[data-menu="discover"] .pnav-dside{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0}
+  .pnav-menu[data-menu="discover"] .pnav-dside .pnav-dcounts{grid-template-columns:minmax(0,1fr);gap:16px;padding-right:24px}
+  .pnav-menu[data-menu="discover"] .pnav-dside .pnav-dcount-strip{max-width:160px}
+  .pnav-menu[data-menu="discover"] .pnav-dside .pnav-reco{padding:0 0 0 24px;border-top:0;border-left:1px solid var(--v3-hair)}
+}
 .pnav-editorial-title{font-size:15px;line-height:22px;font-weight:500;letter-spacing:0;text-wrap:balance;color:var(--v3-ink)}
 .pnav-editorial-blurb{max-width:34ch;margin:8px 0 0;font-size:14px;line-height:20px;color:var(--v3-sec)}
 .pnav-editorial .pnav-prev,.pnav-editorial .pnav-dside{margin-top:20px}
 .pnav-prev{padding:0}
 .pnav-prev-page{border-radius:8px;box-shadow:inset 0 0 0 1px var(--v3-outl)}
-.pnav-editorial-cta{align-self:flex-start;justify-content:center;gap:6px;min-height:36px;margin-top:auto;padding:0 14px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--v3-cta-edge);color:var(--v3-ink);font-size:14px;font-weight:500;line-height:20px;transition:background-color 100ms linear}
+.pnav-editorial-cta{align-self:flex-start;justify-content:center;gap:6px;min-height:36px;margin-top:20px;padding:0 14px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--v3-cta-edge);color:var(--v3-ink);font-size:14px;font-weight:500;line-height:20px;transition:background-color 100ms linear}
 @media(hover:hover){.pnav-editorial-cta:hover{background:var(--v3-rowh);color:var(--v3-ink)}}
 .pnav-editorial-cta:active{background:var(--v3-rowp);transform:scale(.97);transition-duration:120ms}
 .pnav-editorial-cta:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
@@ -236,17 +252,17 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 
 /* The foot. */
 .pnav-menu-foot{min-height:52px;gap:24px;padding:8px 20px;border-top:1px solid var(--v3-hair)}
-.pnav-menu-foot-note{font-size:13px;line-height:18px;color:var(--v3-sec)}
+.pnav-menu-foot-note{align-self:center;margin:0;font-size:13px;line-height:18px;color:var(--v3-sec)}
 .pnav-menu-readout{font-size:13px;line-height:18px;color:var(--v3-sec)}
 .pnav-menu-readout b{font-weight:500;color:var(--v3-ink)}
 .pnav-menu-foot-link{min-height:32px;gap:6px;border-radius:6px;color:var(--v3-ink);font-size:13px;line-height:18px;font-weight:500}
 @media(hover:hover){.pnav-menu-foot-link:hover{color:var(--v3-ink);text-decoration:underline;text-underline-offset:4px}}
 .pnav-menu-foot-link:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px;text-decoration:underline}
 
-/* Below 980px the pane drops under the columns. */
+/* 980-1240: the columns keep their minimums and the pane takes what is left. Below 980px the pane drops under the columns. */
 @media(max-width:1240px){
-  .pnav-editorial{display:flex;flex:1 1 220px;grid-template-columns:none;margin-left:20px;padding:0 0 0 20px;border-left:1px solid var(--v3-hair);border-top:0}
-  .pnav-editorial-cta{margin-top:auto}
+  .pnav-grid{flex:0 1 auto}
+  .pnav-editorial{display:flex;flex:1 1 240px;grid-template-columns:none;margin-left:20px;padding:0 0 0 20px;border-left:1px solid var(--v3-hair);border-top:0}
 }
 @media(max-width:979px){
   .pnav-menu{left:max(10px,env(safe-area-inset-left,0px))}

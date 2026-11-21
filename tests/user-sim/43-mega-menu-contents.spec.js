@@ -654,9 +654,10 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   // The guide rows carry the page's own long title, so the label wraps to two
   // lines instead of an ellipsis, and the read time stays whole beside it.
-  // Titles fit one line at 1440 and 1280; 800 is the width where the long ones
-  // wrap, so that is where the two-line case is required to occur.
-  for (const [width, mustWrap] of [[1440, false], [1280, false], [800, true]]) {
+  // The menu is one shared frame (the screen less 10px each side below 980), so
+  // the guide column is wide enough for every current title on one line at all
+  // three widths; a longer title may wrap, but never past two lines or clipped.
+  for (const [width, mustWrap] of [[1440, false], [1280, false], [800, false]]) {
     test(`Learn menu at ${width}: guide titles wrap whole (at most two lines) and each "N min" is not clipped`, async ({ page }) => {
       watch(page, 'a desktop reader opening the Learn menu')
       await page.setViewportSize({ width, height: 900 })
