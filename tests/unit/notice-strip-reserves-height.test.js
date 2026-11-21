@@ -70,6 +70,10 @@ const EXEMPT = [
   // it grows by the top safe-area inset and pads its content below it.
   '.pnav :: height:calc(var(--nav-top) + var(--nav-h))',
   '.pnav :: padding-top:var(--nav-top)',
+  // The maintenance page's logo-only header stands in for the nav on a page
+  // that renders no nav, so it is the nav's box, not an offset below it.
+  '.maint-head :: height:calc(var(--nav-top) + var(--nav-h))',
+  '.maint-head :: padding:var(--nav-top) max(clamp(16px,2vw,22px),env(safe-area-inset-right,0px)) 0 max(clamp(16px,2vw,22px),env(safe-area-inset-left,0px))',
   // The strip's own top. A strip offset by its own height walks down the page.
   '.notice-stack :: top:calc(var(--nav-top) + var(--nav-h))',
 ]
