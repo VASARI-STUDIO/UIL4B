@@ -5,7 +5,7 @@
 // empty value is a line, a row or a block that is not printed.
 import { A, L, lower, nameOfHex, fieldStyle, darkF, actF, panelF, fitSize, words, inkOn, cwFor, byRole } from './lane-ht-lib.js';
 import { onceRe, sayOnce } from './lane-g3-kit.js';
-import { distinctColours, servedFamily, standInNote, ratioText } from './helpers.js';
+import { distinctColours, servedFamily, ratioText } from './helpers.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -13,6 +13,21 @@ const keep = (ctx, t) => (ok(ctx, t) ? t : '');
 // the one line a page leads with: the primary line, or the brand's next line where the primary line carries the word, else the name (or nothing)
 const lead = (ctx) => { const B = ctx.brand; return ok(ctx, B.lines.primary) ? B.lines.primary : (B.lines.others.find((t) => ok(ctx, t)) || B.name || ''); };
 const NONE = { big: '', html: '' };
+const VOICE_PAIRS = [
+  ['Order 1042 is packed. It should reach you by 11:40 am.', 'Your order has been processed and will be dispatched in due course.'],
+  ['We could not take that card. Check the details and try again.', 'Error 402: payment declined.'],
+];
+// six frames for a first shoot, one line each: what the frame shows and how it is cropped
+const SHOTS = [
+  ['Hero', 'The product in use, wide, in daylight.'],
+  ['Detail', 'A hand on the product, close, nothing behind it.'],
+  ['Place', 'Where it is used, with people in the frame.'],
+  ['Work', 'The packing or making, from above.'],
+  ['Portrait', 'One person from the team, looking at the camera.'],
+  ['Texture', 'Material, tool or surface, filling the frame.'],
+];
+const shotFrames = () => `<ul class="ht-shots">${SHOTS.map(([t, b], i) => `<li><span class="ht-ph" role="img" aria-label="Frame ${i + 1}: ${A(t)}"><i></i><i></i><i></i><i></i></span><p class="ht-shots__t"><span class="num">${i + 1}</span> <b>${A(t)}</b></p><p class="ht-shots__b">${A(b)}</p></li>`).join('')}</ul>`;
+const PHOTO_BRIEF = [['Subject', 'People at work, caught mid-task, not posed.'], ['Light', 'Daylight from the side. No flash.'], ['Crop', 'Close in, with clear space round the subject for type.']];
 
 const dl = (rows) => { const r = rows.filter(([, v]) => v); return r.length ? `<dl class="ht-dl">${r.map(([k, v]) => `<dt>${A(k)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''; };
 const pair = (rows, [h1, h2]) => (rows.length ? `<ul class="ht-pair"><li><p class="ht-pair__h">${A(h1)}</p><p class="ht-pair__h">${A(h2)}</p></li>${rows.map(([a, b]) => `<li><p><span class="ht-pair__k">${A(h1)}</span>${a}</p><p><span class="ht-pair__k">${A(h2)}</span>${b}</p></li>`).join('')}</ul>` : '');
@@ -26,8 +41,19 @@ const pcts = (cs) => {
   raw.map((r, i) => [r - out[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { out[i]++; left--; } });
   return out.map((n) => `${n}%`);
 };
-// a face by its brand name, and where the page is set in a stand-in, the face it is shown in
-const faceName = (F) => (servedFamily(F) !== F.family ? `${F.family}, shown here in ${servedFamily(F)}` : F.family);
+// a face by its brand name: which font file stands in for it is the maker's business, not the reader's
+const faceName = (F) => F.family;
+// a number with its unit, set in the body face with tabular figures and one plain space (the mono face is for hex and code only)
+const nv = (t) => (t ? `<span class="num">${A(t)}</span>` : '');
+// the brand's device: its colours as flat blocks in a fixed rhythm of shares, a bar under a section's title, stepped on the cover
+const SHARES = [34, 26, 20, 12, 8];
+export const device = (ctx, cover = false) => {
+  const cs = distinctColours(ctx).slice().sort((a, b) => b.share - a.share).slice(0, 5);
+  if (cs.length < 2) return '';
+  return `<div class="ht-dev${cover ? ' ht-dev--cv' : ''}" aria-hidden="true">${cs.map((c, i) => `<span style="flex:${SHARES[i]};background:${c.hex}${lower(c.hex) === lower(L(ctx).surface) ? ';box-shadow:inset 0 0 0 1px var(--h)' : ''}"></span>`).join('')}</div>`;
+};
+// a photo slot: the frame at its ratio with crop marks at its corners, and a caption that says what to place in it
+const slot = (cls, label) => `<span class="ht-ph ${cls}" role="img" aria-label="${A(label)}"><i></i><i></i><i></i><i></i></span>`;
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // fields that meet at straight edges; a field on the page ground gets a hairline so it reads against the ground.
 // The grid fits its content: when the last row would be short, the last field takes the rest of it (--ls at the wide layout; a lone last
@@ -63,15 +89,17 @@ const misuseTiles = (ctx) => {
 const doDont = (rules) => pair(rules.map((r) => [A(r.do), A(r.dont)]), ['Do', 'Do not']);
 // a colour as a field: its name, what it is for in words, then its values. `full` adds the RGB and the role line the palette slide carries.
 // Every name is set at one size, so a row of colours reads as one list.
-const colourField = (ctx, c, full = false) => ({
+// The names step down with the colour's rank (the first colour is the largest), so the palette reads in order.
+const NAME_SIZE = ['clamp(36px, 15cqw, 56px)', 'clamp(30px, 12cqw, 44px)', 'clamp(26px, 10cqw, 36px)'];
+const colourField = (ctx, c, full = false, i = 9) => ({
   hex: c.hex, what: `site colour ${c.name}`, size: 24,
-  html: `<p class="ht-d ht-field__w" style="--ws:clamp(24px, 10cqw, 36px)">${A(c.name)}</p><p class="ht-field__c">${A(c.lands || '')}<span class="ht-m">${A(c.hex)}</span>${full ? `<span class="ht-m">rgb(${ctx.C.hexToRgb(c.hex).join(', ')})</span><span class="ht-field__r">The ${A(c.roleText || c.role)} colour.</span>` : ''}</p>`,
+  html: `<p class="ht-d ht-field__w" style="--ws:${NAME_SIZE[Math.min(i, 2)]}">${A(c.name)}</p><p class="ht-field__c">${A(c.lands || '')}<span class="ht-m">${A(c.hex)}</span>${full ? `<span class="num">rgb(${ctx.C.hexToRgb(c.hex).join(', ')})</span><span class="ht-field__r">The ${A(c.roleText || c.role)} colour.</span>` : ''}</p>`,
 });
 
 // 3.5: one tile per colour the brand has, each filled with the colour it names and showing the version of the logo that goes on it,
 // then a tile for a photograph (a calm part of the picture takes the reversed logo)
 const cwCaption = (cw, k, ctx, hex) => {
-  if (cw[k] && lower(cw[k].ground) === lower(hex)) return k === 'colour' ? 'Full-colour logo' : k === 'reversed' ? 'Reversed logo' : `${cap1(k.replace(/-/g, ' '))} logo`;
+  if (cw[k] && lower(cw[k].ground) === lower(hex)) return k === 'colour' ? 'Full-colour logo' : k === 'reversed' ? 'Reversed logo' : 'The version drawn for this ground';
   return lower(inkOn(ctx, hex)) === lower(L(ctx).text) ? 'One-colour logo, in the dark text colour' : 'One-colour logo, in the light ground colour';
 };
 const groundTiles = (ctx) => {
@@ -81,7 +109,7 @@ const groundTiles = (ctx) => {
     return { hex: c.hex, what: `site logo ground ${c.name}`, html: `<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, ...(own ? { colourway: k } : {}), color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(c.name)}</b><br>${A(cwCaption(cw, k, ctx, c.hex))}</p>` };
   });
   const ink = inkOn(ctx, dk);
-  tiles.push({ hex: dk, what: 'site logo ground photo', html: `<span class="ht-field__ph" style="background:${actF(ctx)}"></span><div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, colourway: 'reversed', color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>On a photo</b><br>Reversed logo, on the calmest part of the picture.</p>` });
+  tiles.push({ hex: dk, what: 'site logo ground photo', html: `<span class="ht-field__ph" style="background:${actF(ctx)}"></span>${slot('ht-ph--bg', 'Photo slot')}<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, colourway: 'reversed', color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>On a photo</b><br>Place a photograph here, full bleed. Set the reversed logo on its calmest part.</p>` });
   return fields(ctx, tiles, 3);
 };
 
@@ -91,27 +119,45 @@ const spread3 = (w) => (w.length <= 3 ? w : [w[0], w[Math.floor(w.length / 2)], 
 const specimen = (ctx, role) => {
   const F = ctx.brand.fonts[role], [label, fam, cls] = SPEC_ROLE[role], ws = spread3(F.weights), last = F.weights[F.weights.length - 1];
   const wt = (w) => `font-weight:${w}`;
-  return `<section class="ht-spec" aria-label="${label}"><div class="ht-spec__h"><p class="ht-k">${label}</p><p class="ht-spec__n">${A(faceName(F))}</p><p class="ht-m">${F.weights.join(', ')}</p></div><div class="ht-spec__s"><p class="ht-spec__aa ${cls}" style="font-family:${fam};${wt(role === 'display' ? last : F.weights.includes(400) ? 400 : F.weights[0])}" aria-hidden="true">Aa</p><p class="ht-spec__g ${cls}" style="font-family:${fam};${wt(role === 'display' ? last : 400)}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p><ul class="ht-spec__w">${ws.map((w) => `<li class="${cls}" style="font-family:${fam};${wt(w)}"><span>Aa Bb Cc 123</span><span class="ht-m">${w}</span></li>`).join('')}</ul></div></section>`;
+  return `<section class="ht-spec" aria-label="${label}"><div class="ht-spec__h"><p class="ht-k">${label}</p><p class="ht-spec__n">${A(faceName(F))}</p><p class="ht-m">${F.weights.join(', ')}</p></div><div class="ht-spec__s"><p class="ht-spec__aa ${cls}" style="font-family:${fam};${wt(role === 'display' ? last : F.weights.includes(400) ? 400 : F.weights[0])}" aria-hidden="true">Aa</p><p class="ht-spec__g ${cls}" style="font-family:${fam};${wt(role === 'display' ? last : 400)}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p><ul class="ht-spec__w">${ws.map((w) => `<li${cls ? ` class="${cls}"` : ""} style="font-family:${fam};${wt(w)}"><span>Aa Bb Cc 123</span><span class="ht-m">${w}</span></li>`).join('')}</ul></div></section>`;
 };
 
-// 8.1: the applications as they would be made, drawn from the palette and the name: a 90 x 55 mm card, a sign panel, a phone screen
-const mockups = (ctx) => {
+// 8.1: the applications as they would be made, drawn from the palette and the name: a 90 x 55 mm card, a sign panel, a phone screen.
+// The screens read the shared sample order (the same one the UI kit's lists, cards and dialog use), so the two sites tell one story.
+const ORDER = { screen: 'Orders', id: 'Order 1042', status: 'Packing', due: 'Due 11:40 am', total: 'Total $84.35', action: 'Track order' };
+const mockups = (ctx, { spread = false } = {}) => {
   const B = ctx.brand, A_ = B.applications, act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0];
-  const accent = (byRole(ctx, 'accent') || {}).hex || L(ctx).accent || act, ph = L(ctx).sunken;
+  const ph = L(ctx).sunken;
+  // the card's rule is an accent that shows on the card's own ground (the action colour itself would vanish)
+  const rule = [(byRole(ctx, 'accent') || {}).hex, L(ctx).accent, ...distinctColours(ctx).map((c) => c.hex)].find((h) => h && ctx.ratio(h, act) >= 1.6) || inkOn(ctx, act);
   const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' });
-  const card = A_.card || {}, sign = A_.signage || '', who = [card.person, card.role].filter(Boolean), contact = [card.contact].filter(Boolean);
+  const card = A_.card || {}, sign = A_.signage || 'Pick up here';
+  const who = [card.person, card.role].filter(Boolean), contact = [card.contact].filter(Boolean);
+  const lines = who.length || contact.length ? [...who, ...contact] : ['Jo Hartley', 'Packing lead', 'jo.hartley@example.com', '0412 345 678'];
+  const fig = (cls, body, t, n) => `<figure class="ht-mk ${cls}">${body}${spread ? '' : `<figcaption><b>${A(t)}</b> ${A(n)}</figcaption>`}</figure>`;
+  const cardHtml = `<div class="ht-mk__card" style="${fieldStyle(ctx, act, 'site mock-up card')}"><div class="ht-mk__logo">${wm(act, 150)}</div><span class="ht-mk__rule" style="background:${rule}"></span><p class="ht-mk__p">${lines.map(A).join('<br>')}</p></div>`;
+  const signHtml = `<div class="ht-mk__sign" style="${fieldStyle(ctx, dk, 'site mock-up sign')}"><div class="ht-mk__logo">${wm(dk, 170)}</div><p class="ht-d ht-mk__line">${A(sign)}</p><span class="ht-mk__bar" style="background:${rule}"></span></div>`;
+  const phoneHtml = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div><div class="ht-mk__scr"><p class="ht-d ht-mk__h">${ORDER.screen}</p><div class="ht-mk__panel" style="${fieldStyle(ctx, ph, 'site mock-up phone card')}"><p class="ht-k">${ORDER.id}</p><p class="ht-d ht-mk__v">${ORDER.status}</p><p class="ht-k">${ORDER.due}</p><p class="ht-mk__pr num">${ORDER.total}</p></div><p class="ht-mk__btn" style="${fieldStyle(ctx, act, 'site mock-up phone button')}">${ORDER.action}</p></div></div>`;
+  return `<div class="ht-mks${spread ? ' ht-mks--sp' : ''}">${fig('ht-mk--card', cardHtml, 'Business card', '90 × 55 mm. The logo reversed on the action colour, with a rule in the accent.')}${fig('ht-mk--sign', signHtml, 'Sign panel', 'The logo reversed on the dark field, with the accent as its base.')}${fig('ht-mk--phone', phoneHtml, 'Phone screen', '390 px wide. The action colour for the bar and the button, the page ground behind.')}</div>`;
+};
+// 8.5: the website on a laptop and on a phone, drawn from the palette and the shared sample order
+const digitalFigs = (ctx) => {
+  const act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], ph = L(ctx).sunken;
+  const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' });
+  const btn = (c) => `<p class="ht-dg__b" style="${fieldStyle(ctx, c, 'site mock-up website button')}">${ORDER.action}</p>`;
+  const hero = (cls) => `<div class="ht-dg__hero ${cls}" style="${fieldStyle(ctx, dk, 'site mock-up website hero')}"><p class="ht-d ht-dg__h">Where is my order?</p><p class="ht-dg__t">${ORDER.id} is packing. ${ORDER.due}.</p>${btn(act)}</div>`;
+  const stat = (n, t) => `<div class="ht-dg__st" style="${fieldStyle(ctx, ph, 'site mock-up website stat')}"><p class="ht-d ht-dg__n">${n}</p><p class="ht-dg__t">${t}</p></div>`;
+  const laptop = `<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat('4', 'Open')}${stat('1', 'Late')}${stat('1', 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
+  const phone = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}</div>`;
   const fig = (cls, body, t, n) => `<figure class="ht-mk ${cls}">${body}<figcaption><b>${A(t)}</b> ${A(n)}</figcaption></figure>`;
-  const cardHtml = `<div class="ht-mk__card" style="${fieldStyle(ctx, act, 'site mock-up card')}"><div class="ht-mk__logo">${wm(act, 150)}</div><span class="ht-mk__rule" style="background:${accent}"></span>${who.length || contact.length ? `<p class="ht-mk__p">${[...who, ...contact].map(A).join('<br>')}</p>` : ''}</div>`;
-  const signHtml = `<div class="ht-mk__sign" style="${fieldStyle(ctx, dk, 'site mock-up sign')}"><div class="ht-mk__logo">${wm(dk, 170)}</div>${sign ? `<p class="ht-d ht-mk__line">${A(sign)}</p>` : ''}<span class="ht-mk__bar" style="background:${accent}"></span></div>`;
-  const phoneHtml = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div><div class="ht-mk__scr"><p class="ht-d ht-mk__h">Overview</p><div class="ht-mk__panel" style="${fieldStyle(ctx, ph, 'site mock-up phone card')}"><p class="ht-k">Items done</p><p class="ht-d ht-mk__v">12</p><p class="ht-k">Total</p><p class="ht-mk__pr">$24.50</p></div><p class="ht-mk__btn" style="${fieldStyle(ctx, act, 'site mock-up phone button')}">View order</p></div></div>`;
-  return `<div class="ht-mks">${fig('ht-mk--card', cardHtml, 'Business card', '90 × 55 mm. The logo reversed on the action colour, with a rule in the accent.')}${fig('ht-mk--sign', signHtml, 'Sign panel', 'The logo reversed on the dark field, with the accent as its base.')}${fig('ht-mk--phone', phoneHtml, 'Phone screen', '390 px wide. The action colour for the bar and the button, the page ground behind.')}</div>`;
+  return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', phone, 'On a phone', 'The same lead, one column.')}</div>`;
 };
 
 // 5.1 type in use: each step at the size it is specified at, set with the brand's own line, its name and a price
-const PRICE = '$24.50';
+const PRICE = '$84.35';
 const typeInUse = (ctx) => {
   const T = ctx.brand.type, B = ctx.brand, step = (t) => T.scale.find((x) => x.token === t), name = B.name || '';
-  const line = lead(ctx) || name || 'Headline', body = keep(ctx, B.product) || `${name ? `${name}: ` : ''}your order of 3 items is on its way.`, capt = `Total ${PRICE}`;
+  const line = lead(ctx) || name || 'Headline', body = keep(ctx, B.product) || `${name ? `${name}: ` : ''}order 1042 is packed and due at 11:40 am.`, capt = `Total ${PRICE}`;
   const rows = [['headline', line], ['body', body], ['caption', capt]].map(([t, text]) => [step(t), text]).filter(([x]) => x);
   return { big: line, html: `<ol class="ht-scale">${rows.map(([x, text]) => `<li><p class="ht-k">${A(x.token === 'body' ? 'Paragraph' : cap1(x.token))}<span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span></p><p class="ht-scale__s ${x.face === 'display' ? 'ht-d' : ''}" style="font-size:${x.size}px;line-height:${x.line < 3 ? x.line : (x.line / x.size).toFixed(2)};font-weight:${x.weight};${x.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(text)}</p></li>`).join('')}</ol>` };
 };
@@ -124,21 +170,26 @@ export const NOTES = {
     const ws = fitSize(ctx, P.map((x) => x.trait), 0.9, 48, 24);
     return { big: `${words(P.length)} traits`, html: fields(ctx, P.map((x, i) => ({ hex: g[i % 3], what: 'site trait field', html: `<p class="ht-field__c">${A(sayOnce(ctx, x.means))}</p><p class="ht-d ht-field__w" style="--ws:${ws}">${A(x.trait)}</p>` })), Math.min(P.length, 3)) };
   },
-  voice: (ctx) => { const P = ctx.brand.voice.principles.filter((x) => ok(ctx, x.title) && ok(ctx, x.example)); return P.length ? { big: P[0].example, html: list(P.map((x) => `<b>${A(x.title)}</b>${A(x.example)}`)) } : NONE; },
+  // with no principles written, the page still shows the voice at work: two lines written the way the product speaks, and the way it does not
+  voice: (ctx) => {
+    const P = ctx.brand.voice.principles.filter((x) => ok(ctx, x.title) && ok(ctx, x.example));
+    if (P.length) return { big: P[0].example, html: list(P.map((x) => `<b>${A(x.title)}</b>${A(x.example)}`)) };
+    return { big: 'Say what happened, then what to do next.', html: pair(VOICE_PAIRS.map(([w, n]) => [A(w), A(n)]), ['Write this', 'Not that']) };
+  },
   'write-this': (ctx) => { const W = ctx.brand.voice.writeThis.filter((r) => ok(ctx, r.write) && ok(ctx, r.not) && ok(ctx, r.because)); return W.length ? { big: W[0].write, html: pair(W.map((r) => [A(r.write), `${A(r.not)}<br><span class="ht-field__q">${A(r.because)}</span>`]), ['Write this', 'Not that, and why']) } : NONE; },
   messaging: (ctx) => { const B = ctx.brand, V = B.voice; return { big: lead(ctx), html: list(B.lines.others.filter((t) => ok(ctx, t)).map(A)) + dl([['In 25 words', A(sayOnce(ctx, V.boilerplate25))], ['In 50 words', A(sayOnce(ctx, V.boilerplate50))], ['Writing the name', A(V.nameRules)]]) }; },
   logo: (ctx) => ({ big: ctx.brand.logo.idea || '', html: dl([['Writing the name', A(ctx.brand.voice.nameRules)]]) }),
   'logo-versions': (ctx) => {
     const Lg = ctx.logo, cw = ctx.brand.logo.colourways;
-    return { big: `${words(Lg.versions.length)} versions`, html: fields(ctx, Lg.versions.map((id) => { const w = cw[Lg.colourwayOf(id)]; return { hex: w.ground, what: `site logo ${id}`, html: `<div class="ht-field__logo">${Lg.html(id, { width: id === 'symbol' ? 72 : 200, label: Lg.labels[id] })}</div><p class="ht-field__c"><b>${A(Lg.labels[id])}</b>${ctx.brand.logo.when[id] ? `<br>${A(ctx.brand.logo.when[id])}` : ''}</p>` }; }), 2) };
+    return { big: `${words(Lg.versions.length)} versions`, html: fields(ctx, Lg.versions.map((id) => { const k = Lg.colourwayOf(id), w = cw[k]; return { hex: w.ground, what: `site logo ${id}`, html: `<div class="ht-field__logo">${Lg.html(id, { width: id === 'symbol' ? 72 : id === 'stacked' ? 120 : 200, colourway: k, color: w.name, label: Lg.labels[id] })}</div><p class="ht-field__c"><b>${A(Lg.labels[id])}</b>${ctx.brand.logo.when[id] ? `<br>${A(ctx.brand.logo.when[id])}` : ''}</p>` }; }), 2) };
   },
   'clear-space': (ctx) => ({ big: `Keep ${ctx.logo.clearShare}% of the logo's height clear on every side.`, html: p('The clear space is measured from the logo itself, so it grows and shrinks with it. Nothing else sits inside it: no type, no edge, no other mark.', 'ht-lead') }),
-  'min-size': (ctx) => { const ms = ctx.logo.minSize; return { big: `${ms.screenPx} px on screen. ${ms.printMm} mm in print.`, html: p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') + dl([['On screen', m(`${ms.screenPx} px`)], ['In print', m(`${ms.printMm} mm`)]]) }; },
+  'min-size': (ctx) => { const ms = ctx.logo.minSize; return { big: `${ms.screenPx} px on screen. ${ms.printMm} mm in print.`, html: p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') + dl([['On screen', nv(`${ms.screenPx} px`)], ['In print', nv(`${ms.printMm} mm`)]]) }; },
   'logo-grounds': (ctx) => ({ big: 'Each ground has one version.', html: groundTiles(ctx) }),
   'logo-misuse': (ctx) => ({ big: 'Use the logo as it is drawn.', html: misuseTiles(ctx) }),
   palette: (ctx) => {
     const cs = distinctColours(ctx).sort((a, b) => (a.role === 'action' ? -1 : b.role === 'action' ? 1 : 0));
-    return { big: `${words(cs.length)} colours`, html: fields(ctx, cs.map((c) => colourField(ctx, c, true)), 3) };
+    return { big: `${words(cs.length)} colours`, html: fields(ctx, cs.map((c, i) => colourField(ctx, c, true, i)), 3) };
   },
   proportion: (ctx) => {
     const cs = distinctColours(ctx).sort((a, b) => b.share - a.share), ps = pcts(cs);
@@ -148,18 +199,28 @@ export const NOTES = {
     big: `${words(ctx.pairs.length)} pairs that pass`,
     html: `<ol class="ht-scale">${ctx.pairs.map((q) => `<li><p class="ht-k">${A(ratioText(q.ratioText))}<span>${q.large ? '24 px and over' : 'Any size'}</span></p><p class="ht-scale__s" style="background:${q.bgHex};color:${q.fgHex};padding:16px 20px;font-size:${q.large ? 24 : 17}px;line-height:1.35;${q.large ? 'font-weight:600;' : ''}${lower(q.bgHex) === lower(L(ctx).surface) ? 'box-shadow:inset 0 0 0 1px var(--h)' : ''}">${A(nameOfHex(ctx, q.fgHex))} on ${A(nameOfHex(ctx, q.bgHex))}. ${A(q.use || '')}</p></li>`).join('')}</ol>`,
   }),
-  'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...distinctColours(ctx), ...ctx.tones].map((c) => [c.name, `${m(c.hex)} ${m(`rgb(${ctx.C.hexToRgb(c.hex).join(', ')})`)}${ctx.C.cmykOf(c) ? ` ${m(ctx.C.cmykOf(c))}` : ''}`])) }),
-  typefaces: (ctx) => { const F = ctx.brand.fonts, sn = [...new Set(['display', 'body', 'mono'].map((r) => standInNote(F[r])).filter(Boolean))].join(' '); return { big: F.display.family, html: `<div class="ht-specs">${['display', 'body', 'mono'].map((r) => specimen(ctx, r)).join('')}</div>${p(A(`${sn}${sn ? ' ' : ''}The mono face is for literal values only.`))}` }; },
+  'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...distinctColours(ctx), ...ctx.tones].map((c) => [c.name, `<span class="ht-vals">${m(c.hex)}<span class="num">rgb(${ctx.C.hexToRgb(c.hex).join(', ')})</span>${ctx.C.cmykOf(c) ? `<span class="num">${A(ctx.C.cmykOf(c))}</span>` : ''}</span>`])) }),
+  typefaces: (ctx) => { const F = ctx.brand.fonts; return { big: F.display.family, html: `<div class="ht-specs">${['display', 'body', 'mono'].map((r) => specimen(ctx, r)).join('')}</div>${p('The mono face is for literal values only: hex codes, sizes in code, file names.')}` }; },
   hierarchy: (ctx) => ({
     big: `${words(ctx.brand.type.scale.length)} steps`,
     html: `<ol class="ht-scale">${ctx.brand.type.scale.map((t) => { const role = t.face === 'display' ? 'ht-d' : ''; return `<li><p class="ht-k">${A(t.token)}<span class="num">${t.size} px, weight ${t.weight}</span></p><p class="ht-scale__s ${role}" style="font-size:min(${t.size}px, 12cqw);line-height:${t.line < 3 ? t.line : (t.line / t.size).toFixed(2)};font-weight:${t.weight};${t.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(t.use)}</p></li>`; }).join('')}</ol>`,
   }),
   'type-in-use': typeInUse,
   'type-rules': (ctx) => { const R = ctx.brand.type.rules; return R.length ? { big: R[0].do, html: doDont(R) } : NONE; },
-  'photo-direction': (ctx) => { const D = ctx.brand.imagery.direction; return { big: D.subject || '', html: dl(Object.entries(D).filter(([k]) => k !== 'subject').map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)])) }; },
-  'shot-list': (ctx) => { const S = ctx.brand.imagery.shots; return S.length ? { big: `${words(S.length)} shots`, html: list(S.map((s) => `<b>${A(s.caption || s.alt)}</b>${A(s.alt)}${s.credit && !s.generated ? ` Photo: ${A(s.credit)}.` : ''}`)) } : NONE; },
+  // 6.1: a frame for the photograph the brand has still to choose, with its direction beside it (the brand's own where it wrote one)
+  'photo-direction': (ctx) => {
+    const D = ctx.brand.imagery.direction, rows = Object.entries(D).filter(([k, v]) => k !== 'subject' && v).map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)]);
+    const frame = `<figure class="ht-pf">${slot('ht-ph--43', 'Photo slot, 4:3')}<figcaption>Place a photograph here at 4:3. Keep the subject inside the crop marks.</figcaption></figure>`;
+    return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.map(([k, v]) => [k, A(v)])) };
+  },
+  'shot-list': (ctx) => { const S = ctx.brand.imagery.shots; return S.length ? { big: `${words(S.length)} shots`, html: list(S.map((s) => `<b>${A(s.caption || s.alt)}</b>${A(s.alt)}${s.credit && !s.generated ? ` Photo: ${A(s.credit)}.` : ''}`)) } : { big: 'Six frames for a first shoot.', html: shotFrames() }; },
   'imagery-rules': (ctx) => { const R = ctx.brand.imagery.rules; return R.length ? { big: R[0].do, html: doDont(R) } : NONE; },
-  grid: (ctx) => { const G = ctx.brand.layout; return { big: `${G.columns} columns`, html: dl([['Page', m(`${G.page.w} × ${G.page.h} px`)], ['Margin', m(`${G.margin} px`)], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', m(`${G.gutter} px`)], ['Base unit', m(`${G.base} px`)]]) }; },
+  // the grid drawn as the page it is for: A4 portrait (794 x 1123 px), its margins, its columns and the gutters between them
+  grid: (ctx) => {
+    const G = ctx.brand.layout, W = 794, H = 1123, gt = ((G.gutter / (W - 2 * G.margin)) * 100).toFixed(2);
+    const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page with ${G.columns} columns, ${G.margin} px margins and ${G.gutter} px gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns, ${nv(`${G.margin} px`)} margins, ${nv(`${G.gutter} px`)} gutters.</figcaption></figure>`;
+    return { big: `${G.columns} columns`, html: fig + dl([['Page', 'A4 portrait'], ['Margin', nv(`${G.margin} px`)], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', nv(`${G.gutter} px`)], ['Base unit', nv(`${G.base} px`)]]) };
+  },
   layouts: (ctx) => ({ big: 'One idea a slide.', html: p(`Every slide carries one thing at display size, a line, a word or a photograph, set on a full field of ${ctx.brand.name ? `${A(ctx.brand.name)}'s` : 'the brand’s'} colours. Everything else is small.`, 'ht-lead') }),
   // 8.1: the card, the sign and the phone screen are drawn here from the palette, so the page shows them, not a list of their words
   'business-card': (ctx) => ({ big: '', html: mockups(ctx) }),
@@ -167,7 +228,9 @@ export const NOTES = {
   // the whole signage string, as the print page's sign carries it; brand copy is never cut at its colon
   signage: (ctx) => ({ big: ctx.brand.applications.signage || '', html: '' }),
   'email-signature': (ctx) => { const E = ctx.brand.applications.email; return { big: E.person || '', html: dl([['Role', A(E.role)], ['Web', m(ctx.brand.applications.site.url)]]) }; },
-  digital: (ctx) => ({ big: ok(ctx, ctx.brand.product) ? ctx.brand.product : ctx.brand.applications.site.url || '', html: dl([['Web', m(ctx.brand.applications.site.url)]]) }),
-  summary: (ctx) => { const B = ctx.brand; return { big: lead(ctx), html: fields(ctx, distinctColours(ctx).map((c) => colourField(ctx, c)), 2) + dl([['Display', A(faceName(B.fonts.display))], ['Body', A(faceName(B.fonts.body))]]) }; },
+  // 8.5: the laptop and the phone are drawn here, so they show at every width
+  digital: (ctx) => ({ big: ok(ctx, ctx.brand.product) ? ctx.brand.product : ctx.brand.applications.site.url || '', html: digitalFigs(ctx) + dl([['Web', m(ctx.brand.applications.site.url)]]) }),
+  // 9.1: the system at work as an applications spread (the colours and the type are on their own pages, so they are not repeated here)
+  summary: (ctx) => { const B = ctx.brand; return { big: lead(ctx), html: mockups(ctx, { spread: true }) + dl([['Display', A(faceName(B.fonts.display))], ['Body', A(faceName(B.fonts.body))]]) }; },
   'contact-scope': (ctx) => { const B = ctx.brand; return { big: B.contact.email || '', html: dl([['Owner', A(B.contact.owner)], ['Email', m(B.contact.email)], ['Version', `<span class="num">${A(B.version.number)}</span>`], ['Issued', A(ctx.versionLine)]]) }; },
 };

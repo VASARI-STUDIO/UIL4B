@@ -12,42 +12,71 @@ const SPECIMEN = {
   caption: 'Figure 1. Sphinx of black quartz, judge my vow.',
 };
 
-// The kit's sample copy where the skeleton's wording reads as unfilled ("First field", "Say how to fix it."): plain product copy instead.
+// The product's sample copy: one set of orders (an order screen) that the kit's lists, table, cards, dialog and product screens and the
+// guide's mock-ups all read, so every page tells the same story. Round totals and round times would read as filler, so there are none:
+// six orders, mixed times, one late, one closed. Each row is [customer, line under the name, total].
+const ORDERS = [
+  ['Maya Chen', 'Order 1042, due 11:40 am', '$84.35'],
+  ['Tom Nguyen', 'Order 1041, due 10:50 am', '$126.80'],
+  ['Ruth Okafor', 'Order 1040, 12 min late', '$47.95'],
+  ['Sam Peters', 'Order 1039, sent 8:42 am', '$212.10'],
+  ['Lena Fischer', 'Order 1043, due 1:30 pm', '$58.20'],
+  ['Dev Patel', 'Order 1044, due 2:15 pm', '$93.65'],
+];
 const UI_SAMPLE = {
-  'ui.screen.title': 'Overview',
-  'ui.screen.content.pickup': 'Status changed a moment ago.',
-  'ui.screen.content.rider': 'Alex Morgan',
-  'ui.screen.content.initials': 'AM',
-  'ui.screen.content.riderNote': 'Step 3 of 5',
-  'ui.screen.content.form.title': 'Details',
-  'ui.screen.content.form.pickup': 'Name',
-  'ui.screen.content.form.pickupValue': 'Alex Morgan',
-  'ui.screen.content.form.dropoff': 'Email',
-  'ui.screen.content.form.dropoffValue': 'alex@example.com',
-  'ui.screen.content.form.ready': 'Quantity',
-  'ui.screen.content.form.readyError': 'Enter a number from 1 to 50.',
-  'ui.screen.content.form.size': 'Size',
-  'ui.screen.content.form.notes': 'Notes',
-  'ui.screen.content.form.notesHelp': 'Anything we should know.',
-  'ui.screen.content.form.bookWhy': 'Fill in the fields above to continue.',
-  'ui.screen.content.empty.body': 'Add your first item and it shows up here.',
-  'ui.screen.content.dialog.title': 'Move this item?',
-  'ui.screen.content.dialog.body': 'You can undo this for the next 24 hours.',
-  'ui.screen.content.toast': 'Changes saved.',
-  'ui.screen.content.alert': 'Your changes are waiting to be saved.',
-  'ui.screen.content.inline': 'You can change this later.',
-  'ui.screen.content.example.statLabel': 'Items done',
+  'ui.screen.title': 'Orders',
+  'ui.screen.content.status': 'Packing',
+  'ui.screen.content.eta': 'Due 11:40 am',
+  'ui.screen.content.pickup': 'Packing started at 10:32 am. Ready to hand over by 11:40 am.',
+  'ui.screen.content.from': 'Packed',
+  'ui.screen.content.to': 'Sent',
+  'ui.screen.content.rider': 'Jo Hartley',
+  'ui.screen.content.initials': 'JH',
+  'ui.screen.content.riderNote': '3 of 5 items packed',
+  'ui.screen.content.deliverToLabel': 'Customer',
+  'ui.screen.content.deliverTo': 'Maya Chen',
   'ui.screen.content.paidLabel': 'Total',
-  'ui.screen.content.paid': '$24.50',
+  'ui.screen.content.paid': '$84.35',
+  'ui.screen.content.share': 'Share tracking link',
+  'ui.screen.content.form.title': 'Place an order',
+  'ui.screen.content.form.pickup': 'Customer',
+  'ui.screen.content.form.pickupValue': 'Maya Chen',
+  'ui.screen.content.form.dropoff': 'Email',
+  'ui.screen.content.form.dropoffValue': 'maya.chen@example.com',
+  'ui.screen.content.form.ready': 'Quantity',
+  'ui.screen.content.form.readyValue': '61',
+  'ui.screen.content.form.readyError': 'Enter a quantity from 1 to 50.',
+  'ui.screen.content.form.size': 'Delivery',
+  'ui.screen.content.form.notes': 'Order notes',
+  'ui.screen.content.form.notesHelp': 'Gate code, level, who to ask for.',
+  'ui.screen.content.form.book': 'Place order',
+  'ui.screen.content.form.bookWhy': 'Add a customer to place the order.',
+  'ui.screen.content.empty.title': 'No orders yet',
+  'ui.screen.content.empty.body': 'New orders show up here with the time they are due.',
+  'ui.screen.content.empty.cta': 'Place order',
+  'ui.screen.content.dialog.title': 'Cancel order 1042?',
+  'ui.screen.content.dialog.body': 'Packing has started, so cancelling is free until the order is sent. Maya Chen is told straight away.',
+  'ui.screen.content.dialog.confirm': 'Cancel order',
+  'ui.screen.content.dialog.keep': 'Keep order',
+  'ui.screen.content.toast': 'Order 1042 placed. Due at 11:40 am.',
+  'ui.screen.content.alert': 'Order 1040 is 12 minutes late. Ruth Okafor has been told.',
+  'ui.screen.content.inline': 'Add a gate code if the address has one.',
+  'ui.screen.content.example.secondary': 'Track order',
+  'ui.screen.content.example.quiet': 'Not now',
+  'ui.screen.content.example.danger': 'Cancel order',
+  'ui.screen.content.example.small': 'Add note',
+  'ui.screen.content.example.statLabel': 'Orders today',
 };
 const UI_LIST = {
-  'ui.screen.content.form.sizes': ['Small', 'Large'],
-  'ui.screen.content.example.checks': ['Email me updates', 'Show hints', 'Remember me'],
-  'ui.screen.content.example.switches': ['Notifications', 'Dark mode'],
+  'ui.screen.content.form.sizes': ['Standard', 'Express', 'Pick up'],
+  'ui.screen.content.example.checks': ['Leave at the door', 'Signature needed', 'Fragile'],
+  'ui.screen.content.example.switches': ['Text me when it is packed', 'Email receipts'],
   'ui.screen.content.example.radios': ['Standard', 'Express'],
-  'ui.screen.content.example.tabs': ['Overview', 'Activity', 'Settings'],
+  'ui.screen.content.example.crumbs': ['Orders', 'Order 1042'],
+  'ui.screen.content.example.tabs': ['Open', 'Late', 'Closed'],
 };
 const LINKS = ['Home', 'Search', 'Profile'];
+const ORDER_FIELD = { to: 0, when: 1, price: 2 };
 
 export function realCopy(path, value) {
   if (path === 'name' || path === 'logo.showcase.wordmark') return value === 'Your brand' ? undefined : value;  // no project name: the user still has to write it
@@ -59,6 +88,6 @@ export function realCopy(path, value) {
   if (path in UI_SAMPLE) return UI_SAMPLE[path];
   if ((m = /^(.*)\.(\d+)$/.exec(path)) && UI_LIST[m[1]]) return UI_LIST[m[1]][Number(m[2])] ?? value;
   if ((m = /^ui\.screen\.content\.example\.links\.(\d+)\.0$/.exec(path))) return LINKS[Number(m[1])] ?? value;
-  if (/^ui\.screen\.content\.deliveries\.\d+\.when$/.test(path)) return value.replace('A short note', 'on schedule');
+  if ((m = /^ui\.screen\.content\.deliveries\.(\d+)\.(to|when|price)$/.exec(path))) { const o = ORDERS[Number(m[1])]; return o ? o[ORDER_FIELD[m[2]]] : value; }
   return value;
 }

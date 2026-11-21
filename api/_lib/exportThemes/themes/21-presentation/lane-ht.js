@@ -7,9 +7,9 @@
 import { guidelines } from './guidelines.js';
 import { A, darkF, actF, fieldStyle, fitSize, bar, tocPanel, nextField, skipLink, contentsGrid } from './lane-ht-lib.js';
 import { htCss } from './lane-ht-css.js';
-import { NOTES } from './lane-ht-notes.js';
+import { NOTES, device } from './lane-ht-notes.js';
 import { kitSite } from './lane-ht-kit.js';
-import { hasPh, nameOf, docOf, siteCtx, NOT_WRITTEN } from './lane-ht-clean.js';
+import { hasPh, nameOf, docOf, siteCtx } from './lane-ht-clean.js';
 
 export { kitSite };
 
@@ -17,12 +17,14 @@ const docName = (ctx) => docOf(ctx, 'guidelines');
 // pages whose slide is a picture of a table or a spec: the slide is not drawn at all, the page is the notes alone, laid out as a spread
 // (the colours as fields with their values, the type as a spec list, the misuse as a grid of tiles), so each point is said once.
 // Every other page shows its slide and then the notes, which add what the slide cannot carry.
-const REFLOW = new Set(['palette', 'proportion', 'contrast', 'colour-values', 'typefaces', 'hierarchy', 'type-in-use', 'logo-misuse']);
+const REFLOW = new Set(['palette', 'proportion', 'contrast', 'colour-values', 'typefaces', 'hierarchy', 'type-in-use', 'logo-misuse', 'grid', 'summary']);
 // pages whose slide already says everything the notes would: the notes are for the narrow layout alone, where the slide is not drawn
-const COVERED = new Set(['intro', 'personality', 'voice', 'write-this', 'messaging', 'logo', 'logo-versions', 'photo-direction']);
+const COVERED = new Set(['intro', 'personality', 'voice', 'write-this', 'messaging', 'logo', 'logo-versions', 'photo-direction', 'clear-space', 'min-size', 'layouts', 'digital']);
 // a big line's cap follows its length, so a sentence sets as a paragraph of display type and a word as a poster
-const bigCap = (t) => (String(t).length > 90 ? 36 : String(t).length > 44 ? 48 : 72);
-const big = (ctx, t, cls = 'ht-big') => `<p class="ht-d ${cls}" style="--bs:${fitSize(ctx, [t], 0.94, bigCap(t), 18)};--bn:${String(t).length > 44 ? 30 : String(t).length > 20 ? 44 : 72}px">${A(t)}</p>`;
+// the cap is a step of the type scale the kit shares: the headline step for a line under the page title, the title step for a long sentence
+const stepPx = (ctx, token, d) => (ctx.brand.type.scale.find((x) => x.token === token) || {}).size || d;
+const bigCap = (ctx, t) => (String(t).length > 90 ? stepPx(ctx, 'title', 24) : stepPx(ctx, 'headline', 36));
+const big = (ctx, t, cls = 'ht-big') => `<p class="ht-d ${cls}" style="--bs:${fitSize(ctx, [t], 0.94, bigCap(ctx, t), 18)};--bn:${bigCap(ctx, t)}px">${A(t)}</p>`;
 
 // the slide at its own size, zoomed to the column below 1280 (it is a picture of the PDF page, its text kept as text).
 // Below 841 the engine sets --fit on [data-gs-fit]; above it the CSS sets the zoom per breakpoint.
@@ -41,21 +43,31 @@ const slideOf = (ctx, id) => {
 // the text a block of notes carries, for the test of whether there is anything to print
 const hasText = (html) => !!String(html || '').replace(/<[^>]*>/g, '').trim();
 
-function page(ctx0, id) {
+// what a page has to print: its one big line, its notes and its slide. A page with none of the three is not written.
+function contentOf(ctx0, id) {
   const ctx = siteCtx(ctx0);
-  let n = null;
+  let n;
   try { n = NOTES[id] ? NOTES[id](ctx) : null; } catch (e) { n = null; }
-  const text = n && !hasPh(n.big) && n.big ? n.big : '';
-  const notes = n && !hasPh(n.html) && hasText(n.html) ? n.html : '';
-  // below 841 the 1280 px slide would be a 330 px thumbnail nobody can read, so the CSS swaps it for this lead: the deck's running head
-  // and the page's title at display size on the same dark field. The slide stays in the markup for the wide layouts.
-  // A spread page has no slide at any width: the lead is its title and the notes are the page.
-  const slide = REFLOW.has(id) ? '' : slideOf(ctx0, id);
+  return {
+    ctx,
+    text: n && !hasPh(n.big) && n.big ? n.big : '',
+    notes: n && !hasPh(n.html) && hasText(n.html) ? n.html : '',
+    slide: REFLOW.has(id) ? '' : slideOf(ctx0, id),
+  };
+}
+// a page the project has not written is left out of the site, its contents and its Next and Previous links (engine: guideSite.keep)
+const keep = (ctx0, id) => { const c = contentOf(ctx0, id); return !!(c.text || c.notes || c.slide); };
+
+function page(ctx0, id) {
+  const { ctx, text, notes, slide } = contentOf(ctx0, id);
+  // below 841 the slide is a figure scaled to the column (the engine sets --fit), above the notes. The bar carries the running head,
+  // so the lead is the page's title alone. A spread page has no slide at any width: the lead is its title and the notes are the page.
   const p = ctx.pages.find((x) => x.id === id), spread = !slide;
-  const lead = `<section class="ht-ml${spread ? ' ht-ml--spread' : ''}" aria-label="Page heading" style="${fieldStyle(ctx, darkF(ctx), 'site narrow lead')}"><p class="ht-ml__hd"><span>${A(docName(ctx))}</span><span class="num">${String(ctx.pageNo(id)).padStart(3, '0')}</span></p><h1 class="ht-d ht-ml__t" style="--bs:${fitSize(ctx, [p.title], 0.9, 96, 32)}">${p.ref ? `<b class="num">${A(p.ref)}</b>` : ''}${A(p.title)}</h1></section>`;
-  // nothing real to print and nothing drawn: the one quiet line, once
-  const body = `${text ? `<div class="ht-bigc">${big(ctx, text)}</div>` : ''}${notes || (!text && !slide) ? `<div class="ht-nb">${notes || NOT_WRITTEN}</div>` : ''}`;
-  return `${lead}${slide ? stage(ctx, 'slide', slide) : ''}${body ? `
+  const lead = `<section class="ht-ml${spread ? ' ht-ml--spread' : ''}" aria-label="Page heading" style="${fieldStyle(ctx, darkF(ctx), 'site narrow lead')}"><h1 class="ht-d ht-ml__t" style="--bs:${fitSize(ctx, [p.title], 0.9, stepPx(ctx, 'display', 48), 32)}">${p.ref ? `<b class="num">${A(p.ref)}</b>` : ''}${A(p.title)}</h1></section>`;
+  // the first page of a section opens it with the brand's device
+  const opener = /\.1$/.test(p.ref || '') ? device(ctx) : '';
+  const body = `${text ? `<div class="ht-bigc">${big(ctx, text)}</div>` : ''}${notes ? `<div class="ht-nb">${notes}</div>` : ''}`;
+  return `${lead}${opener}${slide ? stage(ctx, 'slide', slide) : ''}${body ? `
 <section class="ht-notes${spread ? ' ht-notes--spread' : ''}${text ? '' : ' ht-notes--bare'}${slide && COVERED.has(id) ? ' ht-notes--narrow' : ''}" aria-label="${spread ? 'Page' : 'Notes'}">${body}</section>` : ''}`;
 }
 
@@ -64,7 +76,7 @@ function front(ctx0, S) {
   const ctx = siteCtx(ctx0), cover = slideOf(ctx0, 'cover'), line = ctx.brand.lines.primary;
   const sections = S.sections.map((x) => ({ n: x.n, title: x.title, pages: x.units.map((u) => ({ href: u.file, ref: u.ref, title: u.title })) }));
   return `${cover ? stage(ctx, 'cover', cover) : ''}
-<section class="ht-cv" aria-labelledby="ht-cv-h"><h1 class="ht-d ht-cv__t" id="ht-cv-h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 96, 32)}">${A(docName(ctx))}</h1>${line ? `<p class="ht-cv__l">${A(line)}</p>` : ''}</section>
+${device(ctx, true)}<section class="ht-cv" aria-labelledby="ht-cv-h"><h1 class="ht-d ht-cv__t" id="ht-cv-h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 96, 32)}">${A(docName(ctx))}</h1>${line ? `<p class="ht-cv__l">${A(line)}</p>` : ''}</section>
 ${contentsGrid(ctx, sections)}`;
 }
 
@@ -87,7 +99,7 @@ ${nextField(ctx, { next: file(S.next), prev: file(S.prev) })}
 }
 
 export const guideSite = {
-  css: htCss, shell, front, page,
+  css: htCss, shell, front, page, keep,
   // the slides keep their own type: nothing in them is linked, and literal values are never read as references
   adapt: { strip: [], minStack: 99, noLink: '.pg,.ht-m' },
   darkSample: ['index', 'personality', 'logo-versions', 'palette', 'contrast', 'hierarchy'],

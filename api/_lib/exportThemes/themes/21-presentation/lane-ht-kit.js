@@ -14,8 +14,18 @@ import { screenContent as SC, deliveryRows, noPrices } from './once.js';
 
 const docName = (ctx) => docOf(ctx, 'UI kit');
 // the engine writes a trailing space where a class list is empty (`ui-input `, `type="button" >`): the pages show the markup without it
-const tidy = (h) => String(h).replace(/class="([^"]*?) +"/g, 'class="$1"').replace(/"\s+>/g, '">');
+// (and an empty class attribute, which the shipped components leave on a bare checkbox)
+const tidy = (h) => String(h).replace(/class="([^"]*?) +"/g, 'class="$1"').replace(/ class=""/g, '').replace(/"\s+>/g, '">');
+// the type step the guide sets its titles in, so the kit's titles match it
+const stepPx = (ctx, token, d) => (ctx.brand.type.scale.find((x) => x.token === token) || {}).size || d;
+const VOID_TAGS = 'area|br|col|embed|hr|img|input|link|meta|source|track|wbr';
+// the engine's printer closes a long void element (`</input>`) and splits an empty textarea over two lines: the markup shown has neither
+const settle = (s) => s.replace(new RegExp(`\\n\\s*</(?:${VOID_TAGS})>`, 'g'), '').replace(/(<textarea\b[^>\n]*>)\n\s*(<\/textarea>)/g, '$1$2');
 const EX = (ctx) => SC(ctx).example || {};
+// the label a row's status carries
+const stateLabel = (ctx, id) => (ctx.status.find((x) => x.id === id) || ctx.status[0]).label;
+// what each status tone says, so the caption under a status adds to its word
+const TONE_SAYS = { action: 'Needs a first look', success: 'Going to plan', warning: 'Needs attention', danger: 'Has failed', info: 'For your information', neutral: 'Finished, nothing to do' };
 // the card's one action: the brand's own secondary label, unless that is the generic "Back" (a card is not a way back)
 const cardAction = (ctx) => { const s = EX(ctx).secondary; return !s || /^back$/i.test(s) ? 'View order' : s; };
 const copyBtn = (value, name) => `<button type="button" class="ht-btn hk-copy" data-copy="${A(value)}" data-copy-name="${A(name)}"><span data-copy-text>Copy</span></button>`;
@@ -59,7 +69,7 @@ const PAGES = {
   },
   states: (ctx) => {
     const F = SC(ctx).form, E = EX(ctx), u = ctx.ui;
-    const all = [['Rest', u.btn(F.book)], ['Hover', u.btn(F.book, { state: 'hover' })], ['Focus', u.btn(F.book, { state: 'focus' })], ['Pressed', u.btn(F.book, { state: 'active' })], ['Disabled', u.btn(E.secondary || F.book, { variant: 'secondary', state: 'disabled' })]];
+    const all = [['Rest', u.btn(F.book)], ['Hover', u.btn(F.book, { state: 'hover' })], ['Focus', u.btn(F.book, { state: 'focus' })], ['Pressed', u.btn(F.book, { state: 'active' })], ['Disabled', u.btn(F.book, { state: 'disabled' })]];
     return { lede: 'Every control has its rest, hover, focus, pressed and disabled look.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all };
   },
   buttons: (ctx) => {
@@ -79,26 +89,39 @@ const PAGES = {
   },
   cards: (ctx) => {
     const S = SC(ctx), u = ctx.ui, E = EX(ctx);
-    const all = [['Card', u.card({ meta: S.status, title: S.eta, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })], ['Stat', u.stat(S.paid, S.paidLabel)]];
-    return { lede: 'A card holds one delivery; a stat holds one number.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
+    // each card is one of the shared orders: the first (packing) and the third (late)
+    const o = (d) => u.card({ meta: stateLabel(ctx, d.status), title: d.to, text: d.when, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` });
+    const ds = S.deliveries, late = ds[2] || ds[ds.length - 1];
+    const all = [['Card', o(ds[0])], ['Card, late order', o(late)], ['Stat', u.stat(S.paid, S.paidLabel)], ['Stat, a count', u.stat(String(ds.length), E.statLabel || S.paidLabel)]];
+    return { lede: 'A card holds one order; a stat holds one number.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
   navigation: (ctx) => {
     const S = SC(ctx), u = ctx.ui, E = EX(ctx);
-    const all = [['Tabs', u.tabs(E.tabs || [S.status], 0)], ['Breadcrumb', u.crumbs([...(E.crumbs || []), S.deliverTo])], ['Links', `<nav class="hk-links" aria-label="Example">${u.links(E.links || [[S.call, 'phone']], 0)}</nav>`]];
+    const all = [['Tabs', u.tabs(E.tabs || [S.status], 0)], ['Breadcrumb', u.crumbs(E.crumbs && E.crumbs.length ? E.crumbs : [S.deliverTo])], ['Links', `<nav class="hk-links" aria-label="Example">${u.links(E.links || [[S.call, 'phone']], 0)}</nav>`]];
     return { lede: 'Tabs switch a view, a breadcrumb shows the way back, links move between screens.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
-  lists: (ctx) => { const h = deliveryRows(ctx, 4); return { lede: 'A row for each delivery, its status in plain words.', live: `<div class="hk-col">${item(h, 'Delivery rows', 'hk-i--w')}</div>`, code: [['Delivery rows', h]] }; },
-  status: (ctx) => { const all = ctx.status.map((s) => [s.label, ctx.ui.statusChip(s.id)]); return { lede: 'Status is said in words, in one colour that reads on the ground.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all }; },
+  lists: (ctx) => { const h = deliveryRows(ctx, 6); return { lede: 'A row for each order, its status in plain words.', live: `<div class="hk-col">${item(h, 'Order rows', 'hk-i--w')}</div>`, code: [['Order rows', h]] }; },
+  // the caption says what the status means; the word itself is the chip
+  status: (ctx) => { const all = ctx.status.map((s) => [TONE_SAYS[s.tone] || s.tone, ctx.ui.statusChip(s.id)]); return { lede: 'Status is said in words, in one colour that reads on the ground.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all }; },
   feedback: (ctx) => {
     const S = SC(ctx), u = ctx.ui;
-    const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Toast', u.toast(S.toast)], ['Loading', `<div class="hk-stack">${u.spinner()}${u.skeleton('220px')}${u.skeleton('150px')}</div>`]];
+    const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Error', u.alert('danger', "Payment didn't go through. Check the card details and try again.")], ['Toast', u.toast(S.toast)], ['Loading', `<div class="hk-stack">${u.spinner()}${u.skeleton('220px')}${u.skeleton('150px')}</div>`]];
     return { lede: 'What happened, said where it happened.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
-  dialog: (ctx) => { const D = SC(ctx).dialog, h = ctx.ui.dialog({ title: D.title, body: D.body, confirm: D.confirm, keep: D.keep, danger: true }); return { lede: 'A dialog asks one question and names both answers.', live: `<div class="hk-col">${item(h, 'Dialog', 'hk-i--w')}</div>`, code: [['Dialog', h]] }; },
+  // a dialog's confirm is the primary button; the danger button is kept for the one that cannot be undone (cancelling the order)
+  dialog: (ctx) => {
+    const S = SC(ctx), D = S.dialog, u = ctx.ui;
+    const danger = u.dialog({ title: D.title, body: D.body, confirm: D.confirm, keep: D.keep, danger: true });
+    // the primary dialog moves the order named in the danger one; a brand with other words gets its own copy as a primary dialog
+    const move = /order 1042/.test(D.title) ? u.dialog({ title: 'Move order 1042?', body: `It will be due at 1:30 pm instead of 11:40 am. ${S.deliverTo} is told straight away.`, confirm: 'Move', keep: 'Keep 11:40 am' }) : u.dialog({ title: D.title, body: D.body, confirm: D.confirm, keep: D.keep });
+    // the two share one title id; a page holds each id once
+    const second = danger.replace(/dlg-t/g, 'dlg-t2');
+    return { lede: 'A dialog asks one question and names both answers.', live: `<div class="hk-col">${item(move, 'Confirm', 'hk-i--w')}${item(second, 'Cannot be undone', 'hk-i--w')}</div>`, code: [['Confirm', move], ['Cannot be undone', second]] };
+  },
   table: (ctx) => {
     const S = SC(ctx), u = ctx.ui, d = S.deliveries;
-    const h = `<table class="hk-tbl"><thead><tr><th scope="col">Item</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td>${A(x.to)}<span>${A(x.when)}</span></td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
-    return { lede: 'Rows of deliveries, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
+    const h = `<table class="hk-tbl"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td>${A(x.to)}<span>${A(x.when)}</span></td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
+    return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="hk-empty"><h3>${A(E.title)}</h3><p>${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
   'screen-light': (ctx) => screen(ctx, false, false),
@@ -112,7 +135,12 @@ const PAGES = {
   },
   code: (ctx) => {
     const F = SC(ctx).form, h = ctx.ui.btn(F.book);
-    return { lede: 'The kit ships as plain HTML and CSS: the tokens, the components and an example page.', live: `<div class="hk-col">${item(h, 'A button, as shipped')}</div>`, code: [['Button', h], ['Tokens', `:root { --action: ${colourMap(ctx, 'light').action}; }`]] };
+    // the zip's folder as it opens, then the three steps that put it to work
+    const tree = ['ui-kit/', '  tokens.css       custom properties, light and dark', '  tokens.json      the same tokens, W3C format', '  tokens.ts        the same tokens, typed', '  tailwind.css     a Tailwind v4 theme block', '  components.css   every component, on the tokens', '  example.html     every component live', '  fonts.css        @font-face for assets/fonts', '  assets/          logo, icons and font files', '  README.md        the install, in short'].join(String.fromCharCode(10));
+    const links = '<link rel="stylesheet" href="fonts.css">\n<link rel="stylesheet" href="tokens.css">\n<link rel="stylesheet" href="components.css">';
+    const steps = ['Copy the ui-kit folder into your project.', 'Link the three stylesheets in this order: fonts, tokens, components.', 'Put class="ui" on body, or on any wrapper, so the base type and colours apply.'];
+    const live = `<div class="hk-col">${item(`<pre class="hk-tree" tabindex="0" role="region" aria-label="The zip folder"><code>${A(tree)}</code></pre>`, 'The zip folder', 'hk-i--w')}${item(`<ol class="hk-steps">${steps.map((t) => `<li>${A(t)}</li>`).join('')}</ol>`, 'Install in three steps', 'hk-i--w')}${item(h, 'A button, as shipped', 'hk-i--w')}</div>`;
+    return { lede: 'The kit ships as plain HTML and CSS: the tokens, the components and an example page.', live, code: [['Step 2: the stylesheets', links], ['Step 3: the wrapper', '<body class="ui">\n  <!-- your page -->\n</body>'], ['A button', h]] };
   },
 };
 // a product screen: the brand's own screen title and content, built from the components
@@ -125,13 +153,13 @@ function screen(ctx, dark, mobile) {
 }
 
 // markup is laid out by the engine; CSS lines are shown as written, a line each
-const pretty = (K, h) => (String(h).trim().startsWith('<') ? K.prettyHtml(tidy(h)) : h);
+const pretty = (K, h) => (String(h).trim().startsWith('<') ? settle(K.prettyHtml(tidy(h))) : h);
 // ---- the page: a split slide (the title on a field, the live components on the ground), then the markup ----
 const grounds = (ctx) => [panelF(ctx), actF(ctx), darkF(ctx), panelF(ctx)];
 function body(ctx0, K) {
   const ctx = siteCtx(ctx0);
   const p = K.page, d = PAGES[p.id](ctx), sec = p.section ? p.section.n : 1, hex = grounds(ctx)[(sec - 1) % 4];
-  const ts = fitSize(ctx, K.pages.filter((q) => q.section).map((q) => q.title), 0.94, 72, 32);
+  const ts = fitSize(ctx, K.pages.filter((q) => q.section).map((q) => q.title), 0.94, stepPx(ctx, 'display', 48), 32);
   const top = `<section class="hk-top"><div class="hk-title" style="${fieldStyle(ctx, hex, 'kit title field', 32)}"><div class="hk-title__in"><p class="ht-k">${A(p.section.title)} <b class="num">${A(p.ref)}</b></p><h1 class="ht-d hk-title__h" style="--bs:${ts}">${A(p.title)}</h1><p class="hk-title__l">${A(d.lede)}</p></div></div>
 <div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live"${d.dark ? ' data-theme="dark"' : ''}>${d.live}</div></section>`;
@@ -142,7 +170,7 @@ function body(ctx0, K) {
 function cover(ctx0, K) {
   const ctx = siteCtx(ctx0), B = ctx.brand, rev = B.logo.colourways.reversed, S = SC(ctx), F = S.form, u = ctx.ui, dk = darkF(ctx);
   const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(cardAction(ctx), { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(S.deliveries[0].status)} <span class="ui-badge">${S.deliveries.length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}${item(u.card({ meta: S.status, title: S.eta, text: S.pickup }), 'Card', 'hk-i--w')}`;
-  const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320 })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 72, 32)}">${A(docName(ctx))}</h1>${B.product ? `<p class="hk-title__l">${A(B.product)}</p>` : ''}<p class="hk-title__v">${A(ctx.versionLine)}</p></div>
+  const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320 })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, ['UI kit'], 0.94, stepPx(ctx, 'display', 48), 32)}">UI kit</h1>${B.product ? `<p class="hk-title__l">${A(B.product)}</p>` : ''}<p class="hk-title__v">${A(ctx.versionLine)}</p></div>
 <div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live">${live}</div></section>`;
   // the cover names the sections, each a link into it; the contents page lists every page
@@ -158,11 +186,11 @@ function shell(ctx0, K, inner) {
   const p = K.page, toggle = `<button class="ht-btn" type="button" data-disclosure aria-expanded="false" aria-controls="ht-toc">Contents</button>`;
   const sections = K.sections.map((s) => ({ n: s.n, title: s.title, pages: s.pages.map((q) => K.pages.find((x) => x.id === q.id)) }));
   const toc = tocPanel(ctx, { id: 'ht-toc', sections, href: K.href, current: p.id, front: 'Cover and contents' });
-  const nx = (q) => q && { href: K.href(q.id), ref: q.ref, title: q.id === 'cover' ? 'Cover and contents' : q.title };
+  const nx = (q) => q && { href: K.href(q.id), ref: q.ref, title: q.id === 'cover' ? 'Cover' : q.id === 'contents' ? 'Contents' : q.title };
   const next = K.next && K.next.id === 'contents' ? K.pages[K.pages.indexOf(K.next) + 1] : K.next;
   return `<div class="sx ht ht--kit" data-page="${p.id}">
 ${skipLink()}
-${bar(ctx, { home: 'index.html', doc: docName(ctx), ref: p.ref, title: p.section ? p.title : 'Cover and contents', no: ctx.pageNo(p.id), toggle })}
+${bar(ctx, { home: 'index.html', doc: docName(ctx), ref: p.ref, title: p.section ? p.title : p.id === 'contents' ? 'Contents' : 'Cover', no: ctx.pageNo(p.id), toggle })}
 ${toc}
 <main id="ht-main" tabindex="-1"><article class="sx-art" data-rd-doc>
 ${tidy(inner)}

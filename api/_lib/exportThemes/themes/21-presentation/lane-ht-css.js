@@ -7,6 +7,8 @@ export function htCss(ctx) {
   const B = ctx.brand, l = L(ctx), d = DK(ctx), f = B.fonts;
   const body = `'${f.body.family}',sans-serif`, disp = `'${f.display.family}',sans-serif`, mono = `'${f.mono.family}',monospace`;
   const dw = f.display.weights[f.display.weights.length - 1];
+  // one type scale for both sites: a page's title is the display step, a line under it the headline step (the kit reads the same scale)
+  const sd = (B.type.scale.find((x) => x.token === 'display') || {}).size || 48;
   return `.ht{--g:${l.surface};--g2:${l.sunken};--t:${l.text};--s:${l.textSoft};--q:${l.quiet};--h:${l.divider};--fo:${l.focus || l.text};
   --body:${body};--disp:${disp};--mono:${mono};
   display:block;min-height:100vh;background:var(--g);color:var(--t);font:400 16px/1.6 var(--body);-webkit-font-smoothing:antialiased;isolation:isolate}
@@ -166,14 +168,11 @@ export function htCss(ctx) {
 /* the page's title: a display h1 over the slide on wide screens (the bar already carries the running head); on a phone it also leads the page, under the running head */
 .ht-ml{display:block;padding:72px 56px 8px;container-type:inline-size}
 .ht-ml--spread{padding-bottom:56px}
-.ht-ml__hd{display:none}
-.ht-ml__t{font-size:min(var(--bs,96px),clamp(48px,6vw,96px));line-height:0.98}
+.ht-ml__t{font-size:min(var(--bs,${sd}px),${sd}px);line-height:1}
 .ht-ml__t b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%;color:var(--q)}
 @media (max-width:840px){
 .ht-ml{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:224px;padding:20px 20px 28px}
-.ht-ml__hd{display:flex;justify-content:space-between;gap:12px;font-size:14px;line-height:1.3;color:var(--q)}
-.ht-ml__hd b{font-weight:400}
-.ht-ml__t{font-size:min(var(--bs,40px),64px)}
+.ht-ml__t{font-size:min(var(--bs,40px),${sd}px)}
 .ht-bar{gap:12px;padding:0 20px}
 .ht-home,.ht-doc{display:none}
 .ht-bar{height:auto;min-height:56px;padding-top:10px;padding-bottom:10px}
@@ -227,7 +226,12 @@ export function htCss(ctx) {
 /* a name set where a logo would go (lane-ht-clean.js): the display face, one line, never clipped */
 .ht-wm{display:inline-flex;align-items:center;justify-content:center;max-width:100%;white-space:nowrap;line-height:1.1;font-weight:${dw};letter-spacing:-0.01em;overflow:visible}
 .ht-wm--sym{letter-spacing:0}
-.ht-empty{font-size:16px;line-height:1.5;color:var(--q)}
+.ht-wm--h{gap:.45em}
+.ht-wm--h .ht-wm__s{font-size:1em;padding-right:.45em;border-right:.08em solid currentColor;line-height:1.1}
+.ht-wm--st{flex-direction:column;gap:.15em}
+.ht-wm--st .ht-wm__s{font-size:1.9em;line-height:1}
+.ht-wm--st span{font-size:.55em;letter-spacing:.04em;text-transform:uppercase}
+.ht-wm__s{font-weight:inherit}
 .ht-notes--bare{grid-template-columns:minmax(0,1fr)}
 .ht-notes--narrow{display:none}
 .ht-tile__a{container-type:inline-size}
@@ -265,11 +269,77 @@ export function htCss(ctx) {
 .ht-mk__v{font-size:44px}
 .ht-mk__pr{font-size:20px;font-weight:600}
 .ht-mk__btn{display:flex;align-items:center;justify-content:center;min-height:48px;font-weight:600;font-size:16px}
+/* a photograph still to be placed: the frame at its ratio, crop marks at its corners */
+.ht-ph{position:relative;display:block;width:100%;aspect-ratio:4/3;background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box}
+.ht-ph>i{position:absolute;width:20px;height:20px;border:0 solid var(--t)}
+.ht-ph>i:nth-child(1){left:12px;top:12px;border-width:2px 0 0 2px}
+.ht-ph>i:nth-child(2){right:12px;top:12px;border-width:2px 2px 0 0}
+.ht-ph>i:nth-child(3){left:12px;bottom:12px;border-width:0 0 2px 2px}
+.ht-ph>i:nth-child(4){right:12px;bottom:12px;border-width:0 2px 2px 0}
+.ht-ph--bg{position:absolute;inset:0;z-index:-1;width:auto;aspect-ratio:auto;background:transparent;box-shadow:none}
+.ht-ph--bg>i{border-color:currentColor}
+.ht-pf{display:flex;flex-direction:column;gap:12px;max-width:640px}
+.ht-pf figcaption,.ht-gp figcaption{font-size:14px;line-height:1.5;color:var(--s)}
+.ht-shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 24px}
+.ht-shots li{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ht-shots__t{font-size:14px;line-height:1.4;font-weight:600;color:var(--t);margin-top:6px}
+.ht-shots__t .num{color:var(--q);font-weight:400;margin-right:4px}
+.ht-shots__b{font-size:14px;line-height:1.5;color:var(--s)}
+/* the brand's device: its colours as flat blocks, a bar under a section's title and stepped on the cover */
+.ht-dev{display:flex;align-items:flex-end;height:16px;margin:0 56px}
+.ht-dev>span{display:block;height:100%;min-width:0}
+.ht-dev--cv{height:112px;margin:0}
+.ht-dev--cv>span:nth-child(1){height:100%}
+.ht-dev--cv>span:nth-child(2){height:75%}
+.ht-dev--cv>span:nth-child(3){height:55%}
+.ht-dev--cv>span:nth-child(4){height:35%}
+.ht-dev--cv>span:nth-child(5){height:20%}
+/* a value table: tabular figures in the body face; the mono face is for hex and code */
+.ht-vals{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:baseline}
+.ht-dl .num{white-space:nowrap}
+.ht-field__c .num{display:block;margin-top:4px}
+.ht-scale .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}
+.ht-scale .ht-k span{display:inline;white-space:nowrap}
+/* the grid as an A4 portrait page */
+.ht-gp{display:flex;flex-direction:column;gap:12px;max-width:360px}
+.ht-gp__pg{background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box;width:100%}
+.ht-gp__in{display:grid;height:100%}
+.ht-gp__in>span{display:block;background:color-mix(in srgb,var(--t) 14%,transparent)}
+/* the applications spread: a card, a sign and a phone on one sheet */
+.ht-mks--sp{grid-template-columns:minmax(0,5fr) minmax(0,4fr);gap:32px;align-items:start}
+.ht-mks--sp .ht-mk--card{grid-column:1}
+.ht-mks--sp .ht-mk--sign{grid-column:1}
+.ht-mks--sp .ht-mk--phone{grid-column:2;grid-row:1/3}
+.ht-mks--sp :is(.ht-mk__card,.ht-mk__sign){max-width:none}
+/* the website drawn on a laptop and a phone */
+.ht-mks--dg{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:end}
+.ht-lt{container-type:inline-size;width:100%;max-width:640px}
+.ht-lt__s{border:8px solid var(--t);border-bottom-width:10px;border-radius:12px 12px 0 0;overflow:hidden;background:var(--g);box-sizing:border-box}
+.ht-lt__base{height:12px;background:var(--t);border-radius:0 0 12px 12px;margin:0 -3%}
+.ht-dg__nav{display:flex;align-items:center;gap:4cqw;padding:2.4cqw 3cqw}
+.ht-dg__nav .ht-wm{margin-right:auto}
+.ht-dg__lk{font-size:max(11px,1.8cqw);font-weight:600}
+.ht-dg__hero{display:flex;flex-direction:column;align-items:flex-start;gap:1.6cqw;padding:5cqw 3cqw}
+.ht-dg__h{font-size:max(18px,5cqw)}
+.ht-dg__t{font-size:max(11px,1.9cqw);line-height:1.4}
+.ht-dg__b{display:inline-flex;align-items:center;min-height:max(24px,4.6cqw);padding:0 2.4cqw;font-size:max(11px,1.9cqw);font-weight:600}
+.ht-dg__row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2cqw;padding:3cqw}
+.ht-dg__st{padding:2cqw}
+.ht-dg__n{font-size:max(18px,3.6cqw)}
+.ht-mk__phone .ht-dg__hero--m{padding:28px 20px 32px;gap:12px}
+.ht-mk__phone .ht-dg__hero--m .ht-dg__h{font-size:30px}
+.ht-mk__phone .ht-dg__hero--m .ht-dg__t,.ht-mk__phone .ht-dg__hero--m .ht-dg__b{font-size:15px}
+.ht-mk__phone .ht-dg__hero--m .ht-dg__b{min-height:44px;padding:0 20px}
 @media (max-width:840px){
-/* a slide is a picture of a PDF page: on a phone it is not drawn, and the page is its heading and its notes at reading size */
-.ht-stage{display:none}
+/* a slide is a picture of a PDF page: below 841 it is the same figure scaled to the column (the engine sets --fit), above the notes */
+.ht-fit{overflow:hidden}
 .ht-notes--narrow{display:grid}
-.ht-ml__hd{margin-block-end:24px}
+.ht-dev{margin:0 20px}
+.ht-dev--cv{margin:0;height:72px}
+.ht-shots{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ht-mks--sp,.ht-mks--dg{grid-template-columns:minmax(0,1fr)}
+.ht-mks--sp .ht-mk--phone{grid-column:1;grid-row:auto}
+.ht-mks--dg .ht-lt{max-width:none}
 .ht-spec{grid-template-columns:minmax(0,1fr);gap:16px}
 .ht-spec__aa{font-size:96px}
 .ht-mks{gap:32px}

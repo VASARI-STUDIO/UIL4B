@@ -360,11 +360,36 @@ ${markup}
 `;
 }
 
+// A theme may leave a page out when it has nothing written for it (G.keep(ctx, id) is false): the site, its contents list and its Next and
+// Previous chain are then built from the pages it keeps, numbered on from one, so no page is a blank and no link leads to one.
+// A theme without G.keep gets its context back as it is.
+function keptCtx(ctx, G) {
+  if (typeof G.keep !== 'function') return ctx;
+  const pages = ctx.pages.filter((p) => !p.section || G.keep(ctx, p.id));
+  if (pages.length === ctx.pages.length) return ctx;
+  const secs = [], nos = {};
+  pages.forEach((p, i) => { nos[p.id] = i + 1; });
+  const kept = pages.map((p) => {
+    if (!p.section) return { ...p, no: nos[p.id] };
+    let s = secs.find((x) => x.old === p.section.n);
+    if (!s) secs.push(s = { old: p.section.n, n: secs.length + 1, title: p.section.title, pages: [] });
+    const q = { ...p, no: nos[p.id], section: { ...p.section, n: s.n }, ref: `${s.n}.${s.pages.length + 1}` };
+    s.pages.push(q);
+    return q;
+  });
+  const out = Object.create(ctx);
+  out.pages = kept;
+  out.sections = secs.map(({ n, title, pages: ps }) => ({ n, title, pages: ps }));
+  out.pageNo = (id) => nos[id];
+  return out;
+}
+
 // The site as { 'index.html', '<page>.html', 'assets/guidelines.css', 'assets/guidelines.js', 'assets/fonts/<stem>.woff2' }. ctx is a
 // guidelines ctx (files mode); a page the theme cannot lay out for this brand throws, and so does the build.
-export function guideSiteFiles(ctx, T) {
+export function guideSiteFiles(ctx0, T) {
   const G = T.guideSite;
   if (!G) throw new Error('guide site: this theme has no guideSite');
+  const ctx = keptCtx(ctx0, G);
   const adapt = G.adapt || {};
   const files = {};
   put(ctx, files, 'assets/guidelines.css', `${fontFaceCss(ctx, (f) => `fonts/${f.stem}.woff2`, chromeFaces(T))}\n${siteCss(ctx, T)}`);

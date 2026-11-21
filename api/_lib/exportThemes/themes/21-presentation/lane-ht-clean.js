@@ -25,11 +25,14 @@ function wordmark(ctx, geos, id, { width = 200, color, share } = {}) {
   const name = nameOf(ctx);
   if (!name) return '';
   const g = geos[id] || geos.colour || Object.values(geos)[0], sym = id === 'symbol';
+  // the three shapes differ as the plugin's geometries do: the name alone, the initials beside the name, the initials over the name
+  const lay = id === 'horizontal' || id === 'stacked' ? id : '';
   const text = sym ? initialsOf(name) : name, h = (width * g.h) / g.w;
-  const fs = Math.max(10, sym ? h * 0.6 : Math.min(h * 0.8, width / (Math.max(text.length, 3) * 0.5)));
+  const fs = Math.max(10, sym ? h * 0.6 : lay === 'horizontal' ? Math.min(h * 0.6, width / (text.length * 0.55 + 2.6)) : lay === 'stacked' ? Math.min(h * 0.3, width / (text.length * 0.55)) : Math.min(h * 0.8, width / (Math.max(text.length, 3) * 0.5)));
   const ink = color ? `color:${color};` : '';
   const size = share ? `width:${share * 100}cqw;font-size:min(${(fs * 2).toFixed(1)}px,${((fs / width) * share * 100).toFixed(2)}cqw)` : `width:${width}px;height:${h.toFixed(1)}px;font-size:${fs.toFixed(1)}px`;
-  return `<span class="ht-wm ht-d${sym ? ' ht-wm--sym' : ''}" role="img" aria-label="${A(name)} logo" style="${ink}${size}">${A(text)}</span>`;
+  const inner = lay ? `<b class="ht-wm__s">${A(initialsOf(name))}</b><span>${A(text)}</span>` : A(text);
+  return `<span class="ht-wm ht-d${sym ? ' ht-wm--sym' : ''}${lay ? ` ht-wm--${lay === 'horizontal' ? 'h' : 'st'}` : ''}" role="img" aria-label="${A(name)} logo" style="${ink}${size}">${inner}</span>`;
 }
 
 // the brand's data with every placeholder string emptied, and the lists and groups left with nothing in them dropped. What is left is
@@ -65,6 +68,3 @@ export function siteCtx(ctx) {
   cache.set(ctx, out);
   return out;
 }
-
-/** a page with nothing written yet: one quiet line */
-export const NOT_WRITTEN = '<p class="ht-empty">Not written yet.</p>';
