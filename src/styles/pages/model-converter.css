@@ -9,18 +9,18 @@
  *
  * Built Spectrum-native against the app file (UIL4B App.dc.html):
  *   - the tool grid: stage + a 336px panel, one column under 900px;
- *   - the stage and the panel are 18px (`--radius-2xl`) cards over a hairline;
+ *   - the stage and the panel are 16px cards over a hairline;
  *   - panel sections split by hairlines, each headed by a mono 9.5px / .16em
  *     index label;
- *   - buttons are pills (--radius-pill) over a hairline, as in the shared
- *     ToolButton; the format choices are 10px tiles;
- *   - no accent anywhere except the one primary action and the selected
- *     output, because accent means "the next action".
+ *   - buttons are 36px pills over a hairline (44px on a coarse pointer), as in
+ *     the shared ToolButton; the format choices are 8px tiles;
+ *   - colour comes from the V3 roles (`--tl-*`, which alias `--v3-*`): ink,
+ *     raised and L2 surfaces, hairlines and ink washes. The one filled control
+ *     is the primary action, an ink pill; the chosen output is ink-edged.
  *
- * CONTRAST: the primary button is `--accent-ink` on `--accent-fill`, and on
- * `--accent-fill-hover` when hovered; both pairs hold 4.5:1 or more in both
- * themes. Never `--accent-hover` (it lightens in light) and never
- * `--accent-strong` (a per-theme literal that does not follow a premium accent).
+ * CONTRAST: the primary button is `--v3-on-ink` on `--v3-ink`, and on
+ * `--v3-ink-hover` when hovered; both pairs hold 4.5:1 or more in both
+ * themes.
  *
  * MOTION: colour and border transitions only. Nothing on this page moves a box.
  * The one real motion is the model's turntable, which is decided in JavaScript
@@ -48,9 +48,9 @@
   letter-spacing: normal;
   line-height: 1;
   text-transform: none;
-  color: var(--t2);
-  border: 1px solid var(--bh);
-  border-radius: var(--radius-xs);
+  color: var(--tl-dim);
+  border: 1px solid var(--tl-line-on);
+  border-radius: 8px;
 }
 
 /* ── Buttons ── */
@@ -60,40 +60,44 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 36px;
   padding: 0 15px;
   font-family: var(--font);
   font-size: 13px;
   font-weight: 540;
   line-height: 1.2;
-  color: var(--t0);
-  background: var(--card);
-  border: 1px solid var(--bh);
-  border-radius: var(--radius-pill);
+  color: var(--tl-ink);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line-on);
+  border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
 }
 
-.v3d .v3d-btn:hover:not(:disabled) { background: var(--bg-2); border-color: var(--t3); }
-
-.v3d .v3d-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.v3d .v3d-btn:disabled { color: var(--t2); cursor: not-allowed; opacity: .6; }
-
-.v3d .v3d-btn--primary {
-  color: var(--accent-ink);
-  background: var(--accent-fill);
-  border-color: var(--accent-fill);
+@media (hover: hover) {
+  .v3d .v3d-btn:hover:not(:disabled) { background: var(--tl-wash-2); }
 }
 
-.v3d .v3d-btn--primary:hover:not(:disabled) { color: var(--accent-ink); background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+.v3d .v3d-btn:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
-/* A disabled primary drops to the neutral button rather than a faded accent:
-   a washed-out blue still reads as "the next action", and it is not one yet. */
+.v3d .v3d-btn:disabled { color: var(--tl-dim); cursor: not-allowed; opacity: .6; }
+
+.v3d .v3d-btn--primary {
+  color: var(--v3-on-ink);
+  background: var(--v3-ink);
+  border-color: var(--v3-ink);
+}
+
+@media (hover: hover) {
+  .v3d .v3d-btn--primary:hover:not(:disabled) { color: var(--v3-on-ink); background: var(--v3-ink-hover); border-color: var(--v3-ink-hover); }
+}
+
+/* A disabled primary drops to the neutral L2 button rather than a faded ink
+   pill: a faded pill still reads as "the next action", and it is not one yet. */
 .v3d .v3d-btn--primary:disabled,
 .v3d .v3d-btn--primary[aria-disabled="true"],
-.v3d .v3d-btn--primary[aria-disabled="true"]:hover { color: var(--t2); background: var(--bg-2); border-color: var(--border); opacity: 1; cursor: progress; }
+.v3d .v3d-btn--primary[aria-disabled="true"]:hover { color: var(--v3-t56); background: var(--tl-card2); border-color: var(--tl-line); opacity: 1; cursor: progress; }
 
 .v3d .v3d-btn--primary:disabled { cursor: not-allowed; }
 
@@ -119,15 +123,15 @@
   /* Clear the fixed nav and the sticky tool toolbar when scrolled to. */
   scroll-margin-top: calc(var(--chrome-h, 60px) + 76px);
   overflow: hidden;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card2);
+  border: 1px solid var(--tl-line);
+  border-radius: 16px;
   transition: border-color var(--dur-1) ease, background var(--dur-1) ease;
 }
 
-/* A file held over the stage: the border takes the accent and the ground a
+/* A file held over the stage: the border takes the ink and the ground a 9%
    wash of it. Colour only, no scale, so nothing moves under the pointer. */
-.v3d .v3d-frame.is-over { border-color: var(--accent); background: var(--accent-wash); }
+.v3d .v3d-frame.is-over { border-color: var(--tl-ink); background: color-mix(in srgb, var(--v3-ink) 9%, var(--tl-card2)); }
 
 .v3d .v3d-canvas {
   position: absolute;
@@ -144,7 +148,7 @@
 
 /* The canvas is the keyboard's target once a model is open, so its focus ring
    is drawn INSIDE the frame, where the overflow clip cannot cut it off. */
-.v3d .v3d-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.v3d .v3d-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--tl-focus); }
 
 .v3d[data-state="idle"] .v3d-canvas,
 .v3d[data-state="error"] .v3d-canvas { visibility: hidden; }
@@ -166,7 +170,7 @@
 
 .v3d .v3d-overlay .v3d-btn { margin-top: 12px; }
 
-.v3d[data-state="busy"] .v3d-overlay { background: color-mix(in srgb, var(--bg-2) 82%, transparent); }
+.v3d[data-state="busy"] .v3d-overlay { background: color-mix(in srgb, var(--tl-card2) 82%, transparent); }
 
 /* Empty: a glyph, one line, the formats and the limit, one button. */
 .v3d .v3d-empty { cursor: pointer; }
@@ -177,21 +181,21 @@
   width: 44px;
   height: 44px;
   margin-bottom: 8px;
-  color: var(--t2);
-  border: 1px solid var(--bh);
-  border-radius: var(--radius);
+  color: var(--tl-dim);
+  border: 1px solid var(--tl-line-on);
+  border-radius: 12px;
 }
 
 .v3d .v3d-empty-glyph svg { width: 22px; height: 22px; }
 
-.v3d .v3d-empty-line { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
+.v3d .v3d-empty-line { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
 
 .v3d .v3d-empty-formats {
   max-width: 46ch;
   margin: 0;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
 /* The accepted formats: a "Supported formats" row that opens to a compact 12px list. */
@@ -203,7 +207,7 @@
   min-height: 44px;
   cursor: pointer;
   font-size: 12px;
-  color: var(--t1);
+  color: var(--tl-soft);
 }
 .v3d .v3d-formats summary::-webkit-details-marker { display: none; }
 .v3d .v3d-formats summary::after {
@@ -216,8 +220,8 @@
   transform: rotate(45deg);
 }
 .v3d .v3d-formats[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
-.v3d .v3d-formats summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.v3d .v3d-formats-list { margin: 0; font-family: var(--font); font-size: 12px; line-height: 1.7; color: var(--t2); }
+.v3d .v3d-formats summary:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.v3d .v3d-formats-list { margin: 0; font-family: var(--font); font-size: 12px; line-height: 1.7; color: var(--tl-dim); }
 .v3d .v3d-empty { overflow-y: auto; }
 
 /* Loading: the file's name, the stage, the bytes, a meter when a total is known. */
@@ -227,14 +231,14 @@
   overflow: hidden;
   font-size: 14px;
   font-weight: 560;
-  color: var(--t0);
+  color: var(--tl-ink);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.v3d .v3d-busy-stage { margin: 0; font-size: 13px; color: var(--t1); }
+.v3d .v3d-busy-stage { margin: 0; font-size: 13px; color: var(--tl-soft); }
 
-.v3d .v3d-busy-bytes { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t2); letter-spacing: 0; }
+.v3d .v3d-busy-bytes { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-dim); letter-spacing: 0; }
 
 /* The loading meter. */
 .v3d .v3d-meter {
@@ -242,15 +246,15 @@
   height: 4px;
   margin-top: 8px;
   overflow: hidden;
-  background: var(--border);
-  border-radius: var(--radius-pill);
+  background: var(--tl-line);
+  border-radius: 999px;
 }
 
 .v3d .v3d-meter-fill {
   display: block;
   width: var(--v3d-pct, 0%);
   height: 100%;
-  background: var(--t1);
+  background: var(--tl-soft);
   border-radius: inherit;
 }
 
@@ -274,10 +278,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 10px 10px 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  box-shadow: var(--v3-shadow);
 }
 
 .v3d .v3d-banner .v3d-error-text { font-size: 12.5px; }
@@ -292,10 +296,10 @@
   gap: 4px;
   max-width: calc(100% - 24px);
   padding: 4px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-s);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
+  box-shadow: var(--v3-shadow);
   translate: -50% 0;
 }
 
@@ -304,7 +308,7 @@
   gap: 2px;
   padding-right: 4px;
   margin-right: 2px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--tl-line);
 }
 
 .v3d .v3d-seg button,
@@ -317,11 +321,11 @@
   font-family: var(--font);
   font-size: 12.5px;
   font-weight: 540;
-  color: var(--t2);
+  color: var(--tl-dim);
   white-space: nowrap;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   cursor: pointer;
   transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
@@ -329,16 +333,18 @@
 .v3d .v3d-seg button svg,
 .v3d .v3d-tool svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-.v3d .v3d-seg button:hover,
-.v3d .v3d-tool:hover:not(:disabled) { color: var(--t0); background: var(--bg-2); }
+@media (hover: hover) {
+  .v3d .v3d-seg button:hover,
+  .v3d .v3d-tool:hover:not(:disabled) { color: var(--tl-ink); background: var(--tl-wash-2); }
+}
 
 /* Pressed is carried by three things, not by colour alone: the ink darkens,
    the ground fills, and a hairline in the strong border colour draws the box. */
 .v3d .v3d-seg button[aria-pressed="true"],
-.v3d .v3d-tool[aria-pressed="true"] { color: var(--t0); background: var(--bg-2); border-color: var(--bh); }
+.v3d .v3d-tool[aria-pressed="true"] { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
 
 .v3d .v3d-seg button:focus-visible,
-.v3d .v3d-tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.v3d .v3d-tool:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; }
 
 .v3d .v3d-tool:disabled { cursor: not-allowed; opacity: .55; }
 
@@ -348,21 +354,21 @@
   margin: 10px 2px 0;
   font-size: 12px;
   line-height: 1.55;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
 /* ── The panel ── */
 
 .v3d .v3d-panel {
   min-width: 0;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 16px;
 }
 
 .v3d .v3d-sect { display: grid; gap: 12px; padding: 16px; }
 
-.v3d .v3d-sect + .v3d-sect { border-top: 1px solid var(--border); }
+.v3d .v3d-sect + .v3d-sect { border-top: 1px solid var(--tl-line); }
 
 .v3d .v3d-label {
   margin: 0;
@@ -372,7 +378,7 @@
   letter-spacing: normal;
   line-height: 1.4;
   text-transform: none;
-  color: var(--t3);
+  color: var(--tl-faint);
 }
 
 .v3d .v3d-facts {
@@ -384,7 +390,7 @@
   line-height: 1.45;
 }
 
-.v3d .v3d-facts dt { color: var(--t2); }
+.v3d .v3d-facts dt { color: var(--tl-dim); }
 
 .v3d .v3d-facts dd {
   min-width: 0;
@@ -393,14 +399,14 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-align: right;
-  color: var(--t0);
+  color: var(--tl-ink);
   overflow-wrap: anywhere;
   letter-spacing: 0;
 }
 
-.v3d .v3d-facts--idle dd { font-family: var(--font); font-size: 12.5px; text-align: left; color: var(--t1); }
+.v3d .v3d-facts--idle dd { font-family: var(--font); font-size: 12.5px; text-align: left; color: var(--tl-soft); }
 
-.v3d .v3d-unit { font-family: var(--font); font-size: 11.5px; color: var(--t2); }
+.v3d .v3d-unit { font-family: var(--font); font-size: 11.5px; color: var(--tl-dim); }
 
 .v3d .v3d-notes {
   display: grid;
@@ -410,8 +416,8 @@
   list-style: none;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--t1);
-  border-top: 1px dashed var(--border);
+  color: var(--tl-soft);
+  border-top: 1px dashed var(--tl-line);
 }
 
 .v3d .v3d-notes li { position: relative; padding-left: 14px; }
@@ -423,7 +429,7 @@
   top: .6em;
   width: 5px;
   height: 5px;
-  background: var(--t3);
+  background: var(--tl-faint);
   border-radius: 1px;
 }
 
@@ -434,14 +440,14 @@
   gap: 12px;
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--tl-line);
 }
 
 .v3d .v3d-opt { display: grid; gap: 6px; }
 
-.v3d .v3d-opt-k { font-size: 12px; line-height: 1.3; color: var(--t2); }
+.v3d .v3d-opt-k { font-size: 12px; line-height: 1.3; color: var(--tl-dim); }
 
-.v3d .v3d-opt-note { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--t2); }
+.v3d .v3d-opt-note { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--tl-dim); }
 
 .v3d .v3d-opt .tl-pills { flex-wrap: nowrap; }
 
@@ -462,7 +468,7 @@
 
 .v3d .v3d-outgroup { display: grid; gap: 6px; }
 
-.v3d .v3d-outgroup-k { margin: 0; font-size: 12px; line-height: 1.3; color: var(--t2); }
+.v3d .v3d-outgroup-k { margin: 0; font-size: 12px; line-height: 1.3; color: var(--tl-dim); }
 
 .v3d .v3d-outgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
@@ -471,22 +477,24 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 36px;
   padding: 0 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 8px;
   cursor: pointer;
   transition: border-color var(--dur-1) ease, background var(--dur-1) ease;
 }
 
-.v3d .v3d-out:hover { border-color: var(--bh); }
+@media (hover: hover) {
+  .v3d .v3d-out:hover:not(.is-on):not(.is-off) { background: var(--tl-wash-2); }
+}
 
-.v3d .v3d-out.is-on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.v3d .v3d-out.is-on { border-color: var(--tl-ink); box-shadow: inset 0 0 0 1px var(--tl-ink); background: color-mix(in srgb, var(--v3-ink) 9%, var(--tl-card)); }
 
-.v3d .v3d-out.is-off { cursor: not-allowed; background: var(--bg-2); }
+.v3d .v3d-out.is-off { cursor: not-allowed; background: var(--tl-card2); }
 
-.v3d .v3d-out:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.v3d .v3d-out:has(input:focus-visible) { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .v3d .v3d-out input {
   /* Over the tile's hairline too, so the control is the tile's full size. */
@@ -506,28 +514,28 @@
   flex-shrink: 0;
   width: 16px;
   height: 16px;
-  border: 1.5px solid var(--t2);
+  border: 1.5px solid var(--tl-dim);
   border-radius: 999px;
   pointer-events: none;
 }
 
-.v3d .v3d-out.is-on .v3d-out-dot { border-color: var(--accent-mid); box-shadow: inset 0 0 0 3.5px var(--card), inset 0 0 0 8px var(--accent-mid); }
+.v3d .v3d-out.is-on .v3d-out-dot { border-color: var(--tl-ink); box-shadow: inset 0 0 0 3.5px var(--tl-card), inset 0 0 0 8px var(--tl-ink); }
 
-.v3d .v3d-out.is-off .v3d-out-dot { border-color: var(--border); }
+.v3d .v3d-out.is-off .v3d-out-dot { border-color: var(--tl-line); }
 
-.v3d .v3d-out-l { display: grid; min-width: 0; font-size: 13px; font-weight: 560; line-height: 1.2; color: var(--t0); pointer-events: none; }
+.v3d .v3d-out-l { display: grid; min-width: 0; font-size: 13px; font-weight: 560; line-height: 1.2; color: var(--tl-ink); pointer-events: none; }
 
-.v3d .v3d-out-sub { font-size: 12px; font-weight: 450; color: var(--t2); }
+.v3d .v3d-out-sub { font-size: 12px; font-weight: 450; color: var(--tl-dim); }
 
-.v3d .v3d-out.is-off .v3d-out-l { color: var(--t2); text-decoration: line-through; }
+.v3d .v3d-out.is-off .v3d-out-l { color: var(--tl-dim); text-decoration: line-through; }
 
-.v3d .v3d-keeps { min-height: 2.9em; margin: 0; font-size: 12px; line-height: 1.45; color: var(--t2); }
+.v3d .v3d-keeps { min-height: 2.9em; margin: 0; font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
 
 .v3d .v3d-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
 .v3d .v3d-actions .v3d-btn--primary { flex: 1 1 auto; }
 
-.v3d .v3d-idle-note { margin: 0; font-size: 12px; color: var(--t2); }
+.v3d .v3d-idle-note { margin: 0; font-size: 12px; color: var(--tl-dim); }
 
 .v3d .v3d-result {
   display: flex;
@@ -537,12 +545,12 @@
   margin: 0;
   padding-top: 10px;
   font-size: 12.5px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--tl-line);
 }
 
-.v3d .v3d-result-name { min-width: 0; font-weight: 560; color: var(--t0); overflow-wrap: anywhere; }
+.v3d .v3d-result-name { min-width: 0; font-weight: 560; color: var(--tl-ink); overflow-wrap: anywhere; }
 
-.v3d .v3d-result-size { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t2); white-space: nowrap; letter-spacing: 0; }
+.v3d .v3d-result-size { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; letter-spacing: 0; }
 
 /* ── Coarse pointers: 44px on every control, not a blanket rule ── */
 
@@ -563,17 +571,17 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .v3d .v3d-sect + .v3d-sect { border-top: 0; border-left: 1px solid var(--border); }
+  .v3d .v3d-sect + .v3d-sect { border-top: 0; border-left: 1px solid var(--tl-line); }
   /* The model and its CAD settings on the left, the conversion on the right. */
   .v3d .v3d-sect.v3d-sect--model,
   .v3d .v3d-sect.v3d-sect--cad { grid-column: 1; }
-  .v3d .v3d-sect.v3d-sect--cad { border-left: 0; border-top: 1px solid var(--border); }
+  .v3d .v3d-sect.v3d-sect--cad { border-left: 0; border-top: 1px solid var(--tl-line); }
   .v3d .v3d-sect.v3d-sect--out { grid-column: 2; grid-row: 1 / span 2; }
 }
 
 @media (max-width: 640px) {
   .v3d .v3d-panel { grid-template-columns: minmax(0, 1fr); }
-  .v3d .v3d-sect + .v3d-sect { border-left: 0; border-top: 1px solid var(--border); }
+  .v3d .v3d-sect + .v3d-sect { border-left: 0; border-top: 1px solid var(--tl-line); }
   .v3d .v3d-sect.v3d-sect--model,
   .v3d .v3d-sect.v3d-sect--cad,
   .v3d .v3d-sect.v3d-sect--out { grid-column: auto; grid-row: auto; }
