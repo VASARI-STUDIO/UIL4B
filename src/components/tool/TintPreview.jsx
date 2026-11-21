@@ -16,17 +16,17 @@ export default function TintPreview({ ramp, count, source, sourceCount, sourceHe
   // The ends a 13-step ramp has over the 11-step one; no page role takes them.
   const unused = count === 13 ? ['25', '975'] : []
   const style = {
-    '--pv-page': hex.page,
-    '--pv-card': hex.card,
-    '--pv-line': hex.line,
-    '--pv-btn': hex.button,
-    '--pv-btn-ink': hex.buttonInk,
-    '--pv-hover': hex.hover,
-    '--pv-text': hex.text,
-    '--pv-head': hex.head,
-    '--pv-dark': hex.dark,
-    '--pv-dark-ink': hex.darkInk,
-    '--pv-dark-sub': hex.darkSub,
+    '--tpv-page': hex.page,
+    '--tpv-card': hex.card,
+    '--tpv-line': hex.line,
+    '--tpv-btn': hex.button,
+    '--tpv-btn-ink': hex.buttonInk,
+    '--tpv-hover': hex.hover,
+    '--tpv-text': hex.text,
+    '--tpv-head': hex.head,
+    '--tpv-dark': hex.dark,
+    '--tpv-dark-ink': hex.darkInk,
+    '--tpv-dark-sub': hex.darkSub,
   }
   const scaleTag = sourceCount > 1 ? `Scale ${source} of ${sourceCount} · ` : ''
   return (

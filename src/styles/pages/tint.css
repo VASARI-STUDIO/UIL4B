@@ -421,7 +421,7 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
 }
 
 /* ── Preview: one small page drawn in the scale, a tag on each part naming its
-   step. TintPreview sets --pv-* inline from the ramp; this sheet only reads them.
+   step. TintPreview sets --tpv-* inline from the ramp; this sheet only reads them.
    The tags are neutral chrome so the palette is spent on the page alone. ───── */
 .tt .tt-pv {
   container: tt-pv / inline-size;
@@ -429,7 +429,7 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
   border-radius: 18px;
   border: 1px solid var(--tl-line);
   overflow: hidden;
-  background: var(--pv-page);
+  background: var(--tpv-page);
 }
 .tt .tt-pv-page {
   position: relative;
@@ -438,8 +438,8 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
   min-height: 100%;
   height: 100%;
   overflow: auto;
-  background: var(--pv-page);
-  color: var(--pv-text);
+  background: var(--tpv-page);
+  color: var(--tpv-text);
   font-family: var(--font);
 }
 .tt .tt-pv-body {
@@ -454,36 +454,36 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
   box-sizing: border-box;
 }
 .tt .tt-pv-intro { display: grid; gap: 8px; align-content: start; min-width: 0; }
-.tt .tt-pv-h { margin: 0; font-size: 1.25rem; line-height: 1.25; font-weight: 600; color: var(--pv-head); }
-.tt .tt-pv-meta { margin: 0; font-size: var(--fs-caption); color: var(--pv-text); }
-.tt .tt-pv-p { margin: 0; max-width: 46ch; font-size: 0.875rem; line-height: 1.5; color: var(--pv-text); }
+.tt .tt-pv-h { margin: 0; font-size: 1.25rem; line-height: 1.25; font-weight: 600; color: var(--tpv-head); }
+.tt .tt-pv-meta { margin: 0; font-size: var(--fs-caption); color: var(--tpv-text); }
+.tt .tt-pv-p { margin: 0; max-width: 46ch; font-size: 0.875rem; line-height: 1.5; color: var(--tpv-text); }
 .tt .tt-pv-card {
   position: relative;
   padding: 14px 16px;
-  border: 1px solid var(--pv-line);
+  border: 1px solid var(--tpv-line);
   border-radius: 12px;
-  background: var(--pv-card);
+  background: var(--tpv-card);
   min-width: 0;
 }
-.tt .tt-pv-card-h { margin: 0; font-weight: 600; color: var(--pv-head); }
-.tt .tt-pv-card-m { margin: 2px 0 0; font-size: var(--fs-caption); color: var(--pv-text); }
+.tt .tt-pv-card-h { margin: 0; font-weight: 600; color: var(--tpv-head); }
+.tt .tt-pv-card-m { margin: 2px 0 0; font-size: var(--fs-caption); color: var(--tpv-text); }
 .tt .tt-pv-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 12px; padding-bottom: 22px; }
 .tt .tt-pv-btn {
   position: relative;
   display: inline-block;
   padding: 9px 16px;
   border-radius: 10px;
-  background: var(--pv-btn);
-  color: var(--pv-btn-ink);
+  background: var(--tpv-btn);
+  color: var(--tpv-btn-ink);
   font-weight: 600;
   font-size: 0.875rem;
 }
-.tt .tt-pv-link { font-size: 0.875rem; color: var(--pv-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.tt .tt-pv-link { font-size: 0.875rem; color: var(--tpv-text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 /* A second section, shown only when the frame has room for it (768px and up,
    where the page is a size container), so a tall window shows a fuller page
    rather than an empty band above the footer. */
 .tt .tt-pv-more { display: none; grid-column: 1 / -1; min-width: 0; }
-.tt .tt-pv-more-h { margin: 0 0 6px; font-weight: 600; font-size: 0.875rem; color: var(--pv-head); }
+.tt .tt-pv-more-h { margin: 0 0 6px; font-weight: 600; font-size: 0.875rem; color: var(--tpv-head); }
 .tt .tt-pv-rows { display: grid; }
 .tt .tt-pv-row {
   display: grid;
@@ -491,9 +491,9 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
   gap: 12px;
   margin: 0;
   padding: 8px 0;
-  border-top: 1px solid var(--pv-line);
+  border-top: 1px solid var(--tpv-line);
   font-size: 0.875rem;
-  color: var(--pv-text);
+  color: var(--tpv-text);
 }
 .tt .tt-pv-row > span:first-child { font-variant-numeric: tabular-nums; }
 @media (min-width: 768px) {
@@ -531,10 +531,10 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
   margin-top: auto;
   /* The footer text starts where the page copy does (the body is 880px at most). */
   padding: 14px max(clamp(16px, 4cqi, 40px), calc((100cqi - 880px) / 2 + clamp(16px, 4cqi, 40px)));
-  background: var(--pv-dark);
+  background: var(--tpv-dark);
 }
-.tt .tt-pv-foot-h { margin: 0; font-weight: 600; font-size: 0.875rem; color: var(--pv-dark-ink); }
-.tt .tt-pv-foot-m { margin: 2px 0 0; font-size: var(--fs-caption); color: var(--pv-dark-sub); }
+.tt .tt-pv-foot-h { margin: 0; font-weight: 600; font-size: 0.875rem; color: var(--tpv-dark-ink); }
+.tt .tt-pv-foot-m { margin: 2px 0 0; font-size: var(--fs-caption); color: var(--tpv-dark-sub); }
 @container tt-pv (min-width: 760px) {
   .tt .tt-pv-body { grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr); gap: 32px; align-items: start; }
   /* Columns named outright: with the term list hidden the card would otherwise
