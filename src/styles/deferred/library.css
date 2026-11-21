@@ -521,7 +521,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
    the shared field metrics instead, which is what consistency has to mean for a
    control this size. */
 .lbry-select{flex:0 0 auto;min-width:0;max-width:220px;height:38px;padding:0 10px;border:1px solid var(--v3-hair);border-radius:var(--radius);background:var(--v3-l2);color:color-mix(in srgb,var(--v3-ink) 86%,transparent);font-family:var(--font);font-size:11px;font-weight:650;cursor:pointer}
-.lbry-select:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lbry-select:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
 @media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
 
 /* `.pl-sort` is retired with `.pl-toolbar`: the Prompt Library's sort is
@@ -1260,6 +1260,10 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .lib-surface .btn-accent:hover,
 .lib-surface .btn-primary:hover{background:var(--v3-ink-hover);color:var(--v3-on-ink);transform:none;box-shadow:none}
 .lib-surface .btn:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+/* The brand-kit walkthrough's Next keeps the accent fill: it is the rail's one
+   forward action on every create page, not a library primary. (0,3,0). */
+.lib-surface .bkit-rail .bkit-rail-next.btn-accent{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill)}
+.lib-surface .bkit-rail .bkit-rail-next.btn-accent:hover{background:var(--accent-fill-hover);color:var(--accent-ink);border-color:var(--accent-fill-hover)}
 
 /* The shared app button — the rectangle every library surface's own dialogs
    and footers use (IconLibrary's customizer, the Prompt Library's modal).
