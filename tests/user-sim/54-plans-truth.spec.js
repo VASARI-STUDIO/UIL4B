@@ -40,6 +40,7 @@ import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
+import { PROMPT_LIBRARY_OPEN } from '../../src/data/toolTree.js'
 
 // /plans is the plan ledger (src/pages/Pricing.jsx): one table whose columns are
 // Free and Pro. The selectors below are its own:
@@ -358,5 +359,19 @@ test.describe('/plans says what it claims', () => {
     // one place (the Pro note), not repeated down the page.
     expect(text.split('cancel pro any time').length - 1, 'cancelling is not stated exactly once').toBe(1)
     await expect(page.locator('.pl-same td')).toContainText('Files stay in your browser')
+  })
+
+  test('no prompt claim while the Prompt Library is admin-only', async ({ page }) => {
+    test.skip(PROMPT_LIBRARY_OPEN, 'the Prompt Library is open to everyone')
+    // A signed-out visitor cannot open /discover/prompts, so nothing the plans
+    // page sells may name prompts. Opening the expanders shows every row.
+    watch(page, PERSONA)
+    await stubPrices(page)
+    await go(page, '/plans')
+    await expectRendered(page)
+    const main = page.locator('.pricing main')
+    await expect(main).toContainText(/palettes?/i)
+    // The AI Image Prompt Generator is a live tool, so only a library claim counts.
+    expect(await main.textContent(), '/plans names prompts while the library is admin-only').not.toMatch(/prompt librar|\bprompts\b/i)
   })
 })

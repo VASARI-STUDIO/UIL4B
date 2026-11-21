@@ -128,14 +128,14 @@ test.describe('the kit builder is the first screen, and its exits go to real pla
     expect(await stashed(page)).toBeNull()
   })
 
-  test('saving drops any stashed page that is not a checkout', async ({ page }) => {
+  test('saving goes back to the tool the sign-up began in', async ({ page }) => {
     watch(page, 'a new account that signed up from a tool page')
     await openOnboarding(page)
     await stash(page, '/create/gradient')
     await toSave(page)
     await page.locator('[data-go]').click()
 
-    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/create/palette')
+    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/create/gradient')
     expect(await stashed(page)).toBeNull()
   })
 
