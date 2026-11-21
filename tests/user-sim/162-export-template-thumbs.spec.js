@@ -7,14 +7,14 @@
 //      content type and the first bytes are read).
 //   2. The stage draws the pictures of the chosen template, one page at a time (the gallery thumbnails pick the page), and their
 //      alt names that template and its sample brand.
-//   3. For a free account the book, slides and UI kit previews in a Pro theme are blurred with a "Pro export" lock (the kit's dock
-//      says "Pro theme"). A Pro account sees none of it blurred.
+//   3. For a free account the book, slides and UI kit previews in a Pro theme are the real page at 1x (no retina version), sharp, under a
+//      tiled "Pro sample" mark and a "Pro template" lock (the kit's dock says "Pro theme"). A Pro account sees no mark.
 //   4. At 390 neither the preview nor the templates grid pushes the page or the dialog sideways.
 //
 // MUTATION
 //   - exportPreviewData.js: the page address points at '.png'            -> tests 1 and 2
-//   - ExportPreview: standin is always false for a free account          -> test 3
-//   - export-dialog.css: .xd-box.is-locked .xd-img loses its blur        -> test 3
+//   - ExportPreview: sample is always false for a free account          -> test 3
+//   - ExportStage: the .xd-mark is left out, or the sample keeps its srcset -> test 3
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, chooseTemplate, exportPanel, openTemplates } from './export-rows.js'
@@ -43,6 +43,20 @@ async function open(page, plan, file, size) {
 async function choose(page, panel, name) {
   await chooseTemplate(panel, name)
   await stock(panel)
+}
+/** A page the account cannot export: the real picture at 1x with no retina srcset, no blur, and the tiled mark over it that takes no clicks. */
+async function expectSample(stage, panel) {
+  const img = stage.locator('img')
+  await expect(img).toHaveCount(1)
+  await expect(img).toHaveAttribute('src', /^\/export-themes\/[\w-]+\.webp$/)
+  await expect(img).not.toHaveAttribute('srcset', /.+/)
+  expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the sample is not blurred').toBe('none')
+  const mark = stage.locator('.xd-mark')
+  await expect(mark).toHaveCount(1)
+  await expect(mark).toHaveAttribute('aria-hidden', 'true')
+  expect(await mark.evaluate((el) => getComputedStyle(el).pointerEvents), 'the mark takes no clicks').toBe('none')
+  // Gallery thumbnails of a template with several pages carry the mark too.
+  for (const thumb of await panel.locator('.xd-thumb').all()) await expect(thumb.locator('.xd-mark')).toHaveCount(1)
 }
 async function stock(panel) {
   const box = panel.locator('.xd-stock input')
@@ -86,10 +100,10 @@ for (const [kind, keys] of Object.entries(KEYS)) {
   })
 }
 
-test.describe('blur and lock', () => {
+test.describe('sample and lock', () => {
   for (const file of ['book', 'guidelines']) {
     for (const [, name] of [THEMES[0], THEMES[3], THEMES[6], THEMES[9]]) {
-      test(`${file} in ${name}: free sees it blurred and locked, Pro sees it sharp`, async ({ page, browser }) => {
+      test(`${file} in ${name}: free sees a sharp 1x sample under the mark and locked, Pro sees it with no mark`, async ({ page, browser }) => {
         watch(page, `a free account looking at the ${file} preview in ${name}`)
         const panel = await open(page, 'free', file)
         await choose(page, panel, name)
@@ -97,7 +111,7 @@ test.describe('blur and lock', () => {
         await expect(stage).toHaveClass(/is-locked/)
         await expect(panel.locator('.xd-stock input'), 'a template the account cannot export has only the stock picture').toBeDisabled()
         await expect(panel.locator('.xd-stage-pro')).toHaveText('Pro template')
-        for (const img of await stage.locator('img').all()) expect(await img.evaluate((el) => getComputedStyle(el).filter)).toMatch(/blur\(\d+px\)/)
+        await expectSample(stage, panel)
 
         const ctx = await browser.newContext()
         const proPage = await ctx.newPage()
@@ -106,20 +120,19 @@ test.describe('blur and lock', () => {
         await choose(proPage, proPanel, name)
         await expect(proPanel.locator('.xd-box')).not.toHaveClass(/is-locked/)
         await expect(proPanel.locator('.xd-stage-pro')).toHaveCount(0)
+        await expect(proPanel.locator('.xd-mark')).toHaveCount(0)
         expect(await proPanel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter)).toBe('none')
         await ctx.close()
       })
     }
   }
 
-  test('free: the UI kit preview in a Pro template is the blurred stand-in, with the Pro mark on it, and the dock says Pro theme', async ({ page }) => {
+  test('free: the UI kit preview in a Pro template is a sharp 1x sample under the mark, with the Pro mark on it, and the dock says Pro theme', async ({ page }) => {
     watch(page, 'a free account looking at the kit in a Pro theme')
     const panel = await open(page, 'free', 'kit')
     await choose(page, panel, 'Studio')
     await expect(panel.locator('.xd-box')).toHaveClass(/is-locked/)
-    const img = panel.locator('.xd-box img').first()
-    expect(await img.evaluate((el) => getComputedStyle(el).filter)).toMatch(/blur\(\d+px\)/)
-    await expect(img, 'the real kit picture never reaches the page').toHaveAttribute('src', /^\/locked-images\/export-themes\/06-studio-kit(Screen|Buttons)\.webp$/)
+    await expectSample(panel.locator('.xd-box'), panel)
     await expect(panel.locator('.xd-stage-pro')).toHaveText('Pro template')
     await expect(panel.locator('.xd-dock')).toContainText('Pro theme.')
   })

@@ -1,9 +1,8 @@
 // Which stock pages the stage and the gallery show for a file, and how a page's picture is addressed. The manifest
 // (config/exportPreviewData.js) is the one place that knows where a picture lives; this file only picks pages out of it
-// and decides, for a viewer, which address may reach the page.
+// and decides, for a viewer, whether a page is drawn at its own density or as a 1x sample.
 
 import { previewPages } from '../../config/exportPreviewData'
-import { themeStandinSrc } from '../../utils/lockedStandin'
 
 // The pages of each document, in the order they are shown.
 const KIND_PAGES = Object.freeze({
@@ -22,11 +21,11 @@ export function pagesOf(themeId, kind) {
 export const pageSrcSet = (page) => (page.src2x ? `${page.src1x} 1x, ${page.src2x} 2x` : undefined)
 
 /**
- * The picture a page draws for a viewer: its own, or the tiny stand-in when the viewer cannot export it. A stand-in carries no
- * srcset, and a page with no stand-in has no picture at all (src ''), so the real address is never handed to a viewer who has not earned it.
+ * The picture a page draws for a viewer: its own at full density, or, for a `sample` (a page the viewer cannot export), the same
+ * picture at its 1x display size with no srcset, so no retina version is offered. The caller lays the sample mark over a sample.
  */
-export function pageImage(page, standin) {
-  if (standin) return { src: themeStandinSrc(page.src1x), srcSet: undefined }
+export function pageImage(page, sample) {
+  if (sample) return { src: page.src1x, srcSet: undefined }
   return { src: page.src1x, srcSet: pageSrcSet(page) }
 }
 

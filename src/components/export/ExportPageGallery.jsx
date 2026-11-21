@@ -21,7 +21,7 @@ const PlayIcon = ({ playing }) => (
   </svg>
 )
 
-export default function ExportPageGallery({ pages, state, dispatch, standin = false }) {
+export default function ExportPageGallery({ pages, state, dispatch, sample = false }) {
   if (pages.length < 2) return null
   const shown = windowIndexes(state.index, pages.length)
   const playing = state.auto && !state.reduced
@@ -40,7 +40,7 @@ export default function ExportPageGallery({ pages, state, dispatch, standin = fa
       <div className="xd-gal-list">
         {shown.map((i) => {
           const page = pages[i]
-          const image = pageImage(page, standin)
+          const image = pageImage(page, sample)
           const on = i === state.index
           return (
             <button
@@ -52,6 +52,7 @@ export default function ExportPageGallery({ pages, state, dispatch, standin = fa
               onClick={() => dispatch({ type: 'select', index: i })}
             >
               {image.src && <img src={image.src} width={page.w} height={page.h} alt="" data-pin-nopin="true" decoding="async" loading="lazy" />}
+              {sample && <span className="xd-mark xd-mark--thumb" aria-hidden="true" />}
             </button>
           )
         })}

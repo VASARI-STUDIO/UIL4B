@@ -570,13 +570,13 @@ const PRO_CATEGORIES = [
 ]
 
 // Criteria 8, 9, 10 and 12: Pro categories for a free account.
-//   - Draw the previews without bakeBlur (utils/proPreviews.js): "the blur is in the pixels" fails.
+//   - Leave the .xd-mark out of ExportStage for a sample: "the mark is over the page" fails.
 //   - Render .xd-stage-pro / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
 //   - Send a free account on a Pro file to the server instead of /plans: "goes to /plans" fails.
 //   - Drop from=kit-gallery from the checkout navigation: "a saved project goes to checkout" fails.
 test.describe('Pro categories for a free account', () => {
   for (const { name, tab, gate } of PRO_CATEGORIES) {
-    test(`${name}: a blurred preview, a lock, a Pro tag, and the primary leads to /plans when no project is saved`, async ({ page }) => {
+    test(`${name}: a sample preview under the mark, a lock, a Pro tag, and the primary leads to /plans when no project is saved`, async ({ page }) => {
       watch(page, `a signed-in free account on ${name}`)
       const asked = []
       await page.route('**/api/ai?export=document', (route) => { asked.push(route.request().url()); route.abort() })
@@ -598,8 +598,10 @@ test.describe('Pro categories for a free account', () => {
       const shots = panel.locator('.xd-box.is-locked img')
       await expect(shots.first()).toBeVisible()
       for (const img of await shots.all()) {
-        expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the locked pictures are blurred').toMatch(/blur\(/)
+        expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the sample is not blurred').toBe('none')
+        await expect(img, 'the sample is the 1x picture, with no retina version').not.toHaveAttribute('srcset', /.+/)
       }
+      await expect(panel.locator('.xd-box > .xd-mark'), 'the sample carries the tiled mark').toHaveCount(1)
       await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
       await primaryButton(panel).click()
       await expect(page).toHaveURL(/\/plans(\?|$)/)
@@ -646,7 +648,7 @@ test.describe('Pro categories for a free account', () => {
     await expect(page).toHaveURL(/\/checkout\?plan=yearly&from=kit-gallery$/)
   })
 
-  test('the blur is in the pixels: a Pro account sees the same preview sharp', async ({ browser }) => {
+  test('the mark is over the page: a Pro account sees the same preview with none', async ({ browser }) => {
     const sharp = {}
     for (const plan of ['free', 'pro']) {
       const context = await browser.newContext()
@@ -659,11 +661,14 @@ test.describe('Pro categories for a free account', () => {
       await categoryRadio(panel, 'Brand book').click()
       await showStock(panel)
       await expect(panel.locator('.xd-box img').first()).toBeVisible()
-      sharp[plan] = await panel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter)
+      sharp[plan] = {
+        filter: await panel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter),
+        marks: await panel.locator('.xd-box > .xd-mark').count(),
+      }
       await context.close()
     }
-    expect(sharp.free, 'free: the Brand book preview is blurred').toMatch(/blur\(/)
-    expect(sharp.pro, 'pro: the same preview is sharp').toBe('none')
+    expect(sharp.free, 'free: the Brand book is a sharp sample under the mark').toEqual({ filter: 'none', marks: 1 })
+    expect(sharp.pro, 'pro: the same preview has no mark').toEqual({ filter: 'none', marks: 0 })
   })
 })
 

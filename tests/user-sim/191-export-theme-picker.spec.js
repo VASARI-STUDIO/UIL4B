@@ -175,7 +175,7 @@ test.describe('Free and Pro', () => {
         expect(read.pro, 'the card says what the dock says').toContain(name)
         await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
         await expect(dockStatus(panel)).toHaveText(isGuide(file) ? GUIDE_LOCK : 'Pro unlocks this file.')
-        await expect(panel.locator('.xd-stage-pro'), 'the blurred preview carries its lock').toBeVisible()
+        await expect(panel.locator('.xd-stage-pro'), 'the sample preview carries its lock').toBeVisible()
         await expect(panel.locator('.xd-wayout'), 'and a way out to a free file').toHaveText(/^Use the free /)
         await primaryButton(panel).click()
         await expect(page).toHaveURL(/\/plans(\?|$)/)
@@ -225,7 +225,7 @@ test.describe('Free and Pro', () => {
         const free = freeTemplates.includes(name)
         await pick(panel, name)
         await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Upgrade to Pro')
-        if (file !== 'kit' && !free) await expect(panel.locator('.xd-stage-pro'), `${name}: the lock on the blurred preview`).toBeVisible()
+        if (file !== 'kit' && !free) await expect(panel.locator('.xd-stage-pro'), `${name}: the lock on the sample preview`).toBeVisible()
         if (free) await expect(panel.locator('.xd-stage-pro'), `${name}: no lock on a free file`).toHaveCount(0)
       }
     })

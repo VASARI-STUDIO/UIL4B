@@ -1,26 +1,26 @@
-// A locked Pro preview must never deliver the real picture to the browser.
+// What a locked Pro preview delivers to the browser.
 //
-// A CSS blur over the real file is not a paywall: an image-saving extension, "Save image as"
-// or a devtools edit gets the sharp file. So for a free account these surfaces load a tiny
-// blurred stand-in (public/locked-images/, utils/lockedStandin.js) and the real address is
-// in neither the page HTML nor the network.
+// Export dialog: a free account looking at a Pro theme sees the page sharp, as a display-size
+// sample: the 1x picture only (no retina version, which is the resolution cap), under a tiled
+// "Pro sample" mark. The real 1x file is requested and the img has no srcset.
+//
+// Community prompt gallery: a locked card loads a tiny blurred stand-in (public/locked-images/,
+// utils/lockedStandin.js) and the real address is in neither the page HTML nor the network.
 //
 // Two surfaces, with request capture:
 //   - the Export dialog's book and guidelines previews in a Pro theme
 //   - the community prompt gallery's locked cards (parked: skipped until the gallery is public, see its block below)
-// A Pro account is the control: it must still get the real pictures, or the test would pass
+// A Pro account is the control: it gets the real pictures with no mark, or the test would pass
 // by loading nothing.
 //
-// To see it fail: in ExportStage.jsx draw the real page picture in place of the stand-in,
+// To see it fail: in ExportStage.jsx pass srcSet for a sample, or leave the .xd-mark out,
 // or in PromptLockedCard.jsx use promptPosterSrc in place of promptStandinSrc.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, chooseTemplate, expectTemplate, exportPanel } from './export-rows.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
-// Not preceded by locked-images: the stand-in's path ends in the same /export-themes/<file> and must not count as the real one.
 const REAL_THEME = /(?<!locked-images)\/export-themes\/[\w-]+-(book|guideCover|guidePalette)\.webp/
-const STANDIN_THEME = /\/locked-images\/export-themes\/[\w-]+-(book|guideCover|guidePalette)\.webp/
 
 function capture(page) {
   const urls = []
@@ -46,25 +46,21 @@ async function chooseTheme(page, panel, name) {
 
 test.describe('export dialog theme previews', () => {
   for (const file of ['book', 'guidelines']) {
-    test(`${file} in a Pro theme: a free account never loads or holds the real pictures`, async ({ page }) => {
+    test(`${file} in a Pro theme: a free account gets the sharp 1x sample under the mark, with no retina version`, async ({ page }) => {
       watch(page, `a free account previewing the ${file} in a Pro theme, with requests captured`)
       const urls = capture(page)
       const panel = await openExport(page, 'free', file)
-      // The guidelines open on Label, a Free theme whose real pictures a free account may load. Count requests from the Pro theme on.
-      urls.length = 0
       await chooseTheme(page, panel, 'Studio')
       const stage = panel.locator('.xd-box')
       await expect(stage).toHaveClass(/is-locked/)
+      await expect(stage.locator('.xd-mark')).toHaveCount(1)
       for (const img of await stage.locator('img').all()) {
-        await expect(img).toHaveAttribute('src', STANDIN_THEME)
-        await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth), 'the stand-in loads').toBeGreaterThan(0)
-        expect(await img.evaluate((el) => el.naturalWidth), 'a stand-in too small to carry detail').toBeLessThanOrEqual(48)
+        await expect(img).toHaveAttribute('src', REAL_THEME)
+        await expect(img, 'the sample has no retina version').not.toHaveAttribute('srcset', /.+/)
+        await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth), 'the sample loads').toBeGreaterThan(0)
+        expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the sample is not blurred').toBe('none')
       }
-      const html = await page.content()
-      expect(html.match(REAL_THEME) || [], 'the real theme picture is not in the page').toEqual([])
-      expect(urls.filter((u) => REAL_THEME.test(u)), 'the real theme picture is not requested').toEqual([])
-      expect(urls.some((u) => STANDIN_THEME.test(u)), 'the stand-in is what was requested').toBe(true)
-    })
+      expect(urls.some((u) => REAL_THEME.test(u)), 'the 1x picture is requested').toBe(true)    })
 
     test(`${file} in a Pro theme: a Pro account still gets the real pictures`, async ({ page }) => {
       watch(page, `a Pro account previewing the ${file} in a Pro theme`)
@@ -73,6 +69,7 @@ test.describe('export dialog theme previews', () => {
       await chooseTheme(page, panel, 'Studio')
       const stage = panel.locator('.xd-box')
       await expect(stage).not.toHaveClass(/is-locked/)
+      await expect(stage.locator('.xd-mark')).toHaveCount(0)
       await expect(stage.locator('img').first()).toHaveAttribute('src', REAL_THEME)
       expect(urls.some((u) => REAL_THEME.test(u)), 'the real picture is requested for Pro').toBe(true)
     })

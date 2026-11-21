@@ -130,7 +130,10 @@
 .xd-stage--plain::after{content:none}
 .xd-box{position:relative;width:min(100cqw,100cqh * var(--xd-w,4) / var(--xd-h,3));aspect-ratio:var(--xd-w,4) / var(--xd-h,3);max-height:100cqh}
 .xd-img{display:block;width:100%;height:100%;object-fit:contain}
-.xd-box.is-locked .xd-img{filter:blur(4px)}
+/* The sample mark: "Pro sample" tiled over a page the viewer cannot export. Light letters with a faint dark edge so it reads on a pale or a dark
+   page alike; no blur, and it takes no pointer events, so the page underneath stays as sharp as the 1x picture is. */
+.xd-mark{position:absolute;inset:0;pointer-events:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='96'><text x='75' y='52' text-anchor='middle' transform='rotate(-24 75 48)' font-family='sans-serif' font-size='13' font-weight='600' fill='%23f4f4f2' fill-opacity='.5' stroke='%231b1b1d' stroke-opacity='.22' stroke-width='.6' paint-order='stroke'>Pro sample</text></svg>");background-size:150px 96px}
+.xd-mark--thumb{background-size:75px 48px}
 .xd-live{position:absolute;inset:0;overflow:hidden;background:var(--bg-1)}
 .xd-live iframe{display:block;border:0;transform-origin:0 0;pointer-events:none;background:var(--bg-1)}
 .xd-stage-pro{position:absolute;z-index:1;top:var(--s-3);left:var(--s-3);padding:var(--s-1) var(--s-3);font-size:12px;font-weight:600;color:var(--t0);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill)}
@@ -163,7 +166,7 @@
 .xd-gal-b{display:grid;place-items:center;min-height:36px;padding:0;color:var(--t1);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer;transition:background-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .xd-gal-b:disabled{cursor:not-allowed;opacity:.45}
 .xd-gal-b:active:not(:disabled){background:var(--bg-2)}
-.xd-thumb{display:grid;place-items:center;width:100%;aspect-ratio:3 / 2;padding:var(--s-1);overflow:hidden;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background-color var(--dur-1) var(--ease-out)}
+.xd-thumb{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:3 / 2;padding:var(--s-1);overflow:hidden;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background-color var(--dur-1) var(--ease-out)}
 .xd-thumb img{display:block;width:100%;height:100%;object-fit:contain}
 .xd-thumb.is-on{border-color:var(--accent-fill);box-shadow:inset 0 0 0 1px var(--accent-fill)}
 .xd-thumb:active{background:var(--bg-1)}
