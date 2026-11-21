@@ -50,7 +50,8 @@ function wordmark(ctx, geos, id, { width = 200, color, share, colourway } = {}) 
   const accent = !sym && colourway ? accentOf(ctx, colourway, color) : '';
   const [pre, post] = accent ? accentSplit(name) : [name, ''];
   const named = accent ? `${A(pre)}<em class="ht-wm__a" style="color:${accent}">${A(post)}</em>` : A(text);
-  const inner = lay ? `<b class="ht-wm__s">${A(symbolOf(name))}</b><span>${named}</span>` : sym ? A(text) : named;
+  // the name sits in its own span in every shape: the wordmark is a flex box, and a bare text run beside the accent <em> loses its space
+  const inner = lay ? `<b class="ht-wm__s">${A(symbolOf(name))}</b><span>${named}</span>` : sym ? A(text) : `<span>${named}</span>`;
   return `<span class="ht-wm ht-d${sym ? ' ht-wm--sym' : ''}${lay ? ` ht-wm--${lay === 'horizontal' ? 'h' : 'st'}` : ''}" role="img" aria-label="${A(name)} logo" style="${ink}${size}">${inner}</span>`;
 }
 

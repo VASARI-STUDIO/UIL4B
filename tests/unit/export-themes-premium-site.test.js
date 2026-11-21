@@ -254,3 +254,54 @@ test('theme 21 labels the faces it ships: the body family named in the css has a
   for (const m of css.matchAll(/@font-face\s*\{[^}]*font-family:\s*['"]?([^;'"]+)/g)) assert.ok(m[1].trim().length > 0, 'an unnamed @font-face')
   assert.doesNotMatch(Object.values(files).filter((t) => typeof t === 'string').join('\n'), /Inter \/ Inter/)
 })
+
+// Design review round 7: the typeset wordmark keeps the space in the name ("Tide& Co." / "Yourname" came from a bare text run beside the accent tag).
+//     Break: in wordmark() (themes/21-presentation/lane-ht-clean.js) put the name back as a bare text run, outside <span>, for the non-horizontal shape.
+async function pagesFor(row, body) {
+  const res = fakeRes()
+  await serveExportDocument({ headers: { authorization: 'Bearer tok' }, body: { theme: '21-presentation', row, format: row === 'slides' ? 'html' : 'zip', ...body } }, res, deps())
+  assert.equal(res.code, 200, row)
+  const zip = await JSZip.loadAsync(res.buffer)
+  const out = {}
+  for (const [name, f] of Object.entries(zip.files)) if (!f.dir && /\.(html|css|md)$/.test(name)) out[name.slice(name.indexOf('/') + 1)] = await f.async('string')
+  return out
+}
+// each typeset wordmark's inner markup: from its opening span to the span that closes it (spans nest inside)
+function wordmarkInners(html) {
+  const out = []
+  for (const m of html.matchAll(/<span class="ht-wm ht-d[^"]*"[^>]*>/g)) {
+    const start = m.index + m[0].length
+    let depth = 1
+    for (const t of html.slice(start).matchAll(/<(\/?)span\b[^>]*>/g)) {
+      depth += t[1] ? -1 : 1
+      if (!depth) { out.push(html.slice(start, start + t.index)); break }
+    }
+  }
+  return out
+}
+// the words a wordmark's own box holds directly: text outside every child element (a flex box drops the space at the edge of such a run)
+function bareText(inner) {
+  let depth = 0, bare = ''
+  for (const part of inner.split(/(<[^>]*>)/)) {
+    if (/^<\//.test(part)) depth--
+    else if (/^<[a-z]/i.test(part)) depth++
+    else if (!depth) bare += part
+  }
+  return bare.trim()
+}
+const readOf = (inner) => inner.replace(/<\/b>/g, ' ').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+
+test('the typeset wordmark reads as the brand name, spaces kept, with a name and without one', async () => {
+  for (const [body, name] of [[{ projectName: 'Tide & Co.', design: DESIGN }, 'Tide & Co.'], [{ design: {} }, 'Your name']]) {
+    const files = await pagesFor('slides', body)
+    const inners = Object.entries(files).filter(([n]) => /^[^/]+\.html$/.test(n)).flatMap(([, h]) => wordmarkInners(h))
+    assert.ok(inners.length > 0, name + ': no typeset wordmark found in the guide')
+    for (const inner of inners) {
+      // the horizontal and stacked shapes carry the initial first: "T Tide & Co."
+      const t = readOf(inner), bare = t.replace(/^\S\s(?=\S)/, '')
+      assert.ok(t === name || bare === name || t === name[0].toUpperCase(), name + ': a wordmark reads "' + t + '"')
+      // the symbol alone is one run and has nothing beside it; every other shape keeps its words in an element
+      if (/</.test(inner)) assert.equal(bareText(inner), '', name + ': a wordmark holds a bare text run, which loses its space beside the accent tag: ' + t)
+    }
+  }
+})
