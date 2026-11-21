@@ -5,6 +5,7 @@ import { esc as A } from '../../engine/brand.js';
 import { outline } from '../../engine/logo.js';
 import { loadFont } from '../../engine/nodeFont.js';
 import { softOnDark } from './helpers.js';
+import { nameOf } from './lane-ht-clean.js';
 
 export { A };
 export const L = (ctx) => ctx.roles.light;
@@ -50,7 +51,7 @@ export const words = (n) => ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
 // ---- the running head as the site bar: section ref and title left; the document name, the folio and the controls right ----
 export function bar(ctx, { home, doc, ref, title, no, toggle, modeAttr = '' }) {
   return `<header class="ht-bar">
-<a class="ht-home" href="${home}">${A(ctx.brand.name)}</a>
+<a class="ht-home" href="${home}">${A(nameOf(ctx) || 'Home')}</a>
 <p class="ht-run">${ref ? `<b class="num">${A(ref)}</b> ` : ''}<span>${A(title)}</span></p>
 <p class="ht-doc"><span>${A(doc)}</span> <b class="num">${folio(no)}</b></p>
 ${toggle}
@@ -78,8 +79,10 @@ export function nextField(ctx, { next, prev, nextLabel = 'Next', prevLabel = 'Pr
 export const skipLink = () => '<a class="ht-skip" href="#ht-main">Skip to the content</a>';
 // the contents as one spread: a row to a section, in three columns (its number, its title with the page count, its pages as links). One ground, hairlines between rows;
 // nothing alternates. A section of one page is a row of one link.
-export function contentsGrid(ctx, sections, { label = 'Contents' } = {}) {
+// `brief` lists the sections alone, each title a link to the section's own `href` (for a front page that sits above a full contents page)
+export function contentsGrid(ctx, sections, { label = 'Contents', brief = false } = {}) {
   const hs = fitSize(ctx, sections.map((s) => s.title), 0.9, 44, 28);
-  const rows = sections.map((s) => `<li class="ht-cx__r"><p class="ht-cx__n num">${A(s.n)}</p><div class="ht-cx__h"><h2 class="ht-d ht-cx__t" style="--bs:${hs}">${A(s.title)}</h2><p class="ht-cx__c num">${s.pages.length === 1 ? '1 page' : `${s.pages.length} pages, ${A(s.pages[0].ref)} to ${A(s.pages[s.pages.length - 1].ref)}`}</p></div><ol class="ht-cx__p">${s.pages.map((u) => `<li><a href="${u.href}"><span class="num">${A(u.ref)}</span><span>${A(u.title)}</span></a></li>`).join('')}</ol></li>`).join('');
-  return `<section class="ht-cx" id="contents" aria-label="${A(label)}"><ol>${rows}</ol></section>`;
+  const count = (s) => (s.pages.length === 1 ? '1 page' : `${s.pages.length} pages, ${A(s.pages[0].ref)} to ${A(s.pages[s.pages.length - 1].ref)}`);
+  const rows = sections.map((s) => `<li class="ht-cx__r"><p class="ht-cx__n num">${A(s.n)}</p><div class="ht-cx__h"><h2 class="ht-d ht-cx__t" style="--bs:${hs}">${brief ? `<a href="${s.href}">${A(s.title)}</a>` : A(s.title)}</h2><p class="ht-cx__c num">${count(s)}</p></div>${brief ? '' : `<ol class="ht-cx__p">${s.pages.map((u) => `<li><a href="${u.href}"><span class="num">${A(u.ref)}</span><span>${A(u.title)}</span></a></li>`).join('')}</ol>`}</li>`).join('');
+  return `<section class="ht-cx${brief ? ' ht-cx--brief' : ''}" id="contents" aria-label="${A(label)}"><ol>${rows}</ol></section>`;
 }

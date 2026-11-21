@@ -8,10 +8,16 @@ import { A, darkF, actF, panelF, fieldStyle, fitSize, bar, tocPanel, nextField, 
 import { distinctColours } from './helpers.js';
 import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
+import { docOf, siteCtx } from './lane-ht-clean.js';
 
-const docName = (ctx) => `${ctx.brand.name} UI kit`;
 import { screenContent as SC, deliveryRows, noPrices } from './once.js';
+
+const docName = (ctx) => docOf(ctx, 'UI kit');
+// the engine writes a trailing space where a class list is empty (`ui-input `, `type="button" >`): the pages show the markup without it
+const tidy = (h) => String(h).replace(/class="([^"]*?) +"/g, 'class="$1"').replace(/"\s+>/g, '">');
 const EX = (ctx) => SC(ctx).example || {};
+// the card's one action: the brand's own secondary label, unless that is the generic "Back" (a card is not a way back)
+const cardAction = (ctx) => { const s = EX(ctx).secondary; return !s || /^back$/i.test(s) ? 'View order' : s; };
 const copyBtn = (value, name) => `<button type="button" class="ht-btn hk-copy" data-copy="${A(value)}" data-copy-name="${A(name)}"><span data-copy-text>Copy</span></button>`;
 const tok = (name) => `<span class="ht-m">${A(name)}</span>`;
 // a live item: the component, its name under it
@@ -73,7 +79,7 @@ const PAGES = {
   },
   cards: (ctx) => {
     const S = SC(ctx), u = ctx.ui, E = EX(ctx);
-    const all = [['Card', u.card({ meta: S.status, title: S.eta, text: S.pickup, action: `<div>${u.btn(E.secondary || S.call, { variant: 'secondary', size: 'sm' })}</div>` })], ['Stat', u.stat(S.paid, S.paidLabel)]];
+    const all = [['Card', u.card({ meta: S.status, title: S.eta, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })], ['Stat', u.stat(S.paid, S.paidLabel)]];
     return { lede: 'A card holds one delivery; a stat holds one number.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
   navigation: (ctx) => {
@@ -91,7 +97,7 @@ const PAGES = {
   dialog: (ctx) => { const D = SC(ctx).dialog, h = ctx.ui.dialog({ title: D.title, body: D.body, confirm: D.confirm, keep: D.keep, danger: true }); return { lede: 'A dialog asks one question and names both answers.', live: `<div class="hk-col">${item(h, 'Dialog', 'hk-i--w')}</div>`, code: [['Dialog', h]] }; },
   table: (ctx) => {
     const S = SC(ctx), u = ctx.ui, d = S.deliveries;
-    const h = `<table class="hk-tbl"><thead><tr><th scope="col">${A(S.deliverToLabel)}</th><th scope="col">${A(S.status)}</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td>${A(x.to)}<span>${A(x.when)}</span></td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
+    const h = `<table class="hk-tbl"><thead><tr><th scope="col">Item</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td>${A(x.to)}<span>${A(x.when)}</span></td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
     return { lede: 'Rows of deliveries, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="hk-empty"><h3>${A(E.title)}</h3><p>${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
@@ -113,16 +119,17 @@ const PAGES = {
 function screen(ctx, dark, mobile) {
   const S = SC(ctx), u = ctx.ui, E = EX(ctx), title = ctx.brand.ui.screen.title;
   const h = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}><header class="hk-scr__h"><p class="hk-scr__t">${A(title)}</p>${u.statusChip(S.deliveries[0].status)}</header>
-${u.card({ meta: S.status, title: S.eta, text: S.pickup, action: `<div>${u.btn(E.secondary || S.call, { variant: 'secondary', size: 'sm' })}</div>` })}
-${deliveryRows(ctx, mobile ? 3 : 4)}<div>${u.btn(S.form.book, { iconRight: 'arrow-right', block: mobile })}</div></div>`;
+<div class="hk-scr__a">${u.card({ meta: S.status, title: S.eta, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })}<div>${u.btn(S.form.book, { iconRight: 'arrow-right', block: mobile })}</div></div>
+<div class="hk-scr__b">${deliveryRows(ctx, 3)}</div></div>`;
   return { lede: mobile ? `${title}, at phone width.` : `${title}, built from the kit's components only.`, live: `<div class="hk-col">${h}</div>`, code: [] };
 }
 
 // markup is laid out by the engine; CSS lines are shown as written, a line each
-const pretty = (K, h) => (String(h).trim().startsWith('<') ? K.prettyHtml(h) : h);
+const pretty = (K, h) => (String(h).trim().startsWith('<') ? K.prettyHtml(tidy(h)) : h);
 // ---- the page: a split slide (the title on a field, the live components on the ground), then the markup ----
 const grounds = (ctx) => [panelF(ctx), actF(ctx), darkF(ctx), panelF(ctx)];
-function body(ctx, K) {
+function body(ctx0, K) {
+  const ctx = siteCtx(ctx0);
   const p = K.page, d = PAGES[p.id](ctx), sec = p.section ? p.section.n : 1, hex = grounds(ctx)[(sec - 1) % 4];
   const ts = fitSize(ctx, K.pages.filter((q) => q.section).map((q) => q.title), 0.94, 72, 32);
   const top = `<section class="hk-top"><div class="hk-title" style="${fieldStyle(ctx, hex, 'kit title field', 32)}"><div class="hk-title__in"><p class="ht-k">${A(p.section.title)} <b class="num">${A(p.ref)}</b></p><h1 class="ht-d hk-title__h" style="--bs:${ts}">${A(p.title)}</h1><p class="hk-title__l">${A(d.lede)}</p></div></div>
@@ -132,19 +139,22 @@ function body(ctx, K) {
   return top + code;
 }
 // index.html: the kit's title slide (the logo on its dark ground, a live set of components), then the contents stripes
-function cover(ctx, K) {
-  const B = ctx.brand, rev = B.logo.colourways.reversed, F = SC(ctx).form, E = EX(ctx), u = ctx.ui, dk = darkF(ctx);
-  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(E.secondary || F.book, { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(SC(ctx).deliveries[0].status)} <span class="ui-badge">${SC(ctx).deliveries.length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}`;
-  const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320, label: 'Your logo goes here' })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 72, 32)}">${A(docName(ctx))}</h1><p class="hk-title__l">${A(B.product)}</p><p class="hk-title__v">${A(ctx.versionLine)}</p></div>
+function cover(ctx0, K) {
+  const ctx = siteCtx(ctx0), B = ctx.brand, rev = B.logo.colourways.reversed, S = SC(ctx), F = S.form, u = ctx.ui, dk = darkF(ctx);
+  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(cardAction(ctx), { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(S.deliveries[0].status)} <span class="ui-badge">${S.deliveries.length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}${item(u.card({ meta: S.status, title: S.eta, text: S.pickup }), 'Card', 'hk-i--w')}`;
+  const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320 })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 72, 32)}">${A(docName(ctx))}</h1>${B.product ? `<p class="hk-title__l">${A(B.product)}</p>` : ''}<p class="hk-title__v">${A(ctx.versionLine)}</p></div>
 <div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live">${live}</div></section>`;
-  return top + contents(ctx, K);
+  // the cover names the sections, each a link into it; the contents page lists every page
+  return top + contentsGrid(ctx, K.sections.map((x) => ({ n: x.n, title: x.title, href: K.href(x.pages[0].id), pages: x.pages.map((q) => ({ ref: K.pages.find((y) => y.id === q.id).ref })) })), { brief: true });
 }
-function contents(ctx, K) {
+function contents(ctx0, K) {
+  const ctx = siteCtx(ctx0);
   return contentsGrid(ctx, K.sections.map((x) => ({ n: x.n, title: x.title, pages: x.pages.map((q) => { const r = K.pages.find((y) => y.id === q.id); return { href: K.href(q.id), ref: r.ref, title: r.title }; }) })));
 }
 
-function shell(ctx, K, inner) {
+function shell(ctx0, K, inner) {
+  const ctx = siteCtx(ctx0);
   const p = K.page, toggle = `<button class="ht-btn" type="button" data-disclosure aria-expanded="false" aria-controls="ht-toc">Contents</button>`;
   const sections = K.sections.map((s) => ({ n: s.n, title: s.title, pages: s.pages.map((q) => K.pages.find((x) => x.id === q.id)) }));
   const toc = tocPanel(ctx, { id: 'ht-toc', sections, href: K.href, current: p.id, front: 'Cover and contents' });
@@ -155,7 +165,7 @@ ${skipLink()}
 ${bar(ctx, { home: 'index.html', doc: docName(ctx), ref: p.ref, title: p.section ? p.title : 'Cover and contents', no: ctx.pageNo(p.id), toggle })}
 ${toc}
 <main id="ht-main" tabindex="-1"><article class="sx-art" data-rd-doc>
-${inner}
+${tidy(inner)}
 </article></main>
 ${nextField(ctx, { next: nx(next), prev: nx(K.prev) })}
 <footer class="ht-foot"><span>${A(docName(ctx))}</span><span>${A(ctx.versionLine)}</span></footer>

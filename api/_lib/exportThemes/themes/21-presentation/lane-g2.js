@@ -68,7 +68,7 @@ function slotFrame(ctx, id, width, ink, label = 'Your logo goes here') {
 }
 // the logo (showcase) or the slot frame (slot) at a width, in a colourway; ink is the slot frame's colour
 const logo = (ctx, id, width, { colourway, ink, label, fill } = {}) => {
-  if (ctx.edition === 'slot') return slotFrame(ctx, id, width, ink || inkOn(ctx, ctx.brand.logo.colourways[colourway || ctx.logo.colourwayOf(id)].ground), label);
+  if (ctx.edition === 'slot' && !ctx.logo.drawn) return slotFrame(ctx, id, width, ink || inkOn(ctx, ctx.brand.logo.colourways[colourway || ctx.logo.colourwayOf(id)].ground), label);
   return ctx.logo.svg(id, { colourway: colourway || ctx.logo.colourwayOf(id), width, fill });
 };
 // a colourway's parts in words, by its own keys: "White name, Signal kerb" or "Asphalt name and kerb"

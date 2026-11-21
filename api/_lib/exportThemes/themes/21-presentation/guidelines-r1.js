@@ -196,7 +196,7 @@ const sceneK = (ctx, id, artW, pageK) => { const qs = ctx.sceneInfo(id).quads; r
 // (k is the scale the art is shown at). The label is "Your logo goes here" where that fits and "Logo" alone where it does not; the ink is the ground's own.
 // min is the width the frame needs to hold a label at all, used only on the smallest objects (the slot edition's frame grows there; the logo's does not).
 const logoAt = (ctx, id, width, { k = 1, ink, colourway, min = 0, minH = 0 } = {}) => {
-  if (ctx.edition !== 'slot') return ctx.logo.html(id, { width, colourway, color: ink });
+  if (ctx.edition !== 'slot' || ctx.logo.drawn) return ctx.logo.html(id, { width, colourway, color: ink });
   const g = ctx.logo.geos[id], w = Math.max(width, Math.min(min, 3 * width)), h = Math.max((w * g.h) / g.w, minH / k), line = +(1.5 / k).toFixed(2);
   const bw = ctx.brand.fonts.body.weights.includes(500) ? 500 : ctx.brand.fonts.body.weights[0], per = (t) => textW(ctx, 'body', bw, t, 100, 0) / 100;
   const room = w - 2 * line - 8 / k, high = h - 2 * line;

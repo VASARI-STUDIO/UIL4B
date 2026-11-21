@@ -180,3 +180,32 @@ test('with a project name given, no button specimen in the kit is a placeholder 
     for (const b of buttons) assert.doesNotMatch(b, /class="[^"]*\bph-[bc]\b/, `${p}: a placeholder box inside a button: ${b.slice(0, 90)}`)
   }
 })
+
+// 10. THE PUBLISHED SITES CARRY NO EDITOR GUIDANCE: a placeholder the project has not filled is not printed. The guidance is the engine's
+//     sentinel (U+E000), so the helpers that drop it are pinned here and the built pages are checked for the boxes it would draw.
+//     Break: return the string unchanged from realOnly()/cleaned() in themes/21-presentation/lane-ht-clean.js, or drop the siteCtx() call in lane-ht.js page().
+test('the site helpers drop placeholders: a line, a list item and a group with nothing real left are not kept', async () => {
+  const { hasPh, realOnly, cleaned } = await import('../../api/_lib/exportThemes/themes/21-presentation/lane-ht-clean.js')
+  const ph = String.fromCharCode(0xe000) + '12' + String.fromCharCode(0xe001)
+  assert.equal(hasPh(`a ${ph} b`), true)
+  assert.equal(hasPh('a real line'), false)
+  assert.equal(realOnly(ph), '')
+  assert.equal(realOnly('kept'), 'kept')
+  assert.deepEqual(cleaned({ name: ph, lines: { primary: 'Keep this', second: ph }, list: ['One', ph, 'Two'], groups: [{ items: [ph] }, { items: ['Real'] }] }),
+    { name: '', lines: { primary: 'Keep this', second: '' }, list: ['One', 'Two'], groups: [{ items: [] }, { items: ['Real'] }].filter((g) => g.items.length) })
+})
+
+test('a brand with nothing written yet gets a guide and a kit with no dashed boxes, no logo frame and no editor labels', async () => {
+  for (const row of ['slides', 'ui-kit']) {
+    const res = fakeRes()
+    await serveExportDocument({ headers: { authorization: 'Bearer tok' }, body: { theme: '21-presentation', row, format: row === 'slides' ? 'html' : 'zip', design: {} } }, res, deps())
+    assert.equal(res.code, 200, row)
+    const zip = await JSZip.loadAsync(res.buffer)
+    for (const [name, f] of Object.entries(zip.files)) {
+      if (f.dir || !/^[^/]+\/[^/]+\.html$/.test(name) || /example\.html$/.test(name)) continue
+      const html = await f.async('string')
+      assert.doesNotMatch(html, /class="[^"]*\b(ph-b|ph-c|logo-slot)\b/, `${row} ${name}: a placeholder box`)
+      assert.doesNotMatch(html, /\uE000/, `${row} ${name}: an unswapped placeholder`)
+    }
+  }
+})

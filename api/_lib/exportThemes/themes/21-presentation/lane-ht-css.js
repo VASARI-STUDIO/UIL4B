@@ -16,8 +16,8 @@ export function htCss(ctx) {
 .ht a{color:inherit}
 .ht .num{font-variant-numeric:tabular-nums}
 .ht-d{font-family:var(--disp);font-weight:${dw};font-stretch:${f.display.stretch || 100}%;letter-spacing:-0.01em;line-height:1.02;text-wrap:balance}
-.ht-m{font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:0}
-.ht-k{font-size:13px;line-height:1.4;font-weight:600}
+.ht-m{font-family:var(--mono);font-size:14px;font-weight:400;letter-spacing:0}
+.ht-k{font-size:14px;line-height:1.4;font-weight:600}
 .ht :focus-visible{outline:2px solid currentColor;outline-offset:3px}
 /* the live components keep one ring, not two: the page ink at 2px, offset by a 2px gap, in place of their own 4px ring in the focus token's colour (about 1.6:1 on a light ground) */
 .ht .ui :focus-visible,.ht .ui .is-focus{outline:2px solid var(--t);outline-offset:2px;box-shadow:none}
@@ -25,14 +25,14 @@ export function htCss(ctx) {
 .ht-skip:focus,.ht-skip:focus-visible{top:8px;outline:2px solid var(--t);outline-offset:3px}
 
 /* the bar: the deck's running head, one line, the same on every page */
-.ht-bar{position:relative;z-index:3;display:flex;align-items:center;gap:24px;height:56px;padding:0 56px;background:var(--g);color:var(--q);font-size:13px;line-height:1.3;border-bottom:1px solid var(--h)}
+.ht-bar{position:relative;z-index:3;display:flex;align-items:center;gap:24px;height:56px;padding:0 56px;background:var(--g);color:var(--q);font-size:14px;line-height:1.3;border-bottom:1px solid var(--h)}
 .ht-home{font-weight:600;color:var(--t);text-decoration:none}
 .ht-run{flex:1;min-width:0;color:var(--t)}
 .ht-run b{font-weight:400;color:var(--q);margin-right:12px}
 .ht-doc{display:flex;align-items:center}
 .ht-doc b{font-weight:400;color:var(--t);margin-left:16px;padding-left:16px;border-left:1px solid var(--h)}
 .ht-mode{display:flex}
-.ht-btn,.ht-mode button{font:500 13px/1 var(--body);color:var(--t);background:transparent;border:1px solid var(--h);border-radius:0;height:36px;padding:0 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background-color 150ms ease,color 150ms ease}
+.ht-btn,.ht-mode button{font:500 14px/1 var(--body);color:var(--t);background:transparent;border:1px solid var(--h);border-radius:0;height:36px;padding:0 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background-color 150ms ease,color 150ms ease}
 .ht-mode button+button{border-left:0}
 .ht-mode button[aria-pressed="true"]{background:var(--t);color:var(--g);border-color:var(--t)}
 .ht-btn[aria-expanded="true"]{background:var(--t);color:var(--g);border-color:var(--t)}
@@ -59,7 +59,7 @@ export function htCss(ctx) {
 /* the signage art sets its poster lines at 0.96: on screen the display face's lines touch, so they open to 1 */
 .ht-slides .g5 [style*="zoom"] p.disp{line-height:1!important}
 .ht-slides>.pg{flex:none;box-shadow:none;position:relative;box-sizing:border-box;width:1280px;height:720px;overflow:hidden}
-.ht-cap{max-width:1280px;margin:16px auto 0;display:flex;justify-content:space-between;gap:16px;font-size:13px;line-height:1.4;color:var(--q)}
+.ht-cap{max-width:1280px;margin:16px auto 0;display:flex;justify-content:space-between;gap:16px;font-size:14px;line-height:1.4;color:var(--q)}
 
 /* the notes: one big line, the readable text beside it */
 .ht-notes{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:64px;padding:96px 56px 112px;max-width:1440px;margin:0 auto;container-type:inline-size}
@@ -81,7 +81,7 @@ export function htCss(ctx) {
 .ht-pair>li{display:contents}
 .ht-pair p{padding:16px 24px 16px 0;border-bottom:1px solid var(--h);font-size:16px;line-height:1.55;color:var(--s)}
 .ht-pair p:first-child{color:var(--t);font-weight:500}
-.ht-pair .ht-pair__h{font-weight:600;color:var(--t);font-size:13px;padding-top:0}
+.ht-pair .ht-pair__h{font-weight:600;color:var(--t);font-size:14px;padding-top:0}
 .ht-pair__k{display:none}
 .ht-list{counter-reset:n;border-top:1px solid var(--h)}
 .ht-list>li{display:grid;grid-template-columns:48px minmax(0,1fr);padding:16px 0;border-bottom:1px solid var(--h);font-size:16px;line-height:1.55;color:var(--s)}
@@ -130,7 +130,7 @@ export function htCss(ctx) {
 .ht-prev .ht-k{margin-right:12px}
 .ht-prev b{font-weight:400;margin-right:6px}
 @media (hover:hover){.ht-next__a:hover .ht-next__t,.ht-prev:hover{text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:8px}.ht-prev:hover{text-decoration-thickness:1px;text-underline-offset:4px}}
-.ht-foot{display:flex;justify-content:space-between;gap:24px;padding:20px 56px;font-size:13px;line-height:1.4;color:var(--q)}
+.ht-foot{display:flex;justify-content:space-between;gap:24px;padding:20px 56px;font-size:14px;line-height:1.4;color:var(--q)}
 
 /* the front: the cover slide, then the contents as the deck's stripes */
 .ht-cv{padding:72px 56px 56px;container-type:inline-size}
@@ -147,15 +147,19 @@ export function htCss(ctx) {
 .ht-cx__p a{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:baseline;min-height:44px;padding:10px 0;border-bottom:1px solid var(--h);text-decoration:none;font-size:16px;line-height:1.4}
 .ht-cx__p a .num{color:var(--q)}
 @media (hover:hover){.ht-cx__p a:hover span:last-child{text-decoration:underline;text-underline-offset:4px}}
+.ht-cx--brief .ht-cx__r{grid-template-columns:72px minmax(0,1fr);padding:24px 0 28px}
+.ht-cx--brief .ht-cx__t a{color:inherit;text-decoration:none}
+.ht-cx--brief .ht-cx__t a:hover{text-decoration:underline;text-underline-offset:6px}
+.ht-cx--brief .ht-cx__t a:focus-visible{outline:2px solid currentColor;outline-offset:4px}
 @media (min-width:841px){.ht-slides{zoom:0.56}}
 @media (min-width:1000px){.ht-slides{zoom:0.68}}
 @media (min-width:1200px){.ht-slides{zoom:0.84}}
 @media (min-width:1392px){.ht-slides{zoom:1}}
 .ht-ps{container-type:inline-size;padding:0}
-.ht-ps__hd{position:absolute;top:36px;left:56px;right:56px;display:flex;justify-content:space-between;gap:24px;font-size:13px;line-height:1.3}
+.ht-ps__hd{position:absolute;top:36px;left:56px;right:56px;display:flex;justify-content:space-between;gap:24px;font-size:14px;line-height:1.3}
 .ht-ps__hd b{font-weight:400;margin-right:12px}
 .ht-ps__t{position:absolute;left:56px;right:56px;bottom:72px;line-height:0.94}
-.ht-ps__fo{position:absolute;right:56px;bottom:36px;font-size:13px;line-height:1.3}
+.ht-ps__fo{position:absolute;right:56px;bottom:36px;font-size:14px;line-height:1.3}
 @media (min-width:841px){
 .ht-stage--tight{padding-top:40px}
 }
@@ -167,7 +171,7 @@ export function htCss(ctx) {
 .ht-ml__t b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%;color:var(--q)}
 @media (max-width:840px){
 .ht-ml{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:224px;padding:20px 20px 28px}
-.ht-ml__hd{display:flex;justify-content:space-between;gap:12px;font-size:13px;line-height:1.3;color:var(--q)}
+.ht-ml__hd{display:flex;justify-content:space-between;gap:12px;font-size:14px;line-height:1.3;color:var(--q)}
 .ht-ml__hd b{font-weight:400}
 .ht-ml__t{font-size:min(var(--bs,40px),64px)}
 .ht-bar{gap:12px;padding:0 20px}
@@ -193,7 +197,7 @@ export function htCss(ctx) {
 .ht-pair p{padding-right:0}
 .ht-pair p:first-child{border-bottom:0;padding-bottom:0}
 .ht-pair .ht-pair__h{display:none}
-.ht-pair__k{display:block;font-size:13px;line-height:1.4;font-weight:600;color:var(--t);margin-bottom:4px}
+.ht-pair__k{display:block;font-size:14px;line-height:1.4;font-weight:600;color:var(--t);margin-bottom:4px}
 .ht-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ht-field--last{grid-column:auto}
 .ht-field--odd{grid-column:1/-1}
@@ -219,6 +223,56 @@ export function htCss(ctx) {
 .ht-fields{grid-template-columns:minmax(0,1fr)}
 .ht-field--odd{grid-column:auto}
 .ht-field--last{grid-column:auto}
+}
+/* a name set where a logo would go (lane-ht-clean.js): the display face, one line, never clipped */
+.ht-wm{display:inline-flex;align-items:center;justify-content:center;max-width:100%;white-space:nowrap;line-height:1.1;font-weight:${dw};letter-spacing:-0.01em;overflow:visible}
+.ht-wm--sym{letter-spacing:0}
+.ht-empty{font-size:16px;line-height:1.5;color:var(--q)}
+.ht-notes--bare{grid-template-columns:minmax(0,1fr)}
+.ht-notes--narrow{display:none}
+.ht-tile__a{container-type:inline-size}
+.ht-field{position:relative;isolation:isolate}
+.ht-field__ph{position:absolute;left:0;right:0;bottom:0;height:38%;z-index:-1}
+/* the faces as specimens */
+.ht-specs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--h)}
+.ht-spec{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:32px;padding:32px 0;border-bottom:1px solid var(--h)}
+.ht-spec__n{margin-top:8px;font-size:17px;line-height:1.4;color:var(--t)}
+.ht-spec__h .ht-m{display:block;margin-top:8px;color:var(--s)}
+.ht-spec__s{container-type:inline-size;min-width:0}
+.ht-spec__aa{font-size:120px;line-height:1;margin:0 0 16px;overflow-wrap:anywhere}
+.ht-spec__g{font-size:clamp(16px,3.2cqw,26px);line-height:1.4;overflow-wrap:anywhere}
+.ht-spec__w{margin-top:20px;display:grid;gap:8px}
+.ht-spec__w li{display:flex;align-items:baseline;justify-content:space-between;gap:16px;font-size:22px;line-height:1.3;border-top:1px solid var(--h);padding-top:8px}
+.ht-spec__w .ht-m{color:var(--s)}
+/* the applications as mock-ups, drawn from the palette */
+.ht-mks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:40px 32px;align-items:start}
+.ht-mk{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ht-mk figcaption{font-size:14px;line-height:1.5;color:var(--s)}
+.ht-mk figcaption b{color:var(--t);font-weight:600}
+.ht-mk__card,.ht-mk__sign{container-type:inline-size;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:8cqw;width:100%;max-width:420px;box-sizing:border-box}
+.ht-mk__card{aspect-ratio:90/55}
+.ht-mk__sign{aspect-ratio:3/2;max-width:480px;padding:8% 8% 14%}
+.ht-mk__logo{display:flex}
+.ht-mk__rule{display:block;width:16%;height:3px}
+.ht-mk__p{font-size:14px;line-height:1.5}
+.ht-mk__line{font-size:clamp(24px,7cqw,40px);margin-top:16px}
+.ht-mk__bar{position:absolute;left:0;right:0;bottom:0;height:12px}
+.ht-mk__phone{width:100%;max-width:390px;border:10px solid var(--t);border-radius:28px;overflow:hidden;background:var(--g);box-sizing:border-box}
+.ht-mk__top{display:flex;align-items:center;padding:20px 20px 16px}
+.ht-mk__scr{display:flex;flex-direction:column;gap:20px;padding:24px 20px 28px}
+.ht-mk__h{font-size:32px;color:var(--t)}
+.ht-mk__panel{display:flex;flex-direction:column;gap:4px;padding:20px}
+.ht-mk__v{font-size:44px}
+.ht-mk__pr{font-size:20px;font-weight:600}
+.ht-mk__btn{display:flex;align-items:center;justify-content:center;min-height:48px;font-weight:600;font-size:16px}
+@media (max-width:840px){
+/* a slide is a picture of a PDF page: on a phone it is not drawn, and the page is its heading and its notes at reading size */
+.ht-stage{display:none}
+.ht-notes--narrow{display:grid}
+.ht-ml__hd{margin-block-end:24px}
+.ht-spec{grid-template-columns:minmax(0,1fr);gap:16px}
+.ht-spec__aa{font-size:96px}
+.ht-mks{gap:32px}
 }
 @media (prefers-reduced-motion:reduce){.ht *{transition:none!important}}`;
 }
