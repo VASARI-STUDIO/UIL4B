@@ -6,7 +6,7 @@
 
 .mkt {
   --mk-raised: var(--sp-card);
-  --mk-l2: var(--bg-3);
+  --mk-l2: var(--v3-l2);
   --mk-sec: var(--sp-dim);
   --mk-ter: var(--sp-faint);
   --mk-hair: var(--sp-line);
@@ -20,6 +20,12 @@
   color: var(--sp-ink);
   font-family: var(--hm-font, var(--font));
 }
+/* The ground and the card on the V3 roles. spectrum.css sets --sp-page and
+   --sp-card from the app's tokens for the homepage, /roadmap and /sitemap too,
+   so they are redeclared here, on the two-class root, rather than moved there.
+   Dark: #060607 and #0F1012 (the card was #111215). Light: the same #F5F5F2 and
+   #FFFFFF the sales sheet already used. */
+.spectrum.mkt { --sp-page: var(--v3-ground); --sp-card: var(--v3-raised); }
 [data-theme="light"] .mkt { --mk-edge: oklch(0 0 0 / .1); --mk-wash-2: rgba(var(--sp-ink-rgb), .06); }
 
 .mkt .mk-spacer { height: calc(var(--spnav-h, 92px) + var(--notice-h, 0px)); }
@@ -94,6 +100,14 @@
 .mkt .mk-art { flex: 1 1 auto; display: grid; min-height: 0; }
 .mkt.spt .spt-art--card { aspect-ratio: auto; height: 100%; min-height: 240px; max-height: 360px; background: var(--mk-l2); --plate: var(--mk-l2); }
 .mkt.spt .spt-art--thumb { --plate: var(--mk-l2); border-radius: 10px; outline-color: var(--mk-edge); }
+/* Semantic Colour thumb: the fourth role takes the group's hue like the circle
+   beside it (--fill), not the app's blue. */
+.mkt.spt .spt-role--accent { fill: var(--fill); }
+/* Voted is a wash of ink, never a fill (no blue; one filled pill per screen). */
+.mkt.spt .vote[type="button"][data-voted="true"] { background: var(--v3-rowhc); border-color: transparent; color: var(--v3-ink); }
+@media (hover: hover) {
+  .mkt.spt .vote[type="button"][data-voted="true"]:not([aria-disabled="true"]):hover { background: var(--v3-rowp); border-color: transparent; }
+}
 
 /* ── demos ── */
 .mkt .mk-demo { display: grid; gap: 16px; min-width: 0; align-content: start; }
@@ -212,7 +226,20 @@
 @media (max-width: 767px) {
   .mkt .mk-h1 { font-size: clamp(40px, 4.45vw + 22px, 52px); }
   .mkt .mk-card, .mkt .mk-lead-card, .mkt .mk-card-a, .mkt .mk-card-b, .mkt .mk-card-ic, .mkt .mk-card-fc, .mkt .mk-wide { grid-column: 1 / -1; }
-  .mkt .mk-pal { width: 100%; max-width: 360px; }
+  /* The phone has no hero palette: the Palette card is the first one. */
+  .mkt .mk-pal { display: none; }
+  /* The hero pill spans the column, label left and arrow right, like the close pill. */
+  .mkt .mk-intro-copy .mk-pill { display: flex; justify-content: space-between; }
+  /* A card's padding is 16px on a phone. */
+  .mkt .mk-card { padding: 16px; }
+  /* The closing band is left-aligned on a phone. The two-class rules at the top of
+     this sheet (centred, for the wide layout) outrank the band's own phone rule, so
+     the phone values are restated here. */
+  .mkt .hm-close h2 { margin: 0; max-width: 11ch; }
+  .mkt .hm-close p { margin: 18px 0 0; }
+  /* The buttons are in tab order See the plans, Use for free; stacked, the filled one
+     draws first. */
+  .mkt .hm-close-btns { flex-direction: column-reverse; }
   .mkt .mk-row { grid-template-columns: 112px minmax(0, 1fr) auto; gap: 14px; }
   .mkt .mk-lead-card .mk-ramp { min-height: 168px; }
   .mkt .mk-seeds { gap: 8px; }
@@ -223,7 +250,9 @@
   .mkt .mk-frame { width: 100%; padding: 6px; border-radius: 32px 32px 12px 12px; aspect-ratio: 402 / 724; }
   .mkt .mk-shot { aspect-ratio: auto; height: auto; border-radius: 26px 26px 6px 6px; background: var(--sp-page); }
   .mkt .mk-shot img { height: auto; object-fit: initial; }
-  .mkt .mk-fig figcaption { margin-top: 16px; }
+  /* The caption starts at the phone's left edge, as the first slide does. */
+  .mkt .mk-fig { justify-items: stretch; }
+  .mkt .mk-fig figcaption { margin-top: 16px; text-align: left; }
   .mkt .mk-fig figcaption span { display: block; font-size: 13px; color: var(--mk-ter); }
   .mkt .mk-live { display: none; }
   .mkt .mk-bar { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; }
@@ -238,10 +267,7 @@
 @media (max-width: 374px) {
   /* A narrower thumb keeps the row's text readable on a small phone. */
   .mkt .mk-row { grid-template-columns: 72px minmax(0, 1fr) auto; gap: 12px; }
-  /* Five hex labels do not fit one row at this width: one swatch per line. */
-  .mkt .mk-pal { height: auto; }
-  .mkt .mk-pal .mk-ramp { grid-template-columns: minmax(0, 1fr); }
-  .mkt .mk-pal .mk-ramp li { min-height: 28px; padding: 0 8px; place-items: center start; }
+  .mkt .mk-card { padding: 12px; }
 }
 
 /* ── reduced motion: opacity only, nothing turns or presses ── */

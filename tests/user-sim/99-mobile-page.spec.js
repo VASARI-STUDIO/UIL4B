@@ -341,6 +341,90 @@ test.describe('the phone row', () => {
   })
 })
 
+test.describe('the closing band and footer, light and dark', () => {
+  // The light page ends light: the closing band and the home-style footer take the page ground and ink,
+  // the wash is dimmed, the dark theme's screen-blend core is gone and the horizon band is halved.
+  const read = (page) => page.evaluate(() => {
+    const parse = (c) => c.match(/[\d.]+/g).map(Number)
+    const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
+    const ratio = (a, b) => { const x = lum(a); const y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+    const cs = (sel) => getComputedStyle(document.querySelector(sel))
+    const bg = parse(cs('.sp-footer--home').backgroundColor)
+    const text = ['.sp-footer-say', '.sp-footer-col-h', '.sp-footer-copy', '.sp-footer-place', '.sp-footer-col a'].map((sel) => [sel, ratio(parse(cs(sel).color), bg)])
+    const band = ['.hm-close h2', '.hm-close p'].map((sel) => [sel, ratio(parse(cs(sel).color), parse(cs('.hm-close').backgroundColor))])
+    return {
+      closeBg: cs('.hm-close').backgroundColor, footBg: cs('.sp-footer--home').backgroundColor,
+      ink: cs('.sp-footer--home').color, horizon: [cs('.sp-footer-horizon').opacity, cs('.sp-footer-horizon').height],
+      core: cs('.sp-footer-core').display, text, band,
+    }
+  })
+
+  for (const w of [1440, 390]) {
+    test(`light theme at ${w}px: the closing band and the footer are on the light ground, and their text reads`, async ({ browser }) => {
+      const { ctx, page } = await ctxAt(browser, w, { theme: 'light' })
+      await go(page, '/mobile')
+      const got = await read(page)
+      // Mutation: delete the "Light theme: /tools and /mobile" block in home-footer.css -> both grounds are still the dark rgb(6, 6, 7).
+      expect(got.closeBg).toBe('rgb(245, 245, 242)')
+      expect(got.footBg).toBe('rgb(245, 245, 242)')
+      expect(got.ink).toBe('rgb(18, 20, 24)')
+      expect(got.core, 'the screen-blend core only works on dark').toBe('none')
+      expect(got.horizon[0]).toBe('0.3')
+      expect(got.horizon[1], 'the horizon band is halved').toBe(w >= 768 ? '340px' : '190px')
+      for (const [what, r] of [...got.text, ...got.band]) expect(r, `${what} at ${w}px is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+      await ctx.close()
+    })
+
+    test(`dark theme at ${w}px: the closing band and the footer keep the dark ground`, async ({ browser }) => {
+      const { ctx, page } = await ctxAt(browser, w, { theme: 'dark' })
+      await go(page, '/mobile')
+      const got = await read(page)
+      expect(got.closeBg).toBe('rgb(6, 6, 7)')
+      expect(got.footBg).toBe('rgb(6, 6, 7)')
+      expect(got.core).toBe('block')
+      expect(Number(got.horizon[0])).toBeGreaterThanOrEqual(0.5)
+      for (const [what, r] of [...got.text, ...got.band]) expect(r, `${what} at ${w}px is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+      await ctx.close()
+    })
+  }
+
+  for (const w of [390, 320]) {
+    test(`at ${w}px the closing heading and line start at the content edge`, async ({ browser }) => {
+      const { ctx, page } = await ctxAt(browser, w)
+      await go(page, '/mobile')
+      const xs = await page.evaluate(() => ['.hm-close h2', '.hm-close p', '.hm-close-cta'].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left)))
+      // Mutation: delete `.mkt .hm-close h2 { margin: 0 }` in v3-marketing.css -> the heading is indented 14px.
+      expect(xs, 'h2, line and button share one left edge').toEqual([16, 16, 16])
+      await ctx.close()
+    })
+  }
+
+  test('at 390 the footer puts Legal under Tools in the first column, and Explore beside them', async ({ browser }) => {
+    const { ctx, page } = await ctxAt(browser, 390)
+    await go(page, '/mobile')
+    const [tools, explore, legal] = await page.locator('footer .sp-footer-col-h').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top) } }))
+    // Mutation: delete the `.mkt .sp-footer--no-page` grid placement in home-footer.css -> Legal drops out of column 1.
+    expect(legal.x, 'Legal sits in the first column').toBe(tools.x)
+    expect(legal.y, 'Legal sits under Tools').toBeGreaterThan(tools.y)
+    expect(explore.x, 'Explore is in the second column').toBeGreaterThan(tools.x)
+    expect(explore.y).toBe(tools.y)
+    await ctx.close()
+  })
+
+  test('at 390 the first phone and its caption start at the content edge', async ({ browser }) => {
+    const { ctx, page } = await ctxAt(browser, 390, { reducedMotion: 'reduce' })
+    await go(page, '/mobile')
+    const xs = await page.evaluate(() => {
+      const fig = document.querySelector('.mk-phones .mk-fig')
+      return [fig, fig.querySelector('.mk-frame'), fig.querySelector('figcaption')].map((e) => Math.round(e.getBoundingClientRect().left))
+    })
+    // Mutation: delete `.mkt .mk-fig { justify-items: stretch }` in v3-marketing.css -> the caption centres inside the figure (x=56).
+    expect(xs[0]).toBe(16)
+    expect(xs[2], 'the caption starts where the phone does').toBe(16)
+    await ctx.close()
+  })
+})
+
 test.describe('reduced motion', () => {
   test('the menu does not animate and leaves at once', async ({ browser }) => {
     const { ctx, page } = await ctxAt(browser, 390, { reducedMotion: 'reduce' })

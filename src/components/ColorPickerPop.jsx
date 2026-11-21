@@ -1,10 +1,11 @@
 import MenuSelect from './tool/MenuSelect'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import usePopover, { topObstruction } from '../hooks/usePopover'
+import usePopover, { popoverGridTarget, topObstruction } from '../hooks/usePopover'
+import { useClipboard } from '../hooks/useClipboard'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { getLenis } from '../hooks/useSmoothScroll'
-import { COLOR_FORMATS, formatColor, normalizeHex, parseColor } from '../utils/colorFormats'
+import { COLOR_FORMATS, formatColor, normalizeHex, parseColor, readNotation, writeNotation } from '../utils/colorFormats'
 import { buildPickerPresets } from '../utils/pickerPresets'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
 import { useProject } from '../contexts/ProjectContext'
@@ -40,13 +41,24 @@ import { lockScroll } from '../utils/scrollLock'
 //
 // The SV field, hue slider and preset swatches already existed. Added since:
 //
-//   FORMAT DROPDOWN — hex / rgb / hsl. A LENS, not a second value: the
+//   FORMAT DROPDOWN — hex / rgb / hsl / oklch. A LENS, not a second value: the
 //   component still emits `#rrggbb` whatever is on screen. Widening the emit
 //   contract is a much larger change than a display preference earns, and every
 //   consumer would have to be taught to read it. Squarespace, Hex and Zoho all
 //   place the notation control immediately beside the value field, which is
 //   where ours already was — that reference changed nothing, and saying so is
-//   the point of looking.
+//   the point of looking. The choice is remembered on this browser and shared by
+//   every picker (utils/colorFormats.js), because it is how someone reads colour,
+//   not a setting of one tool.
+//
+//   COPY — the value as shown, in the notation on screen, from a button under the
+//   field. The notation, eyedropper and Copy sit in one tools row that shrinks
+//   and never wraps, so a phone sheet keeps its single-line toolbar.
+//
+//   GRIDS — each swatch grid is ONE Tab stop with the arrow keys moving inside
+//   it, so a keyboard user does not tab through thirty swatches to leave. Arrows
+//   move focus only: selection writes to the shared Recent list, and browsing
+//   must not.
 //
 //   SAVED SWATCHES — the last twelve colours committed from ANY picker in the
 //   app, shared across surfaces (utils/recentColors.js). A colour you just
@@ -135,15 +147,28 @@ function hsvToHex({ h, s, v }) {
 // a finished choice. Tab and Escape raise keyup on these elements too, and
 // recording on those would put a colour nobody picked at the head of the shared
 // list — including on a panel that was opened and abandoned.
-const PAD_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'])
+const PAD_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'])
 const HUE_KEYS = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
 ])
 
 // The shortest a phone sheet is made to keep its trigger in view: the header,
-// the pad, the hue strip and the hex row still fit (about 313px), and the rest
-// scrolls under the pinned header.
-const SHEET_MIN_H = 320
+// the pad, the hue strip, the hex row and the tools row still fit (about 361px),
+// and the rest scrolls under the pinned header.
+const SHEET_MIN_H = 368
+
+// How long the Copy button says "Copied" before it says "Copy" again.
+const COPIED_MS = 1500
+
+// The picker confirms a copy on its own button, not through the app toast: the
+// toast can sit under the phone sheet and its scrim.
+const NOOP = () => {}
+
+// "Press Ctrl+C" is wrong on an Apple keyboard. Read only when the hint shows.
+const copyKeyName = () => (
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgentData?.platform ?? navigator.platform ?? '')
+    ? '⌘C' : 'Ctrl+C'
+)
 
 // On a phone the portalled panel is a bottom sheet (global.css, the same width
 // the notation sheet switches at) rather than a popover hung off its trigger.
@@ -178,7 +203,7 @@ export default function ColorPickerPop({
   portal = false,
 }) {
   const [open, setOpen] = useState(false)
-  const [format, setFormat] = useState('hex')
+  const [format, setFormat] = useState(readNotation)
   const [recents, setRecents] = useState(getRecentColors)
   // The working design's palette and semantic colours, offered as presets. The
   // picker can sit outside a project provider, where there is nothing to offer.
@@ -205,7 +230,26 @@ export default function ColorPickerPop({
   // back to the last good colour; this keeps the reason on screen until the next
   // value that does parse.
   const [hexError, setHexError] = useState(false)
+  // Counts refusals, so a second refusal in a row is still announced: the hint
+  // text is the same both times and a live region stays silent for a repeat.
+  const [refusals, setRefusals] = useState(0)
+  // Copy: the label state, what a screen reader is told, and the fallback hint
+  // when the clipboard refused. `copySeq` lets a write that finishes after the
+  // panel closed be ignored, and `badPress` remembers that the press began on text
+  // that would not parse (the field blurs, and refuses it, before the click).
+  const [copied, setCopied] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
+  const [copyFailed, setCopyFailed] = useState(false)
+  const copyTimer = useRef(0)
+  const copySeq = useRef(0)
+  const badPress = useRef(false)
+  const copyText = useClipboard(NOOP)
+  const coarse = useMediaQuery('(pointer: coarse)')
+  // Which swatch holds the grid's one Tab stop, per grid, by colour rather than
+  // position so it survives the list reordering. Cleared each time the panel opens.
+  const [roving, setRoving] = useState({})
   const padRef = useRef(null)
+  const fieldRef = useRef(null)
   const draggingRef = useRef(false)
 
   // onClose is the "that pick is finished" boundary, and it is the popover's
@@ -213,7 +257,17 @@ export default function ColorPickerPop({
   // `input`). ColorStudio's "+ Add" card needs exactly that signal to know one
   // pick has ended and the next should append a new swatch rather than keep
   // rewriting the last one.
-  const close = useCallback(() => { setOpen(false); setHexError(false); onClose?.() }, [onClose])
+  // Copy is over when the panel goes: stop the timer, drop a write still in
+  // flight, and start the next open on "Copy".
+  const resetCopy = useCallback(() => {
+    copySeq.current += 1
+    window.clearTimeout(copyTimer.current)
+    setCopied(false)
+    setCopyStatus('')
+    setCopyFailed(false)
+  }, [])
+  useEffect(() => () => { copySeq.current += 1; window.clearTimeout(copyTimer.current) }, [])
+  const close = useCallback(() => { setOpen(false); setHexError(false); resetCopy(); onClose?.() }, [onClose, resetCopy])
   // Land on the saturation/value pad, not the panel: this popover's whole
   // purpose is that one control, and anything else costs a keyboard user a tab
   // every single time they open it.
@@ -225,7 +279,7 @@ export default function ColorPickerPop({
   const sheet = portal && phone
   const scrimRef = useRef(null)
   const { triggerRef, popRef } = usePopover(open, close, {
-    initialFocus: '.cpk-pad', portalled: portal, closeWhenAnchorLeaves: portal && !sheet,
+    initialFocus: '.cpk-pad', portalled: portal, closeWhenAnchorLeaves: portal && !sheet, rovingTab: true, openAtTop: true,
   })
 
   useLayoutEffect(() => {
@@ -384,9 +438,18 @@ export default function ColorPickerPop({
   // colour out of devtools should not have to change a setting first. An
   // unreadable value snaps back rather than clearing, so a typo never destroys
   // the colour that was already chosen.
+  const refuse = () => {
+    setHexText(formatColor(liveHex, format))
+    setHexError(true)
+    setRefusals(n => n + 1)
+  }
   const applyTypedColor = () => {
+    // Untouched text is not a new choice. OKLCH and HSL text is rounded, so
+    // re-reading it would nudge the colour and add a near-copy to Recent every
+    // time someone tabbed through the field.
+    if (hexText === formatColor(liveHex, format)) return
     const parsed = parseColor(hexText)
-    if (!parsed) { setHexText(formatColor(liveHex, format)); setHexError(true); return }
+    if (!parsed) { refuse(); setCopyFailed(false); return }
     // `parsed.alpha` is deliberately discarded. Pasting `#ff000080` or
     // `rgb(255 0 0 / .5)` sets the COLOUR and drops the transparency, because
     // nothing downstream can store one — see the note at the top. Silently
@@ -394,47 +457,112 @@ export default function ColorPickerPop({
     selectColor(parsed.hex)
   }
 
-  const swatchGrid = (list, labelledBy) => (
-    <div className="cpk-swatches" role="listbox" aria-labelledby={labelledBy}>
-      {list.map((sw) => (
-        <button
-          key={sw}
-          type="button"
-          role="option"
-          aria-selected={sw === liveHex}
-          className={`cpk-swatch${sw === liveHex ? ' is-active' : ''}`}
-          style={{ background: sw }}
-          aria-label={sw}
-          title={sw}
-          onClick={() => selectColor(sw)}
-        />
-      ))}
-    </div>
-  )
+  // Copies the value on screen. Text edited but not yet committed is committed
+  // first, the way Enter would; text that will not parse copies nothing and gets
+  // the same refusal as Enter. Never recorded in Recent: copying is not choosing.
+  const copyValue = async () => {
+    if (badPress.current) { badPress.current = false; return }
+    let hex = liveHex
+    if (hexText !== formatColor(liveHex, format)) {
+      const parsed = parseColor(hexText)
+      if (!parsed) { refuse(); return }
+      hex = parsed.hex
+      selectColor(hex)
+    }
+    const text = formatColor(hex, format)
+    const seq = ++copySeq.current
+    const ok = await copyText(text)
+    if (seq !== copySeq.current) return
+    window.clearTimeout(copyTimer.current)
+    if (ok) {
+      setCopyFailed(false)
+      setHexError(false)
+      setCopied(true)
+      setCopyStatus(`Copied ${text}`)
+      copyTimer.current = window.setTimeout(() => { setCopied(false); setCopyStatus('') }, COPIED_MS)
+    } else {
+      // The clipboard refused (a blocked permission, an insecure page). Hand the
+      // job to the person: the value is selected, one keystroke from copied.
+      setCopyFailed(true)
+      fieldRef.current?.focus()
+      fieldRef.current?.select()
+    }
+  }
+
+  // One Tab stop per grid: the swatch last focused this open, else the selected
+  // one, else the first. `key` names the grid; `items` are its colours in order.
+  const stopAt = (key, items) => {
+    const picked = items.indexOf(roving[key])
+    if (picked >= 0) return picked
+    const selected = items.indexOf(liveHex)
+    return selected >= 0 ? selected : 0
+  }
+
+  // Arrows, Home and End move focus inside a grid and never select. The column
+  // count is read now, not assumed: five in the popover, auto-fill in the sheet.
+  const gridKeyDown = (e) => {
+    const grid = e.currentTarget
+    const buttons = Array.from(grid.querySelectorAll('button'))
+    const at = buttons.indexOf(document.activeElement)
+    if (at < 0) return
+    const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length
+    const next = popoverGridTarget(e.key, at, buttons.length, cols)
+    if (next < 0) return
+    e.preventDefault()
+    buttons[next].focus()
+  }
+
+  const swatchGrid = (list, gridKey, labelledBy) => {
+    const stop = stopAt(gridKey, list)
+    return (
+      <div className="cpk-swatches" role="listbox" aria-labelledby={labelledBy} data-roving="" onKeyDown={gridKeyDown}>
+        {list.map((sw, i) => (
+          <button
+            key={sw}
+            type="button"
+            role="option"
+            aria-selected={sw === liveHex}
+            className={`cpk-swatch${sw === liveHex ? ' is-active' : ''}`}
+            style={{ background: sw }}
+            aria-label={sw}
+            title={sw}
+            tabIndex={i === stop ? 0 : -1}
+            onFocus={() => setRoving((r) => (r[gridKey] === sw ? r : { ...r, [gridKey]: sw }))}
+            onClick={() => selectColor(sw)}
+          />
+        ))}
+      </div>
+    )
+  }
 
   // The project's own colours. Plain "use this colour" buttons that report their
   // state with aria-pressed, each named for where the colour came from, rather
   // than options of the listbox above.
-  const presetGroup = (group) => (
-    <div className="cpk-section" key={group.id}>
-      <p className="cpk-section-label" id={`${ids}-${group.id}`}>{group.label}</p>
-      <div className="cpk-presets" role="group" aria-labelledby={`${ids}-${group.id}`}>
-        {group.items.map((item) => (
-          <button
-            key={item.hex}
-            type="button"
-            className="cpk-preset"
-            aria-pressed={item.hex === liveHex}
-            aria-label={item.label}
-            title={item.label}
-            onClick={() => selectColor(item.hex)}
-          >
-            <span className="cpk-preset-chip" style={{ background: item.hex }} aria-hidden="true" />
-          </button>
-        ))}
+  const presetGroup = (group) => {
+    const stop = stopAt(group.id, group.items.map((item) => item.hex))
+    return (
+      <div className="cpk-section" key={group.id}>
+        <p className="cpk-section-label" id={`${ids}-${group.id}`}>{group.label}</p>
+        <div className="cpk-presets" role="group" aria-labelledby={`${ids}-${group.id}`} data-roving="" onKeyDown={gridKeyDown}>
+          {group.items.map((item, i) => (
+            <button
+              key={item.hex}
+              type="button"
+              className="cpk-preset"
+              aria-pressed={item.hex === liveHex}
+              aria-label={item.label}
+              title={item.label}
+              tabIndex={i === stop ? 0 : -1}
+              onFocus={() => setRoving((r) => (r[group.id] === item.hex ? r : { ...r, [group.id]: item.hex }))}
+              onClick={() => selectColor(item.hex)}
+            >
+              <span className="cpk-preset-chip" style={{ background: item.hex }} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="cpk-wrap">
@@ -451,6 +579,15 @@ export default function ColorPickerPop({
           // Stay a real (not natively disabled) button when locked so a click
           // still reaches onDisabledClick — the Pro gate wants to raise its modal.
           if (disabled) { onDisabledClick?.(); return }
+          setRoving({})
+          resetCopy()
+          if (!open) {
+            // The notation is shared between pickers, so read it on every open:
+            // another picker on the page may have changed it since this mounted.
+            const notation = readNotation()
+            setFormat(notation)
+            setHexText(formatColor(current, notation))
+          }
           setOpen((o) => !o)
         }}
       >
@@ -527,9 +664,13 @@ export default function ColorPickerPop({
                 else if (e.key === 'ArrowLeft') { e.preventDefault(); commit({ ...hsv, s: Math.max(0, hsv.s - step) }) }
                 else if (e.key === 'ArrowUp') { e.preventDefault(); commit({ ...hsv, v: Math.min(1, hsv.v + step) }) }
                 else if (e.key === 'ArrowDown') { e.preventDefault(); commit({ ...hsv, v: Math.max(0, hsv.v - step) }) }
+                else if (e.key === 'Home') { e.preventDefault(); commit({ ...hsv, s: 0 }) }
+                else if (e.key === 'End') { e.preventDefault(); commit({ ...hsv, s: 1 }) }
+                else if (e.key === 'PageUp') { e.preventDefault(); commit({ ...hsv, v: Math.min(1, hsv.v + 0.1) }) }
+                else if (e.key === 'PageDown') { e.preventDefault(); commit({ ...hsv, v: Math.max(0, hsv.v - 0.1) }) }
               }}
               // The keyboard's settle boundary, matching onPointerUp above.
-              // Guarded to the four keys that actually move the pad so Tab and
+              // Guarded to the keys that actually move the pad so Tab and
               // Escape — which also raise keyup here — do not record a colour
               // nobody chose.
               onKeyUp={(e) => {
@@ -566,6 +707,51 @@ export default function ColorPickerPop({
 
           <div className="cpk-value">
           <div className="cpk-row">
+            <input
+              className="cpk-hex"
+              type="text"
+              ref={fieldRef}
+              value={hexText}
+              spellCheck={false}
+              aria-invalid={hexError}
+              aria-describedby={hexError || copyFailed ? `${ids}-hexhint` : undefined}
+              /* Not "Hex colour" any more: the field takes rgb() and hsl() too,
+                 and a label that names one notation tells a screen-reader user
+                 the other two will be rejected. */
+              aria-label="Colour value"
+              onChange={(e) => {
+                setHexText(e.target.value)
+                setCopyFailed(false)
+                if (hexError && parseColor(e.target.value)) setHexError(false)
+              }}
+              onBlur={() => { setCopyFailed(false); applyTypedColor() }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyTypedColor() } }}
+            />
+          </div>
+          {/* The tools row: notation and eyedropper on the left, Copy on the right.
+              It shrinks and never wraps; Copy keeps its width (both labels share
+              one grid cell) so the row does not move when it says "Copied". */}
+          <div className="cpk-tools">
+            <MenuSelect
+              className="cpk-format"
+              value={format}
+              aria-label="Colour notation"
+              onChange={nextValue => {
+                const next = nextValue
+                setFormat(next)
+                writeNotation(next)
+                // Rewrite what is on screen immediately. Waiting for the next
+                // commit would leave the field showing hex under a dropdown
+                // that says rgb. That rewrite also drops any refused text, so
+                // the hint about it goes too.
+                setHexText(formatColor(liveHex, next))
+                setHexError(false)
+              }}
+            >
+              {COLOR_FORMATS.map((f) => (
+                <option key={f} value={f}>{f.toUpperCase()}</option>
+              ))}
+            </MenuSelect>
             {canSampleScreen && (
               <button
                 type="button"
@@ -582,46 +768,31 @@ export default function ColorPickerPop({
                 </svg>
               </button>
             )}
-            <input
-              className="cpk-hex"
-              type="text"
-              value={hexText}
-              spellCheck={false}
-              aria-invalid={hexError}
-              aria-describedby={hexError ? `${ids}-hexhint` : undefined}
-              /* Not "Hex colour" any more: the field takes rgb() and hsl() too,
-                 and a label that names one notation tells a screen-reader user
-                 the other two will be rejected. */
-              aria-label="Colour value"
-              onChange={(e) => {
-                setHexText(e.target.value)
-                if (hexError && parseColor(e.target.value)) setHexError(false)
-              }}
-              onBlur={applyTypedColor}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyTypedColor() } }}
-            />
-            <MenuSelect
-              className="cpk-format"
-              value={format}
-              aria-label="Colour notation"
-              onChange={nextValue => {
-                const next = nextValue
-                setFormat(next)
-                // Rewrite what is on screen immediately. Waiting for the next
-                // commit would leave the field showing hex under a dropdown
-                // that says rgb.
-                setHexText(formatColor(liveHex, next))
-              }}
+            {/* The visible word is the accessible name; the idle and done labels
+                share a cell and the unused one is hidden from both sight and the
+                accessibility tree. */}
+            {/* A mouse dragged off before release never clicks, so its press is
+                forgotten. A touch fires pointerleave straight after pointerup,
+                before the click, so only the mouse resets there. */}
+            <button
+              type="button"
+              className="cpk-copy"
+              onPointerDown={() => { badPress.current = hexText !== formatColor(liveHex, format) && !parseColor(hexText) }}
+              onPointerLeave={(e) => { if (e.pointerType === 'mouse') badPress.current = false }}
+              onPointerCancel={() => { badPress.current = false }}
+              onClick={copyValue}
             >
-              {COLOR_FORMATS.map((f) => (
-                <option key={f} value={f}>{f.toUpperCase()}</option>
-              ))}
-            </MenuSelect>
+              <span className="cpk-copy-label" data-state="idle" aria-hidden={copied ? 'true' : undefined}>Copy</span>
+              <span className="cpk-copy-label" data-state="done" aria-hidden={copied ? undefined : 'true'}>Copied</span>
+            </button>
           </div>
-          {/* Empty until a typed value is refused, so it takes no room. The field
-              has already gone back to the last good colour. */}
+          <p id={`${ids}-status`} className="cpk-status sr-only" role="status">{copyStatus}</p>
+          {/* Empty until a typed value is refused or a copy fails, so it takes no
+              room. After a refusal the field has already gone back to the last good
+              colour. */}
           <p id={`${ids}-hexhint`} className="cpk-hint" aria-live="polite">
-            {hexError && 'Use a hex like #1A2B3C'}
+            {hexError && <span key={refusals}>Couldn&rsquo;t read that. Try <span className="cpk-hint-value">#1A2B3C</span>, rgb(), hsl() or oklch().</span>}
+            {!hexError && copyFailed && (coarse ? 'Select the value to copy it' : `Press ${copyKeyName()} to copy`)}
           </p>
           </div>
 
@@ -630,22 +801,24 @@ export default function ColorPickerPop({
               "My library", "Used Colors"); an unheaded second grid is
               indistinguishable from the first, to the eye and to a screen
               reader alike. */}
+          {/* The project's own colours lead: they are the ones this design already
+              uses. Recent follows, then the caller's own list. */}
+          {projectGroups.map(presetGroup)}
+
           {recents.length > 0 && (
             /* `.cpk-recents` is load-bearing, not decorative: it is how
                35-colour-picker.spec.js tells the shared list apart from the
                presets, including across two different tools. */
             <div className="cpk-section cpk-recents">
               <p className="cpk-section-label" id={`${ids}-recent`}>Recent</p>
-              {swatchGrid(recents, `${ids}-recent`)}
+              {swatchGrid(recents, 'recent', `${ids}-recent`)}
             </div>
           )}
-
-          {projectGroups.map(presetGroup)}
 
           {swatches.length > 0 && (
             <div className="cpk-section">
               <p className="cpk-section-label" id={`${ids}-presets`}>{swatchesLabel}</p>
-              {swatchGrid(swatches, `${ids}-presets`)}
+              {swatchGrid(swatches, 'presets', `${ids}-presets`)}
             </div>
           )}
         </div>
