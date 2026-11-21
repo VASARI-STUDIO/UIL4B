@@ -25,7 +25,7 @@ export function paletteHaystack(palette, mood = classifyPalette(palette.colors))
   const moods = Object.keys(mood).filter((id) => mood[id]).map((id) => MOOD_LABELS[id])
   return [
     palette.name,
-    palette.kind === 'brand' ? 'brand system' : 'curated',
+    palette.kind === 'brand' ? 'brand system' : palette.kind === 'community' ? 'community' : 'curated',
     ...palette.colors,
     ...moods,
     ...hueTerms(palette.colors),

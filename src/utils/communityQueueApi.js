@@ -11,6 +11,7 @@ import {
 import { db } from './firebase'
 import { notifyCommunityPost } from './communityNotify'
 import { QUEUE_COLLECTION, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS } from './communityQueue'
+import { filterApproved } from './approvedSubmissions'
 import { COMMUNITY_LIMITS_ENABLED, UNSTAMPED_SCAN, mergeUnstamped, planCounter, queueOrderField } from './communityLimits'
 
 /**
@@ -103,6 +104,32 @@ export async function listMySubmissions(uid, kind = null, max = 100) {
   if (kind) parts.push(where('kind', '==', kind))
   const snap = await getDocs(query(...parts, orderBy('createdAt', 'desc'), limit(max)))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+/** How many of the newest approved documents one read looks at; `kind` is filtered from these. */
+export const APPROVED_WINDOW = 200
+
+/**
+ * Approved submissions, newest first, for the galleries. Reads by status and
+ * createdAt (the existing index) and filters `kind` here, so no new index is
+ * needed. firestore.rules lets only a signed-in visitor read an approved
+ * document, so call this signed in; a refusal reads as an empty list rather
+ * than an error. Anything else (offline, say) still throws, for the caller to
+ * decide. Plain objects: `{ id, ...document }`.
+ */
+export async function listApproved({ kind = null, max = 60 } = {}) {
+  try {
+    const snap = await getDocs(query(
+      collection(db, QUEUE_COLLECTION),
+      where('status', '==', 'approved'),
+      orderBy('createdAt', 'desc'),
+      limit(APPROVED_WINDOW),
+    ))
+    return filterApproved(snap.docs.map(d => ({ id: d.id, ...d.data() })), { kind, max })
+  } catch (err) {
+    if (err?.code === 'permission-denied') return []
+    throw err
+  }
 }
 
 /** Everything awaiting review — the admin queue. */

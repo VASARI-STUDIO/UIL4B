@@ -21,6 +21,8 @@ import useResultsScroll from '../hooks/useResultsScroll'
 import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import useApprovedSubmissions from '../hooks/useApprovedSubmissions'
+import { communityGradientRows, newCommunityRows, withCommunityOpen } from '../utils/approvedSubmissions'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import { splitLockedLibrary, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
@@ -86,6 +88,11 @@ export default function GradientGallery({ toast }) {
   const ready = pro.status === 'ready'
   const proPending = pro.active && !ready
   const rows = pro.items ?? LIBRARY_GRADIENT_ROWS
+  // Gradients the community made and a reviewer approved: read for a signed-in
+  // viewer only (the rules allow nothing else), added after the library's own
+  // rows and always open. An id the library already has is not added twice.
+  const approved = useApprovedSubmissions('gradient')
+  const communityRows = useMemo(() => newCommunityRows(rows, communityGradientRows(approved)), [rows, approved])
   // Anonymous → free account → Pro, exactly as on the Palette Library. Both
   // inputs must be an exact `true` to climb a rung: an entitlement or an auth
   // state still resolving shows the tier below, never the one above.
@@ -131,7 +138,9 @@ export default function GradientGallery({ toast }) {
       .then((server) => {
         if (cancelled) return
         const items = server
-          .filter(s => s.status !== 'withdrawn')
+          // An approved gradient has joined the library above, so it leaves this
+          // waiting list; pending and rejected ones stay, with Withdraw / Remove.
+          .filter(s => s.status !== 'withdrawn' && s.status !== 'approved')
           .map((s) => {
             // The server's copy gets the same clean-up a local entry did: a
             // document that doesn't describe a gradient is skipped, not drawn.
@@ -190,13 +199,15 @@ export default function GradientGallery({ toast }) {
     // split as a brand palette, and the opposite of a community prompt, whose
     // title IS the thing being sold. `slots` is the stop count: how many values
     // the row holds, never the values (src/utils/libraryRules.js).
-    splitLockedLibrary(rows, {
+    // The community rows join what the viewer may open AFTER the cap: it counts
+    // the library, and approved community work is never withheld by it.
+    withCommunityOpen(splitLockedLibrary(rows, {
       unlocked: ready,
       isOpen: LIBRARY_RULES.gradients.isOpen,
       preview: LIBRARY_RULES.gradients.preview,
       limit: galleryLimit(tier),
-    })
-  ), [rows, ready, tier])
+    }), communityRows)
+  ), [rows, ready, tier, communityRows])
   const { open: browsable, remaining: lockedCount, eligible } = split
 
   // COUNTED OVER THE WHOLE LIBRARY (utils/galleryCounts.js), not over `browsable`
@@ -236,7 +247,7 @@ export default function GradientGallery({ toast }) {
   const anonymous = tier === 'anonymous'
   const gate = gateFor({ tier, counts, pending: proPending })
   // Where the viewer stands on the ladder, in words, for the wall and the close.
-  const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'gradients' })
+  const ladderLine = tierSentence({ tier, shown: browsable.length - communityRows.length, total: rows.length, eligible, noun: 'gradients' })
   // What a free account opens in all; the gate names it, not the count on screen.
   const opens = freeOpens({ eligible })
   // What a filter leaves, as a noun, for the count line and the gate.

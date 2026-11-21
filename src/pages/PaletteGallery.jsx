@@ -17,13 +17,15 @@ import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
 import { paletteHaystack } from '../utils/paletteSearch'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { useProLibrary } from '../hooks/useProLibrary'
+import useApprovedSubmissions from '../hooks/useApprovedSubmissions'
+import { communityPaletteRows, newCommunityRows, withCommunityOpen } from '../utils/approvedSubmissions'
 import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
 import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { countGallery, gateFor, palettePublicMatch } from '../utils/galleryCounts'
 import { filterNoun } from '../utils/galleryFilterNoun'
 import useResultsScroll from '../hooks/useResultsScroll'
-import { paletteMeta } from '../utils/galleryMeta'
+import { communityBy, paletteMeta } from '../utils/galleryMeta'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -138,6 +140,13 @@ const SECTIONS = [
     blurb: 'Published identity colours from interfaces you already know.',
     match: (palette) => palette.kind === 'brand',
   },
+  // Only present when a signed-in viewer has approved community palettes to show.
+  {
+    id: 'community',
+    label: 'Community',
+    blurb: 'Made by people here, approved by a reviewer.',
+    match: (palette) => palette.kind === 'community',
+  },
 ]
 
 // Moods are a pure function of the hexes, classified once per set of rows the
@@ -154,10 +163,12 @@ const SECTIONS = [
 // hexes alone. No `mood:` field exists on a palette and none should — a tag is
 // written once and keeps its answer after an edit changes the colours under it.
 // The tile's meta line: the palette's first mood in MOOD_IDS order, then its
-// size ("Warm · 5 colours"); a brand system says so instead of a mood. Every mood
+// size ("Warm · 5 colours"); a brand system says so instead of a mood, and a
+// community palette names its maker ("By Freya Free · 4 colours"). Every mood
 // comes from the classifier, so the word is measured, not tagged.
 const cardMetaFor = (moodsById) => (palette) => {
   if (palette.kind === 'brand') return paletteMeta(palette.colors.length, 'Brand system')
+  if (palette.kind === 'community') return paletteMeta(palette.colors.length, communityBy(palette))
   const moods = moodsById.get(palette.id) || {}
   const first = MOOD_IDS.find((id) => moods[id])
   return paletteMeta(palette.colors.length, first ? MOOD_LABELS[first] : null)
@@ -178,6 +189,15 @@ export default function PaletteGallery({ toast }) {
   const pro = useProLibrary('palettes')
   const ready = pro.status === 'ready'
   const rows = pro.items ?? LIBRARY_PALETTE_ROWS
+  // Palettes the community made and a reviewer approved: read for a signed-in
+  // viewer only (the rules allow nothing else), added after the library's own
+  // rows and always open. An id the library already has is not added twice.
+  const approved = useApprovedSubmissions('palette')
+  const communityRows = useMemo(() => newCommunityRows(rows, communityPaletteRows(approved)), [rows, approved])
+  const groupOptions = useMemo(
+    () => (communityRows.length ? [...GROUP_FILTERS, { id: 'community', label: 'Community' }] : GROUP_FILTERS),
+    [communityRows.length],
+  )
   // Three rungs: anonymous → free account → Pro (utils/lockedPreview.js). Both
   // inputs must be an exact `true` to climb, so an entitlement or an auth state
   // that is still resolving shows the tier BELOW rather than the one above.
@@ -198,13 +218,15 @@ export default function PaletteGallery({ toast }) {
   // counts down THAT list, never the filtered one — the distinction is the whole of
   // the prompt-library defect this module was written after.
   const split = useMemo(() => (
-    splitLockedLibrary(rows, {
+    // The community rows join what the viewer may open AFTER the cap: it counts
+    // the library, and approved community work is never withheld by it.
+    withCommunityOpen(splitLockedLibrary(rows, {
       unlocked: ready,
       isOpen: LIBRARY_RULES.palettes.isOpen,
       preview: LIBRARY_RULES.palettes.preview,
       limit: galleryLimit(tier),
-    })
-  ), [rows, ready, tier])
+    }), communityRows)
+  ), [rows, ready, tier, communityRows])
   const { open: browsable, remaining: lockedCount, eligible } = split
 
   // Over the rows this viewer was handed, so a free viewer classifies ten and a
@@ -288,7 +310,8 @@ export default function PaletteGallery({ toast }) {
   // Only the collection filter names the heading; moods span collections.
   const heading = group === 'brand' ? 'Brand palettes'
     : group === 'curated' ? 'Curated collection'
-      : 'Colours worth building with'
+      : group === 'community' ? 'Community palettes'
+        : 'Colours worth building with'
 
   // The gate (components/library/LibraryGate) shows whenever the viewer is withheld
   // a match, under a collection, a mood or a search too: a narrower question that
@@ -299,7 +322,7 @@ export default function PaletteGallery({ toast }) {
   const proFailed = pro.status === 'error' || pro.status === 'refused'
   const gate = gateFor({ tier, counts, pending: proPending })
   // Where the viewer stands on the ladder, in words, for the close.
-  const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'palettes' })
+  const ladderLine = tierSentence({ tier, shown: browsable.length - communityRows.length, total: rows.length, eligible, noun: 'palettes' })
   // What a free account opens in all; the gate names it, not the count on screen.
   const opens = freeOpens({ eligible })
   // What a filter leaves, as a noun, for the count line and the gate.
@@ -354,7 +377,7 @@ export default function PaletteGallery({ toast }) {
           triggerLabel="Collection"
           value={group}
           onChange={setGroup}
-          options={GROUP_FILTERS}
+          options={groupOptions}
         />
         {/* A MENU, at every width, and that is measured rather than assumed —
             see the `alwaysCollapsed` note in LibraryFilterGroup. Nine options
