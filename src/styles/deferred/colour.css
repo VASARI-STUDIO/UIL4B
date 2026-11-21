@@ -164,8 +164,8 @@ input.cs-hue-slider::-webkit-slider-runnable-track{height:12px;border-radius:var
 input.cs-hue-slider::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
 input.cs-hue-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin-top:-3px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
 input.cs-hue-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
-input.cs-hue-slider:focus-visible::-webkit-slider-runnable-track{box-shadow:0 0 0 3px var(--accent-bg)}
-input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--accent-bg)}
+input.cs-hue-slider:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 2px var(--focus-halo),0 0 0 4px var(--focus-ink)}
+input.cs-hue-slider:focus-visible::-moz-range-thumb{box-shadow:0 0 0 2px var(--focus-halo),0 0 0 4px var(--focus-ink)}
 .stc-hue-row .cs-hue-slider{flex:1;width:auto}
 
 /* ─── Tint swatches ─── */

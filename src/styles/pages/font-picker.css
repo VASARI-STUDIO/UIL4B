@@ -183,10 +183,6 @@
   padding: 0 13px;
 }
 
-.fbd-overlay .lbry-search:focus-within {
-  border-color: var(--accent);
-}
-
 .fbd-overlay .lbry-search input { font-size: 14px; }
 
 /* ── S4, restated from library.css under this root ───────────────────────── */

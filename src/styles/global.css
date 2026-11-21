@@ -3333,7 +3333,7 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-trigger:hover,.cpk-trigger[aria-expanded="true"]{border-color:var(--bh)}
 /* The open state has to be legible WITHOUT hover. A touch user never has one,
    and this trigger now stands on twelve surfaces rather than three. */
-.cpk-trigger[aria-expanded="true"]{box-shadow:0 0 0 3px var(--accent-bg)}
+.cpk-trigger[aria-expanded="true"]{border-color:var(--sel-edge)}
 .cpk-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cpk-trigger[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
 .cpk-trigger-chip{width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border)}
@@ -3646,7 +3646,7 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
    the page, deliberately 60px (54px on a phone) so it reads as the one thing to
    do there. Every other search bar is 44px. */
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
-.hcmd-bar:focus-within{border-color:var(--accent)}
+.hcmd-bar:focus-within{outline:var(--focus-w) solid var(--focus-ink);outline-offset:var(--focus-offset)}
 /* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
    (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
 .hcmd-prompt{font-family:var(--font);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
@@ -4225,7 +4225,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    colour each surface sets. (Not :focus-within, so the clear button, which has
    its own ring, does not get a second one around the field.) Forced colours
    swaps the colour for a system one below. */
-.lbry-search:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.lbry-search:has(input:focus-visible){outline:var(--focus-w) solid var(--focus-ink);outline-offset:var(--focus-offset)}
 @media (forced-colors:active){
   .lbry-search:has(input:focus-visible){outline-color:Highlight}
 }

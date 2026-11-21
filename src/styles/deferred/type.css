@@ -27,7 +27,6 @@
    narrowest panel that hosts this, which is enough for a real word. */
 .typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;container-type:inline-size;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .typ-picker-trigger:hover:not(:disabled){border-color:var(--bh);background:var(--hvr)}
-.typ-picker-trigger:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
 .typ-picker-trigger:disabled{opacity:.55;cursor:not-allowed}
 /* Fixed height: the specimen changes family on every pick, and letting it size
    the row would bounce the whole panel each time you chose something.

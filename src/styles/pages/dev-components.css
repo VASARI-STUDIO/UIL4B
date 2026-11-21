@@ -62,8 +62,6 @@
 .ui-pill-out.dcs-hover::before,
 .ui-pill-out.dcs-focus::before { opacity: 1; }
 /* :focus-visible */
-.dcs-focus, input.dcs-field-focus, textarea.dcs-field-focus { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* input:focus,select:focus,textarea:focus */
-.dcs-field-focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.dcs-focus, input.dcs-field-focus, textarea.dcs-field-focus { outline: var(--focus-w) solid var(--focus-ink); outline-offset: var(--focus-offset); }
 /* .lib-surface .lbry-search:focus-within */
 .lib-surface .lbry-search.dcs-focus-within { border-color: var(--accent); }

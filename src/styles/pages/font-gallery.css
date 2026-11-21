@@ -46,7 +46,6 @@
 :where(.fg-page) .fg-compare-close{position:static}
 :where(.fg-page) .fg-compare-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 :where(.fg-page) .fg-compare-input{flex:1;min-width:200px;min-height:38px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-size:14px;transition:border-color var(--t),box-shadow var(--t)}
-:where(.fg-page) .fg-compare-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
 :where(.fg-page) .fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:max(var(--fs-caption),11px);color:var(--t2);font-weight:600;font-variant-numeric:tabular-nums}
 :where(.fg-page) .fg-compare-control input[type=range]{width:120px;accent-color:var(--accent)}
 :where(.fg-page) .fg-compare-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
@@ -174,8 +173,6 @@
 .fg-page .fg-compare-title { font-weight: 560; letter-spacing: -.025em; }
 
 .fg-page .fg-compare-input { border-radius: var(--radius-s); }
-
-.fg-page .fg-compare-input:focus { box-shadow: 0 0 0 3px var(--accent-wash-4); }
 
 .fg-page .fg-compare-col { border-radius: var(--radius-l); }
 

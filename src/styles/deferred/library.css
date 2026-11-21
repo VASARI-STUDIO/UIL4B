@@ -1357,10 +1357,6 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
    thing louder. Quiet ink: `--t2` measures 5.5:1 on the light page. */
 .lib-surface .drh-head span{color:var(--t2)}
 
-/* Search focus was `--brand`. The ring is non-text, so the plain accent is
-   right for it; the halo is the derived wash. */
-.lib-surface .lbry-search:focus-within{border-color:var(--accent)}
-
 /* The empty state's one action. It was an `--accent-strong` fill; an empty
    result is the user's own filter talking back, not the product asking for
    something, so it is the ink primary. */
@@ -1465,11 +1461,6 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-search{
   padding:0 18px;
 }
-/* The rule above is (0,3,0) and comes after the generic focus ring near the top
-   of this file, so it covered that ring's accent border and left only the wash.
-   With the focus state added (0,4,0), the focused search keeps the accent
-   border here too. */
-.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-search:focus-within{border-color:var(--accent)}
 /* The All/Curated/Brand segment (line 232): a 5% track, 3px in, the chosen
    segment a 9% ink wash in full ink — not the solid ink chip the icon filters
    use, which is a different control in the file. */

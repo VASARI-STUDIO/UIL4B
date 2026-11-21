@@ -273,7 +273,7 @@ html[data-reduced-motion="true"] .fgd-hero-bg { animation-duration: 120ms; anima
   transition: border-color var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
 }
 
-.fgd-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
+.fgd-field:focus-within { outline: var(--focus-w) solid var(--focus-ink); outline-offset: var(--focus-offset); }
 .fgd-field > span { flex: 0 0 auto; color: var(--t1); font-size: 13px; font-weight: 500; }
 
 .fgd-field input {
