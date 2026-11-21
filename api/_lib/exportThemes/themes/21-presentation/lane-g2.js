@@ -194,7 +194,8 @@ export const guidelines = {
       const x = i * half, ink = inkOn(ctx, s.bg), ch = chromeOn(ctx, s.bg), lh = hOf(ctx, 'colour', s.w);
       return box(x, 0, half, 720, `background:${s.bg}`) +
         box(x + 56, topForBaseline(ctx, 'display', dw, size, 1, 296), half - 112, 0, `color:${ink};font-size:${size}px;line-height:1;letter-spacing:-0.02em`, `<h2 class="disp r-nw num">${A(s.big)}</h2>`) +
-        box(x + 56, 328, 360, 0, '', `<p class="r-t15 r-w600" style="color:${ink}">${A(s.title)}</p><p class="r-t15" style="color:${ch}">${A(s.note)}</p>`) +
+        // (the caption starts below the numeral's descender, which the "p" of "px" drops)
+        box(x + 56, Math.max(328, 296 + Math.round(size * 0.26) + 16), 360, 0, '', `<p class="r-t15 r-w600" style="color:${ink}">${A(s.title)}</p><p class="r-t15" style="color:${ch}">${A(s.note)}</p>`) +
         box(x + 56, 536 - lh, s.w, lh, '', logo(ctx, 'colour', s.w, { colourway: s.key, ink, label: '' })) +
         // the ruler: a hairline the logo's exact width, with a tick at each end
         box(x + 56, 552, s.w, 1, `background:${ch}`) + box(x + 56, 548, 1, 9, `background:${ch}`) + box(x + 56 + s.w - 1, 548, 1, 9, `background:${ch}`) +
