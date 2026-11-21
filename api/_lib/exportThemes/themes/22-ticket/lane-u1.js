@@ -13,7 +13,7 @@
 //   at, wrap, clip, ratioText, kitRoles                     small layout pieces
 // This lane's css() writes the kit tokens and componentsCss(ctx) once, for the UI kit document only (ctx.kind === 'uikit'), so the other kit
 // lanes must not add them again. Every class here starts u1-.
-import { A, px, T, PAGE, device, roles, barcodeRects, serialOf, slugOf, longDate, fitLines, textWidth, lineTop, trackOf, sentences, listAnd, weightName } from './helpers.js';
+import { A, px, T, PAGE, device, roles, barcodeRects, serialOf, slugOf, longDate, fitLines, textWidth, lineTop, ascentAt, trackOf, sentences, listAnd, weightName } from './helpers.js';
 import { colourMap, tokenGroups, statusText } from '../../engine/tokens.js';
 import { componentsCss } from '../../engine/components.js';
 
@@ -189,8 +189,10 @@ export const uikit = {
     const R = roles(ctx), B = ctx.brand, asp = ctx.logo.geo.aspect;
     const lw = Math.min(360, 64 * asp), lh = lw / asp;
     const logo = `<div class="a" style="left:72px;top:72px;width:${px(lw)};height:${px(lh)}">${ctx.logo.html('colour', { width: lw, colourway: R.colourwayOn(R.field), color: R.inkOn(R.field, 13, 400, '(Logo slot frame)'), label: 'Logo' })}</div>`;
-    // the event line: "UI kit" as large as one line allows, its baseline 40 px above the printed fields
-    const fy = 400, s = fitOne(ctx, 'UI kit', 864, 280, 72);
+    // the event line: "UI kit" as large as one line allows, its baseline 40 px above the printed fields. Its box (the face's ascent above the
+    // baseline) stays 16 px clear of the logo above it, so a tall logo or a face with a deep ascent sets it smaller rather than running over the mark
+    const fy = 400, room = (fy - 40) - (72 + lh) - 16, top = Math.floor(room / ascentAt(ctx, 'display', 1) / 2) * 2;
+    const s = fitOne(ctx, 'UI kit', 864, Math.min(280, top), 72);
     const title = dispAt(ctx, 64, fy - 40, s, 'UI kit', 'var(--ink)');
     const modes = 'Light and dark', faces = listAnd([B.fonts.display.family, B.fonts.body.family].filter((f, i, a) => a.indexOf(f) === i));
     const fields = `<div class="a" style="left:72px;top:${fy - 12}px;width:864px;height:1px;background:var(--ink)"></div>`

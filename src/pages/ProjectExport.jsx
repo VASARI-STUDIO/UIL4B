@@ -24,12 +24,12 @@ const LOOKUP_WAIT_MS = 10000
 
 // The rows, in the page's order. Which of them are Pro comes from the export config.
 const ROWS = [
-  { category: 'kit', title: 'UI kit', description: 'One HTML file with your palette, type and components. Opens offline.', preset: { type: 'kit', category: 'kit', file: 'kit' } },
-  { category: 'guide', title: 'Style guide', description: 'A guide to your palette and type, as A4 pages, an A4 sheet image or Markdown.', preset: { type: 'brand', category: 'guide', file: 'html' } },
-  { category: 'code', title: 'Code', description: 'Your palette, tints and type as CSS, JSON or a Tailwind theme, plus contrast pairs.', preset: { type: 'code', category: 'code', file: 'css' } },
-  { category: 'book', title: 'Book', description: 'A book of your system, as an A4 PDF, 2K page images or one HTML file.', preset: { type: 'brand', category: 'book', file: 'book' } },
-  { category: 'slides', title: 'Slides', description: 'Your logo, colour and type as 16:9 slides.', preset: { type: 'brand', category: 'slides', file: 'guidelines' } },
-  { category: 'apps', title: 'App-ready', description: 'Your colours and tokens as files for Figma, Adobe, Affinity, Procreate and code, in one zip.', preset: { type: 'apps', category: 'apps', file: 'app-bundle' } },
+  { category: 'kit', title: 'UI kit', description: 'One HTML file with your palette, type and components. Opens offline.', preset: { type: 'ui', category: 'kit', file: 'kit' } },
+  { category: 'guide', title: 'Style guide', description: 'A guide to your palette and type, as A4 pages, an A4 sheet image or Markdown.', preset: { type: 'branding', category: 'guide', file: 'html' } },
+  { category: 'tokens', title: 'Code', description: 'Your palette, tints and type as CSS, JSON or a Tailwind theme, plus contrast pairs.', preset: { type: 'code', category: 'tokens', file: 'css' } },
+  { category: 'book', title: 'Book', description: 'A book of your system, as an A4 PDF, 2K page images or one HTML file.', preset: { type: 'branding', category: 'book', file: 'book' } },
+  { category: 'slides', title: 'Slides', description: 'Your logo, colour and type as 16:9 slides.', preset: { type: 'branding', category: 'slides', file: 'guidelines' } },
+  { category: 'apps', title: 'App-ready', description: 'Your colours and tokens as files for Figma, Adobe, Affinity, Procreate and code, in one zip.', preset: { type: 'ui', category: 'apps', file: 'app-bundle' } },
 ].map((row) => ({ ...row, pro: Boolean(exportLocation(row.preset.file)?.category.pro) }))
 
 const lastCategory = () => {

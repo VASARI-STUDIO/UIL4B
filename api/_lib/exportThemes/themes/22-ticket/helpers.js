@@ -99,6 +99,11 @@ export function lineTop(ctx, role, size, line, baseline) {
   const asc = h.ascender / upm * size, desc = -h.descender / upm * size;
   return baseline - ((line - (asc + desc)) / 2 + asc);
 }
+// how far the face's hhea ascent rises above the baseline at this size: the top of the text's own box, the part that has to clear what sits above it
+export function ascentAt(ctx, role, size) {
+  const font = loadFont(faceOf(ctx, role).stem);
+  return font.tables.hhea.ascender / font.unitsPerEm * size;
+}
 // The spec's fit rule: break at sentence ends first, then take the largest size, from max down in 2 px steps, at which every line fits the box
 // (with a 2% margin) and the line count is within maxLines. If nothing fits at min, one more line is allowed at min.
 // the display tracking the brand's own type rule states ("minus 0.015 em"), else -0.015

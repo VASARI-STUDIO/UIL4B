@@ -129,6 +129,10 @@ export const preloadTheme = (kind, theme) => Promise.all(themeShots(kind, theme)
 )))
 
 export const themeThumb = (theme) => `/export-themes/${theme.id}-thumb.webp`
+/** The same thumbnail for a 2x screen: 284 px wide, the card's width at twice the pixels. Written by scripts/library/exportThemePreviews.mjs.
+ *  Built from the 1x path so the bundle never holds a literal "<name>@2x.webp", which the shipped-address scan reads as an
+ *  email address (tests/unit/owner-email-not-public.test.js). */
+export const themeThumb2x = (theme) => themeThumb(theme).replace(/\.webp$/, '@2x.webp')
 
 /** The preview caption and the file's description for a kind, in a theme. */
 export function themeLines(kind, theme) {

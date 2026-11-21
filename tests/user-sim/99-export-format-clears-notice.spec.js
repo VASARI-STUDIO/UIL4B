@@ -19,7 +19,7 @@ test('choosing another format clears the finished-export notice', async ({ page 
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
   const panel = exportPanel(page)
   await expect(panel).toBeVisible()
-  // The header Export opens on the Brand book, so the kit is a pick like any other.
+  // The header Export opens on the Guidelines, so the kit is a pick like any other.
   await chooseFormat(panel, 'kit')
   await expect(typeRadio(panel, 'UI kit')).toHaveAttribute('aria-checked', 'true')
 
@@ -37,7 +37,7 @@ test('choosing another format clears the finished-export notice', async ({ page 
 
   await chooseFormat(panel, 'css')
 
-  await expect(fileGroup(panel, 'Code').getByRole('radio', { name: 'CSS stylesheet', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(fileGroup(panel, 'Tokens').getByRole('radio', { name: 'CSS stylesheet', exact: true })).toHaveAttribute('aria-checked', 'true')
   await expect(primaryButton(panel), 'the button is back to naming the new file').toHaveText('Export CSS')
   await expect(primaryButton(panel)).toBeEnabled()
   await expect(dockStatus(panel), 'the kit confirmation is gone once another file is chosen').not.toContainText('Downloaded')

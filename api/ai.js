@@ -1272,6 +1272,18 @@ export default async function handler(req, res) {
     })
   }
 
+  // The Export dialog's live page previews: POST /api/ai?export=live-preview { theme, page, brand }. Same token + plan gate as the
+  // document above, and a Free account on a Pro template gets a 403 with no page; see api/_lib/exportLivePreview.js.
+  if (req.method === 'POST' && req.query?.export === 'live-preview') {
+    const { serveExportLivePreview } = await import('./_lib/exportLivePreview.js')
+    return serveExportLivePreview(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      credentialProblem,
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+      consume: async (opts) => (await import('./_lib/rateLimit.js')).consume(adminDb(), opts),
+    })
+  }
+
   // ── The clean page previews of a Pro export theme ─────────────────────────
   // GET /api/ai?export=preview&theme=&row=&n=&dpr=2. The bearer header is the check, so there is no signed URL; the
   // picture is the 2x of a page of a Pro pair, sent to a Pro account only. See api/_lib/exportPreview.js.

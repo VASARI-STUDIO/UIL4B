@@ -197,9 +197,20 @@ const showDocument = (html, filename, win, title) => {
  *                                 downloaded ('' when nothing did), `opened` is a print window showing it
  *   retryIn                       whole seconds left of a 429's Retry-After (0 when there is no wait)
  */
+// A server refusal for want of a Pro plan (a 403 and no file), told apart from every other failure.
+const proRefusal = (line) => Object.assign(new Error(line), { proRequired: true })
+
+// Which pick a refusal was for: the file, and the theme only when the file takes one.
+export const refusedKey = (formatId, theme) => `${formatId}|${theme && themedFile(formatId) ? theme : ''}`
+
 export default function useExportRunner() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // The file (and theme) the SERVER refused for want of a Pro plan, as refusedKey() spells it; '' until one is.
+  // The server's 403 is the verdict, not this page's plan read: once it has said no, the dialog shows the one
+  // Upgrade offer for that pick, and the next click on it goes to checkout or /plans instead of asking again.
+  // It outlives reset(): the answer stays true for as long as this dialog is open.
+  const [refused, setRefused] = useState('')
   // A finished export that still has something to say (a font it could not
   // embed, a print window the browser blocked). { lead, detail }: the lead says
   // what happened, the detail what follows from it. Announced politely, and
@@ -319,6 +330,8 @@ export default function useExportRunner() {
     const themed = theme && themedFile(format) ? themedFile(format) : null
     const needsPro = themed ? themedFileIsPro(format, theme) : Boolean(fmt.pro)
     if (needsPro && !isPro) return goUpgrade(format, projectId, Boolean(user))
+    // A pick the server has already refused goes the same way, whatever the plan read here says.
+    if (refused === refusedKey(format, theme)) return goUpgrade(format, projectId, Boolean(user))
 
     // ── OFFLINE. ───────────────────────────────────────────────────────────
     // The server builds the book and the slides and the kit fetches its fonts, so
@@ -400,6 +413,7 @@ export default function useExportRunner() {
         if (answer.status !== 'ok') {
           // A 429 that said how long to wait: the button counts it down instead of staying live for a click that will be refused again.
           if (answer.retryAfter) { limitLine.current = answer.line; setRetryIn(answer.retryAfter) }
+          if (answer.code === 'pro-required') throw proRefusal(answer.line)
           throw new Error(answer.line)
         }
         if (answer.zip) {
@@ -429,7 +443,7 @@ export default function useExportRunner() {
         }, { loadAuth: loadAuthSdk })
         if (!mounted.current) return { status: 'unmounted' }
         const refusal = fileRefusal(answer, PRO_DOCUMENT.book.noun)
-        if (refusal) throw new Error(refusal)
+        if (refusal) throw answer.status === 'pro-required' ? proRefusal(refusal) : new Error(refusal)
         const blob = await paintBookPng(answer.book)
         savedFile = download(blob, formatFileName(fileProject, 'book-png'))
       } else if (proDocument) {
@@ -444,12 +458,11 @@ export default function useExportRunner() {
         // it). Nobody is left to read a result, so close the blank window that was
         // reserved and touch nothing else.
         if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
-        // A refusal stays in the dialog and says so. It is not sent to /plans: this
-        // account passed the Pro check on this page a moment ago, so the likely
-        // cause is a plan that just ended or a stale read, and a pricing page
-        // that may say "you are on Pro" is the wrong answer to that person.
+        // A refusal stays in the dialog and says so, and the button becomes the one Upgrade offer
+        // (see the catch below). Nothing navigates on its own: this account passed the plan read on
+        // this page a moment ago, so the person reads why before choosing Upgrade or the free option.
         if (answer.status === 'pro-required') {
-          throw new Error(`We couldn’t find a Pro plan on this account, so the ${doc.noun} wasn’t made.`)
+          throw proRefusal(`We couldn’t find a Pro plan on this account, so the ${doc.noun} wasn’t made.`)
         }
         if (answer.status === 'signed-out') {
           throw new Error(`You’re signed out. Sign in again, then export the ${doc.noun}.`)
@@ -490,7 +503,7 @@ export default function useExportRunner() {
         }, { loadAuth: loadAuthSdk })
         if (!mounted.current) return { status: 'unmounted' }
         const refusal = fileRefusal(answer, 'app bundle')
-        if (refusal) throw new Error(refusal)
+        if (refusal) throw answer.status === 'pro-required' ? proRefusal(refusal) : new Error(refusal)
         savedFile = download(zipBlob(answer.zip), formatFileName(fileProject, 'app-bundle'))
       } else if (tokenFile) {
         // The token, Tailwind and contrast files all read one token list
@@ -543,6 +556,12 @@ export default function useExportRunner() {
       setBusy(false)
       setStage('')
       setError(err?.message || FAILED_LINE)
+      // The server said this file needs Pro (a 403, no file). That answer, not the plan read on this
+      // page, is what counts: the dialog turns this pick's button into the Upgrade offer, with the free option beside it.
+      if (err?.proRequired) {
+        setRefused(refusedKey(format, theme))
+        return { status: 'pro-required' }
+      }
       return { status: 'failed' }
     }
   }
@@ -589,5 +608,8 @@ export default function useExportRunner() {
     setRetryIn(0)
   }
 
-  return { run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn }
+  // True when the server refused this file (in this theme) for want of a Pro plan while this dialog was open.
+  const isRefused = (formatId, theme) => Boolean(refused) && refused === refusedKey(formatId, theme)
+
+  return { run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn, isRefused }
 }

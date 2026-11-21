@@ -157,7 +157,10 @@ export const guidelines = {
     const hairL = L(ctx).divider, hairD = ctx.roles.dark.divider, it = (B.fonts.display.italics || []).length > 0;
     const line = pick(ctx, [B.lines.others[1], B.lines.others[0], B.type.sample.headline]), show = (c.deliveries || [])[0]?.to || line;
     const sent = pick(ctx, sentences(sayOnce(ctx, B.type.sample.paragraph)).filter((s) => s.length < 70));
-    const D = (t, st = '') => `<p class="disp r-nw" style="font-size:32px;line-height:1;letter-spacing:-0.01em;${st}">${A(t)}</p>`;
+    // the demo line is one nowrap line, so it is sized to the half page: the widest of its three settings (as is, capitals, wide tracking) must fit the text column, 32 px down to 20
+    const tw0 = half - 112, up = line.toUpperCase();
+    const dsz = Math.min(fitOne(ctx, 'display', dw, [line, show], 32, 20, tw0), fitOne(ctx, 'display', dw, [up], 32, 20, tw0), fitOne(ctx, 'display', dw, [line], 32, 20, tw0, 0.14));
+    const D = (t, st = '') => `<p class="disp r-nw" style="font-size:${dsz}px;line-height:1;letter-spacing:-0.01em;${st}">${A(t)}</p>`;
     const Bt = (t, size, st = '') => `<p class="r-nw" style="font:400 ${size}px/1.4 var(--body);${st}">${A(t)}</p>`;
     // a demo pair [do, don't] for a rule, read from its words; null where the rule cannot be drawn without breaking it
     const demo = (r, inkD2) => {

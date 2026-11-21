@@ -1,9 +1,9 @@
 // EXPORT V3: THE ONE EXPORT POPUP.
 //
 // Every export entry point opens the same dialog (.xd, role=dialog named by its
-// h2): a rail (Brand book > Book / Slides / Style guide, UI kit, Code), one
-// scrolling column (File, Layout, Details) and a dock with the price line and the
-// primary button. This file is the Done-when list of
+// h2): a rail (Branding, UI, Image, Code), a bar of sub-category tabs, the preview stage
+// with its page gallery, a "File details" fold (File, Layout, Details) and a dock with the
+// price line, View templates and the primary button. This file is the Done-when list of
 // the export v3 spec, section 6, and it replaces
 // the old 124-export-panel-polish, 137-export-panel-five and 177-kit-export-gallery
 // specs.
@@ -24,7 +24,7 @@ import { mockThemeApi, cleanHtml, printedDoc } from './export-theme-mock.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import {
-  exportPanel, typeRadio, categoryRadio, fileGroup, primaryButton, dockStatus, dockError,
+  exportPanel, chooseTemplate, readTemplates, openDetails, typeRadio, categoryRadio, fileGroup, primaryButton, dockStatus, dockError,
 } from './export-rows.js'
 
 const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -54,9 +54,9 @@ async function settled(page) {
   return panel
 }
 
-/** Choose a named theme in the Theme step's inline list (Studio is Pro in every row; Label and Swiss Field are the Free pair). */
+/** Choose a named theme in the grid under View templates (Studio is Pro in every row; Label and Swiss Field are the Free pair). */
 async function chooseTheme(panel, name) {
-  await panel.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: new RegExp(`^${name}\\b`) }).click()
+  await chooseTemplate(panel, name)
 }
 
 /** Open from the app header's Export button. */
@@ -73,16 +73,26 @@ const checkedIn = (group) => group.getByRole('radio', { checked: true }).first()
 const firstLine = (text) => text.split('\n')[0].trim()
 const textOf = async (locator) => firstLine(await locator.innerText())
 
-/** { type, category, file } as the popup shows it, read from the checked radios. */
+/**
+ * { type, category, file } as the popup shows it: the type from the rail's checked radio, the category from the selected tab
+ * (its name is the part of the accessible name before the first comma), and the file from the checked pill of the file switch
+ * (null where the category makes one file and has no switch).
+ */
 async function shownPick(panel) {
   const type = await textOf(checkedIn(panel.getByRole('radiogroup', { name: 'Export type' })))
-  const cats = panel.getByRole('radiogroup', { name: /categories$/ })
+  const tab = panel.getByRole('tablist').getByRole('tab', { selected: true })
   const files = panel.getByRole('radiogroup', { name: /file type$/ })
   return {
     type,
-    category: (await cats.count()) ? await textOf(checkedIn(cats)) : null,
+    category: (await tab.count()) ? (await tab.getAttribute('aria-label')).split(',')[0] : null,
     file: (await files.count()) ? await textOf(checkedIn(files)) : null,
   }
+}
+
+/** Tick "Show the default template" (when it can be ticked), so the stage draws the stock picture and not a live page. */
+async function showStock(panel) {
+  const box = panel.locator('.xd-stock input')
+  if ((await box.isEnabled()) && !(await box.isChecked())) await box.check()
 }
 
 // Criteria 1, 2, 3 and 23: every entry point opens the one popup on its preset.
@@ -90,27 +100,23 @@ async function shownPick(panel) {
 //   - Open the Tint row on the default pick instead of Code > CSS: "the Tint tool row" fails.
 //   - Drop the open-on-arrival effect in ProjectExport.jsx: "the export route" fails.
 test.describe('every entry point opens the same popup', () => {
-  test('the header Export opens on a free Slides PDF, and reopens on the last pick', async ({ page }) => {
+  test('the header Export opens on a free Guidelines PDF, and reopens on the last pick', async ({ page }) => {
     watch(page, 'a designer exporting from the header')
     await go(page, WORKED_BOARD)
     let panel = await openFromHeader(page)
     await expect(panel.getByRole('heading', { level: 2 })).toHaveText('Export your design system')
-    // Signed out, the popup starts on a free file: the slides as a PDF, in Label (a free theme).
-    expect(await shownPick(panel), 'a visitor starts on a file that is free').toEqual({ type: 'Brand book', category: 'Slides', file: 'PDF' })
-    await expect(
-      panel.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { checked: true }),
-      'the Theme step is an inline list, on a free theme',
-    ).toHaveText(/^Label/)
+    // Signed out, the popup starts on a free file: the guidelines as a PDF, in Label (a free template).
+    expect(await shownPick(panel), 'a visitor starts on a file that is free').toEqual({ type: 'Branding', category: 'Guidelines', file: 'PDF' })
+    expect((await readTemplates(panel)).chosen, 'the templates grid is on a free template').toEqual(['Label'])
     await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
 
-    await typeRadio(panel, 'Brand book').click()
-    await categoryRadio(panel, 'Style guide').click()
-    await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'PNG', exact: true }).click()
+    await typeRadio(panel, 'Image').click()
+    await fileGroup(panel, 'Style guide image').getByRole('radio', { name: 'JPEG', exact: true }).click()
     await panel.getByRole('button', { name: 'Close export' }).click()
     await expect(exportPanel(page)).toBeHidden()
 
     panel = await openFromHeader(page)
-    expect(await shownPick(panel), 'the same session reopens on the last pick').toEqual({ type: 'Brand book', category: 'Style guide', file: 'PNG' })
+    expect(await shownPick(panel), 'the same session reopens on the last pick').toEqual({ type: 'Image', category: 'Style guide image', file: 'JPEG' })
   })
 
   test('both project page buttons open it, named for the project', async ({ page }) => {
@@ -122,7 +128,7 @@ test.describe('every entry point opens the same popup', () => {
       await page.locator(area).getByRole('button', { name: 'Export project', exact: true }).click()
       const panel = await settled(page)
       await expect(panel.getByRole('heading', { level: 2 }), `from ${area}`).toHaveText(`Export ${PROJECT_NAME}`)
-      expect(await shownPick(panel), `from ${area}`).toEqual({ type: 'Brand book', category: 'Slides', file: 'PDF' })
+      expect(await shownPick(panel), `from ${area}`).toEqual({ type: 'Branding', category: 'Guidelines', file: 'PDF' })
       await panel.getByRole('button', { name: 'Close export' }).click()
       await expect(exportPanel(page)).toBeHidden()
     }
@@ -134,7 +140,7 @@ test.describe('every entry point opens the same popup', () => {
     await go(page, ROUTE)
     const panel = await settled(page)
     await expect(panel.getByRole('heading', { level: 2 })).toHaveText(`Export ${PROJECT_NAME}`)
-    expect(await shownPick(panel)).toEqual({ type: 'Brand book', category: 'Slides', file: 'PDF' })
+    expect(await shownPick(panel)).toEqual({ type: 'Branding', category: 'Guidelines', file: 'PDF' })
 
     await panel.getByRole('button', { name: 'Close export' }).click()
     await expect(exportPanel(page)).toBeHidden()
@@ -150,24 +156,29 @@ test.describe('every entry point opens the same popup', () => {
     await expect(await settled(page)).toBeVisible()
   })
 
-  test('the Tint tool row opens it on Code, CSS stylesheet', async ({ page }) => {
+  test('the Tint tool row opens it on Code, Tokens, CSS stylesheet', async ({ page }) => {
     watch(page, 'a designer exporting from the tint tool')
     await go(page, '/create/tint')
     await page.locator('.tl-export-btn').click()
     await page.getByRole('menuitem', { name: 'Export design system…', exact: true }).click()
     const panel = await settled(page)
-    expect(await shownPick(panel)).toEqual({ type: 'Code', category: null, file: 'CSS stylesheet' })
+    expect(await shownPick(panel)).toEqual({ type: 'Code', category: 'Tokens', file: 'CSS stylesheet' })
   })
 })
 
-/** Every category the rail offers, with the clicks that reach it. */
+/** Every category the popup offers (a rail type, then a tab), with the clicks that reach it. */
 const CATEGORIES = [
-  { name: 'Book', go: async (p) => { await typeRadio(p, 'Brand book').click(); await categoryRadio(p, 'Book').click() } },
-  { name: 'Slides', go: async (p) => { await typeRadio(p, 'Brand book').click(); await categoryRadio(p, 'Slides').click() } },
-  { name: 'Style guide', go: async (p) => { await typeRadio(p, 'Brand book').click(); await categoryRadio(p, 'Style guide').click() } },
-  { name: 'UI kit', go: async (p) => { await typeRadio(p, 'UI kit').click() } },
-  { name: 'Code', go: async (p) => { await typeRadio(p, 'Code').click() } },
+  { name: 'Guidelines', go: async (p) => { await typeRadio(p, 'Branding').click(); await categoryRadio(p, 'Guidelines').click() } },
+  { name: 'Brand book', go: async (p) => { await typeRadio(p, 'Branding').click(); await categoryRadio(p, 'Brand book').click() } },
+  { name: 'Style guide', go: async (p) => { await typeRadio(p, 'Branding').click(); await categoryRadio(p, 'Style guide').click() } },
+  { name: 'UI kit', go: async (p) => { await typeRadio(p, 'UI').click(); await categoryRadio(p, 'UI kit').click() } },
+  { name: 'App-ready bundle', go: async (p) => { await typeRadio(p, 'UI').click(); await categoryRadio(p, 'App-ready bundle').click() } },
+  { name: 'Style guide image', go: async (p) => { await typeRadio(p, 'Image').click(); await categoryRadio(p, 'Style guide image').click() } },
+  { name: 'Book pages', go: async (p) => { await typeRadio(p, 'Image').click(); await categoryRadio(p, 'Book pages').click() } },
+  { name: 'Tokens', go: async (p) => { await typeRadio(p, 'Code').click(); await categoryRadio(p, 'Tokens').click() } },
+  { name: 'Contrast', go: async (p) => { await typeRadio(p, 'Code').click(); await categoryRadio(p, 'Contrast').click() } },
 ]
+const categoryNamed = (name) => CATEGORIES.find((c) => c.name === name)
 
 const SIZES = [
   { width: 320, height: 700, layout: 'strip' },
@@ -247,78 +258,93 @@ for (const size of SIZES) {
   })
 }
 
-// The chip row under Brand book (Book, Slides, Style guide) on a free account at the narrowest width: every chip fits, so the row has nothing to scroll.
-//   - Put the strip chip padding back to var(--s-3) under 360px in export-dialog.css: each category fails, the row is wider than its box.
-test.describe('the category chips at 320px', () => {
+// The tab bar at the narrowest width. It scrolls sideways on its own, so the tab that is chosen is brought into view: every tab, once
+// chosen, lies inside the window, and neither the window nor the dialog scrolls sideways.
+//   - Remove the scrollIntoView effect from ExportTabs in ExportNav.jsx: a later tab is chosen and stays off the right edge.
+test.describe('the tab bar at 320px', () => {
   test.use({ viewport: { width: 320, height: 700 } })
-  for (const name of ['Book', 'Slides', 'Style guide']) {
-    test(`free, ${name}: the chip row has no sideways scroll`, async ({ page }) => {
-      watch(page, `a free account at 320px choosing ${name} in the Brand book`)
+  for (const [rail, name] of [['Branding', 'Guidelines'], ['Branding', 'Brand book'], ['Branding', 'Style guide'], ['UI', 'App-ready bundle'], ['Image', 'Book pages'], ['Code', 'Contrast']]) {
+    test(`free, ${name}: the chosen tab is in view and nothing scrolls the window sideways`, async ({ page }) => {
+      watch(page, `a free account at 320px choosing ${name}`)
       await signIn(page, { plan: 'free' })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      await typeRadio(panel, 'Brand book').click()
+      await typeRadio(panel, rail).click()
       await categoryRadio(panel, name).click()
-      const chips = panel.locator('.xd-chips')
-      await expect(chips.getByRole('radio')).toHaveCount(3)
-      const row = await chips.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }))
-      expect(row.scrollWidth, `the chip row scrolls sideways: ${JSON.stringify(row)}`).toBeLessThanOrEqual(row.clientWidth)
+      const tab = categoryRadio(panel, name)
+      await expect(tab).toHaveAttribute('aria-selected', 'true')
+      await expect.poll(async () => {
+        const box = await tab.boundingBox()
+        return Boolean(box) && box.x >= -0.5 && box.x + box.width <= 320.5
+      }, `the ${name} tab is inside the window`).toBe(true)
+      const over = await page.evaluate(() => ({
+        page: document.documentElement.scrollWidth - window.innerWidth,
+        card: document.querySelector('.xd-card').scrollWidth - document.querySelector('.xd-card').clientWidth,
+      }))
+      expect(over.page, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+      expect(over.card, 'the card scrolls sideways').toBeLessThanOrEqual(0)
     })
   }
 })
 
 // Criteria 17, 18 and 19: the sizes the spec names.
 //   - Change the card or rail width in export-dialog.css: the 1440 and 768 tests fail.
-//   - Drop the 44px min-height on .xd-type / .xd-cat in the strip: the 390 test fails.
+//   - Drop the 44px min-height on .xd-type / .xd-tab in the strip: the 390 test fails.
 test.describe('the sizes the spec names', () => {
   test.describe('at 1440', () => {
     test.use({ viewport: { width: 1440, height: 900 } })
-    test('the dialog is 1120 by 820 with a 264px rail', async ({ page }) => {
+    test('the dialog is 1120 by 820 with a 176px rail', async ({ page }) => {
       watch(page, 'a designer exporting at 1440px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
       const card = await panel.boundingBox()
       expect([Math.round(card.width), Math.round(card.height)]).toEqual([1120, 820])
-      expect(Math.round((await panel.locator('.xd-nav').boundingBox()).width)).toBe(264)
+      expect(Math.round((await panel.locator('.xd-nav').boundingBox()).width)).toBe(176)
     })
 
     // To see this fail: make Manifest's `folded` true at every width in ExportSteps.jsx, or drop the formatFileName call.
-    test('the File step lists every file in the category by the name it downloads under, open, with the chosen one marked', async ({ page }) => {
+    test('File details lists every file in the category by the name it downloads under, open, with the chosen one marked', async ({ page }) => {
       watch(page, 'a designer reading the file list at 1440px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
       await typeRadio(panel, 'Code').click()
+      await openDetails(panel)
       const rows = panel.locator('.xd-man-row')
-      await expect(rows, 'Code lists CSS, JSON, Tailwind and both contrast files').toHaveCount(5)
+      await expect(rows, 'Tokens lists CSS, JSON and Tailwind').toHaveCount(3)
       await expect(panel.locator('.xd-man .xd-man-t'), 'the rows are not folded at 1440').toHaveCount(0)
       const names = await panel.locator('.xd-man-n').allInnerTexts()
-      expect(names).toEqual([
-        'untitled.tokens.css', 'untitled.tokens.json', 'untitled-tailwind.css',
-        'untitled-contrast-pairs.csv', 'untitled-contrast-pairs.json',
-      ])
+      expect(names).toEqual(['untitled.tokens.css', 'untitled.tokens.json', 'untitled-tailwind.css'])
       for (const name of names) expect(name, 'no file is named for the product').not.toMatch(/uil4b|-tokens\.(css|json)$/)
       await expect(panel.locator('.xd-man-row[aria-current="true"]')).toHaveCount(1)
       await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n')).toHaveText('untitled.tokens.css')
       // The preview is headed by the exact name of the chosen file.
       await expect(panel.locator('.xfp-file')).toHaveText('untitled.tokens.css')
       await panel.getByRole('radio', { name: 'Tailwind theme' }).click()
+      await openDetails(panel)
       await expect(panel.locator('.xfp-file')).toHaveText('untitled-tailwind.css')
       await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n')).toHaveText('untitled-tailwind.css')
+      // Contrast is its own tab, with its own two files.
+      await categoryRadio(panel, 'Contrast').click()
+      await openDetails(panel)
+      await expect(panel.locator('.xd-man-n')).toHaveText(['untitled-contrast-pairs.csv', 'untitled-contrast-pairs.json'])
+      await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n')).toHaveText('untitled-contrast-pairs.csv')
     })
   })
 
   test.describe('at 768', () => {
-    test.use({ viewport: { width: 768, height: 1024 } })
-    test('the rail is 208px and every target is at least 44px tall', async ({ page }) => {
+    // A tablet is a coarse pointer: the 44px target rule is the one that applies (a fine pointer gets 36px gallery buttons).
+    test.use({ viewport: { width: 768, height: 1024 }, hasTouch: true })
+    test('the rail is 148px and every target is at least 44px tall', async ({ page }) => {
       watch(page, 'a designer exporting at 768px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      expect(Math.round((await panel.locator('.xd-nav').boundingBox()).width)).toBe(208)
+      expect(Math.round((await panel.locator('.xd-nav').boundingBox()).width)).toBe(148)
       for (const category of CATEGORIES) {
         await category.go(panel)
         const small = await panel.evaluate((card) => [...card.querySelectorAll('button, [role=radio], a[href], input:not([type=hidden]), select')]
           .filter((el) => el.offsetParent !== null && !el.closest('[inert]'))
-          .map((el) => ({ what: el.getAttribute('aria-label') || el.textContent.trim().slice(0, 30), h: Math.round(el.getBoundingClientRect().height) }))
+          // A checkbox is tapped through its label, so the label is the target; the 18px box is only the mark.
+          .map((el) => ({ what: el.getAttribute('aria-label') || el.textContent.trim().slice(0, 30), h: Math.round((el.type === 'checkbox' ? el.closest('label') || el : el).getBoundingClientRect().height) }))
           .filter((t) => t.h > 2 && t.h < 44))
         expect(small, `${category.name}: targets under 44px tall`).toEqual([])
       }
@@ -327,49 +353,46 @@ test.describe('the sizes the spec names', () => {
 
   test.describe('at 390', () => {
     test.use({ viewport: { width: 390, height: 844 } })
-    test('the type control and category chips are 44px tall; the primary button is full width and 48px', async ({ page }) => {
+    test('the type control and tabs are 44px tall; the dock buttons share the dock and are 48px', async ({ page }) => {
       watch(page, 'a designer exporting at 390px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-    // Signed out, the popup starts on the free Slides; this clicks the Brand book type in case that changes.
-    await typeRadio(panel, 'Brand book').click()
-      for (const type of ['Brand book', 'UI kit', 'Code']) {
+      for (const type of ['Branding', 'UI', 'Image', 'Code']) {
         expect(Math.round((await typeRadio(panel, type).boundingBox()).height), `${type} segment`).toBeGreaterThanOrEqual(44)
       }
-      for (const name of ['Book', 'Slides', 'Style guide']) {
-        expect(Math.round((await categoryRadio(panel, name).boundingBox()).height), `${name} chip`).toBeGreaterThanOrEqual(44)
+      for (const name of ['Guidelines', 'Brand book', 'Style guide']) {
+        expect(Math.round((await categoryRadio(panel, name).boundingBox()).height), `${name} tab`).toBeGreaterThanOrEqual(44)
       }
       for (const category of CATEGORIES) {
         await category.go(panel)
         const button = await primaryButton(panel).boundingBox()
         const dock = await panel.locator('.xd-dock').boundingBox()
         expect(Math.round(button.height), `${category.name}: primary height`).toBe(48)
-        if (category.name === 'Code') {
-          // Copy sits beside the primary, half and half.
-          const copy = await panel.getByRole('button', { name: /^Copy file$/ }).boundingBox()
-          expect(Math.abs(copy.width - button.width), 'Copy and the primary share the dock evenly').toBeLessThanOrEqual(2)
-          expect(copy.width + button.width, 'together they span the dock').toBeGreaterThan(dock.width - 48)
-        } else {
-          expect(button.width, `${category.name}: the primary spans the dock`).toBeGreaterThan(dock.width - 48)
-        }
+        // View templates (a themed file) or Copy file (Code) sits beside the primary, half and half.
+        const acts = await panel.locator('.xd-dock .xd-act').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width))
+        for (const width of acts) expect(Math.abs(width - button.width), `${category.name}: the dock buttons share the dock evenly`).toBeLessThanOrEqual(2)
+        expect(acts.reduce((sum, width) => sum + width, 0), `${category.name}: the buttons span the dock`).toBeGreaterThan(dock.width - 48)
       }
     })
 
     // To see this fail: set `folded` to false in ExportSteps.jsx (the rows show at once), or remove the hidden attribute handling.
-    test('the file list folds to one line, "5 files" for Code, and opens in place', async ({ page }) => {
+    test('the file list folds to one line, "3 files" for Tokens, and opens in place', async ({ page }) => {
       watch(page, 'a designer reading the file list at 390px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
       await typeRadio(panel, 'Code').click()
+      await openDetails(panel)
       const toggle = panel.locator('.xd-man .xd-man-t')
-      await expect(toggle).toHaveText('5 files')
+      await expect(toggle).toHaveText('3 files')
       await expect(toggle).toHaveAttribute('aria-expanded', 'false')
       await expect(panel.locator('.xd-man-row').first(), 'folded rows are not shown').toBeHidden()
       expect(Math.round((await toggle.boundingBox()).height), 'the fold is one 44px line').toBeGreaterThanOrEqual(44)
+      // Bring the fold into view first, so the click does not scroll the column and move what is measured.
+      await toggle.scrollIntoViewIfNeeded()
       const above = await panel.getByRole('radiogroup', { name: /file type/i }).boundingBox()
       await toggle.click()
       await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-      await expect(panel.locator('.xd-man-row')).toHaveCount(5)
+      await expect(panel.locator('.xd-man-row')).toHaveCount(3)
       await expect(panel.locator('.xd-man-row').first()).toBeVisible()
       await expect(panel.locator('.xd-man-n').first()).toHaveText('untitled.tokens.css')
       // It opens in place: nothing above it moved.
@@ -378,26 +401,27 @@ test.describe('the sizes the spec names', () => {
       await toggle.click()
       await expect(panel.locator('.xd-man-row').first()).toBeHidden()
       // A category with one file has nothing to fold.
-      await typeRadio(panel, 'UI kit').click()
+      await typeRadio(panel, 'UI').click()
+      await openDetails(panel)
       await expect(panel.locator('.xd-man .xd-man-t')).toHaveCount(0)
       await expect(panel.locator('.xd-man-n')).toHaveText('untitled-ui-kit-04-standards.zip')
     })
 
-    test('the title, the type control, the file pills and the dock text share one 16px left edge', async ({ page }) => {
+    test('the title, the type control, the file pills, the details fold and the dock text share one 16px left edge', async ({ page }) => {
       watch(page, 'a designer exporting at 390px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      await typeRadio(panel, 'Brand book').click()
+      await typeRadio(panel, 'Branding').click()
       await categoryRadio(panel, 'Style guide').click()
       const edge = async (locator) => Math.round((await locator.boundingBox()).x)
       const edges = {
         title: await edge(panel.getByRole('heading', { level: 2 })),
         type: await edge(panel.getByRole('radiogroup', { name: 'Export type' })),
-        stepLabel: await edge(panel.getByRole('heading', { level: 3, name: 'File' })),
+        details: await edge(panel.locator('.xd-more > summary')),
         files: await edge(fileGroup(panel, 'Style guide').getByRole('radio').first()),
         status: await edge(dockStatus(panel)),
       }
-      expect(edges, 'the left edges that line up').toEqual({ title: 16, type: 16, stepLabel: 16, files: 16, status: 16 })
+      expect(edges, 'the left edges that line up').toEqual({ title: 16, type: 16, details: 16, files: 16, status: 16 })
     })
   })
 
@@ -454,8 +478,8 @@ test.describe('what a free account can take', () => {
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    await categoryRadio(panel, 'Style guide').click()
-    await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'PNG', exact: true }).click()
+    await typeRadio(panel, 'Image').click()
+    await fileGroup(panel, 'Style guide image').getByRole('radio', { name: 'PNG', exact: true }).click()
     const file = await takeDownload(page)
     expect(file.name).toMatch(/-style-guide\.png$/)
     expect([...file.bytes.subarray(0, 8)], 'the PNG signature').toEqual([137, 80, 78, 71, 13, 10, 26, 10])
@@ -481,7 +505,7 @@ test.describe('what a free account can take', () => {
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    await typeRadio(panel, 'UI kit').click()
+    await typeRadio(panel, 'UI').click()
     await expect(primaryButton(panel)).toHaveText('Export UI kit')
     const calls = await mockThemeApi(page)
     const file = await takeDownload(page)
@@ -526,7 +550,7 @@ test.describe('what a free account can take', () => {
     const panel = await openFromHeader(page)
     await typeRadio(panel, 'Code').click()
     await expect(panel.getByRole('button', { name: 'Copy file' })).toHaveCount(1)
-    await fileGroup(panel, 'Code').getByRole('radio', { name: 'JSON', exact: true }).click()
+    await fileGroup(panel, 'Tokens').getByRole('radio', { name: 'JSON', exact: true }).click()
     await expect(panel.getByRole('button', { name: 'Copy CSS' })).toHaveCount(0)
     await panel.getByRole('button', { name: 'Copy file', exact: true }).click()
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/^\s*\{/)
@@ -541,42 +565,44 @@ const eventsNamed = (page, name) => page.evaluate((wanted) => (window.vaq || [])
   .map((q) => q[1].data || null), name)
 
 const PRO_CATEGORIES = [
-  { name: 'Book', gate: 'design-system-book-export' },
-  { name: 'Slides', gate: 'brand-guidelines-export' },
+  { name: 'Brand book', tab: 'Brand book, A4 pages, Pro', gate: 'design-system-book-export' },
+  { name: 'Guidelines', tab: 'Guidelines, Brand guidelines', gate: 'brand-guidelines-export' },
 ]
 
 // Criteria 8, 9, 10 and 12: Pro categories for a free account.
-//   - Draw the previews without bakeBlur (utils/proPreviews.js): "the blur is in the pixels" fails.
-//   - Render .xd-theme-lock / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
+//   - Leave the .xd-mark out of ExportStage for a sample: "the mark is over the page" fails.
+//   - Render .xd-stage-pro / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
 //   - Send a free account on a Pro file to the server instead of /plans: "goes to /plans" fails.
 //   - Drop from=kit-gallery from the checkout navigation: "a saved project goes to checkout" fails.
 test.describe('Pro categories for a free account', () => {
-  for (const { name, gate } of PRO_CATEGORIES) {
-    test(`${name}: a blurred preview, a lock, a Pro tag, and the primary leads to /plans when no project is saved`, async ({ page }) => {
+  for (const { name, tab, gate } of PRO_CATEGORIES) {
+    test(`${name}: a sample preview under the mark, a lock, a Pro tag, and the primary leads to /plans when no project is saved`, async ({ page }) => {
       watch(page, `a signed-in free account on ${name}`)
       const asked = []
       await page.route('**/api/ai?export=document', (route) => { asked.push(route.request().url()); route.abort() })
       await signIn(page, { plan: 'free' })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      await typeRadio(panel, 'Brand book').click()
-      // The Book is Pro in every theme, so its row carries the tag. The slides are free in the Free pair's themes, so their row does not: the theme decides.
-      await expect(categoryRadio(panel, name)).toHaveAccessibleName(name === 'Book' ? 'Book, A4 pages, Pro' : 'Slides, Brand guidelines')
+      await typeRadio(panel, 'Branding').click()
+      // The Brand book is Pro in every template, so its tab carries the tag. The guidelines are free in the Free pair's templates, so their tab does not: the template decides.
+      await expect(categoryRadio(panel, name)).toHaveAccessibleName(tab)
       await categoryRadio(panel, name).click()
-      if (name === 'Slides') {
-        // The guidelines open on Label, a Free theme, so there is no lock yet; a Pro theme is what locks them.
-        await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+      if (name === 'Guidelines') {
+        // The guidelines open on Label, a Free template, so there is no lock yet; a Pro template is what locks them.
+        await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
         await expect(primaryButton(panel)).toHaveText('Export PDF')
         await chooseTheme(panel, 'Studio')
       }
-      await expect(panel.locator('.xd-theme-lock')).toBeVisible()
-      await expect(panel.locator('.xd-theme-lock')).toContainText('Pro')
-      const shots = panel.locator('.xd-theme-stage.is-locked img')
+      await expect(panel.locator('.xd-stage-pro')).toBeVisible()
+      await expect(panel.locator('.xd-stage-pro')).toContainText('Pro')
+      const shots = panel.locator('.xd-box.is-locked img')
       await expect(shots.first()).toBeVisible()
       for (const img of await shots.all()) {
-        expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the locked pictures are blurred').toMatch(/blur\(/)
+        expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the sample is not blurred').toBe('none')
+        await expect(img, 'the sample is the 1x picture, with no retina version').not.toHaveAttribute('srcset', /.+/)
       }
-      await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+      await expect(panel.locator('.xd-box > .xd-mark'), 'the sample carries the tiled mark').toHaveCount(1)
+      await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
       await primaryButton(panel).click()
       await expect(page).toHaveURL(/\/plans(\?|$)/)
       expect(await eventsNamed(page, 'upgrade_gate_shown')).toContainEqual({ gate })
@@ -591,54 +617,58 @@ test.describe('Pro categories for a free account', () => {
     const panel = await openFromHeader(page)
     await expect(categoryRadio(panel, 'Style guide')).toHaveAccessibleName('Style guide, A4')
     await categoryRadio(panel, 'Style guide').click()
-    await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+    await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
     await expect(panel.locator('img[data-blurred="true"]')).toHaveCount(0)
   })
 
   test('signed out is the same as free: the lock, then /plans', async ({ page }) => {
-    watch(page, 'a visitor on Book')
+    watch(page, 'a visitor on the Brand book')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    await typeRadio(panel, 'Brand book').click()
-    await categoryRadio(panel, 'Book').click()
-    await expect(panel.locator('.xd-theme-lock')).toBeVisible()
+    await typeRadio(panel, 'Branding').click()
+    await categoryRadio(panel, 'Brand book').click()
+    await expect(panel.locator('.xd-stage-pro')).toBeVisible()
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
     expect(await eventsNamed(page, 'upgrade_gate_shown')).toContainEqual({ gate: 'design-system-book-export' })
   })
 
-  test('with a saved project a Pro pick has one offer, Unlock with Pro, and it lands on checkout from the gallery', async ({ page }) => {
-    watch(page, 'a free account with a saved project on Book')
+  test('with a saved project a Pro pick has one offer, Upgrade to Pro, and it lands on checkout from the gallery', async ({ page }) => {
+    watch(page, 'a free account with a saved project on the Brand book')
     await signIn(page, { plan: 'free', projects: [savedProject()] })
     await go(page, ROUTE)
     const panel = await settled(page)
     // The dialog starts on a free file, so there is no offer until a Pro pick is made.
     await expect(primaryButton(panel)).toHaveText('Export PDF')
-    await categoryRadio(panel, 'Book').click()
-    await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+    await categoryRadio(panel, 'Brand book').click()
+    await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     await expect(dockStatus(panel)).toHaveText(/Pro unlocks this file/)
     await expect(dockStatus(panel), 'one offer, with no trial wording in the dialog').not.toContainText(/trial|Cancel before/i)
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/checkout\?plan=yearly&from=kit-gallery$/)
   })
 
-  test('the blur is in the pixels: a Pro account sees the same preview sharp', async ({ browser }) => {
+  test('the mark is over the page: a Pro account sees the same preview with none', async ({ browser }) => {
     const sharp = {}
     for (const plan of ['free', 'pro']) {
       const context = await browser.newContext()
       const page = await context.newPage()
-      watch(page, `a ${plan} account comparing the Book preview`)
+      watch(page, `a ${plan} account comparing the Brand book preview`)
       await signIn(page, { plan })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      // A free account opens on the free Slides, which are sharp; the Book is the Pro file to compare.
-      await categoryRadio(panel, 'Book').click()
-      await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
-      sharp[plan] = await panel.locator('.xd-theme-stage img').first().evaluate((el) => getComputedStyle(el).filter)
+      // A free account opens on the free guidelines, which are sharp; the Brand book is the Pro file to compare.
+      await categoryRadio(panel, 'Brand book').click()
+      await showStock(panel)
+      await expect(panel.locator('.xd-box img').first()).toBeVisible()
+      sharp[plan] = {
+        filter: await panel.locator('.xd-box img').first().evaluate((el) => getComputedStyle(el).filter),
+        marks: await panel.locator('.xd-box > .xd-mark').count(),
+      }
       await context.close()
     }
-    expect(sharp.free, 'free: the Book preview is blurred').toMatch(/blur\(/)
-    expect(sharp.pro, 'pro: the same preview is sharp').toBe('none')
+    expect(sharp.free, 'free: the Brand book is a sharp sample under the mark').toEqual({ filter: 'none', marks: 1 })
+    expect(sharp.pro, 'pro: the same preview has no mark').toEqual({ filter: 'none', marks: 0 })
   })
 })
 
@@ -651,15 +681,18 @@ test.describe('a Pro account', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    for (const name of ['Book', 'Slides', 'Style guide']) {
+    for (const name of ['Brand book', 'Guidelines', 'Style guide']) {
       await expect(categoryRadio(panel, name)).not.toHaveAccessibleName(/, (Pro|free)$/)
     }
-    await expect(panel.locator('.xd-theme-lock, .xd-pro')).toHaveCount(0)
-    await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
-    await expect(panel.locator('.xd-theme-stage.is-locked')).toHaveCount(0)
+    await expect(panel.locator('.xd-stage-pro, .xd-pro')).toHaveCount(0)
+    await showStock(panel)
+    await expect(panel.locator('.xd-box img').first()).toBeVisible()
+    await expect(panel.locator('.xd-box.is-locked')).toHaveCount(0)
     await expect(primaryButton(panel)).toHaveText('Export PDF')
     await expect(dockStatus(panel)).toContainText('No watermark')
-    await expect(panel.getByRole('radiogroup', { name: 'Theme' }).locator('.xd-theme-gh'), 'a Pro account sees one plain list, with no Free or In Pro groups').toHaveCount(0)
+    const grid = await readTemplates(panel)
+    expect(grid.pro, 'a Pro account sees one plain list, with no Pro mark on any card').toEqual([])
+    expect(grid.chosen, 'and one template is chosen').toHaveLength(1)
   })
 
   test('exports the book through the server: a POST with a Bearer token, row book, format pdf, in the chosen theme', async ({ page }) => {
@@ -669,6 +702,8 @@ test.describe('a Pro account', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
+    // The dialog opens on a free file for everyone, the guidelines; the book is a pick.
+    await categoryRadio(panel, 'Brand book').click()
     await expect(primaryButton(panel)).toBeEnabled()
     const [doc] = await Promise.all([page.context().waitForEvent('page'), primaryButton(panel).click()])
     await expect(printedDoc(doc).locator('#printed-doc')).toHaveText('Stub book')
@@ -738,7 +773,7 @@ test.describe('opening, closing and keyboard', () => {
     expect((await shownPick(panel)).category, 'the pick stays where it was').toBe('Style guide')
   })
 
-  test('while a file builds the rail holds still, Escape and Close export do nothing, and focus stays inside', async ({ page }) => {
+  test('while a file builds the rail and tabs hold still, Escape and Close export do nothing, and focus stays inside', async ({ page }) => {
     watch(page, 'a Pro account waiting for the book')
     await page.addInitScript(() => { window.print = () => {} })
     let finish
@@ -754,6 +789,7 @@ test.describe('opening, closing and keyboard', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
+    await categoryRadio(panel, 'Brand book').click()
     // The print tab is reserved on the click itself, so listen before pressing.
     const opened = page.context().waitForEvent('page')
     await primaryButton(panel).click()
@@ -763,7 +799,7 @@ test.describe('opening, closing and keyboard', () => {
     await expect(dockStatus(panel)).toBeEmpty()
 
     await categoryRadio(panel, 'Style guide').click({ force: true })
-    expect((await shownPick(panel)).category, 'the rail ignores a click while a file builds').toBe('Book')
+    expect((await shownPick(panel)).category, 'the tabs ignore a click while a file builds').toBe('Brand book')
     await page.keyboard.press('Escape')
     await panel.getByRole('button', { name: 'Close export' }).click({ force: true })
     await expect(panel).toBeVisible()
@@ -800,23 +836,23 @@ test.describe('opening, closing and keyboard', () => {
       .evaluate((group) => [...group.querySelectorAll('[role=radio]')].filter((r) => r.tabIndex === 0 && !r.closest('[role=radiogroup]:not([aria-label="Export type"])')).length)
     expect(tabStops, 'one Tab stop in the type group').toBe(1)
 
-    await typeRadio(panel, 'Brand book').focus()
+    await typeRadio(panel, 'Branding').focus()
     await page.keyboard.press('ArrowDown')
-    await expect(typeRadio(panel, 'UI kit')).toBeFocused()
-    await expect(typeRadio(panel, 'UI kit')).toHaveAttribute('aria-checked', 'true')
+    await expect(typeRadio(panel, 'UI')).toBeFocused()
+    await expect(typeRadio(panel, 'UI')).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('ArrowDown')
+    await expect(typeRadio(panel, 'Image')).toBeFocused()
+    await expect(typeRadio(panel, 'Image')).toHaveAttribute('aria-checked', 'true')
     await page.keyboard.press('ArrowDown')
     await expect(typeRadio(panel, 'Code')).toBeFocused()
     await expect(typeRadio(panel, 'Code')).toHaveAttribute('aria-checked', 'true')
     await page.keyboard.press('ArrowDown')
-    await expect(typeRadio(panel, 'App-ready')).toBeFocused()
-    await expect(typeRadio(panel, 'App-ready')).toHaveAttribute('aria-checked', 'true')
-    await page.keyboard.press('ArrowDown')
-    await expect(typeRadio(panel, 'Brand book'), 'the end wraps to the start').toBeFocused()
+    await expect(typeRadio(panel, 'Branding'), 'the end wraps to the start').toBeFocused()
     await page.keyboard.press('End')
-    await expect(typeRadio(panel, 'App-ready')).toBeFocused()
+    await expect(typeRadio(panel, 'Code')).toBeFocused()
     await page.keyboard.press('Home')
-    await expect(typeRadio(panel, 'Brand book')).toBeFocused()
-    await expect(typeRadio(panel, 'Brand book')).toHaveAttribute('aria-checked', 'true')
+    await expect(typeRadio(panel, 'Branding')).toBeFocused()
+    await expect(typeRadio(panel, 'Branding')).toHaveAttribute('aria-checked', 'true')
   })
 
   test('with the keyboard alone: pick a category and a file, then export', async ({ page }) => {
@@ -826,11 +862,11 @@ test.describe('opening, closing and keyboard', () => {
     await page.locator('.pnav-export').focus()
     await page.keyboard.press('Enter')
     const panel = await settled(page)
-    await typeRadio(panel, 'Brand book').focus()
-    await categoryRadio(panel, 'Book').focus()
-    await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('ArrowDown')
-    await expect(categoryRadio(panel, 'Style guide')).toBeChecked()
+    await typeRadio(panel, 'Branding').focus()
+    await categoryRadio(panel, 'Brand book').focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(categoryRadio(panel, 'Style guide')).toHaveAttribute('aria-selected', 'true')
+    await expect(categoryRadio(panel, 'Style guide')).toBeFocused()
     await fileGroup(panel, 'Style guide').getByRole('radio', { checked: true }).focus()
     await page.keyboard.press('ArrowRight')
     const picked = await shownPick(panel)
@@ -857,14 +893,14 @@ test.describe('while the plan is still loading', () => {
       await signIn(page, { plan, uid, slowReads: [{ path: `users/${uid}`, hold: true }] })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      const tags = panel.locator('.xd-pro, .xd-theme-lock')
+      const tags = panel.locator('.xd-pro, .xd-stage-pro')
 
-      // A Pro category, then a free one.
-      await expect(primaryButton(panel), 'Book, plan unknown').toHaveText('Checking your plan…')
+      // The starting file, then a free one, then a Pro one.
+      await expect(primaryButton(panel), 'Guidelines, plan unknown').toHaveText('Checking your plan…')
       await expect(primaryButton(panel)).toBeDisabled()
       await expect(dockStatus(panel)).toHaveText('Checking your plan…')
       await expect(tags, 'held back: no tag and no lock').toHaveCount(0)
-      await expect(categoryRadio(panel, 'Book')).not.toHaveAccessibleName(/, (Pro|free)$/)
+      await expect(categoryRadio(panel, 'Brand book')).not.toHaveAccessibleName(/, (Pro|free)$/)
       await categoryRadio(panel, 'Style guide').click()
       await expect(primaryButton(panel), 'Style guide, plan unknown').toHaveText('Checking your plan…')
       await expect(primaryButton(panel)).toBeDisabled()
@@ -873,10 +909,10 @@ test.describe('while the plan is still loading', () => {
       await page.evaluate(() => window.__UIL4B_TEST_HOLD__.release())
       await expect(primaryButton(panel)).toBeEnabled()
       await expect(primaryButton(panel), 'Style guide once the plan is known').toHaveText('Export style guide')
-      await categoryRadio(panel, 'Book').click()
-      await expect(primaryButton(panel), 'Book once the plan is known').toHaveText(plan === 'pro' ? 'Export PDF' : 'Unlock with Pro')
-      await expect(categoryRadio(panel, 'Book'), 'the tag, free accounts only').toHaveAccessibleName(plan === 'free' ? 'Book, A4 pages, Pro' : 'Book, A4 pages')
-      await expect(panel.locator('.xd-theme-lock')).toHaveCount(plan === 'free' ? 1 : 0)
+      await categoryRadio(panel, 'Brand book').click()
+      await expect(primaryButton(panel), 'Brand book once the plan is known').toHaveText(plan === 'pro' ? 'Export PDF' : 'Upgrade to Pro')
+      await expect(categoryRadio(panel, 'Brand book'), 'the tag, free accounts only').toHaveAccessibleName(plan === 'free' ? 'Brand book, A4 pages, Pro' : 'Brand book, A4 pages')
+      await expect(panel.locator('.xd-stage-pro')).toHaveCount(plan === 'free' ? 1 : 0)
     })
   }
 })
@@ -885,57 +921,64 @@ test.describe('while the plan is still loading', () => {
 //   - Reset the file to the category's first on every switch (lastFile ref): the memory test fails.
 //   - Put an em dash in any step copy: the em dash test names the category.
 test.describe('what the popup remembers and says', () => {
-  test('each category remembers its file: Style guide on PNG survives a trip to Book', async ({ page }) => {
+  test('each category remembers its file: the style guide as Markdown survives a trip to the Brand book', async ({ page }) => {
     watch(page, 'a designer switching categories')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    // Signed out, the popup starts on the free Slides; this clicks the Brand book type in case that changes.
-    await typeRadio(panel, 'Brand book').click()
+    await typeRadio(panel, 'Branding').click()
     await categoryRadio(panel, 'Style guide').click()
-    await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'PNG', exact: true }).click()
-    await categoryRadio(panel, 'Book').click()
-    await fileGroup(panel, 'Book').getByRole('radio', { name: 'HTML', exact: true }).click()
+    await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'Markdown', exact: true }).click()
+    await categoryRadio(panel, 'Brand book').click()
+    await fileGroup(panel, 'Brand book').getByRole('radio', { name: 'HTML', exact: true }).click()
     await categoryRadio(panel, 'Style guide').click()
-    expect((await shownPick(panel)).file).toBe('PNG')
-    await categoryRadio(panel, 'Book').click()
+    expect((await shownPick(panel)).file).toBe('Markdown')
+    await categoryRadio(panel, 'Brand book').click()
     expect((await shownPick(panel)).file).toBe('HTML')
+    // The same holds across the rail: the style guide image on JPEG survives a trip to Code.
+    await typeRadio(panel, 'Image').click()
+    await fileGroup(panel, 'Style guide image').getByRole('radio', { name: 'JPEG', exact: true }).click()
     await typeRadio(panel, 'Code').click()
-    await typeRadio(panel, 'Brand book').click()
-    expect((await shownPick(panel)).category, 'back in Brand book').toBe('Book')
+    await typeRadio(panel, 'Image').click()
+    expect((await shownPick(panel)).file).toBe('JPEG')
+    // A type opens on its first tab.
+    await typeRadio(panel, 'Branding').click()
+    expect((await shownPick(panel)).category, 'back in Branding').toBe('Guidelines')
   })
 
-  test('PNG pages under Book replace the layout tiles with "PNG pages use one layout."', async ({ page }) => {
+  test('PNG pages replace the layout tiles with "PNG pages use one layout.", and take no template', async ({ page }) => {
     watch(page, 'a designer choosing PNG pages')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    // Signed out, the popup starts on the free Slides; this clicks the Brand book type in case that changes.
-    await typeRadio(panel, 'Brand book').click()
-    await expect(panel.getByRole('radiogroup', { name: 'Template' }), 'a themed file has a Theme step and no Layout tiles').toHaveCount(0)
-    await expect(panel.getByRole('heading', { name: 'Theme', level: 3 })).toBeVisible()
-    await fileGroup(panel, 'Book').getByRole('radio', { name: 'PNG pages', exact: true }).click()
+    await typeRadio(panel, 'Branding').click()
+    await expect(panel.getByRole('radiogroup', { name: 'Template' }), 'a templated file has the grid behind View templates, and no Layout tiles').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'View templates' })).toBeVisible()
+    await typeRadio(panel, 'Image').click()
+    await categoryRadio(panel, 'Book pages').click()
+    await openDetails(panel)
     await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
     await expect(panel.getByText('PNG pages use one layout.')).toBeVisible()
-    await expect(panel.getByRole('heading', { name: 'Theme', level: 3 }), 'PNG pages are drawn in the browser and take no theme').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'View templates' }), 'PNG pages are drawn in the browser and take no template').toHaveCount(0)
   })
 
-  test('the steps are Theme, File and Details; only PNG pages keep a Layout; a category with none has none', async ({ page }) => {
+  test('File details holds File, Layout (PNG pages only) and Details; a category with none has none', async ({ page }) => {
     watch(page, 'a designer reading the steps')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    // Signed out, the popup starts on the free Slides; this clicks the Brand book type in case that changes.
-    await typeRadio(panel, 'Brand book').click()
-    const steps = async () => panel.getByRole('heading', { level: 3 }).allInnerTexts()
-    expect(await steps(), 'a themed file leads with its Theme').toEqual(['Theme', 'File', 'Details'])
-    await fileGroup(panel, 'Book').getByRole('radio', { name: 'PNG pages', exact: true }).click()
+    const steps = async () => {
+      await openDetails(panel)
+      return panel.getByRole('heading', { level: 3 }).allInnerTexts()
+    }
+    await typeRadio(panel, 'Branding').click()
+    expect(await steps(), 'a templated file has File and Details; its template is behind View templates').toEqual(['File', 'Details'])
+    await expect(panel.getByRole('heading', { name: 'Theme', level: 3 })).toHaveCount(0)
+    await typeRadio(panel, 'Image').click()
+    await categoryRadio(panel, 'Book pages').click()
     expect(await steps(), 'only the PNG pages keep a Layout step').toEqual(['File', 'Layout', 'Details'])
-    await fileGroup(panel, 'Book').getByRole('radio', { name: 'PDF', exact: true }).click()
-    await categoryRadio(panel, 'Style guide').click()
+    await categoryRadio(panel, 'Style guide image').click()
     expect(await steps()).toEqual(['File', 'Details'])
     await typeRadio(panel, 'Code').click()
-    expect((await steps()).slice(0, 1)).toEqual(['File'])
-    await expect(panel.getByRole('radiogroup', { name: /categories$/ }), 'Code shows no sub-rows').toHaveCount(0)
-    await typeRadio(panel, 'UI kit').click()
-    await expect(panel.getByRole('radiogroup', { name: /categories$/ }), 'UI kit shows no sub-rows').toHaveCount(0)
+    expect(await steps(), 'Tokens has files and no details').toEqual(['File'])
+    await expect(panel.getByRole('radiogroup', { name: /categories$/ }), 'the categories are tabs, not a group of rows').toHaveCount(0)
   })
 
   test('no category says anything with an em dash, free or Pro', async ({ page }) => {
@@ -945,6 +988,7 @@ test.describe('what the popup remembers and says', () => {
     for (const category of CATEGORIES) {
       await category.go(panel)
       await expect(panel.locator('.xd-swap')).toBeVisible()
+      await openDetails(panel)
       const text = await panel.evaluate((card) => [card.innerText, ...[...card.querySelectorAll('[aria-label]')].map((el) => el.getAttribute('aria-label'))].join('\n'))
       expect(text, `${category.name} contains an em dash`).not.toContain('—')
       expect(text.length, `${category.name} drew its text`).toBeGreaterThan(80)
@@ -1016,7 +1060,7 @@ test.describe('the walkthrough and the way back from checkout', () => {
       const page = await context.newPage()
       watch(page, 'a buyer returning from checkout')
       await page.route('**/api/checkout-status**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: PAID }))
-      // Pro, as the account is once the payment has gone through: a free account always opens on a free file, so only a Pro one can be sent back to the Book.
+      // Pro, as the account is once the payment has gone through: a free account always opens on a free file, so only a Pro one can be sent back to the PNG pages.
       const session = await signIn(page, { plan: 'pro', projects: [savedProject()] })
       await page.addInitScript((value) => { sessionStorage.setItem('uil4b.kitGalleryPick', JSON.stringify({ ...value, at: Date.now() })) }, pickFor(session.uid))
       await go(page, '/checkout/return?session_id=cs_test_paid')
@@ -1030,7 +1074,8 @@ test.describe('the walkthrough and the way back from checkout', () => {
     await expect(back(own.page)).toHaveAttribute('href', ROUTE)
     await back(own.page).click()
     const panel = await settled(own.page)
-    expect(await shownPick(panel), 'the popup reopens on the same category and file').toEqual({ type: 'Brand book', category: 'Book', file: 'PNG pages' })
+    expect(await shownPick(panel), 'the popup reopens on the same category (the PNG pages have no file switch)').toEqual({ type: 'Image', category: 'Book pages', file: null })
+    await expect(primaryButton(panel), 'and on the same file').toHaveText('Export PNG pages')
     await own.context.close()
 
     const foreign = await visit(() => ({ projectId: 'harbour', design: 'book', format: 'pdf', uid: 'someone-else' }))
@@ -1046,10 +1091,10 @@ test.describe('the walkthrough and the way back from checkout', () => {
 })
 
 // Criterion 15: offline, the network exports say so and send nothing; the others still download.
-//   - Remove the isOffline() check in useExportRunner.run: the Book / Slides / UI kit cases fail (a request leaves).
+//   - Remove the isOffline() check in useExportRunner.run: the Guidelines / Brand book / UI kit cases fail (a request leaves).
 //   - Make Style guide or Code need the network: the "still download" case fails.
 test.describe('offline', () => {
-  test('Book, Slides and the UI kit show the offline line and send nothing; Style guide and Code still download', async ({ page, context }) => {
+  test('Guidelines, the Brand book and the UI kit show the offline line and send nothing; the Style guide and Tokens still download', async ({ page, context }) => {
     watch(page, 'a Pro account exporting with no connection')
     await page.addInitScript(() => { window.print = () => {} })
     await stubFonts(page)
@@ -1067,7 +1112,7 @@ test.describe('offline', () => {
     // Template pictures may still load lazily from this site; an export would call the API, a font host or Stripe.
     page.on('request', (req) => { if (/\/api\/|fonts\.|jsdelivr|stripe/.test(req.url())) sent.push(req.url()) })
 
-    for (const category of CATEGORIES.slice(0, 2).concat(CATEGORIES[3])) {
+    for (const category of ['Guidelines', 'Brand book', 'UI kit'].map(categoryNamed)) {
       await category.go(panel)
       await primaryButton(panel).click()
       await expect(dockError(panel), `${category.name}: the offline line`).toContainText(/offline/i)
@@ -1076,7 +1121,7 @@ test.describe('offline', () => {
     expect(sent, 'nothing left the page while offline').toEqual([])
     await expect(panel).toBeVisible()
 
-    for (const [category, expected] of [[CATEGORIES[2], /-style-guide\./], [CATEGORIES[4], /\.css$/]]) {
+    for (const [category, expected] of [[categoryNamed('Style guide'), /-style-guide\./], [categoryNamed('Tokens'), /\.css$/]]) {
       await category.go(panel)
       const file = await takeDownload(page)
       expect(file.name, `${category.name} still downloads offline`).toMatch(expected)

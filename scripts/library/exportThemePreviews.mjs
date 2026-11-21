@@ -8,6 +8,8 @@
 //
 // Writes  public/export-themes/<themeId>-<key>.webp, the keys src/config/exportThemePicker.js reads (themeShots, themeThumb):
 //   thumb        the guidelines cover, 80 px tall
+//   thumb@2x     the same cover for a 2x screen (themeThumb2x): 284 px wide, the height of the cover's own shape. The picker
+//                draws a card's picture about 155 px wide whatever the shape, so a narrow cover needs the width as much as a wide one
 //   kitScreen    the UI kit page "screen-light"          (themes with a UI kit only)
 //   kitButtons   the UI kit page "buttons"               (themes with a UI kit only)
 //   book         the top of the brand book's index.html, 1424 x 606 at 1x, light
@@ -51,6 +53,7 @@ const ET = ET_DEFAULT
 const href = (p) => pathToFileURL(p).href
 
 const THUMB_H = 80
+const THUMB_2X_W = 284
 const BOOK = { w: 1424, h: 606 }
 // Page id each picture is cut from.
 const GUIDE_PAGE = { guideCover: 'cover', guidePalette: 'palette' }
@@ -205,8 +208,8 @@ export async function writePreviews(themeIds, { tmp, quality = 0.8 } = {}) {
             if (await el.count() !== 1) { problems.push(`${id} ${key}: page "${pageId}" is not in the ${kind} document (the theme left it out)`); continue }
             const box = await el.boundingBox()
             if (Math.abs(box.width / box.height - size.w / size.h) > 0.01) problems.push(`${id} ${key}: page "${pageId}" is ${Math.round(box.width)}x${Math.round(box.height)}, not the theme's page shape; the picture is stretched`)
-            const w = key === 'thumb' ? Math.round(THUMB_H * size.w / size.h) : size.w
-            const h = key === 'thumb' ? THUMB_H : size.h
+            const w = key === 'thumb' ? Math.round(THUMB_H * size.w / size.h) : key === 'thumb@2x' ? THUMB_2X_W : size.w
+            const h = key === 'thumb' ? THUMB_H : key === 'thumb@2x' ? Math.round(THUMB_2X_W * size.h / size.w) : size.h
             await save(await el.screenshot({ type: 'png' }), `${id}-${key}.webp`, w, h)
           }
         } finally { await pg.close() }
@@ -214,7 +217,7 @@ export async function writePreviews(themeIds, { tmp, quality = 0.8 } = {}) {
 
       // The guidelines: cover, palette, and the thumb is the cover small.
       const guides = await filesOf(renderThemeExport, engine, state, id, 'slides', 'html')
-      await shootPages(guides, 'brand-guidelines.html', 'guidelines', { ...GUIDE_PAGE, thumb: 'cover' }, 'guidelines')
+      await shootPages(guides, 'brand-guidelines.html', 'guidelines', { ...GUIDE_PAGE, thumb: 'cover', 'thumb@2x': 'cover' }, 'guidelines')
 
       if (hasKit) {
         const kit = await filesOf(renderThemeExport, engine, state, id, 'ui-kit', 'zip')
