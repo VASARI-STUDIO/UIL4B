@@ -28,7 +28,7 @@ import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow } from '../../src/data/exportThemes.js'
-import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
+import { chooseFormat, chooseTemplate, exportPanel, primaryButton } from './export-rows.js'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
 
 const ROUTE = '/projects/harbour/export'
@@ -154,13 +154,8 @@ async function openDialog(page, { client = 'free', server = 'free', file = 'kit'
   return { panel, ...served }
 }
 
-// The Theme step: a radiogroup, one row per theme. On a phone the list is folded under a "Theme: <name>" row, so open it first.
-const themes = (panel) => panel.getByRole('radiogroup', { name: 'Theme' })
-async function pick(panel, name) {
-  const toggle = panel.getByRole('button', { name: /^Theme:/ })
-  if (await toggle.count() && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
-  await themes(panel).getByRole('radio').filter({ has: panel.page().locator('.xd-theme-opt-n').getByText(name, { exact: true }) }).click()
-}
+// The template is chosen in the dialog's "View templates" grid: open it, click the card, and the dialog returns to the preview.
+const pick = (panel, name) => chooseTemplate(panel, name)
 
 /** Count what a click produces: files saved and windows opened. */
 function watchOutputs(page) {
@@ -432,7 +427,7 @@ test.describe('(f) the gallery: choosing a Pro template and exporting', () => {
     watch(page, 'a Free account choosing a Pro theme for the UI kit')
     const { panel, log } = await openDialog(page, { client: 'free', server: 'free', file: 'kit' })
     await pick(panel, 'Studio')
-    await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+    await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/(plans|checkout)(\?|$)/)
     expect(log, 'a locked theme never reaches the route').toHaveLength(0)
