@@ -320,3 +320,30 @@ test('with no design, the guide and the kit say "Your name" in titles, comments 
   assert.match(guide['clear-space.html'], /Keep \d(?:\.\d)?× the logo's height clear/, 'the clear space is not a multiple of the logo height')
   assert.doesNotMatch(guide['clear-space.html'], /\d+% of the logo/, 'the clear space is a percentage')
 })
+
+// Design review round 8: the markup the kit pages show and copy only names classes the shipped components.css defines
+// (the docs-only hk-* and ht-* layout classes had leaked into the copied snippets).
+//     Break: wrap a snippet in a docs class again (a `class="hk-links"` in themes/21-presentation/lane-ht-kit.js), or drop .ui-table from components.css.
+const unesc = (s) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#0?39;/g, "'").replace(/&amp;/g, '&')
+function shownMarkup(html) {
+  const out = []
+  for (const m of html.matchAll(/data-copy="([^"]*)"/g)) out.push(unesc(m[1]))
+  for (const m of html.matchAll(/<pre\b[^>]*><code>([\s\S]*?)<\/code><\/pre>/g)) out.push(unesc(m[1]))
+  return out
+}
+test('every class named in markup the kit shows or copies is defined in the shipped components.css', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('ui-kit', body)
+    const defined = new Set([...files['components.css'].matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]))
+    assert.ok(defined.has('ui-table') && defined.has('ui-empty'), 'components.css lost a class this test relies on')
+    let seen = 0
+    for (const [n, html] of Object.entries(files).filter(([k]) => /^[^/]+\.html$/.test(k) && k !== 'example.html')) {
+      for (const markup of shownMarkup(html)) {
+        for (const m of markup.matchAll(/\bclass="([^"]*)"/g)) {
+          for (const c of m[1].split(/\s+/).filter(Boolean)) { seen++; assert.ok(defined.has(c), `${n}: the copied markup names .${c}, which components.css does not define`) }
+        }
+      }
+    }
+    assert.ok(seen > 40, 'the test found almost no classes to check: ' + seen)
+  }
+})

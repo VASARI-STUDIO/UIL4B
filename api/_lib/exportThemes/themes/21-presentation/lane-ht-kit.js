@@ -69,7 +69,7 @@ const PAGES = {
   },
   states: (ctx) => {
     const F = SC(ctx).form, E = EX(ctx), u = ctx.ui;
-    const all = [['Rest', u.btn(F.book)], ['Hover', u.btn(F.book, { state: 'hover' })], ['Focus', u.btn(F.book, { state: 'focus' })], ['Pressed', u.btn(F.book, { state: 'active' })], ['Disabled', u.btn(F.book, { state: 'disabled' })]];
+    const all = [['Rest', u.btn(F.book)], ['Hover', u.btn(F.book, { state: 'hover' })], ['Focus', u.btn(F.book, { state: 'focus' })], ['Pressed', u.btn(F.book, { state: 'pressed' })], ['Disabled', u.btn(F.book, { state: 'disabled' })]];
     return { lede: 'Every control has its rest, hover, focus, pressed and disabled look.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all };
   },
   buttons: (ctx) => {
@@ -85,7 +85,7 @@ const PAGES = {
   choices: (ctx) => {
     const E = EX(ctx), u = ctx.ui, F = SC(ctx).form, ch = E.checks || [F.notes], rd = E.radios || F.sizes, sw = E.switches || [F.notes];
     const all = [['Checkbox', ch.map((t, i) => u.check(t, { checked: i === 0 })).join('')], ['Radio', rd.map((t, i) => u.check(t, { type: 'radio', name: 'hk-r', checked: i === 0 })).join('')], ['Switch', sw.map((t, i) => u.switch(t, { checked: i === 0 })).join('')], ['Segmented', u.segmented(F.sizes, 1)]];
-    return { lede: 'Checkboxes for any number, radios for one of a set, switches for what takes effect at once.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(`<div class="hk-stack">${h}</div>`, l, 'hk-i--w')).join('')}</div>`, code: all };
+    return { lede: 'Checkboxes for any number, radios for one of a set, switches for what takes effect at once.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(h, l, 'hk-i--w hk-i--stack')).join('')}</div>`, code: all };
   },
   cards: (ctx) => {
     const S = SC(ctx), u = ctx.ui, E = EX(ctx);
@@ -97,7 +97,7 @@ const PAGES = {
   },
   navigation: (ctx) => {
     const S = SC(ctx), u = ctx.ui, E = EX(ctx);
-    const all = [['Tabs', u.tabs(E.tabs || [S.status], 0)], ['Breadcrumb', u.crumbs(E.crumbs && E.crumbs.length ? E.crumbs : [S.deliverTo])], ['Links', `<nav class="hk-links" aria-label="Example">${u.links(E.links || [[S.call, 'phone']], 0)}</nav>`]];
+    const all = [['Tabs', u.tabs(E.tabs || [S.status], 0)], ['Breadcrumb', u.crumbs(E.crumbs && E.crumbs.length ? E.crumbs : [S.deliverTo])], ['Links', `<nav class="ui-topbar" aria-label="Main"><strong class="ui-display">${A(ctx.brand.logo.showcase.wordmark)}</strong><div class="ui-topbar__links">${u.links(E.links || [[S.call, 'phone']], 0)}</div></nav>`]];
     return { lede: 'Tabs switch a view, a breadcrumb shows the way back, links move between screens.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
   lists: (ctx) => { const h = deliveryRows(ctx, 6); return { lede: 'A row for each order, its status in plain words.', live: `<div class="hk-col">${item(h, 'Order rows', 'hk-i--w')}</div>`, code: [['Order rows', h]] }; },
@@ -105,8 +105,8 @@ const PAGES = {
   status: (ctx) => { const all = ctx.status.map((s) => [TONE_SAYS[s.tone] || s.tone, ctx.ui.statusChip(s.id)]); return { lede: 'Status is said in words, in one colour that reads on the ground.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all }; },
   feedback: (ctx) => {
     const S = SC(ctx), u = ctx.ui;
-    const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Error', u.alert('danger', "Payment didn't go through. Check the card details and try again.")], ['Toast', u.toast(S.toast)], ['Loading', `<div class="hk-stack">${u.spinner()}${u.skeleton('220px')}${u.skeleton('150px')}</div>`]];
-    return { lede: 'What happened, said where it happened.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
+    const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Error', u.alert('danger', "Payment didn't go through. Check the card details and try again.")], ['Toast', u.toast(S.toast)], ['Loading', `${u.spinner()}${u.skeleton('220px')}${u.skeleton('150px')}`]];
+    return { lede: 'What happened, said where it happened.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, l === 'Loading' ? 'hk-i--w hk-i--stack' : 'hk-i--w')).join('')}</div>`, code: all };
   },
   // a dialog's confirm is the primary button; the danger button is kept for the one that cannot be undone (cancelling the order)
   dialog: (ctx) => {
@@ -120,10 +120,10 @@ const PAGES = {
   },
   table: (ctx) => {
     const S = SC(ctx), u = ctx.ui, d = S.deliveries;
-    const h = `<table class="hk-tbl"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td>${A(x.to)}<span>${A(x.when)}</span></td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
+    const h = `<table class="ui-table"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td><strong>${A(x.to)}</strong><br>${A(x.when)}</td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
     return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
-  empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="hk-empty"><h3>${A(E.title)}</h3><p>${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
+  empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="ui-empty"><h3 class="ui-empty__title">${A(E.title)}</h3><p class="ui-empty__text">${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
   // the light screen on its own page and the dark on its own: each is read whole, at the width it is used at
   'screen-light': (ctx) => screen(ctx, false, false),
   'screen-dark': (ctx) => ({ ...screen(ctx, true, false), dark: true }),
