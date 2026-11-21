@@ -3,7 +3,7 @@
 // line (the slide's one idea, in words) and its notes; brand copy is printed whole, every value is read from ctx.
 // The notes are drawn from the site's context (lane-ht-clean.js): a value the project has not written is an empty string there, and an
 // empty value is a line, a row or a block that is not printed.
-import { A, L, lower, nameOfHex, fieldStyle, darkF, actF, panelF, fitSize, words, inkOn, cwFor, byRole } from './lane-ht-lib.js';
+import { A, L, lower, nameOfHex, fieldStyle, inkMark, darkF, actF, panelF, fitSize, words, inkOn, cwFor, byRole } from './lane-ht-lib.js';
 import { onceRe, sayOnce } from './lane-g3-kit.js';
 import { distinctColours, servedFamily, ratioText, clearTimes } from './helpers.js';
 import { screenContent, exampleDemo, tally } from './once.js';
@@ -174,30 +174,40 @@ const logoOn = (ctx, hex, o) => {
   const cw = ctx.brand.logo.colourways, k = cwFor(ctx, hex), own = cw[k] && lower(cw[k].ground) === lower(hex);
   return ctx.logo.html(geoOf(ctx), { ...o, ...(own ? { colourway: k } : {}), color: own ? cw[k].name : inkOn(ctx, hex), label: 'Logo' });
 };
-// the clear space: the logo and x on every side, x drawn as a square of the action colour in each corner. Every measure is a share of the
-// zone, so the figure keeps its proportions at any width.
-const zoneFig = (ctx, ground, name, note) => {
-  const Lg = ctx.logo, g = Lg.geos.colour || Lg.geos[Lg.versions[0]], u = Lg.geo.unit, zw = g.w + 2 * u, zh = g.h + 2 * u;
+// the name of a ground in words, as a caption says it
+const groundName = (ctx, hex) => { const n = nameOfHex(ctx, hex); return /^#/.test(n) ? 'the light background' : n; };
+// the clear space as a zone drawn from the logo's ink: the logo's own box plus x on every side (x a share of the drawn logo's height, as the rule
+// says), x shown as a square of the action colour in each corner. Every measure is a share of the zone, so the figure keeps its proportions at any width.
+const zoneFig = (ctx, ground, m, { title, width = 0, note }) => {
+  const x = (ctx.logo.clearShare / 100) * m.h, zw = m.w + 2 * x, zh = m.h + 2 * x;
   // the squares are the action colour where it shows against the ground (on the dark ground it may be the ground itself): else an accent, else the ground's ink
   const act = [actF(ctx), accentFor(ctx, ground)].find((h) => h && ctx.ratio(h, ground) >= 1.8) || inkOn(ctx, ground);
   const pc = (a, b) => `${((a / b) * 100).toFixed(3)}%`;
-  const sq = (r, b) => `<i style="${r ? 'right' : 'left'}:0;${b ? 'bottom' : 'top'}:0;width:${pc(u, zw)};height:${pc(u, zh)};background:${act}"></i>`;
-  const label = `The logo on ${name}, with the clear space round it: x is ${clearTimes(Lg.clearShare)} the logo's height`;
-  return `<figure class="ht-cs"><div class="ht-cs__z" role="img" aria-label="${A(label)}" style="aspect-ratio:${zw.toFixed(2)}/${zh.toFixed(2)};background:${ground}">${sq(0, 0)}${sq(1, 0)}${sq(0, 1)}${sq(1, 1)}<span class="ht-cs__l" style="left:${pc(u, zw)};top:${pc(u, zh)};width:${pc(g.w, zw)};height:${pc(g.h, zh)}">${logoOn(ctx, ground, { share: g.w / zw })}</span></div><figcaption>${note}</figcaption></figure>`;
+  const sq = (r, b) => `<i style="${r ? 'right' : 'left'}:0;${b ? 'bottom' : 'top'}:0;width:${pc(x, zw)};height:${pc(x, zh)};background:${act}"></i>`;
+  const label = `${title}, with the clear space round it: x is ${clearTimes(ctx.logo.clearShare)} the logo's height`;
+  return `<figure class="ht-cs"${width ? ` style="width:min(100%,${Math.round(width)}px)"` : ''}><div class="ht-cs__z" role="img" aria-label="${A(label)}" style="aspect-ratio:${zw.toFixed(2)}/${zh.toFixed(2)};background:${ground}">${sq(0, 0)}${sq(1, 0)}${sq(0, 1)}${sq(1, 1)}<span class="ht-cs__l" style="left:${pc(x, zw)};top:${pc(x, zh)};width:${pc(m.w, zw)};height:${pc(m.h, zh)}">${m.svg()}</span></div><figcaption>${note}</figcaption></figure>`;
 };
+// the logo on the light ground with its clear space, then the same x on the brand's other versions made for that ground (as the slide draws them)
 const clearFig = (ctx) => {
-  const cw = ctx.brand.logo.colourways, light = panelF(ctx), dark = cw.reversed && cw.reversed.ground, act = actF(ctx);
-  const key = `<span class="ht-cs__sw" style="background:${act}"></span>`;
-  return `<div class="ht-css">${zoneFig(ctx, light, 'the light ground', `${key}<b>x</b> is ${clearTimes(ctx.logo.clearShare)} the logo's height, on every side.`)}${dark && lower(dark) !== lower(light) ? zoneFig(ctx, dark, 'the dark ground', 'The same x on the dark ground.') : ''}</div>`;
+  const Lg = ctx.logo, cw = ctx.brand.logo.colourways, ground = panelF(ctx), k = Lg.clearShare / 100, gname = groundName(ctx, ground);
+  const mp = inkMark(ctx, ground), P = (480 * mp.w) / (mp.w + 2 * k * mp.h);
+  const key = `<span class="ht-cs__sw" style="background:${actF(ctx)}"></span>`;
+  const others = ['horizontal', 'stacked', 'symbol', 'mono-dark'].filter((id) => Lg.geos[id] && lower(cw[Lg.colourwayOf(id)].ground) === lower(cw.colour.ground)).map((id) => {
+    const m = inkMark(ctx, ground, id), r = m.h / m.w, w2 = Math.min(P * 0.55, 64 / r);
+    return zoneFig(ctx, ground, m, { title: `The ${Lg.labels[id].toLowerCase()} logo on ${gname}`, width: w2 + 2 * k * w2 * r, note: A(Lg.labels[id]) });
+  });
+  const main = zoneFig(ctx, ground, mp, { title: `The logo on ${gname}`, note: `${key}<b>x</b> is ${clearTimes(Lg.clearShare)} the logo's height, on every side. Shown on ${A(gname)}.` });
+  return `<div class="ht-css">${main}${others.length ? `<p class="ht-cs__h">The same x on the other versions</p><div class="ht-csr">${others.join('')}</div>` : ''}</div>`;
 };
-// the smallest size: the logo at the pixels (and, in print, the millimetres) it is specified at, with a ruler its exact width
+// the smallest size: the logo drawn at exactly the pixels (and, in print, the millimetres) it is specified at, with a ruler of the same width.
+// The values are said once, in the caption.
 const sizeFig = (ctx) => {
   const ms = ctx.logo.minSize, cw = ctx.brand.logo.colourways, mmPx = (mm) => (mm * 96) / 25.4;
-  const side = (key, big, w, title, note) => {
-    const hex = cw[key].ground;
-    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-d ht-ms__n">${A(big)}</p><p class="ht-ms__t"><b>${A(title)}</b> ${A(note)}</p><span class="ht-ms__w" style="width:${w.toFixed(1)}px">${ctx.logo.html(geoOf(ctx), { width: w, colourway: key, color: cw[key].name, label: 'Logo' })}<span class="ht-ms__r"></span></span></div>`;
+  const side = (key, w, title, note) => {
+    const hex = cw[key].ground, px = +w.toFixed(1);
+    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-ms__t"><b>${A(title)}</b> ${A(note)}</p><span class="ht-ms__w" style="width:${px}px">${inkMark(ctx, hex).svg(px)}<span class="ht-ms__r"></span></span></div>`;
   };
-  return `<div class="ht-mss">${side('reversed', `${ms.screenPx} px`, ms.screenPx, 'On screen', `${ms.screenPx} px wide, drawn at 1 px to the pixel.`)}${side('colour', `${ms.printMm} mm`, mmPx(ms.printMm), 'In print', `${ms.printMm} mm wide, drawn at true size at 100%.`)}</div>`;
+  return `<div class="ht-mss">${side('reversed', ms.screenPx, 'On screen', `${ms.screenPx} px wide, drawn at 1 px to the pixel.`)}${side('colour', mmPx(ms.printMm), 'In print', `${ms.printMm} mm wide, drawn at true size at 100%.`)}</div>`;
 };
 // 6.2: three slides as the deck lays them out, drawn from the shared orders story (the count, the total and the late order are read
 // from the same sample the kit's lists use). Each is a 16:9 field whose type is in container units, so it reflows at any width.
@@ -234,7 +244,8 @@ export const NOTES = {
     return { big: `${words(Lg.versions.length)} versions`, html: fields(ctx, Lg.versions.map((id) => { const k = Lg.colourwayOf(id), w = cw[k]; return { hex: w.ground, what: `site logo ${id}`, html: `<div class="ht-field__logo">${Lg.html(id, { width: id === 'symbol' ? 72 : id === 'stacked' ? 120 : 200, colourway: k, color: w.name, label: Lg.labels[id] })}</div><p class="ht-field__c"><b>${A(Lg.labels[id])}</b>${ctx.brand.logo.when[id] ? `<br>${A(ctx.brand.logo.when[id])}` : ''}</p>` }; }), 2) };
   },
   'clear-space': (ctx) => ({ big: `Keep ${clearTimes(ctx.logo.clearShare)} the logo's height clear on every side.`, html: `<div class="ht-nf">${clearFig(ctx)}</div>` + p('The clear space is measured from the logo itself, so it grows and shrinks with it. Nothing else sits inside it: no type, no edge, no other mark.', 'ht-lead') }),
-  'min-size': (ctx) => { const ms = ctx.logo.minSize; return { big: `${ms.screenPx} px on screen. ${ms.printMm} mm in print.`, html: `<div class="ht-nf">${sizeFig(ctx)}</div>` + p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') + dl([['On screen', nv(`${ms.screenPx} px`)], ['In print', nv(`${ms.printMm} mm`)]]) }; },
+  // the two measures are said once, in the figure's captions
+  'min-size': (ctx) => ({ big: 'Never smaller than this.', html: `<div class="ht-nf">${sizeFig(ctx)}</div>` + p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') }),
   // the rule is said once, under the tiles: a tile names its ground and, where it differs, its version
   'logo-grounds': (ctx) => ({ big: 'Each ground has one version.', html: groundTiles(ctx) + p('Each tile shows the version drawn for its ground. Where none is drawn, the logo is set in one colour, dark or light, whichever reads on it.') }),
   'logo-misuse': (ctx) => ({ big: 'Use the logo as it is drawn.', html: misuseTiles(ctx) }),

@@ -17,11 +17,11 @@ export const docOf = (ctx, what) => `${nameOf(ctx) || 'Brand'} ${what}`;
 
 // While the project has not named the brand, a typeset stand-in goes where its logo would sit, so no page shows an empty tile
 export const PLACEHOLDER_NAME = 'Your name';
-const nameFor = (ctx) => nameOf(ctx) || PLACEHOLDER_NAME;
+export const nameFor = (ctx) => nameOf(ctx) || PLACEHOLDER_NAME;
 // the one symbol every page uses: the first letter of the name, as the engine's own outlined fallback draws it
 export const symbolOf = (name) => ([...String(name).trim()][0] || '').toUpperCase();
 // the part of a name set in the version's brand colour: from the "&" on, else the last word, else the rest after the first letter
-const accentSplit = (name) => {
+export const accentSplit = (name) => {
   const i = name.indexOf('&');
   if (i > 0) return [name.slice(0, i), name.slice(i)];
   const w = name.trim().split(/\s+/);
@@ -30,7 +30,7 @@ const accentSplit = (name) => {
   return [c[0], c.slice(1).join('')];
 };
 // the colour a version sets its accent in: the colourway's own mark colour, where it differs from the name's and shows on the ground
-const accentOf = (ctx, colourway, ink) => {
+export const accentOf = (ctx, colourway, ink) => {
   const cw = ctx.brand.logo.colourways[colourway];
   if (!cw || !cw.sign || String(cw.sign).toLowerCase() === String(ink || cw.name).toLowerCase()) return '';
   return ctx.ratio(cw.sign, cw.ground) >= 3 ? cw.sign : '';

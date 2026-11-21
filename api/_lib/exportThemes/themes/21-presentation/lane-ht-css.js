@@ -337,19 +337,22 @@ export function htCss(ctx) {
 /* the clear space and the smallest size: below 1024 the slide gives way to a figure at the column's size (type 14 px and up) */
 .ht-notes--fig{display:none}
 @media (max-width:1023px){.ht-stage--fig{display:none}.ht-notes--fig{display:grid}}
-.ht-css{display:grid;grid-template-columns:minmax(0,1fr);gap:32px 24px}
+.ht-css{display:flex;flex-direction:column;gap:24px}
+.ht-cs__h{margin:0;font-size:14px;line-height:1.5;color:var(--s)}
+.ht-csr{display:flex;flex-wrap:wrap;gap:24px 20px;align-items:flex-end}
 .ht-cs{margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
 .ht-cs__z{position:relative;width:100%;max-width:480px;container-type:inline-size;box-shadow:inset 0 0 0 1px var(--h)}
 .ht-cs__z>i{position:absolute;display:block}
-.ht-cs__l{position:absolute;display:flex;align-items:center;justify-content:center}
+.ht-cs__l{position:absolute;display:block}
+.ht-cs__l svg{display:block;width:100%;height:100%}
 .ht-cs figcaption,.ht-slf figcaption{font-size:14px;line-height:1.5;color:var(--s)}
 .ht-slf figcaption b{color:var(--t);font-weight:600}
 .ht-cs__sw{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px}
 .ht-mss{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .ht-ms{box-shadow:inset 0 0 0 1px var(--h);container-type:inline-size;padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0}
-.ht-ms__n{font-size:clamp(44px,18cqi,88px);line-height:1;margin:0}
 .ht-ms__t{font-size:14px;line-height:1.5;margin:0}
-.ht-ms__w{display:flex;flex-direction:column;gap:8px;max-width:100%}
+.ht-ms__w{display:flex;flex-direction:column;gap:8px}
+.ht-ms__w svg{display:block;max-width:none}
 .ht-ms__r{display:block;height:8px;border:1px solid currentColor;border-top:0;opacity:.7}
 .ht-sls{display:grid;grid-template-columns:minmax(0,1fr);gap:32px 24px;max-width:640px}
 .ht-slf{margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -361,7 +364,7 @@ export function htCss(ctx) {
 .ht-sl__n{font-size:max(40px,24cqi);line-height:.9;margin:0}
 .ht-sl__k{font-size:max(12px,3.4cqi);line-height:1.3;margin:0}
 .ht-sl__d+.ht-sl__k,.ht-sl__n+.ht-sl__k{margin-top:2cqi}
-@media (min-width:600px){.ht-css,.ht-mss{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:600px){.ht-mss{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:1024px){.ht-sls{grid-template-columns:repeat(3,minmax(0,1fr));max-width:none}}
 @media (prefers-reduced-motion:reduce){.ht *{transition:none!important}}`;
 }
