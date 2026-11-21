@@ -22,7 +22,7 @@ export function componentsCss(ctx) {
   // a theme may ship firmer parts than the house default (meta.shipped): a raised card with an edge and a shadow, a list row that can be
   // marked as the one in hand, a scrim that is ink at a share of its strength, and a skeleton that reads on the surface. Other themes keep the house CSS.
   const SH = (ctx.theme && ctx.theme.shipped) || {};
-  const scrim = SH.scrimShare ? `color-mix(in srgb, var(--scrim) ${Number(SH.scrimShare)}%, transparent)` : 'var(--scrim)';
+  const scrim = SH.scrimShare ? `color-mix(in srgb, color-mix(in srgb, var(--scrim) 70%, #000) ${Number(SH.scrimShare)}%, transparent)` : 'var(--scrim)';
   const statusCss = ctx.status.filter((s) => s.custom).map((s) => `.ui-chip--s-${cssIdent(s.id)} { color: var(--status-${cssIdent(s.id)}-text); }`).join(" ");
   return `/* ${commentText(ctx.brand.name)} components. Built only on tokens.css. */
 .ui, .ui * { box-sizing: border-box; }
@@ -165,7 +165,7 @@ ${statusCss}
 .ui-inline-msg { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-label); color: var(--text-soft); }
 .ui-spinner { width: 24px; height: 24px; border: 3px solid var(--sunken); border-top-color: var(--text); border-radius: var(--r-round); animation: ui-spin 900ms linear infinite; }
 @keyframes ui-spin { to { transform: rotate(360deg); } }
-.ui-skeleton { display: block; height: 14px; border-radius: var(--r-control); background: ${SH.skeleton ? 'color-mix(in srgb, var(--text) 16%, var(--surface))' : 'var(--sunken)'}; }
+.ui-skeleton { display: block; height: 14px; border-radius: var(--r-control); background: ${SH.skeleton ? 'color-mix(in srgb, var(--text) 22%, var(--surface))' : 'var(--sunken)'}; }
 @media (prefers-reduced-motion: reduce) { .ui-spinner { animation: none; border-top-color: var(--text); border-right-color: var(--text); } .ui-btn, .ui-input, .ui-switch, .ui-switch::after { transition: none; } .ui-btn:active { transform: none; } }
 
 /* dialog */

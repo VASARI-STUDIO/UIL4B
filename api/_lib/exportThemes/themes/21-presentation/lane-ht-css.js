@@ -279,8 +279,8 @@ export function htCss(ctx) {
 .ht-mk__pr{font-size:20px;font-weight:600}
 .ht-mk__btn{display:flex;align-items:center;justify-content:center;min-height:48px;font-weight:600;font-size:16px}
 /* a photograph direction: a scene drawn from the palette */
-.ht-pf{display:flex;flex-direction:column;gap:12px;max-width:640px}
-.ht-pf .ht-scene{aspect-ratio:4/3;height:auto}
+.ht-pf{display:flex;flex-direction:column;gap:12px}
+.ht-pf .ht-scene{aspect-ratio:3/2;height:auto}
 .ht-pf figcaption,.ht-gp figcaption{font-size:14px;line-height:1.5;color:var(--s)}
 /* the brand's device: its colours as flat blocks, a bar under a section's title and stepped on the cover */
 .ht-dev{display:flex;align-items:flex-end;height:16px;margin:0 56px}

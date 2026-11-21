@@ -371,8 +371,8 @@ test('theme 21 ships the raised card with its edge and shadow, a visible skeleto
     const dark = tokens.match(/\[data-theme="dark"\]\s*\{([^}]*)\}/)[1]
     assert.match(dark, /--shadow-float:\s*[^;]*\S/, 'the dark ground has its own float shadow')
     assert.match(comp, /\.ui-skeleton\s*\{[^}]*color-mix\(in srgb, var\(--text\)/, 'the skeleton is the sunken fill, which vanishes on a raised surface')
-    assert.match(comp, /\.ui-scrim\s*\{[^}]*color-mix\(in srgb, var\(--scrim\) 60%/, 'the scrim is a solid slab')
-    assert.match(comp, /dialog\.ui-dialog::backdrop\s*\{[^}]*color-mix\(in srgb, var\(--scrim\) 60%/, 'the backdrop is a solid slab')
+    assert.match(comp, /\.ui-scrim\s*\{[^}]*color-mix\(in srgb, color-mix\(in srgb, var\(--scrim\) 70%, #000\) 60%/, 'the scrim is a solid slab')
+    assert.match(comp, /dialog\.ui-dialog::backdrop\s*\{[^}]*color-mix\(in srgb, color-mix\(in srgb, var\(--scrim\) 70%, #000\) 60%/, 'the backdrop is a solid slab')
     // the docs wrapper only lays out specimens: no .hk-* rule changes a ui- component's border, shadow, colour or spacing
     assert.ok(docs, 'assets/kit.css is in the kit')
     const bad = []
@@ -382,5 +382,41 @@ test('theme 21 ships the raised card with its edge and shadow, a visible skeleto
       if (/(?:^|;)\s*(?:border|box-shadow|background|color|padding|margin|outline)[\w-]*\s*:/.test(';' + m[2])) bad.push(m[1].trim())
     }
     assert.deepEqual(bad, [], 'the docs wrapper restyles a shipped component, so the pasted one will not match the page')
+  }
+})
+
+// Design review round 9 (theme 21): the product screen names its order, marks the row it is about, and lists the open orders by due time; the
+// kit's index, screens and example page tell one story, with a design and without.
+//     Break: take orderMeta() out of the screen's card (lane-ht-kit.js), or drop the aria-current mark in deliveryRows() (once.js).
+test('theme 21 product screen: the card names its order, the row is marked current, the open orders run by due time, in every kit page', async () => {
+  const minutes = (t) => { const m = /(\d{1,2}):(\d{2})\s?([ap])m/i.exec(t); return (Number(m[1]) % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0)) * 60 + Number(m[2]) }
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('ui-kit', body)
+    for (const page of ['screen-light.html', 'screen-dark.html', 'screen-mobile.html', 'example.html', 'index.html']) {
+      assert.ok(files[page].includes('Order 1042 · Maya Chen · Packing'), `${page}: the card names its order`)
+    }
+    for (const page of ['screen-light.html', 'screen-dark.html', 'screen-mobile.html', 'example.html']) {
+      assert.match(files[page], /class="ui-row" aria-current="true"/, `${page}: the open order's row is marked current`)
+    }
+    const list = files['screen-light.html'].match(/<div class="hk-scr__b">[\s\S]*?<\/ul>/)[0]
+    const due = [...list.matchAll(/due (\d{1,2}:\d{2} [ap]m)/g)].map((m) => minutes(m[1]))
+    assert.ok(due.length >= 3, 'the list shows its due times')
+    assert.deepEqual(due, [...due].sort((a, b) => a - b), 'the open orders are by due time')
+    assert.doesNotMatch(files['example.html'].match(/<h2>Status<\/h2>[\s\S]*?<\/section>/)[0], /ui-badge/, 'the status row has no count badge beside it')
+  }
+})
+
+// Design review round 9: the logo-grounds tiles name the version in plain words (the same list as 2.1), never the brand's own ground names.
+//     Break: put `${ctx.logo.labels[k]} logo` back in cwCaption (lane-ht-notes.js).
+test('theme 21 logo grounds: a tile names its logo version plainly, and the photo direction is hands at a counter over clear sky', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('slides', body)
+    const tiles = [...files['logo-grounds.html'].matchAll(/<p class="ht-field__c"><b>([^<]*)<\/b><br>([^<]*)<\/p>/g)].map((m) => m[2])
+    assert.ok(tiles.length >= 3, 'the tiles name a version')
+    for (const t of tiles.filter((x) => /logo/i.test(x) && !/picture|sky/i.test(x))) assert.match(t, /^(?:Full-colour logo|Reversed logo|One-colour logo, (?:dark|light))$/, 'a tile names a logo version plainly')
+    assert.doesNotMatch(files['logo-grounds.html'], /On-[a-z]+ logo/, 'no theme vocabulary')
+    const pd = files['photo-direction.html']
+    assert.match(pd, /<figure class="ht-pf"><svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two pairs of hands/, 'the photo direction is drawn as hands at the counter')
+    assert.doesNotMatch(files['assets/guidelines.css'], /\.ht-pf\{[^}]*max-width/, 'the photo direction runs the full column width')
   }
 })

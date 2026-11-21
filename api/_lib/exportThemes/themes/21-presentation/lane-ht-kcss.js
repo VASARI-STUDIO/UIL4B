@@ -46,7 +46,6 @@ export function kitCss(ctx) {
 .hk-rd__b{display:block;height:72px;border:var(--w-control) solid var(--edge);background:var(--raised)}
 .hk-scr{background:var(--surface);color:var(--text);border:1px solid var(--divider)}
 .hk-scr__body{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px 48px;align-items:start;padding:32px}
-.hk-i .ui-empty{max-width:520px}
 .hk-scr__t{grid-column:1/-1}
 .hk-scr__a{display:flex;flex-direction:column;gap:20px}
 .hk-scr__x{display:flex;flex-wrap:wrap;gap:12px;align-items:center}

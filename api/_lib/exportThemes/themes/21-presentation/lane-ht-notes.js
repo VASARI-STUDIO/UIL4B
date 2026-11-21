@@ -27,8 +27,14 @@ const scene = (ctx, { sky, a, b, post, crate, fruit, ground, vb = '0 0 400 300',
   const crates = [52, 120, 268].map((x, i) => { return `<rect x="${x}" y="162" width="64" height="34" fill="${crate}"/><rect x="${x}" y="176" width="64" height="3" fill="${post}"/>${[12, 32, 52].map((d, k) => `<circle cx="${x + d}" cy="156" r="10" fill="${fruit[(i + k) % 2]}"/>`).join('')}`; }).join('');
   return `<svg class="ht-scene" viewBox="${vb}" preserveAspectRatio="${par} slice" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-100" y="-100" width="600" height="500" fill="${sky}"/><rect x="-100" y="250" width="600" height="150" fill="${ground}"/><rect x="60" y="88" width="8" height="162" fill="${post}"/><rect x="332" y="88" width="8" height="162" fill="${post}"/>${Array.from({ length: 8 }, awn).join('')}<path d="M204 196V176a22 14 0 0 1 44 0v20z" fill="${b}"/><circle cx="226" cy="150" r="11" fill="${post}"/><rect x="40" y="196" width="320" height="54" fill="${post}"/><rect x="34" y="190" width="332" height="10" fill="${a}"/>${crates}</svg>`;
 };
-// the scene on the page ground (photo direction)
-const sceneOnPage = (ctx, label, vb) => { const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken; return scene(ctx, { sky, a: act, b: accentFor(ctx, act, sky) || dk, post: dk, crate: L(ctx).surface, fruit: [act, accentFor(ctx, L(ctx).surface, dk) || act], ground: act, vb }, label); };
+// the photo direction itself, drawn at 3:2: close in on two pairs of hands at the counter, a crate of fruit between them, and clear sky above
+// (the top 40% holds no object, so type has somewhere to go). The same brand colours as the scene above.
+const sceneHands = (ctx, label) => {
+  const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken, b = accentFor(ctx, act, sky) || dk, hand = L(ctx).surface, fruit = [act, accentFor(ctx, hand, dk) || act];
+  const arm = `<path d="M30 300h86l38-56-46-20z" fill="${act}"/><ellipse cx="140" cy="230" rx="22" ry="14" transform="rotate(-25 140 230)" fill="${hand}"/><path d="M154 222l12-5M157 230h11M155 238l11 4" stroke="${hand}" stroke-width="8" stroke-linecap="round" fill="none"/>`;
+  const awn = Array.from({ length: 11 }, (_, i) => `<rect x="${i * 40 - 20}" y="120" width="40" height="26" fill="${i % 2 ? b : act}"/><path d="M${i * 40 - 20} 146h40a20 12 0 0 1-40 0z" fill="${i % 2 ? b : act}"/>`).join('');
+  return `<svg class="ht-scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${A(label)}"><rect width="400" height="300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect y="240" width="400" height="60" fill="${dk}"/><rect y="234" width="400" height="8" fill="${act}"/><rect x="160" y="198" width="80" height="38" fill="${hand}"/><rect x="160" y="216" width="80" height="3" fill="${dk}"/>${[178, 200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${fruit[k % 2]}"/>`).join('')}${arm}<g transform="translate(400 0) scale(-1 1)">${arm}</g></svg>`;
+};
 // the scene as a photograph the logo is set on: the action colour is the sky, the reversed logo sits on it
 const sceneOnAction = (ctx, par) => { const act = actF(ctx), dk = darkF(ctx), light = L(ctx).surface; return scene(ctx, { sky: act, a: light, b: accentFor(ctx, act, dk) || dk, post: dk, crate: light, fruit: [accentFor(ctx, act, dk) || light, dk], ground: dk, par }); };
 const PHOTO_BRIEF = [['Subject', 'People at work, caught mid-task, not posed.'], ['Light', 'Daylight from the side. No flash.'], ['Crop', 'Close in, with clear space round the subject for type.']];
@@ -283,7 +289,7 @@ export const NOTES = {
   // 6.1: a frame for the photograph the brand has still to choose, with its direction beside it (the brand's own where it wrote one)
   'photo-direction': (ctx) => {
     const D = ctx.brand.imagery.direction, rows = Object.entries(D).filter(([k, v]) => k !== 'subject' && v).map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)]);
-    const frame = `<figure class="ht-pf">${sceneOnPage(ctx, 'A drawn market stall in the brand colours: the direction at 4:3', '80 56 260 195')}<figcaption>The direction at 4:3, close in on the hands at the counter, with clear sky above for type.</figcaption></figure>`;
+    const frame = `<figure class="ht-pf">${sceneHands(ctx, 'Two pairs of hands at a market counter, a crate of fruit between them, clear sky above: the direction at 3:2')}<figcaption>The direction at 3:2, close in on the hands at the counter, with clear sky above for type.</figcaption></figure>`;
     return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.map(([k, v]) => [k, A(v)])) };
   },
   // with no shots written there is no list: a row of empty crop-mark frames is not a page
