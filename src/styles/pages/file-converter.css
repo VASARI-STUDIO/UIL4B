@@ -1536,3 +1536,19 @@ html[data-reduced-motion="true"] .fc .fc-rail-sheet { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .fc .fc-lock, .fc .fc-switch, .fc .fc-switch-knob { transition: none; }
 }
+
+/* One ink for the rest of the page. The older focus rings above still point at
+   the blue accent; every focusable thing in the converter takes the same ink
+   ring, and the native range and checkbox controls take the ink too. */
+.fc .fc-tab:focus-visible,
+.fc .fc-howto summary:focus-visible,
+.fc .fc-seg-opt:focus-visible,
+.fc .fc-card--btn:focus-visible,
+.fc .fc-remove:focus-visible,
+.fc .fc-crop-box:focus-visible,
+.fc .fc-frame:focus-visible,
+.fc .fc-rail-tab:focus-visible,
+.fc .fc-rail-sheet-item:focus-visible { outline-color: var(--tl-focus); }
+.fc .fc-scrub,
+.fc .fc-check input { accent-color: var(--v3-ink); }
+.fc .fc-progress-bar { background: var(--v3-ink); }

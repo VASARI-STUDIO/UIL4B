@@ -813,7 +813,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // A sample so a first-time visitor can watch a conversion before they have a
   // file to hand. It goes through addFiles like any other file.
   const trySample = useCallback(() => {
-    makeSampleImage().then(f => addFiles([f])).catch(() => toast('Could not draw the sample image', 'error'))
+    makeSampleImage().then(f => addFiles([f])).catch(() => toast('Could not draw the sample image. Choose a file instead.', 'error'))
   }, [addFiles, toast])
 
   // A Free account sees the Pro rows and gets the upgrade prompt when it uses
