@@ -43,6 +43,16 @@ test('each notation renders the same colour', () => {
   assert.equal(formatColor('#4338e0', 'hex'), '#4338e0')
   assert.equal(formatColor('#4338e0', 'rgb'), 'rgb(67 56 224)')
   assert.equal(formatColor('#4338e0', 'hsl'), 'hsl(244 73% 55%)')
+  assert.match(formatColor('#4338e0', 'oklch'), /^oklch\(\d{1,3}(\.\d)?% \d(\.\d{1,3})? \d{1,3}(\.\d)?\)$/)
+})
+
+test('oklch prints lightness as a percent, chroma to 3 places and hue to 1', () => {
+  assert.equal(formatColor('#ff0000', 'oklch'), 'oklch(62.8% 0.258 29.2)')
+  assert.equal(formatColor('#ffffff', 'oklch'), 'oklch(100% 0 0)')
+  assert.equal(formatColor('#000000', 'oklch'), 'oklch(0% 0 0)')
+  // A grey has no hue; it prints 0 rather than a meaningless angle.
+  assert.match(formatColor('#808080', 'oklch'), /^oklch\(\d+(\.\d)?% 0 0\)$/)
+  assert.equal(formatColor('#ff0000', 'oklch', 0.5), 'oklch(62.8% 0.258 29.2 / 0.5)')
 })
 
 test('an opaque colour never prints an alpha', () => {
@@ -114,6 +124,48 @@ test('nonsense parses to null rather than to black', () => {
   }
 })
 
+// ── reading oklch ────────────────────────────────────────────────────────────
+
+test('oklch reads a percent or a bare lightness', () => {
+  const pct = parseColor('oklch(62.8% 0.258 29.2)')
+  const bare = parseColor('oklch(0.628 0.258 29.2)')
+  assert.ok(pct && bare)
+  assert.equal(pct.hex, bare.hex)
+  assert.equal(pct.alpha, 1)
+})
+
+test('oklch hue takes deg, wraps, and accepts a negative angle', () => {
+  const base = parseColor('oklch(62.8% 0.258 29.2)').hex
+  assert.equal(parseColor('oklch(62.8% 0.258 29.2deg)').hex, base)
+  assert.equal(parseColor('oklch(62.8% 0.258 389.2)').hex, base)
+  assert.equal(parseColor('oklch(62.8% 0.258 -330.8)').hex, base)
+})
+
+test('oklch reads alpha after a slash, and commas as separators', () => {
+  assert.equal(parseColor('oklch(62.8% 0.258 29.2 / 50%)').alpha, 0.5)
+  assert.equal(parseColor('oklch(62.8% 0.258 29.2 / 0.25)').alpha, 0.25)
+  assert.equal(parseColor('oklch(62.8%, 0.258, 29.2)').hex, parseColor('oklch(62.8% 0.258 29.2)').hex)
+})
+
+test('oklch refuses out-of-range and non-numeric parts', () => {
+  for (const bad of [
+    'oklch(120% 0.1 10)', 'oklch(50% -0.1 10)', 'oklch(50% 0.6 10)',
+    'oklch(none 0.1 10)', 'oklch(50% 0.1)', 'oklch(abc)', 'oklch(50% 0.1 10rad)',
+  ]) {
+    assert.equal(parseColor(bad), null, bad)
+  }
+})
+
+test('oklch outside sRGB lands on a real colour instead of failing', () => {
+  const out = parseColor('oklch(70% 0.4 150)')
+  assert.ok(out)
+  assert.match(out.hex, /^#[0-9a-f]{6}$/)
+})
+
+test('a percent chroma maps 100% to 0.4', () => {
+  assert.equal(parseColor('oklch(62.8% 50% 29.2)').hex, parseColor('oklch(62.8% 0.2 29.2)').hex)
+})
+
 // The property the whole lens rests on.
 test('every notation round-trips back to the same colour', () => {
   const colors = ['#4338e0', '#ffffff', '#000000', '#ff0000', '#00ff80', '#123456', '#7f7f7f']
@@ -125,11 +177,15 @@ test('every notation round-trips back to the same colour', () => {
       // HSL is lossy at 8 bits per channel — it prints whole degrees and whole
       // percents — so the round trip is asserted as "visually the same colour"
       // rather than byte-identical. Hex and rgb are exact.
-      if (format === 'hsl') {
+      if (format === 'hsl' || format === 'oklch') {
         const a = hexToRgb(hex)
         const b = hexToRgb(back.hex)
         const drift = Math.max(Math.abs(a.r - b.r), Math.abs(a.g - b.g), Math.abs(a.b - b.b))
-        assert.ok(drift <= 4, `${hex} → ${shown} → ${back.hex} drifted ${drift}`)
+        // OKLCH prints lightness to 0.1%, chroma to 0.001 and hue to 0.1 degrees,
+        // which is coarser than 8-bit sRGB in the saturated greens and cyans. The
+        // worst drift measured over random colours is 8 per channel.
+        const limit = format === 'oklch' ? 8 : 4
+        assert.ok(drift <= limit, `${hex} → ${shown} → ${back.hex} drifted ${drift}`)
       } else {
         assert.equal(back.hex, hex, `${hex} → ${shown} → ${back.hex}`)
       }
