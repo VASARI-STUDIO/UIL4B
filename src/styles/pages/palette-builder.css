@@ -25,8 +25,8 @@
   scroll-padding-block-end: var(--s-4);
 }
 .plb .plb-ctx[data-scroll-more="true"] {
-  -webkit-mask-image: linear-gradient(to bottom, var(--t0) calc(100% - var(--s-4)), transparent);
-  mask-image: linear-gradient(to bottom, var(--t0) calc(100% - var(--s-4)), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, var(--tl-ink) calc(100% - var(--s-4)), transparent);
+  mask-image: linear-gradient(to bottom, var(--tl-ink) calc(100% - var(--s-4)), transparent);
 }
 .plb .tl-body--bleed { min-height: 0; }
 
@@ -70,7 +70,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 }
 .plb .plb-vision-ico { flex: none; }
 .plb .plb-vision-ico--sm { display: none; }
-.plb .plb-vision-text { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; white-space: nowrap; color: var(--t1); }
+.plb .plb-vision-text { flex: 1 1 auto; min-width: 0; display: flex; gap: 4px; white-space: nowrap; color: var(--tl-soft); }
 /* From 768px the text keeps its own width, so Turn off sits 8px after it (the strip's gap) instead of at the far edge.
    On a phone the text fills the strip and the button stays at the right. */
 @media (min-width: 768px) {
@@ -102,14 +102,14 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
    while the outline follows the system text colour. */
 .vis-dot, .vis-open, .harm-dot { forced-color-adjust: none; }
 /* The wheel in a toolbar trigger sits on the toolbar, not on a menu surface. */
-.tl-select .harm-wheel { --hw-edge: var(--bg-0); }
+.tl-select .harm-wheel { --hw-edge: var(--tl-page); }
 
 /* ── The seed chip (D:952-955) ──────────────────────────────────────────── */
 /* Also in the phone Tools sheet, which renders outside .plb. */
 :is(.plb, .tl-sheet-layer) .plb-seedpick { display: flex; }
 .plb .plb-seedpick .cpk-pop { left: 0; right: auto; }
 :is(.plb, .tl-sheet-layer) .plb-seedchip { width: auto; gap: 9px; padding: 0 13px 0 6px; }
-:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 50%; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--t0) 14%, transparent); }
+:is(.plb, .tl-sheet-layer) .plb-seedchip-sw { width: 24px; height: 24px; border-radius: 50%; background: var(--plb-rc, transparent); border: 1px solid color-mix(in srgb, var(--tl-ink) 14%, transparent); }
 :is(.plb, .tl-sheet-layer) .plb-seedchip-hex { font-family: var(--mono); font-size: 13px; color: var(--tl-ink); }
 .plb .plb-menuwrap { position: relative; display: flex; }
 .plb .plb-menu-seed { display: flex; }
@@ -361,7 +361,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 }
 
 /* The popovers a column opens stay anchored to it. */
-.plb .plb-col .plb-pop { cursor: default; color: var(--t0); }
+.plb .plb-col .plb-pop { cursor: default; color: var(--tl-ink); }
 
 /* ── The ADD rail (D:1037-1040) ─────────────────────────────────────────── */
 .plb .plb-add {
@@ -483,6 +483,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
    the track itself instead, hugging the pill that is visibly focused. The
    track's pill radius is on its base rule in tool-layout.css. Each engine's
    track is its own rule: a selector the browser cannot parse drops the list. */
+/* The slider ring stays the link colour, not the ink ring: tests/user-sim/143 pins it to --tl-link. */
 .plb .plb-adjust .tl-slider input[type="range"]:focus { outline: none; box-shadow: none; }
 .plb .plb-adjust .tl-slider input[type="range"]:focus::-webkit-slider-runnable-track {
   outline: 2px solid var(--tl-link);
@@ -503,7 +504,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   min-width: 0;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--t0) 80%, var(--bg-0));
+  color: color-mix(in srgb, var(--tl-ink) 80%, var(--tl-page));
 }
 .plb .plb-adjust-field--edited .tl-slider-v { color: var(--tl-ink); font-weight: 600; }
 /* The degree sign hangs outside the digit column: zero width, drawn past the
@@ -526,7 +527,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   cursor: pointer;
 }
 @media (hover: hover) and (pointer: fine) {
-  .plb .plb-copycss:hover { background: color-mix(in srgb, var(--t0) 9%, transparent); }
+  .plb .plb-copycss:hover { background: color-mix(in srgb, var(--tl-ink) 9%, transparent); }
 }
 /* A finger gets the 44px floor (Reset's .tl-btn and the range inputs already do). */
 @media (pointer: coarse) {
@@ -666,13 +667,13 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   font-family: var(--font);
   font-size: var(--fs-caption);
   letter-spacing: normal;
-  color: color-mix(in srgb, var(--t0) 68%, var(--card));
+  color: color-mix(in srgb, var(--tl-ink) 68%, var(--tl-card));
 }
 .plb .plb-val-v {
   min-width: 0;
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--t0);
+  color: var(--tl-ink);
   background: none;
   padding: 0;
   overflow-wrap: anywhere;
@@ -686,12 +687,12 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--t1);
+  color: var(--tl-soft);
   cursor: pointer;
 }
-.plb .plb-val-copy:focus-visible { outline: 2px solid var(--tl-link, var(--accent)); outline-offset: 0; }
+.plb .plb-val-copy:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .plb .plb-val-copy:hover { background: var(--bg-2); color: var(--t0); }
+  .plb .plb-val-copy:hover { background: var(--tl-card2); color: var(--tl-ink); }
 }
 @media (pointer: coarse) {
   .plb .plb-val-row { grid-template-columns: 44px minmax(0, 1fr) 44px; }
@@ -731,24 +732,24 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   bottom: 0;
   height: 20px;
   margin-top: -20px;
-  background: linear-gradient(to bottom, transparent, var(--card));
+  background: linear-gradient(to bottom, transparent, var(--tl-card));
   pointer-events: none;
 }
-.plb .plb-match-legend { margin: 0 0 8px; font-size: 12px; line-height: 1.4; color: var(--t1); }
+.plb .plb-match-legend { margin: 0 0 8px; font-size: 12px; line-height: 1.4; color: var(--tl-soft); }
 .plb .plb-match-protag { margin-left: 8px; font-size: 12px; vertical-align: middle; }
 .plb .plb-match-protag .lockt-glyph { width: 11px; height: 11px; }
 
 .plb .plb-match-group + .plb-match-group {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--tl-line);
 }
-.plb .plb-match-h { margin: 0 0 4px; font-size: 12px; font-weight: 600; line-height: 1.4; color: var(--t1); }
+.plb .plb-match-h { margin: 0 0 4px; font-size: 12px; font-weight: 600; line-height: 1.4; color: var(--tl-soft); }
 /* The caveat sits on its own line, lighter, so no single word is left alone on one. */
 .plb .plb-match-h-note { display: block; font-weight: 400; text-wrap: balance; }
 .plb .plb-match-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
 /* Locked: a dashed edge so it reads as locked, not as a failed load. */
-.plb .plb-match-list--locked { padding: 4px; border: 1px dashed var(--bh); border-radius: 10px; }
+.plb .plb-match-list--locked { padding: 4px; border: 1px dashed var(--tl-line-on); border-radius: 10px; }
 
 /* One row: seam chip, name and meta, closeness, copy cue. */
 .plb .plb-match-btn,
@@ -771,15 +772,15 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--t0);
+  color: var(--tl-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.plb .plb-match-btn:active { background: var(--bg-3); }
+.plb .plb-match-btn:active { background: var(--tl-card2); }
 .plb .plb-match-btn:focus-visible,
 .plb .plb-match-retry:focus-visible,
-.plb .plb-match-how summary:focus-visible { outline: 2px solid var(--tl-link, var(--accent)); outline-offset: -2px; }
+.plb .plb-match-how summary:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
 
 /* The seam chip: your colour and the match butted together, no gap. */
 .plb .plb-match-seam { position: relative; display: flex; width: 48px; height: 36px; border-radius: 6px; overflow: hidden; }
@@ -793,57 +794,57 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   pointer-events: none;
 }
 [data-theme="dark"] .plb .plb-match-seam::after { box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.1); }
-.plb .plb-match-seam-empty { background: var(--bg-3); }
+.plb .plb-match-seam-empty { background: var(--tl-card2); }
 /* clip-path keeps the blur inside its own half, so the seam edge stays crisp. */
 .plb .plb-match-blur { filter: blur(4px); clip-path: inset(0); }
 
 .plb .plb-match-main { display: grid; gap: 2px; min-width: 0; }
-.plb .plb-match-name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--t0); overflow-wrap: break-word; }
-.plb .plb-match-btn.is-far .plb-match-name { font-weight: 500; color: var(--t1); }
-.plb .plb-match-meta { font-size: 12px; line-height: 1.35; color: var(--t1); }
+.plb .plb-match-name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--tl-ink); overflow-wrap: break-word; }
+.plb .plb-match-btn.is-far .plb-match-name { font-weight: 500; color: var(--tl-soft); }
+.plb .plb-match-meta { font-size: 12px; line-height: 1.35; color: var(--tl-soft); }
 .plb .plb-match-meta code { font-family: var(--mono); font-size: inherit; color: inherit; background: none; padding: 0; }
 .plb .plb-match-near { display: grid; gap: 2px; text-align: right; }
-.plb .plb-match-word { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--t0); }
-.plb .plb-match-de { font-size: 12px; line-height: 1.35; color: var(--t1); font-variant-numeric: tabular-nums; }
-.plb .plb-match-copy { display: grid; place-items: center; color: var(--t2); }
+.plb .plb-match-word { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--tl-ink); }
+.plb .plb-match-de { font-size: 12px; line-height: 1.35; color: var(--tl-soft); font-variant-numeric: tabular-nums; }
+.plb .plb-match-copy { display: grid; place-items: center; color: var(--tl-dim); }
 .plb .plb-match-copy svg { width: 14px; height: 14px; }
 @media (hover: hover) and (pointer: fine) {
-  .plb .plb-match-btn:hover { background: var(--bg-2); }
-  .plb .plb-match-btn:hover .plb-match-copy { color: var(--t0); }
+  .plb .plb-match-btn:hover { background: var(--tl-card2); }
+  .plb .plb-match-btn:hover .plb-match-copy { color: var(--tl-ink); }
   .plb .plb-match-retry:hover { text-decoration-thickness: 2px; }
 }
 
 /* Locked: the bars hold the place of a name and a word. */
 .plb .plb-match-bar { display: block; filter: blur(3px); }
-/* --bg-4 sinks into the dark card; one step up is --bh. */
-[data-theme="dark"] .plb .plb-match-bar { background: var(--bh); }
+/* The base fill sinks into the dark card; one step up is the on-line. */
+[data-theme="dark"] .plb .plb-match-bar { background: var(--tl-line-on); }
 .plb .plb-match-bar--short { margin-left: auto; }
 
 /* Loading: the skeleton shows only after 150ms, so a cached load never flashes.
    It fades in once and does not loop. */
-.plb .plb-match-skel { display: block; width: 60%; height: 10px; margin-block: 3px; border-radius: 999px; background: var(--bg-3); }
+.plb .plb-match-skel { display: block; width: 60%; height: 10px; margin-block: 3px; border-radius: 999px; background: var(--tl-card2); }
 .plb .plb-match-skel--short { width: 40%; margin-left: auto; }
 .plb .plb-match-row--loading .plb-match-skel,
 .plb .plb-match-row--loading .plb-match-seam-empty { animation: plb-match-in 120ms ease-out 150ms both; }
 @keyframes plb-match-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Failed: the left half of the seam stays; the message and a retry take the row. */
-.plb .plb-match-fail { font-size: 12px; line-height: 1.35; color: var(--t0); }
+.plb .plb-match-fail { font-size: 12px; line-height: 1.35; color: var(--tl-ink); }
 .plb .plb-match-retry {
   justify-self: end;
   min-height: 32px;
   padding: 0 4px;
   border: 0;
-  border-radius: var(--btn-radius);
+  border-radius: 999px;
   background: none;
-  color: var(--tl-link, var(--accent));
+  color: var(--tl-link);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
 }
-.plb .plb-match-allfail { display: grid; justify-items: start; gap: 8px; padding-block: 4px; font-size: 12px; line-height: 1.4; color: var(--t0); }
+.plb .plb-match-allfail { display: grid; justify-items: start; gap: 8px; padding-block: 4px; font-size: 12px; line-height: 1.4; color: var(--tl-ink); }
 .plb .plb-match-allfail p { margin: 0; }
 
 .plb .plb-match-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -855,7 +856,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-matchpop .lockt-cta-btn { width: 100%; margin-top: 10px; }
 
 /* How this works */
-.plb .plb-match-how { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--border); }
+.plb .plb-match-how { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--tl-line); }
 .plb .plb-match-how summary {
   display: flex;
   align-items: center;
@@ -863,19 +864,19 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   min-height: 32px;
   border-radius: 6px;
   font-size: 12px;
-  color: var(--t1);
+  color: var(--tl-soft);
   cursor: pointer;
   list-style: none;
 }
 .plb .plb-match-how summary::-webkit-details-marker { display: none; }
-.plb .plb-match-caret { display: grid; place-items: center; color: var(--t2); transition: transform 150ms ease-out; }
+.plb .plb-match-caret { display: grid; place-items: center; color: var(--tl-dim); transition: transform 150ms ease-out; }
 .plb .plb-match-caret svg { display: block; }
 .plb .plb-match-how[open] .plb-match-caret { transform: rotate(180deg); }
 @media (hover: hover) and (pointer: fine) {
-  .plb .plb-match-how summary:hover .plb-match-caret { color: var(--t0); }
+  .plb .plb-match-how summary:hover .plb-match-caret { color: var(--tl-ink); }
 }
 .plb .plb-match-how p,
-.plb .plb-match-how li { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--t1); }
+.plb .plb-match-how li { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--tl-soft); }
 .plb .plb-match-how ul { margin: 4px 0 0; padding-left: 16px; }
 
 @media (pointer: coarse) {
@@ -925,7 +926,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 /* ── Preview: a main action, quiet (hairline) but in full ink so it reads
    ahead of the other quiet buttons without a second accent fill. It is always
    labelled: on a phone it is not on the row at all (an Extra tools row). ──── */
-.plb .tl-btn.plb-preview-btn { font-weight: 600; color: var(--t0); }
+.plb .tl-btn.plb-preview-btn { font-weight: 600; color: var(--tl-ink); }
 
 /* ── Suggest and Explore: one docked panel beside the board ────────────────────
    Rows, not cards: a name line over a strip of equal chips, so chip n of every
@@ -966,7 +967,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sx-link { padding: 0; border: 0; background: none; color: var(--tl-ink); font: inherit; font-weight: 560; text-decoration: underline; cursor: pointer; }
 .plb .plb-sx-search { position: relative; display: flex; align-items: center; margin: var(--s-3) var(--s-4) var(--s-2); color: var(--tl-dim); }
 .plb .plb-sx-search svg { position: absolute; left: 12px; pointer-events: none; }
-.plb .plb-sx-search input { width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid var(--tl-line-2); border-radius: var(--radius-s); background: none; color: var(--tl-ink); font: inherit; font-size: 13px; }
+.plb .plb-sx-search input { width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid var(--tl-line-2); border-radius: 8px; background: none; color: var(--tl-ink); font: inherit; font-size: 13px; }
 
 /* The list and its rows. */
 .plb .plb-sw-list { margin: 0; padding: 0; list-style: none; }
@@ -976,7 +977,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   min-height: 72px;
   padding: var(--s-2) var(--s-4);
   border: 0;
-  border-radius: var(--radius-s);
+  border-radius: 8px;
   background: none;
   color: var(--tl-ink);
   font: inherit;
@@ -990,12 +991,12 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sw-detail { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tl-dim); }
 .plb .plb-sw-meta { flex: none; min-width: 32px; text-align: right; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 .plb .plb-sw-strip { position: relative; display: block; height: 32px; }
-.plb .plb-sw-chips { position: absolute; inset: 0; display: flex; gap: 2px; border-radius: var(--radius-xs); overflow: hidden; }
+.plb .plb-sw-chips { position: absolute; inset: 0; display: flex; gap: 2px; border-radius: 8px; overflow: hidden; }
 .plb .plb-sw-chip { position: relative; flex: 1 1 0; min-width: 0; container-type: inline-size; }
 .plb .plb-sw-chip:not(.lockt-rowcell) { background: var(--plb-rc); }
 .plb .plb-sw-hex { position: absolute; left: 4px; bottom: 2px; font-family: var(--mono); font-size: 11px; line-height: 14px; opacity: 0; transition: opacity 120ms var(--tl-ease); pointer-events: none; }
 @container (max-width: 47px) { .plb .plb-sw-hex { display: none; } }
-.plb .plb-sw-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.plb .plb-sw-row:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
 .plb .plb-sw-row:focus-visible .plb-sw-hex { opacity: 1; }
 
 /* Applied: wash, a 2px gap ring round the chips, "On your board" in words. */
@@ -1028,15 +1029,15 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sw-info[aria-expanded="true"] { background: var(--tl-wash); color: var(--tl-ink); }
 .plb .plb-sw-help { margin: 0; padding: 0 var(--s-4) var(--s-2); font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .plb .plb-sw-help[hidden] { display: none; }
-.plb .plb-sw-compare { height: 32px; padding: 0 var(--s-2); border: 0; border-radius: var(--btn-radius); background: none; color: var(--tl-ink); font: inherit; font-size: 12px; font-weight: 560; cursor: pointer; }
-.plb .plb-sw-info:focus-visible, .plb .plb-sw-compare:focus-visible, .plb .plb-sx-search input:focus-visible, .plb .plb-sx-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plb .plb-sw-compare { height: 32px; padding: 0 var(--s-2); border: 0; border-radius: 999px; background: none; color: var(--tl-ink); font: inherit; font-size: 12px; font-weight: 560; cursor: pointer; }
+.plb .plb-sw-info:focus-visible, .plb .plb-sw-compare:focus-visible, .plb .plb-sx-search input:focus-visible, .plb .plb-sx-link:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .plb .plb-sw-info:hover, .plb .plb-sw-compare:hover { background: var(--tl-wash); color: var(--tl-ink); } }
 
 /* End of the list: flat, hairline above, no card. */
 .plb .plb-sw-problock { margin-top: var(--s-4); padding: var(--s-4); border-top: 1px solid var(--tl-hair); }
 .plb .plb-sw-pro-head { margin: 0; font-size: 13px; font-weight: 560; color: var(--tl-ink); }
 .plb .plb-sw-pro-body { margin: 4px 0 var(--s-3); font-size: 12px; color: var(--tl-dim); }
-.plb .plb-sw-skel-name, .plb .plb-sw-skel-strip { display: block; background: var(--tl-wash); border-radius: var(--radius-xs); }
+.plb .plb-sw-skel-name, .plb .plb-sw-skel-strip { display: block; background: var(--tl-wash); border-radius: 8px; }
 .plb .plb-sw-skel-name { width: 96px; height: 12px; margin-top: 4px; }
 .plb .plb-sw-skel-strip { height: 32px; }
 
@@ -1070,7 +1071,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
     contain: none;
     height: min(400px, 46dvh);
     border-left: 0;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: 16px 16px 0 0;
     box-shadow: 0 -12px 32px -12px oklch(0 0 0 / .28);
     animation: plb-sx-up 240ms var(--tl-ease) both;
   }
@@ -1148,10 +1149,10 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   grid-template-columns: minmax(0, 1fr);
   row-gap: var(--s-1);
   padding: var(--s-3) max(var(--s-4), env(safe-area-inset-right, 0px)) var(--s-3) max(var(--s-4), env(safe-area-inset-left, 0px));
-  background: var(--card);
-  border-top: 1px solid var(--border);
+  background: var(--tl-card);
+  border-top: 1px solid var(--tl-line);
   font-family: var(--font);
-  color: var(--t1);
+  color: var(--tl-soft);
   animation: plb-coach-in 240ms var(--ease-entrance);
 }
 /* On a phone the coach never goes below the fixed tab bar and the home-indicator inset, whether it hangs from the
@@ -1170,31 +1171,31 @@ html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
 .plb-coach[data-overlay-hidden="true"] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 150ms var(--ease-exit), visibility 0s 150ms; }
 
 .plb-coach-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 20px; }
-.plb-coach-count { margin: 0; font-size: var(--fs-caption); font-weight: 400; line-height: 1.2; color: var(--t2); font-variant-numeric: tabular-nums; }
+.plb-coach-count { margin: 0; font-size: var(--fs-caption); font-weight: 400; line-height: 1.2; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 .plb-coach-x {
   position: relative; flex: none; display: flex; align-items: center; justify-content: center;
   box-sizing: border-box; width: 32px; height: 32px; margin: -6px -6px -6px 0; padding: 0;
-  border: 1px solid transparent; border-radius: var(--btn-radius); background: transparent; color: var(--t1); cursor: pointer;
+  border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--tl-soft); cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-out);
 }
 /* A pad wider than the drawn control keeps the target at 44px. */
 .plb-coach-x::after, .plb-coach-hide::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 .plb-coach-x:active { transform: scale(.97); }
-.plb-coach-x:focus-visible, .plb-coach-hide:focus-visible, .plb-coach-go:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.plb-coach-x:focus-visible, .plb-coach-hide:focus-visible, .plb-coach-go:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 @media (hover: hover) {
-  .plb-coach-x:hover { border-color: var(--bh); color: var(--t0); background: var(--hvr); }
-  .plb-coach-hide:hover { color: var(--t0); }
+  .plb-coach-x:hover { border-color: var(--tl-line-on); color: var(--tl-ink); background: var(--tl-wash-2); }
+  .plb-coach-hide:hover { color: var(--tl-ink); }
 }
-.plb-coach-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.25; letter-spacing: normal; color: var(--t0); }
+.plb-coach-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.25; letter-spacing: normal; color: var(--tl-ink); }
 .plb-coach-body {
-  margin: 0; max-width: 60ch; font-size: var(--fs-caption); line-height: 1.5; color: var(--t1);
+  margin: 0; max-width: 60ch; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-soft);
   height: calc(1.5em * var(--plb-coach-lines)); overflow: hidden;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--plb-coach-lines); line-clamp: var(--plb-coach-lines);
 }
 .plb-coach-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-top: var(--s-1); }
 .plb-coach-hide {
   position: relative; padding: 0; border: 0; background: none; font-family: var(--font); font-size: var(--fs-caption); font-weight: 500;
-  line-height: 1.2; color: var(--t2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  line-height: 1.2; color: var(--tl-dim); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
   transition: color var(--dur-1) var(--ease-standard);
 }
 .plb-coach-go { height: 36px; padding: 0 var(--s-4); justify-content: center; white-space: nowrap; font-size: var(--fs-caption); font-weight: 560; }
@@ -1211,36 +1212,36 @@ html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
     bottom: calc(var(--plb-coach-bottom, 0px) + var(--s-2));
     width: min(420px, 100vw - 24px);
     padding: var(--s-4) var(--s-4) var(--s-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-m);
+    border: 1px solid var(--tl-line);
+    border-radius: 16px;
+    box-shadow: var(--v3-shadow);
   }
 }
 /* The control the beat points at wears a ring; no motion, so reduced motion needs nothing. */
-.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached, .plb[data-coach-ring="more"] .tl-more-btn { outline: 2px solid var(--accent-fill); outline-offset: 2px; }
+.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached, .plb[data-coach-ring="more"] .tl-more-btn { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 /* ── Save one colour to a project (SaveColourDialog) ─────────────────────── */
 .plb-sc { max-width: 400px; }
 .plb-sc-x { width: 44px; height: 44px; margin: -6px -8px 0 0; }
 .plb-sc-body { display: grid; gap: var(--s-3); }
 .plb-sc-colour { margin: 0; display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
-.plb-sc-chip { flex: none; width: 32px; height: 32px; border-radius: var(--radius-s); box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.1); }
-.plb-sc-hex { font-size: var(--fs-body-s); font-weight: 600; color: var(--t0); font-variant-numeric: tabular-nums; }
-.plb-sc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-caption); color: var(--t2); }
+.plb-sc-chip { flex: none; width: 32px; height: 32px; border-radius: 8px; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.1); }
+.plb-sc-hex { font-size: var(--fs-body-s); font-weight: 600; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+.plb-sc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-caption); color: var(--tl-dim); }
 .plb-sc-new { width: 100%; min-height: 44px; margin-top: var(--s-3); }
-.plb-sc-empty { margin: 0; font-size: var(--fs-body-s); line-height: 1.5; color: var(--t1); }
-.plb-sc-list { margin: 0; padding: 0; list-style: none; max-height: min(50vh, 320px); overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--border); }
-.plb-sc-list li + li { border-top: 1px solid var(--border); }
+.plb-sc-empty { margin: 0; font-size: var(--fs-body-s); line-height: 1.5; color: var(--tl-soft); }
+.plb-sc-list { margin: 0; padding: 0; list-style: none; max-height: min(50vh, 320px); overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--tl-line); }
+.plb-sc-list li + li { border-top: 1px solid var(--tl-line); }
 .plb-sc-row {
   display: flex; align-items: center; gap: var(--s-2); width: 100%; min-height: 44px; padding: 0 var(--s-2);
-  border: 0; border-radius: var(--radius-s); background: none; text-align: left; cursor: pointer;
-  font-family: var(--font); font-size: var(--fs-body-s); font-weight: 560; color: var(--t0);
+  border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer;
+  font-family: var(--font); font-size: var(--fs-body-s); font-weight: 560; color: var(--tl-ink);
   transition: background-color var(--dur-1) var(--ease-standard);
 }
-.plb-sc-row:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
-.plb-sc-row:active { background: var(--hvr); }
+.plb-sc-row:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
+.plb-sc-row:active { background: var(--tl-wash-2); }
 .plb-sc-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plb-sc-row-tag { flex: none; font-size: var(--fs-caption); font-weight: 500; color: var(--t2); }
+.plb-sc-row-tag { flex: none; font-size: var(--fs-caption); font-weight: 500; color: var(--tl-dim); }
 @media (hover: hover) {
-  .plb-sc-row:hover { background: var(--hvr); }
+  .plb-sc-row:hover { background: var(--tl-wash-2); }
 }
