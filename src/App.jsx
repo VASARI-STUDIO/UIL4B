@@ -34,6 +34,7 @@ import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { maintenanceOn } from './config/maintenance'
+import { BrandLockup } from './components/BrandLogo'
 import RouteLoading from './components/RouteLoading'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
@@ -691,17 +692,19 @@ function AppInner({ toast }) {
 }
 
 // While the maintenance switch is on (config/maintenance.js) every route shows
-// the maintenance page inside the full shell, so the nav and footer stay.
+// the maintenance page alone: the logo, the message and Check again. No nav or
+// footer, because none of their links would work.
 function MaintenanceShell() {
   return (
     <div className="app-shell">
-      <PillNav />
+      <header className="maint-head">
+        <span className="maint-logo"><BrandLockup label="UI L4B" /></span>
+      </header>
       <main className="app-page" id="main" tabIndex={-1}>
         <Suspense fallback={<RouteLoading />}>
           <Maintenance />
         </Suspense>
       </main>
-      <AppFooter />
     </div>
   )
 }
