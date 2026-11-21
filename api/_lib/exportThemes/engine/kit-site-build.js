@@ -224,9 +224,10 @@ const plain = (h) => h.replace(/<(script|style|template)[\s\S]*?<\/\1>/g, ' ').r
 
 // The site as { 'index.html', '<page>.html', 'assets/kit.css', 'assets/kit.js', 'assets/fonts/<stem>.woff2' }. ctx is a uikit ctx
 // (files mode); a page the theme cannot lay out for this brand throws, and so does the build.
-export function kitSiteFiles(ctx, T) {
+export function kitSiteFiles(ctx0, T) {
   const KS = T.kitSite;
   if (!KS) throw new Error('kit site: this theme has no kitSite');
+  const ctx = typeof KS.prepare === 'function' ? KS.prepare(ctx0) : ctx0; // a theme may hand back the context its site is drawn from (KS.prepare)
   const files = {};
   const css = [
     fontFaceCss(ctx, (f) => `fonts/${f.stem}.woff2`, chromeFaces(T)), tokensCss(ctx), componentsCss(ctx), forcedCss(ctx),

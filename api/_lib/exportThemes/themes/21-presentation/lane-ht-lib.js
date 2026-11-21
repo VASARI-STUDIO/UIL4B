@@ -3,6 +3,7 @@
 // the site CSS. Copied from lane-bk.js (which keeps them private) so the web parts and the brand book read as one deck.
 import { esc as A } from '../../engine/brand.js';
 import { outline } from '../../engine/logo.js';
+import { cssIdent } from '../../engine/escape.js';
 import { loadFont } from '../../engine/nodeFont.js';
 import { softOnDark } from './helpers.js';
 import { nameOf } from './lane-ht-clean.js';
@@ -25,11 +26,13 @@ export const nameOfHex = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) =
 export const darkF = (ctx) => byRole(ctx, 'text')?.hex || L(ctx).text;
 export const actF = (ctx) => byRole(ctx, 'action')?.hex || L(ctx).action;
 export const panelF = (ctx) => L(ctx).sunken;
+// a colour as the palette token the page's CSS declares for it (the brand's own colours); a tone that is not one stays as its value
+const tokenOf = (ctx, hex) => { const c = ctx.colours.find((x) => lower(x.hex) === lower(hex)); return c ? `var(--palette-${cssIdent(c.id)})` : hex; };
 // a field's colours as custom properties, the ink checked against it at the size it is used
 export const fieldStyle = (ctx, hex, what, size = 15) => {
-  const ink = inkOn(ctx, hex);
+  const ink = inkOn(ctx, hex), t = tokenOf(ctx, hex);
   ctx.pair(ink, hex, { size: Math.max(size, 15), what });
-  return `background:${hex};color:${ink};--q:${chromeOn(ctx, hex)};--fi:${ink};--fb:${hex}`;
+  return `background:${t};color:${ink};--q:${chromeOn(ctx, hex)};--fi:${ink};--fb:${t}`;
 };
 // the logo colourway the brand draws for a ground, else the one-colour version in the field's ink
 export const cwFor = (ctx, hex) => {
@@ -70,7 +73,7 @@ export function tocPanel(ctx, { id, sections, href, current, front }) {
 // the next slide as a field: the action colour, the next title at display size; the previous one small beside it
 export function nextField(ctx, { next, prev, nextLabel = 'Next', prevLabel = 'Previous' }) {
   const act = actF(ctx);
-  const n = next ? `<a class="ht-next__a" href="${next.href}" rel="next"><span class="ht-k">${nextLabel}${next.ref ? ` <b class="num">${A(next.ref)}</b>` : ''}</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, [next.title], 0.86, 56, 32)}">${A(next.title)}</span></a>` : '';
+  const n = next ? `<a class="ht-next__a" href="${next.href}" rel="next"><span class="ht-k">${nextLabel}${next.ref ? ` <b class="num">${A(next.ref)}</b>` : ''}</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, [next.title], 0.86, (ctx.brand.type.scale.find((x) => x.token === 'headline') || {}).size || 36, 32)}">${A(next.title)}</span></a>` : '';
   const p = prev ? `<a class="ht-prev" href="${prev.href}" rel="prev"><span class="ht-k">${prevLabel}</span> ${prev.ref ? `<b class="num">${A(prev.ref)}</b> ` : ''}${A(prev.title)}</a>` : '';
   return `<nav class="ht-next" aria-label="Previous and next" style="${fieldStyle(ctx, act, 'site next field', 32)}">${n}${p}</nav>`;
 }

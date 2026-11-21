@@ -9,7 +9,7 @@ import { A, darkF, actF, fieldStyle, fitSize, bar, tocPanel, nextField, skipLink
 import { htCss } from './lane-ht-css.js';
 import { NOTES, device } from './lane-ht-notes.js';
 import { kitSite } from './lane-ht-kit.js';
-import { hasPh, nameOf, docOf, siteCtx } from './lane-ht-clean.js';
+import { hasPh, nameOf, docOf, siteCtx, servedCtx } from './lane-ht-clean.js';
 
 export { kitSite };
 
@@ -17,9 +17,9 @@ const docName = (ctx) => docOf(ctx, 'guidelines');
 // pages whose slide is a picture of a table or a spec: the slide is not drawn at all, the page is the notes alone, laid out as a spread
 // (the colours as fields with their values, the type as a spec list, the misuse as a grid of tiles), so each point is said once.
 // Every other page shows its slide and then the notes, which add what the slide cannot carry.
-const REFLOW = new Set(['palette', 'proportion', 'contrast', 'colour-values', 'typefaces', 'hierarchy', 'type-in-use', 'logo-misuse', 'grid', 'summary']);
+const REFLOW = new Set(['palette', 'proportion', 'contrast', 'colour-values', 'typefaces', 'hierarchy', 'type-in-use', 'logo-misuse', 'grid', 'summary', 'digital']);
 // pages whose slide already says everything the notes would: the notes are for the narrow layout alone, where the slide is not drawn
-const COVERED = new Set(['intro', 'personality', 'voice', 'write-this', 'messaging', 'logo', 'logo-versions', 'photo-direction', 'clear-space', 'min-size', 'layouts', 'digital']);
+const COVERED = new Set(['intro', 'personality', 'voice', 'write-this', 'messaging', 'logo', 'logo-versions', 'photo-direction', 'clear-space', 'min-size', 'layouts']);
 // a big line's cap follows its length, so a sentence sets as a paragraph of display type and a word as a poster
 // the cap is a step of the type scale the kit shares: the headline step for a line under the page title, the title step for a long sentence
 const stepPx = (ctx, token, d) => (ctx.brand.type.scale.find((x) => x.token === token) || {}).size || d;
@@ -37,7 +37,7 @@ const stage = (ctx, id, html) => `<section class="ht-stage" id="${id}" aria-labe
 const slideOf = (ctx, id) => {
   const draw = (c) => { try { return guidelines[id](c) || ''; } catch (e) { return ''; } };
   const raw = draw(ctx);
-  return !raw || hasPh(raw) || (!nameOf(ctx) && /logo-slot/.test(raw)) ? '' : draw(siteCtx(ctx));
+  return !raw || hasPh(raw) ? '' : draw(siteCtx(ctx));
 };
 
 // the text a block of notes carries, for the test of whether there is anything to print
@@ -56,7 +56,12 @@ function contentOf(ctx0, id) {
   };
 }
 // a page the project has not written is left out of the site, its contents and its Next and Previous links (engine: guideSite.keep)
-const keep = (ctx0, id) => { const c = contentOf(ctx0, id); return !!(c.text || c.notes || c.slide); };
+// A page under one real content block is not built: it needs its slide or notes with something in them. A big line alone counts only
+// when it is a sentence (three words or more) that is not the brand's own name, so a page that would show a name and nothing else goes.
+const sentence = (ctx, t) => String(t || '').trim().split(/\s+/).filter(Boolean).length >= 3 && String(t).trim() !== nameOf(ctx);
+// These four pages are what the project wrote and nothing else: their slide is a frame for the words, so with no notes there is no page.
+const WRITTEN = new Set(['intro', 'messaging', 'shot-list', 'contact-scope']);
+const keep = (ctx0, id) => { const c = contentOf(ctx0, id); return WRITTEN.has(id) ? !!c.notes : !!(c.notes || c.slide || (c.text && sentence(c.ctx, c.text))); };
 
 function page(ctx0, id) {
   const { ctx, text, notes, slide } = contentOf(ctx0, id);
@@ -99,7 +104,7 @@ ${nextField(ctx, { next: file(S.next), prev: file(S.prev) })}
 }
 
 export const guideSite = {
-  css: htCss, shell, front, page, keep,
+  prepare: servedCtx, css: htCss, shell, front, page, keep,
   // the slides keep their own type: nothing in them is linked, and literal values are never read as references
   adapt: { strip: [], minStack: 99, noLink: '.pg,.ht-m' },
   darkSample: ['index', 'personality', 'logo-versions', 'palette', 'contrast', 'hierarchy'],

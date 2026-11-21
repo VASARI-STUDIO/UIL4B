@@ -162,6 +162,7 @@ export function htCss(ctx) {
 .ht-ps__hd b{font-weight:400;margin-right:12px}
 .ht-ps__t{position:absolute;left:56px;right:56px;bottom:72px;line-height:0.94}
 .ht-ps__fo{position:absolute;right:56px;bottom:36px;font-size:14px;line-height:1.3}
+@media (max-width:1023px){.ht-ps__hd,.ht-ps__fo{display:none}.ht-stage{padding-left:20px;padding-right:20px}.ht-fit{max-width:none}}
 @media (min-width:841px){
 .ht-stage--tight{padding-top:40px}
 }
@@ -171,7 +172,7 @@ export function htCss(ctx) {
 .ht-ml__t{font-size:min(var(--bs,${sd}px),${sd}px);line-height:1}
 .ht-ml__t b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%;color:var(--q)}
 @media (max-width:840px){
-.ht-ml{display:flex;flex-direction:column;justify-content:space-between;gap:48px;min-height:224px;padding:20px 20px 28px}
+.ht-ml{display:flex;flex-direction:column;justify-content:flex-end;gap:16px;min-height:0;padding:28px 20px 24px}
 .ht-ml__t{font-size:min(var(--bs,40px),${sd}px)}
 .ht-bar{gap:12px;padding:0 20px}
 .ht-home,.ht-doc{display:none}
@@ -233,11 +234,15 @@ export function htCss(ctx) {
 .ht-wm--st span{font-size:.55em;letter-spacing:.04em;text-transform:uppercase}
 .ht-mk .ht-wm{justify-content:flex-start}
 .ht-wm__s{font-weight:inherit}
+.ht-wm__a{font-style:normal}
 .ht-notes--bare{grid-template-columns:minmax(0,1fr)}
 .ht-notes--narrow{display:none}
 .ht-tile__a{container-type:inline-size}
 .ht-field{position:relative;isolation:isolate}
-.ht-field__ph{position:absolute;left:0;right:0;bottom:0;height:38%;z-index:-1}
+.ht-field__img{position:relative;flex:1;min-height:140px;overflow:hidden;margin:-24px -24px 0;aspect-ratio:4/3}
+.ht-scene{display:block;width:100%;height:100%}
+.ht-field__img .ht-scene{position:absolute;inset:0}
+.ht-field__imglogo{position:absolute;left:16px;top:16px}
 /* the faces as specimens */
 .ht-specs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--h)}
 .ht-spec{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:32px;padding:32px 0;border-bottom:1px solid var(--h)}
@@ -270,31 +275,14 @@ export function htCss(ctx) {
 .ht-mk__v{font-size:44px}
 .ht-mk__pr{font-size:20px;font-weight:600}
 .ht-mk__btn{display:flex;align-items:center;justify-content:center;min-height:48px;font-weight:600;font-size:16px}
-/* a photograph still to be placed: the frame at its ratio, crop marks at its corners */
-.ht-ph{position:relative;display:block;width:100%;aspect-ratio:4/3;background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box}
-.ht-ph>i{position:absolute;width:20px;height:20px;border:0 solid var(--t)}
-.ht-ph>i:nth-child(1){left:12px;top:12px;border-width:2px 0 0 2px}
-.ht-ph>i:nth-child(2){right:12px;top:12px;border-width:2px 2px 0 0}
-.ht-ph>i:nth-child(3){left:12px;bottom:12px;border-width:0 0 2px 2px}
-.ht-ph>i:nth-child(4){right:12px;bottom:12px;border-width:0 2px 2px 0}
-.ht-ph--bg{position:absolute;inset:0;z-index:-1;width:auto;aspect-ratio:auto;background:transparent;box-shadow:none}
-.ht-ph--bg>i{border-color:currentColor}
+/* a photograph direction: a scene drawn from the palette */
 .ht-pf{display:flex;flex-direction:column;gap:12px;max-width:640px}
+.ht-pf .ht-scene{aspect-ratio:4/3;height:auto}
 .ht-pf figcaption,.ht-gp figcaption{font-size:14px;line-height:1.5;color:var(--s)}
-.ht-shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 24px}
-.ht-shots li{display:flex;flex-direction:column;gap:6px;min-width:0}
-.ht-shots__t{font-size:14px;line-height:1.4;font-weight:600;color:var(--t);margin-top:6px}
-.ht-shots__t .num{color:var(--q);font-weight:400;margin-right:4px}
-.ht-shots__b{font-size:14px;line-height:1.5;color:var(--s)}
 /* the brand's device: its colours as flat blocks, a bar under a section's title and stepped on the cover */
 .ht-dev{display:flex;align-items:flex-end;height:16px;margin:0 56px}
 .ht-dev>span{display:block;height:100%;min-width:0}
 .ht-dev--cv{height:112px;margin:0}
-.ht-dev--cv>span:nth-child(1){height:100%}
-.ht-dev--cv>span:nth-child(2){height:75%}
-.ht-dev--cv>span:nth-child(3){height:55%}
-.ht-dev--cv>span:nth-child(4){height:35%}
-.ht-dev--cv>span:nth-child(5){height:20%}
 /* a value table: tabular figures in the body face; the mono face is for hex and code */
 .ht-vals{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:baseline}
 .ht-dl .num{white-space:nowrap}
@@ -337,7 +325,6 @@ export function htCss(ctx) {
 .ht-notes--narrow{display:grid}
 .ht-dev{margin:0 20px}
 .ht-dev--cv{margin:0;height:72px}
-.ht-shots{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ht-mks--sp,.ht-mks--dg{grid-template-columns:minmax(0,1fr)}
 .ht-mks--sp .ht-mk--phone{grid-column:1;grid-row:auto}
 .ht-mks--dg .ht-lt{max-width:none}

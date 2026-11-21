@@ -229,3 +229,28 @@ test('theme 21 sites print no empty page, no editor words, no stock sample copy 
     }
   }
 })
+
+// Design review round 6: one shared set of orders, no photo slot, the fonts named as shipped.
+//     Break: change the 1040 order's minutes late in real-copy.js, drop exampleDemo from the theme's meta, or restore the photo-slot words.
+test('theme 21 tells one story: order 1040 is late, the example total is the sum of the orders, and no page asks for a photograph', async () => {
+  const kit = await exportZip('21-presentation', 'ui-kit')
+  assert.match(kit['example.html'], /\$623\.05/, 'the example total is not the sum of the sample orders')
+  assert.doesNotMatch(kit['example.html'], /value="Tide &amp; Co\."/, 'the account field shows the shop name as a disabled value')
+  for (const row of ['slides', 'ui-kit']) {
+    const files = row === 'ui-kit' ? kit : await exportZip('21-presentation', row)
+    for (const p of htmlPages(files)) {
+      assert.doesNotMatch(files[p], /Place a photograph|class=""/, `${row} ${p}`)
+    }
+  }
+  const lists = Object.entries(kit).filter(([n]) => /\.html$/.test(n)).map(([, t]) => t).join('\n')
+  assert.match(lists, /1040[\s\S]{0,400}Late/, 'order 1040 is not shown as Late')
+})
+
+test('theme 21 labels the faces it ships: the body family named in the css has a font file in the zip', async () => {
+  const files = await exportZip('21-presentation', 'slides')
+  const css = Object.entries(files).filter(([n]) => /^assets\/.+\.css$/.test(n)).map(([, t]) => t).join('\n')
+  const fonts = Object.keys(files).filter((n) => /\.(woff2?|ttf|otf)$/.test(n))
+  assert.ok(fonts.length > 0, 'no font files shipped')
+  for (const m of css.matchAll(/@font-face\s*\{[^}]*font-family:\s*['"]?([^;'"]+)/g)) assert.ok(m[1].trim().length > 0, 'an unnamed @font-face')
+  assert.doesNotMatch(Object.values(files).filter((t) => typeof t === 'string').join('\n'), /Inter \/ Inter/)
+})

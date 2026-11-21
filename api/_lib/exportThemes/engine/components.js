@@ -223,7 +223,7 @@ export function makeUi(ctx) {
       const m = error ? `<p class="ui-error" id="${id}-m">${A(error)}</p>` : help ? `<p class="ui-help" id="${id}-m">${A(help)}</p>` : '';
       return `<div class="ui-field"><label class="ui-label" for="${id}">${A(label)}</label>${ctl}${m}</div>`;
     },
-    check(label, { checked, disabled, name, type = 'checkbox', state } = {}) { return `<label class="ui-choice"><input type="${type}"${name ? ` name="${name}"` : ''}${checked ? ' checked' : ''}${disabled ? ' disabled' : ''} class="${state ? 'is-' + state : ''}"><span>${A(label)}</span></label>`; },
+    check(label, { checked, disabled, name, type = 'checkbox', state } = {}) { return `<label class="ui-choice"><input type="${type}"${name ? ` name="${name}"` : ''}${checked ? ' checked' : ''}${disabled ? ' disabled' : ''}${state ? ` class="is-${state}"` : ''}><span>${A(label)}</span></label>`; },
     switch(label, { checked, disabled, state } = {}) { return `<label class="ui-choice"><input class="ui-switch ${state ? 'is-' + state : ''}" type="checkbox" role="switch"${checked ? ' checked' : ''}${disabled ? ' disabled' : ''}><span>${A(label)}</span></label>`; },
     segmented(items, active, { disabled } = {}) { return `<div class="ui-segmented" role="group">${items.map((t, i) => `<button type="button" aria-pressed="${i === active}"${disabled ? ' disabled' : ''}>${A(t)}</button>`).join('')}</div>`; },
     row({ lead, title, sub, end, endHtml, chip, href }) {
@@ -250,6 +250,8 @@ export function exampleHtml(ctx) {
   const ui = ctx.ui, S = screenOf(ctx), F = S.form, { DW, DS } = displayType(ctx);
   // sample copy for the demo page: brand data ui.screen.content.example, else neutral words
   const X = { secondary: 'Secondary', quiet: 'Skip', danger: 'Delete', small: 'Add', account: 'Account', checks: ['Checked', 'Unchecked', 'Disabled'], switches: ['Switch on', 'Switch off'], radios: ['First choice', 'Second choice'], statLabel: 'Total', crumbs: ['Home', 'Section'], tabs: ['One', 'Two', 'Three'], links: [['One', 'map-pin'], ['Two', 'plus'], ['Three', 'clock']], ...(S.example || {}) };
+  // a theme may swap the demo page's total and account value for ones that match its sample data (theme.exampleDemo); the others keep them
+  const DM = (ctx.theme && typeof ctx.theme.exampleDemo === 'function' && ctx.theme.exampleDemo(ctx)) || {};
   const sec = (t, body) => `<section class="ex"><h2>${esc(t)}</h2>${body}</section>`;
   const row = (...x) => `<div class="exrow">${x.join('')}</div>`;
   return `<!doctype html>
@@ -272,10 +274,10 @@ code{font-family:var(--ff-mono);font-size:13px}
 <header class="ex-head"><h1>${esc(ctx.brand.name)} components</h1><div class="ui-segmented" role="group" aria-label="Colour mode"><button type="button" aria-pressed="true" data-mode="light">Light</button><button type="button" aria-pressed="false" data-mode="dark">Dark</button></div></header>
 <main>
 ${sec('Buttons', row(ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true }), ui.btn(X.small, { size: 'sm' }), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' })))}
-${sec('Inputs', row(ui.field({ id: 'e1', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'e2', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] })) + row(ui.field({ id: 'e3', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'e4', label: F.notes, kind: 'textarea', help: F.notesHelp })) + row(ui.field({ id: 'e5', label: X.account, value: ctx.brand.name, disabled: true })))}
+${sec('Inputs', row(ui.field({ id: 'e1', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'e2', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] })) + row(ui.field({ id: 'e3', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'e4', label: F.notes, kind: 'textarea', help: F.notesHelp })) + row(ui.field({ id: 'e5', label: X.account, value: DM.account !== undefined ? DM.account : ctx.brand.name, disabled: true })))}
 ${sec('Choices', row(ui.check(X.checks[0], { checked: true }), ui.check(X.checks[1]), ui.check(X.checks[2], { disabled: true }), ui.switch(X.switches[0], { checked: true }), ui.switch(X.switches[1])) + row(ui.check(X.radios[0], { type: 'radio', name: 'v', checked: true }), ui.check(X.radios[1], { type: 'radio', name: 'v' }), ui.segmented(F.sizes, 1)))}
 ${sec('Status', row(...ctx.status.map((s) => ui.statusChip(s.id)), '<span class="ui-badge">3</span>'))}
-${sec('Cards', row(ui.card({ title: S.eta, text: S.pickup, meta: S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(S.paid, X.statLabel)))}
+${sec('Cards', row(ui.card({ title: S.eta, text: S.pickup, meta: S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(DM.stat ? DM.stat[0] : S.paid, DM.stat ? DM.stat[1] : X.statLabel)))}
 ${sec('Navigation', ui.crumbs([...X.crumbs, S.deliverTo]) + '<div style="height:16px"></div>' + ui.tabs(X.tabs, 0) + '<div style="height:16px"></div><nav class="ui-topbar" aria-label="Main"><strong class="ui-display">' + esc(ctx.brand.logo.showcase.wordmark) + '</strong><div class="ui-topbar__links">' + ui.links(X.links, 0) + '</div></nav>')}
 ${sec('List', ui.deliveryRows(5))}
 ${sec('Feedback', ui.alert('warning', S.alert) + '<div style="height:12px"></div>' + ui.alert('success', S.toast) + '<div style="height:12px"></div>' + ui.toast(S.toast) + '<div style="height:12px"></div>' + row(ui.spinner(), ui.skeleton('160px')))}

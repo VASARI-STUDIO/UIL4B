@@ -1,4 +1,4 @@
-import { screenContent } from './once.js';
+import { screenContent, exampleDemo } from './once.js';
 // Theme 01, Presentation: a 1280 x 720 slide deck. Instrument Sans chrome at 11 to 13 px, the brand's display face used once a slide,
 // mostly empty pages, one idea each. Everything below reads roles and colourways from the brand; no brand name or hex is written here.
 import { guidelines } from './guidelines.js';
@@ -13,6 +13,7 @@ import { realCopy } from './real-copy.js';
 
 export const meta = {
   screenContent,  // Long Room says "free" once: the engine's example page and delivery rows read the product screen through this
+  exampleDemo,  // the example page's total and account value, from the sample orders (see once.js)
   realCopy,  // the words of the slot edition that print as words, not as placeholder boxes (see real-copy.js)
   id: '21-presentation', name: 'Keynote', tier: 'Pro', brand: 'kerbside',
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 },

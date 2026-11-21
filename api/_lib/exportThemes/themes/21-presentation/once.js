@@ -21,3 +21,14 @@ export function deliveryRows(ctx, n = 5) {
   const ui = ctx.ui, S = screenContent(ctx);
   return `<ul class="ui-list">${S.deliveries.slice(0, n).map((d) => ui.row({ lead: ui.icon(d.icon || ctx.brand.ui.rowIcon || 'package', 18), title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('')}</ul>`;
 }
+// The example page's total and account value, for the slot edition's sample orders: the day's takings (the order totals added up here,
+// in cents) and the person signed in. A total that is not a plain price is left as the engine prints it.
+export function exampleDemo(ctx) {
+  if (ctx.edition !== 'slot') return {};
+  const S = screenContent(ctx);
+  const rows = S.deliveries.map((d) => /^(\D*)(\d[\d,]*)(?:\.(\d{1,2}))?$/.exec(String(d.price || '').trim()));
+  if (!rows.length || rows.some((m) => !m)) return {};
+  const cents = rows.reduce((a, m) => a + Number(m[2].replace(/,/g, '')) * 100 + Number((m[3] || '0').padEnd(2, '0')), 0);
+  const money = `${rows[0][1]}${Math.floor(cents / 100).toLocaleString('en-AU')}.${String(cents % 100).padStart(2, '0')}`;
+  return { stat: [money, 'Taken today'], account: S.rider };
+}

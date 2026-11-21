@@ -55,7 +55,7 @@ const UI_SAMPLE = {
   'ui.screen.content.empty.body': 'New orders show up here with the time they are due.',
   'ui.screen.content.empty.cta': 'Place order',
   'ui.screen.content.dialog.title': 'Cancel order 1042?',
-  'ui.screen.content.dialog.body': 'Packing has started, so cancelling is free until the order is sent. Maya Chen is told straight away.',
+  'ui.screen.content.dialog.body': "Maya Chen won't be charged, and she is told straight away. This can't be undone.",
   'ui.screen.content.dialog.confirm': 'Cancel order',
   'ui.screen.content.dialog.keep': 'Keep order',
   'ui.screen.content.toast': 'Order 1042 placed. Due at 11:40 am.',
@@ -66,6 +66,8 @@ const UI_SAMPLE = {
   'ui.screen.content.example.danger': 'Cancel order',
   'ui.screen.content.example.small': 'Add note',
   'ui.screen.content.example.statLabel': 'Orders today',
+  // the account item names a link already in the bar, so the bar is not given a fourth
+  'ui.screen.content.example.account': 'Shop',
 };
 const UI_LIST = {
   'ui.screen.content.form.sizes': ['Standard', 'Express', 'Pick up'],
@@ -75,7 +77,8 @@ const UI_LIST = {
   'ui.screen.content.example.crumbs': ['Orders', 'Order 1042'],
   'ui.screen.content.example.tabs': ['Open', 'Late', 'Closed'],
 };
-const LINKS = ['Home', 'Search', 'Profile'];
+const LINKS = ['Orders', 'Customers', 'Shop'];
+const STATUS = ['New order', 'Active', 'Late', 'Closed'];
 const ORDER_FIELD = { to: 0, when: 1, price: 2 };
 
 export function realCopy(path, value) {
@@ -85,6 +88,7 @@ export function realCopy(path, value) {
   if (/^pairs\.\d+\.use$/.test(path)) return value;
   if ((m = /^type\.sample\.(headline|paragraph|caption)$/.exec(path))) return SPECIMEN[m[1]];
   if (!path.startsWith('ui.')) return undefined;
+  if ((m = /^ui[.]status[.](\d)[.]label$/.exec(path))) return STATUS[Number(m[1])] ?? value;
   if (path in UI_SAMPLE) return UI_SAMPLE[path];
   if ((m = /^(.*)\.(\d+)$/.exec(path)) && UI_LIST[m[1]]) return UI_LIST[m[1]][Number(m[2])] ?? value;
   if ((m = /^ui\.screen\.content\.example\.links\.(\d+)\.0$/.exec(path))) return LINKS[Number(m[1])] ?? value;

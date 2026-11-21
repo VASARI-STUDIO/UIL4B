@@ -389,7 +389,7 @@ function keptCtx(ctx, G) {
 export function guideSiteFiles(ctx0, T) {
   const G = T.guideSite;
   if (!G) throw new Error('guide site: this theme has no guideSite');
-  const ctx = keptCtx(ctx0, G);
+  const ctx = keptCtx(typeof G.prepare === 'function' ? G.prepare(ctx0) : ctx0, G); // a theme may hand back the context its site is drawn from (G.prepare)
   const adapt = G.adapt || {};
   const files = {};
   put(ctx, files, 'assets/guidelines.css', `${fontFaceCss(ctx, (f) => `fonts/${f.stem}.woff2`, chromeFaces(T))}\n${siteCss(ctx, T)}`);

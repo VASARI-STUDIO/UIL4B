@@ -8,7 +8,7 @@ import { A, darkF, actF, panelF, fieldStyle, fitSize, bar, tocPanel, nextField, 
 import { distinctColours } from './helpers.js';
 import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
-import { docOf, siteCtx } from './lane-ht-clean.js';
+import { docOf, siteCtx, servedCtx } from './lane-ht-clean.js';
 
 import { screenContent as SC, deliveryRows, noPrices } from './once.js';
 
@@ -116,7 +116,7 @@ const PAGES = {
     const move = /order 1042/.test(D.title) ? u.dialog({ title: 'Move order 1042?', body: `It will be due at 1:30 pm instead of 11:40 am. ${S.deliverTo} is told straight away.`, confirm: 'Move', keep: 'Keep 11:40 am' }) : u.dialog({ title: D.title, body: D.body, confirm: D.confirm, keep: D.keep });
     // the two share one title id; a page holds each id once
     const second = danger.replace(/dlg-t/g, 'dlg-t2');
-    return { lede: 'A dialog asks one question and names both answers.', live: `<div class="hk-col">${item(move, 'Confirm', 'hk-i--w')}${item(second, 'Cannot be undone', 'hk-i--w')}</div>`, code: [['Confirm', move], ['Cannot be undone', second]] };
+    return { lede: 'A dialog asks one question and names both answers.', live: `<div class="hk-row hk-row--2">${item(move, 'Confirm', 'hk-i--w')}${item(second, 'Cannot be undone', 'hk-i--w')}</div>`, code: [['Confirm', move], ['Cannot be undone', second]] };
   },
   table: (ctx) => {
     const S = SC(ctx), u = ctx.ui, d = S.deliveries;
@@ -124,8 +124,8 @@ const PAGES = {
     return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="hk-empty"><h3>${A(E.title)}</h3><p>${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
-  'screen-light': (ctx) => screen(ctx, false, false),
-  'screen-dark': (ctx) => screen(ctx, true, false),
+  'screen-light': (ctx) => pair(ctx, false),
+  'screen-dark': (ctx) => pair(ctx, true),
   'screen-mobile': (ctx) => screen(ctx, false, true),
   tokens: (ctx) => {
     // one group to a row, each under its own heading with one Copy for the group (the declarations as they sit in tokens.css); a colour carries a 16 px chip
@@ -143,6 +143,11 @@ const PAGES = {
     return { lede: 'The kit ships as plain HTML and CSS: the tokens, the components and an example page.', live, code: [['Step 2: the stylesheets', links], ['Step 3: the wrapper', '<body class="ui">\n  <!-- your page -->\n</body>'], ['A button', h]] };
   },
 };
+// the screen in the page's mode beside the same screen in the other, so each is read against the other
+function pair(ctx, dark) {
+  const a = screen(ctx, dark, false), b = screen(ctx, !dark, false);
+  return { ...a, live: `<div class="hk-scrs">${a.live.replace('<div class="hk-col">', '').replace(/<\/div>$/, '')}${b.live.replace('<div class="hk-col">', '').replace(/<\/div>$/, '')}</div>`, dark: false };
+}
 // a product screen: the brand's own screen title and content, built from the components
 function screen(ctx, dark, mobile) {
   const S = SC(ctx), u = ctx.ui, E = EX(ctx), title = ctx.brand.ui.screen.title;
@@ -153,7 +158,19 @@ function screen(ctx, dark, mobile) {
 }
 
 // markup is laid out by the engine; CSS lines are shown as written, a line each
-const pretty = (K, h) => (String(h).trim().startsWith('<') ? settle(K.prettyHtml(tidy(h))) : h);
+// A long opening tag has its attributes one to a line, so no line of markup runs past what a reader can take in at once
+const WRAP_AT = 72;
+const TAG_LINE = /^(\s*)<([a-z][a-z0-9-]*)((?:\s+[^\s=>"]+(?:="[^"]*")?)+)\s*(\/?>)(.*)$/;
+function breakAttrs(s) {
+  return String(s).split('\n').map((line) => {
+    const m = line.length > WRAP_AT && TAG_LINE.exec(line);
+    const attrs = m && m[3].match(/[^\s=>"]+(?:="[^"]*")?/g);
+    if (!attrs || attrs.length < 2) return line;
+    const [, ind, tag, , end, rest] = m, pad = `${ind}  `;
+    return `${ind}<${tag}\n${attrs.map((a, i) => `${pad}${a}${i === attrs.length - 1 ? end + rest : ''}`).join('\n')}`;
+  }).join('\n');
+}
+const pretty = (K, h) => (String(h).trim().startsWith('<') ? breakAttrs(settle(K.prettyHtml(tidy(h)))) : h);
 // ---- the page: a split slide (the title on a field, the live components on the ground), then the markup ----
 const grounds = (ctx) => [panelF(ctx), actF(ctx), darkF(ctx), panelF(ctx)];
 function body(ctx0, K) {
@@ -201,7 +218,7 @@ ${nextField(ctx, { next: nx(next), prev: nx(K.prev) })}
 }
 
 export const kitSite = {
-  css: (ctx) => htCss(ctx) + kitCss(ctx), shell, unscroll: '.ht-bar{position:static!important}',
+  prepare: servedCtx, css: (ctx) => htCss(ctx) + kitCss(ctx), shell, unscroll: '.ht-bar{position:static!important}',
   fallback: (ctx, K) => (PAGES[K.page.id] ? body(ctx, K) : `<section class="hk-code"><p class="ht-p">${A(K.page.title)}</p></section>`),
   pages: { cover, contents: (ctx, K) => contents(ctx, K) },
 };

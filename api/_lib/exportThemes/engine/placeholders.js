@@ -226,6 +226,8 @@ export function applyPlaceholders(ctx) {
   // ctx.colours and ctx.pairs are copies made before the swap: give them the same placeholder strings
   (ctx.colours || []).forEach((k, i) => Object.assign(k, { name: B.colours[i].name, lands: B.colours[i].lands, roleText: B.colours[i].roleText }));
   (ctx.pairs || []).forEach((p, i) => { p.use = B.pairs[i].use; });
+  // ctx.status is a copy too: its chips print the label the brand path now holds
+  (ctx.status || []).forEach((st, i) => { const src = B.ui?.status?.[i]; if (src && typeof src.label === 'string') st.label = src.label; });
   });
   ctx.real = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; if (!e) throw new Error('placeholders: a placeholder from another document'); return e.real; }));
   // ctx.ph(path, real): a placeholder for copy a theme hard-codes; real is the words showcase prints
