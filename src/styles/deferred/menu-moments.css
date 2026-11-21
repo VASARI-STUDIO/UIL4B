@@ -2,6 +2,16 @@
    forced-colours guards, and the V3 hue each live row takes. PillNav loads this on a fine
    pointer only, after first paint. The rest states (every glyph part at its resting value)
    stay in global.css, so a menu opened before this sheet arrives sits still, never broken. */
+/* Only the moments read these: their timings, the Palette rainbow and the ink it settles on
+   (the row's own text colour), the Font Gallery face fit, and the pivot each glyph part turns
+   on. Each pivot matters only while a part is transformed, which only happens below. */
+.pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450}
+[data-theme="dark"] .pnav-menu{--mm-rainbow:#F87171,#FB923C,#FACC15,#4ADE80,#22D3EE,#60A5FA,#A78BFA,#F472B6}
+.pnav-tool[data-moment]{--mm-nm-ink:var(--v3-ink)}
+.pnav-tool-nm[data-face]{font-size-adjust:.5}
+.mm-gl :is(.half,.face,.needle){transform-origin:12px 12px}
+.mm-gl :is(.t1,.t2,.t3){transform-box:fill-box;transform-origin:50% 100%}
+.mm-gl .in{transform-box:fill-box;transform-origin:50% 50%}
 @media (hover:hover) and (pointer:fine){
   /* Exit: every moving part goes back in 150ms ease-in. */
   .pnav-tool-label{transition:color var(--mm-out)}

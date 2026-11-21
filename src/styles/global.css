@@ -3091,42 +3091,29 @@ html.lenis{scroll-behavior:auto!important}
    reduced-motion rule cuts every transition duration to 0 (Font Gallery and Icon Library hold one state). These moments deliberately use
    gradient text and motion on a row hover, which the rest of the site
    avoids. */
-.pnav-menu{--mm-out:150ms cubic-bezier(.4,0,1,1);--mm-ease:cubic-bezier(.23,1,.32,1);--mm-rainbow:#B91C1C,#9A3412,#854D0E,#166534,#155E75,#1D4ED8,#7E22CE,#A31450}
-[data-theme="dark"] .pnav-menu{--mm-rainbow:#F87171,#FB923C,#FACC15,#4ADE80,#22D3EE,#60A5FA,#A78BFA,#F472B6}
 /* The name: its own box with a fixed 20px line, so a face swap cannot grow the line
    box (a taller face made it 21px) and nudge the name. top-aligned so the font's
    baseline cannot move it either. */
 .pnav-tool-nm{display:inline-block;vertical-align:top;max-width:100%;height:20px;line-height:20px;overflow:hidden;text-overflow:ellipsis}
-.pnav-tool-nm[data-face]{font-size-adjust:.5}
-/* The ink the rainbow settles on is the row's own text colour (.86 at rest, full on hover). */
-.pnav-tool[data-moment]{--mm-nm-ink:var(--v3-ink)}
-.pnav-tool[data-moment]:is(:hover,:focus-visible),.pnav-tool[data-moment][aria-current="page"]{--mm-nm-ink:var(--v3-ink)}
 /* Rest states of the moving parts: the glyph looks as it always did. */
-.pnav-tool-ico{position:relative}
-.pnav-tool-ico svg{position:relative}
-.mm-gl .half{transform-origin:12px 12px}
 .mm-gl .rise{transform:translateY(15.5px)}
 /* A line that draws in: pathLength is 1, so an offset of 1 hides all of it (the dash is 1 and the
    gap 2, so no cap is left at the end) and 0 shows all of it. Thinner than the glyph's 1.6 so it
    reads as detail inside the shape. */
 .mm-gl .dr{stroke-width:1.2;stroke-dasharray:1 2;stroke-dashoffset:1}
-.mm-gl .t1,.mm-gl .t2,.mm-gl .t3{transform-box:fill-box;transform-origin:50% 100%}
 /* Scaled strokes keep their width: 1.6 units at the 18px glyph is 1.2px. */
 .mm-gl .ts path{vector-effect:non-scaling-stroke;stroke-width:1.2px}
 .mm-gl :is(.i2,.i3,.i4,.i5){opacity:0}
-.mm-gl .face{transform-origin:12px 12px}
 /* The right eye winks: the dot gives way to a short closed lid, so the wink reads as an eye closing. */
 .mm-gl .ew{opacity:0;fill:none}
-/* The inner frame turns about its own centre; a turn leaves its stroke as drawn. */
-.mm-gl .in{transform-box:fill-box;transform-origin:50% 50%}
-.mm-gl .needle{transform-origin:12px 12px}
 /* A dot is a zero-length stroke with a round cap, as the emoji eyes are. */
 .mm-gl .d{opacity:0;stroke-width:2.6}
-/* The moments themselves (hover loops, keyframes, motion guards, live hues) load later from styles/deferred/menu-moments.css. */
+/* The moments themselves (their timings and colours, the pivots the glyph parts turn on, hover loops, keyframes, motion guards, live hues) load later from styles/deferred/menu-moments.css. */
 
 /* The promo content (App lines 151-206): the file's pane, minus its box. It is
    separated from the columns by one hairline and sits on the tray itself. */
-.pnav-editorial{flex:0 0 clamp(240px,26%,300px);min-width:0;display:flex;flex-direction:column;gap:13px;padding:15px;border-left:1px solid rgba(var(--ink-rgb),.06)}
+/* v3-shell.css sets its size, gap, padding and edge. */
+.pnav-editorial{display:flex;flex-direction:column}
 .pnav-editorial-title{margin:0;font-size:16.5px;font-weight:560;line-height:1.22;letter-spacing:-.02em;color:rgb(var(--ink-rgb))}
 .pnav-editorial-blurb{margin:9px 0 0;font-size:12.5px;line-height:1.55;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-editorial-cta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding:10px 14px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}

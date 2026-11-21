@@ -110,7 +110,7 @@ test('keyframes only move what cannot cause layout (plus the Font Pair face)', (
 
 test('the glyph stays a line icon: no fill, box or background is painted into or behind it', () => {
   const start = CSS.indexOf('.pnav-tool-nm{display:inline-block')
-  const end = CSS.indexOf('.pnav-editorial{flex:0 0')
+  const end = CSS.indexOf('.pnav-editorial{display:flex')
   assert.ok(start > 0 && end > start)
   const section = CSS.slice(start, end)
   assert.doesNotMatch(section, /pnav-fx/, 'the .pnav-fx overlay squares are gone')
@@ -132,9 +132,10 @@ test('the glyph stays a line icon: no fill, box or background is painted into or
 
 test('the moments never use transition: all', () => {
   const start = CSS.indexOf('.pnav-tool-nm{display:inline-block')
-  const end = CSS.indexOf('.pnav-editorial{flex:0 0')
+  const end = CSS.indexOf('.pnav-editorial{display:flex')
   assert.ok(start > 0 && end > start)
   assert.doesNotMatch(CSS.slice(start, end), /transition\s*:\s*all/)
+  assert.doesNotMatch(MOMENTS_CSS, /transition\s*:\s*all/)
 })
 
 test('PillNav loads the moments sheet after first paint, on a fine pointer only', () => {
