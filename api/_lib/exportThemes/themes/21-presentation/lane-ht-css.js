@@ -243,6 +243,9 @@ export function htCss(ctx) {
 .ht-scene{display:block;width:100%;height:100%}
 .ht-field__img .ht-scene{position:absolute;inset:0}
 .ht-field__imglogo{position:absolute;left:16px;top:16px}
+.ht-field--pic{min-height:0}
+.ht-field--pic .ht-field__img{flex:1 1 auto;margin:0;aspect-ratio:auto;min-height:170px}
+.ht-field--pic .ht-field__c{padding:16px 24px 20px}
 /* the faces as specimens */
 .ht-specs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--h)}
 .ht-spec{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:32px;padding:32px 0;border-bottom:1px solid var(--h)}
@@ -301,8 +304,8 @@ export function htCss(ctx) {
 .ht-mks--sp .ht-mk--phone{grid-column:2;grid-row:1/3}
 .ht-mks--sp :is(.ht-mk__card,.ht-mk__sign){max-width:none}
 /* the website drawn on a laptop and a phone */
-.ht-mks--dg{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:end}
-.ht-lt{container-type:inline-size;width:100%;max-width:640px}
+.ht-mks--dg{grid-template-columns:minmax(0,720px) minmax(0,300px);justify-content:start;gap:40px 64px;align-items:start}
+.ht-lt{container-type:inline-size;width:100%;max-width:720px}
 .ht-lt__s{border:8px solid var(--t);border-bottom-width:10px;border-radius:12px 12px 0 0;overflow:hidden;background:var(--g);box-sizing:border-box}
 .ht-lt__base{height:12px;background:var(--t);border-radius:0 0 12px 12px;margin:0 -3%}
 .ht-dg__nav{display:flex;align-items:center;gap:4cqw;padding:2.4cqw 3cqw}
@@ -319,6 +322,13 @@ export function htCss(ctx) {
 .ht-mk__phone .ht-dg__hero--m .ht-dg__h{font-size:30px}
 .ht-mk__phone .ht-dg__hero--m .ht-dg__t,.ht-mk__phone .ht-dg__hero--m .ht-dg__b{font-size:15px}
 .ht-mk__phone .ht-dg__hero--m .ht-dg__b{min-height:44px;padding:0 20px}
+/* the website on a phone is portrait: the lead, then the three counts as a column */
+.ht-dg__ph{display:flex;flex-direction:column;max-width:300px;aspect-ratio:9/15}
+.ht-dg__ph .ht-dg__hero--m{padding:24px 20px 28px}
+.ht-dg__col{flex:1;display:grid;align-content:start;gap:8px;padding:16px 20px 20px}
+.ht-dg__ph .ht-dg__st{display:flex;align-items:baseline;gap:12px;padding:12px 14px}
+.ht-dg__ph .ht-dg__n{font-size:24px}
+.ht-dg__ph .ht-dg__t{font-size:14px}
 @media (max-width:840px){
 /* a slide is a picture of a PDF page: below 841 it is the same figure scaled to the column (the engine sets --fit), above the notes */
 .ht-fit{overflow:hidden}

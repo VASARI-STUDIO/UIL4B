@@ -7,6 +7,7 @@ import { A, L, lower, nameOfHex, fieldStyle, inkMark, darkF, actF, panelF, fitSi
 import { onceRe, sayOnce } from './lane-g3-kit.js';
 import { distinctColours, servedFamily, ratioText, clearTimes } from './helpers.js';
 import { screenContent, exampleDemo, tally } from './once.js';
+import { nameOf, PLACEHOLDER_NAME } from './lane-ht-clean.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -21,15 +22,15 @@ const VOICE_PAIRS = [
 // A photograph the brand has still to choose is shown as a drawn scene in its own colours (a market stall at work), so a frame is never
 // empty: the sky is the calm part of the picture, where the type or the reversed logo goes.
 const accentFor = (ctx, ...against) => [(byRole(ctx, 'accent') || {}).hex, L(ctx).accent, ...distinctColours(ctx).map((c) => c.hex)].find((h) => h && against.every((g) => ctx.ratio(h, g) >= 1.8)) || '';
-const scene = (ctx, { sky, a, b, post, crate, fruit, ground }, label = '') => {
+const scene = (ctx, { sky, a, b, post, crate, fruit, ground, vb = '0 0 400 300', par = 'xMidYMid' }, label = '') => {
   const awn = (_, i) => `<rect x="${48 + i * 38}" y="88" width="38" height="30" fill="${i % 2 ? b : a}"/><path d="M${48 + i * 38} 118h38a19 14 0 0 1-38 0z" fill="${i % 2 ? b : a}"/>`;
   const crates = [52, 120, 268].map((x, i) => { return `<rect x="${x}" y="162" width="64" height="34" fill="${crate}"/><rect x="${x}" y="176" width="64" height="3" fill="${post}"/>${[12, 32, 52].map((d, k) => `<circle cx="${x + d}" cy="156" r="10" fill="${fruit[(i + k) % 2]}"/>`).join('')}`; }).join('');
-  return `<svg class="ht-scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect width="400" height="300" fill="${sky}"/><rect y="250" width="400" height="50" fill="${ground}"/><rect x="60" y="88" width="8" height="162" fill="${post}"/><rect x="332" y="88" width="8" height="162" fill="${post}"/>${Array.from({ length: 8 }, awn).join('')}<path d="M204 196V176a22 14 0 0 1 44 0v20z" fill="${b}"/><circle cx="226" cy="150" r="11" fill="${post}"/><rect x="40" y="196" width="320" height="54" fill="${post}"/><rect x="34" y="190" width="332" height="10" fill="${a}"/>${crates}</svg>`;
+  return `<svg class="ht-scene" viewBox="${vb}" preserveAspectRatio="${par} slice" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-100" y="-100" width="600" height="500" fill="${sky}"/><rect x="-100" y="250" width="600" height="150" fill="${ground}"/><rect x="60" y="88" width="8" height="162" fill="${post}"/><rect x="332" y="88" width="8" height="162" fill="${post}"/>${Array.from({ length: 8 }, awn).join('')}<path d="M204 196V176a22 14 0 0 1 44 0v20z" fill="${b}"/><circle cx="226" cy="150" r="11" fill="${post}"/><rect x="40" y="196" width="320" height="54" fill="${post}"/><rect x="34" y="190" width="332" height="10" fill="${a}"/>${crates}</svg>`;
 };
 // the scene on the page ground (photo direction)
-const sceneOnPage = (ctx, label) => { const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken; return scene(ctx, { sky, a: act, b: accentFor(ctx, act, sky) || dk, post: dk, crate: L(ctx).surface, fruit: [act, accentFor(ctx, L(ctx).surface, dk) || act], ground: act }, label); };
+const sceneOnPage = (ctx, label, vb) => { const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken; return scene(ctx, { sky, a: act, b: accentFor(ctx, act, sky) || dk, post: dk, crate: L(ctx).surface, fruit: [act, accentFor(ctx, L(ctx).surface, dk) || act], ground: act, vb }, label); };
 // the scene as a photograph the logo is set on: the action colour is the sky, the reversed logo sits on it
-const sceneOnAction = (ctx) => { const act = actF(ctx), dk = darkF(ctx), light = L(ctx).surface; return scene(ctx, { sky: act, a: light, b: accentFor(ctx, act, dk) || dk, post: dk, crate: light, fruit: [accentFor(ctx, act, dk) || light, dk], ground: dk }); };
+const sceneOnAction = (ctx, par) => { const act = actF(ctx), dk = darkF(ctx), light = L(ctx).surface; return scene(ctx, { sky: act, a: light, b: accentFor(ctx, act, dk) || dk, post: dk, crate: light, fruit: [accentFor(ctx, act, dk) || light, dk], ground: dk, par }); };
 const PHOTO_BRIEF = [['Subject', 'People at work, caught mid-task, not posed.'], ['Light', 'Daylight from the side. No flash.'], ['Crop', 'Close in, with clear space round the subject for type.']];
 
 const dl = (rows) => { const r = rows.filter(([, v]) => v); return r.length ? `<dl class="ht-dl">${r.map(([k, v]) => `<dt>${A(k)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''; };
@@ -65,7 +66,7 @@ const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const fields = (ctx, items, n = items.length) => {
   const k = items.length, rest = k % n, ls = rest ? n - rest + 1 : 1;
   if (!k) return '';
-  return `<div class="ht-fields" style="--n:${n};--ls:${ls}">${items.map((f, i) => `<div class="ht-field${lower(f.hex) === lower(L(ctx).surface) ? ' ht-field--hair' : ''}${lower(f.hex) === lower(darkF(ctx)) ? ' ht-field--dk' : ''}${i === k - 1 && ls > 1 ? ' ht-field--last' : ''}${i === k - 1 && k % 2 ? ' ht-field--odd' : ''}" style="${fieldStyle(ctx, f.hex, f.what || 'site notes field', f.size || 15)}${f.style || ''}">${f.html}</div>`).join('')}</div>`;
+  return `<div class="ht-fields" style="--n:${n};--ls:${ls}">${items.map((f, i) => `<div class="ht-field${lower(f.hex) === lower(L(ctx).surface) ? ' ht-field--hair' : ''}${lower(f.hex) === lower(darkF(ctx)) ? ' ht-field--dk' : ''}${i === k - 1 && ls > 1 ? ' ht-field--last' : ''}${i === k - 1 && k % 2 ? ' ht-field--odd' : ''}${f.cls ? ` ${f.cls}` : ''}" style="${fieldStyle(ctx, f.hex, f.what || 'site notes field', f.size || 15)}${f.style || ''}">${f.html}</div>`).join('')}</div>`;
 };
 const misuse = ['Do not stretch, squash or skew it.', 'Do not recolour it outside the versions above.', 'Do not rotate it.', 'Do not add shadows, glows or other effects.', 'Do not set it on a busy part of a photo. The pattern here stands in for one.', 'Do not outline it or put it in a box.'];
 // The six misuses as tiles, each the real mark with its fault really applied (stretched, recoloured, rotated, shadowed, set on a busy ground, boxed)
@@ -102,17 +103,21 @@ const colourField = (ctx, c, full = false, i = 9) => ({
 
 // 3.5: one tile per colour the brand has, each filled with the colour it names and showing the version of the logo that goes on it,
 // then a tile for a photograph (a calm part of the picture takes the reversed logo)
-const cwCaption = (cw, k, ctx, hex) => {
-  if (cw[k] && lower(cw[k].ground) === lower(hex)) return k === 'colour' ? 'Full-colour logo' : k === 'reversed' ? 'Reversed logo' : '';
+const cwCaption = (cw, k, ctx, hex, own) => {
+  if (own) return k === 'colour' ? 'Full-colour logo' : `${ctx.logo.labels[k] || cap1(k)} logo`;
   return lower(inkOn(ctx, hex)) === lower(L(ctx).text) ? 'One-colour logo, in the dark text colour' : 'One-colour logo, in the light ground colour';
 };
+// a tile's name: the brand's own colour name, or by its job while the project is still called "Your name" (its colour names are the theme's, not the brand's)
+const tileName = (ctx, c) => (nameOf(ctx) && nameOf(ctx) !== PLACEHOLDER_NAME ? c.name : `${cap1(c.roleText || c.role)} colour`);
 const groundTiles = (ctx) => {
-  const cw = ctx.brand.logo.colourways, geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], dk = darkF(ctx);
+  const cw = ctx.brand.logo.colourways, geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], dk = darkF(ctx), act = actF(ctx);
   const tiles = distinctColours(ctx).slice(0, 5).map((c) => {
-    const k = cwFor(ctx, c.hex), own = cw[k] && lower(cw[k].ground) === lower(c.hex), ink = own ? cw[k].name : inkOn(ctx, c.hex);
-    return { hex: c.hex, what: `site logo ground ${c.name}`, html: `<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, ...(own ? { colourway: k } : {}), color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(c.name)}</b>${cwCaption(cw, k, ctx, c.hex) ? `<br>${A(cwCaption(cw, k, ctx, c.hex))}` : ''}</p>` };
+    // on the dark text colour the logo is one colour, light: no accent word on a ground that only just carries it
+    const k = cwFor(ctx, c.hex), own = lower(c.hex) !== lower(dk) && cw[k] && lower(cw[k].ground) === lower(c.hex), ink = own ? cw[k].name : inkOn(ctx, c.hex);
+    return { hex: c.hex, what: `site logo ground ${c.name}`, html: `<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, ...(own ? { colourway: k } : {}), color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(tileName(ctx, c))}</b><br>${A(cwCaption(cw, k, ctx, c.hex, own))}</p>` };
   });
-  tiles.push({ hex: dk, what: 'site logo ground photo', html: `<div class="ht-field__img">${sceneOnAction(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 150, colourway: 'reversed', color: inkOn(ctx, actF(ctx)), label: 'Logo' })}</div></div><p class="ht-field__c"><b>On a picture</b><br>Set the reversed logo on the calmest part of the picture, here the sky.</p>` });
+  // the picture tile is the drawing, full width, over its own caption on the panel colour
+  tiles.push({ hex: panelF(ctx), what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneOnAction(ctx, 'xMidYMin')}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 150, colourway: 'reversed', color: inkOn(ctx, act), label: 'Logo' })}</div></div><p class="ht-field__c"><b>On a picture</b><br>Set the reversed logo on the calmest part of the picture, here the sky.</p>` });
   return fields(ctx, tiles, 3);
 };
 
@@ -153,9 +158,9 @@ const digitalFigs = (ctx) => {
   const hero = (cls) => `<div class="ht-dg__hero ${cls}" style="${fieldStyle(ctx, dk, 'site mock-up website hero')}"><p class="ht-d ht-dg__h">Where is my order?</p><p class="ht-dg__t">${ORDER.id} is packing. ${ORDER.due}.</p>${btn(act)}</div>`;
   const stat = (n, t) => `<div class="ht-dg__st" style="${fieldStyle(ctx, ph, 'site mock-up website stat')}"><p class="ht-d ht-dg__n">${n}</p><p class="ht-dg__t">${t}</p></div>`;
   const laptop = `<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
-  const phone = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}</div>`;
+  const phone = `<div class="ht-mk__phone ht-dg__ph"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}<div class="ht-dg__col">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div>`;
   const fig = (cls, body, t, n) => `<figure class="ht-mk ${cls}">${body}<figcaption><b>${A(t)}</b> ${A(n)}</figcaption></figure>`;
-  return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', phone, 'On a phone', 'The same lead, one column.')}</div>`;
+  return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', phone, 'On a phone', 'The same lead, then the three counts in one column.')}</div>`;
 };
 
 // 5.1 type in use: each step at the size it is specified at, set with the brand's own line, its name and a price
@@ -274,7 +279,7 @@ export const NOTES = {
   // 6.1: a frame for the photograph the brand has still to choose, with its direction beside it (the brand's own where it wrote one)
   'photo-direction': (ctx) => {
     const D = ctx.brand.imagery.direction, rows = Object.entries(D).filter(([k, v]) => k !== 'subject' && v).map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)]);
-    const frame = `<figure class="ht-pf">${sceneOnPage(ctx, 'A drawn market stall in the brand colours: the direction at 4:3')}<figcaption>The direction at 4:3, drawn in the brand's colours: people at work, close in, with clear sky above for type.</figcaption></figure>`;
+    const frame = `<figure class="ht-pf">${sceneOnPage(ctx, 'A drawn market stall in the brand colours: the direction at 4:3', '80 56 260 195')}<figcaption>The direction at 4:3, close in on the hands at the counter, with clear sky above for type.</figcaption></figure>`;
     return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.map(([k, v]) => [k, A(v)])) };
   },
   // with no shots written there is no list: a row of empty crop-mark frames is not a page
