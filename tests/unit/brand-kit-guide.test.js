@@ -37,13 +37,15 @@ import {
 import { liveToolRoutes, CREATE_HOMES_THAT_RENDER } from '../../src/data/toolTree.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { SYSTEM_PARTS } from '../../src/utils/userHome.js'
+import { SEMANTIC_ROLES, semanticShades } from '../../src/data/semanticPresets.js'
 
 /** A design with real work in the named parts, built off the defaults. */
-function designWith({ palette, fonts, scale } = {}) {
+function designWith({ palette, fonts, scale, semantic } = {}) {
   const d = JSON.parse(JSON.stringify(DEFAULT_DESIGN))
   if (palette) d.palette.colors = ['#112233', '#445566', '#778899']
   if (fonts) d.fonts.heading = { family: 'Fraunces', weight: 700, category: 'serif' }
   if (scale) d.typeScale.base = 18
+  if (semantic) d.states.warning = 1
   return d
 }
 
@@ -79,7 +81,7 @@ test('every step points at a Create tool that renders', () => {
 })
 
 test('the guard above sees a real population, so it cannot pass by finding nothing', () => {
-  assert.equal(BRAND_KIT_STEPS.length, 4)
+  assert.equal(BRAND_KIT_STEPS.length, 5)
   assert.ok(liveToolRoutes().length > 4)
 })
 
@@ -97,7 +99,7 @@ test('each step names a part the User Home already measures, or nothing', () => 
 test('an untouched design has nothing built', () => {
   const { done, total, complete } = guideProgress(DEFAULT_DESIGN)
   assert.equal(done, 0)
-  assert.equal(total, 4)
+  assert.equal(total, 5)
   assert.equal(complete, false)
 })
 
@@ -105,11 +107,25 @@ test('progress is derived from the saved design, not counted', () => {
   const steps = guideSteps(designWith({ palette: true, scale: true }))
   assert.deepEqual(
     steps.map((s) => [s.id, s.done]),
-    [['color', true], ['fonts', false], ['typescale', true], ['icons', false]],
+    [['color', true], ['semantic', false], ['fonts', false], ['typescale', true], ['icons', false]],
   )
-  // Nothing was "advanced" — the type scale is done and fonts, which sits
-  // BEFORE it, is not. A cursor could not represent that; a reading can.
-  assert.equal(firstIncompleteStep(designWith({ palette: true, scale: true })).id, 'fonts')
+  // Nothing was "advanced" — the type scale is done and the semantic colours and
+  // fonts, which sit BEFORE it, are not. A cursor could not represent that; a
+  // reading can.
+  assert.equal(firstIncompleteStep(designWith({ palette: true, scale: true })).id, 'semantic')
+})
+
+test('the steps run colours, semantic colours, fonts, type scale, icons, and tints are not one', () => {
+  assert.deepEqual(BRAND_KIT_STEPS.map((s) => s.id), ['color', 'semantic', 'fonts', 'typescale', 'icons'])
+  assert.equal(BRAND_KIT_STEPS.at(-1).id, 'icons', 'icons stays the last step')
+  assert.equal(BRAND_KIT_STEPS.some((s) => s.id === 'tints' || s.part === 'tints'), false)
+  assert.equal(stepById('semantic').label, 'Semantic colours')
+  assert.equal(stepById('semantic').path, '/create/semantic-color')
+})
+
+test('a changed semantic selection marks the semantic step built', () => {
+  const steps = guideSteps(designWith({ semantic: true }))
+  assert.deepEqual(steps.filter((s) => s.done).map((s) => s.id), ['semantic'])
 })
 
 test('icons are injected, because the design has no field for them', () => {
@@ -120,19 +136,29 @@ test('icons are injected, because the design has no field for them', () => {
 })
 
 test('a finished system reports complete and has no next gap', () => {
-  const design = designWith({ palette: true, fonts: true, scale: true })
+  const design = designWith({ palette: true, fonts: true, scale: true, semantic: true })
   const { done, complete } = guideProgress(design, { iconsTouched: true })
-  assert.equal(done, 4)
+  assert.equal(done, 5)
   assert.equal(complete, true)
   assert.equal(firstIncompleteStep(design, { iconsTouched: true }), null)
 })
 
-test('the rail carries what each step produced, so step four can see step one', () => {
+test('the rail carries what each step produced, so a later step can see an earlier one', () => {
   const design = designWith({ palette: true, fonts: true, scale: true })
   const art = stepArtefacts(design)
   assert.deepEqual(art.color.colors, ['#112233', '#445566', '#778899'])
   assert.equal(art.fonts.text, 'Fraunces / Inter')
   assert.equal(art.typescale.text, '18px · 1.25')
+})
+
+test('the semantic step carries the 500 shade of success, warning, error and info', () => {
+  const shades = semanticShades(DEFAULT_DESIGN.states)
+  const art = stepArtefacts(DEFAULT_DESIGN)
+  assert.deepEqual(art.semantic.colors, SEMANTIC_ROLES.map((role) => shades[role][5]))
+  assert.equal(art.semantic.colors.length, 4)
+  for (const hex of art.semantic.colors) assert.match(hex, /^#[0-9a-f]{6}$/i)
+  const warm = stepArtefacts(designWith({ semantic: true })).semantic.colors
+  assert.notEqual(warm[1], art.semantic.colors[1], 'changing the selection changes the swatch')
 })
 
 test('one family for both roles reads as one name, not "Inter / Inter"', () => {
@@ -157,12 +183,12 @@ test('a fresh start opens step one even when the design already has colours', ()
 test('pressing it again mid-flow resumes at the first gap', () => {
   const entry = guideEntry(designWith({ palette: true }), { active: true })
   assert.equal(entry.resume, true)
-  assert.equal(entry.step.id, 'fonts')
-  assert.equal(entry.path, '/create/font-pair')
+  assert.equal(entry.step.id, 'semantic')
+  assert.equal(entry.path, '/create/semantic-color')
 })
 
 test('resuming a finished system falls back to step one rather than nowhere', () => {
-  const design = designWith({ palette: true, fonts: true, scale: true })
+  const design = designWith({ palette: true, fonts: true, scale: true, semantic: true })
   const entry = guideEntry(design, { active: true, iconsTouched: true })
   assert.equal(entry.step.id, 'color')
 })
@@ -170,7 +196,9 @@ test('resuming a finished system falls back to step one rather than nowhere', ()
 test('step lookup and ordering', () => {
   assert.equal(stepById('typescale').label, 'Type scale')
   assert.equal(stepById('nope'), null)
-  assert.equal(nextStep('color').id, 'fonts')
+  assert.equal(nextStep('color').id, 'semantic')
+  assert.equal(nextStep('semantic').id, 'fonts')
+  assert.equal(nextStep('typescale').id, 'icons')
   assert.equal(nextStep('icons'), null)
   assert.equal(nextStep('nope'), null)
 })
@@ -272,8 +300,8 @@ test('a storage that throws is survivable, and reads as a first-time visitor', (
 })
 
 test('pressing Next on a step counts it as built, defaults and all', () => {
-  // Keeping the defaults is a choice. Someone who walks all four steps without
-  // changing a thing has still been through the flow, and must not read 0 of 4.
+  // Keeping the defaults is a choice. Someone who walks all five steps without
+  // changing a thing has still been through the flow, and must not read 0 of 5.
   const storage = fakeStorage()
   startGuide(storage)
   const untouched = JSON.parse(JSON.stringify(DEFAULT_DESIGN))
@@ -286,7 +314,7 @@ test('pressing Next on a step counts it as built, defaults and all', () => {
 
   for (const s of BRAND_KIT_STEPS) acceptStep(s.id, storage)
   const all = guideProgress(untouched, { accepted: acceptedSteps(storage) })
-  assert.equal(all.done, 4)
+  assert.equal(all.done, 5)
   assert.equal(all.complete, true)
 })
 
@@ -302,7 +330,7 @@ test('the moved-past steps live in the flow flag, survive a resume and end with 
   startGuide(storage)
   assert.deepEqual(acceptedSteps(storage), ['color', 'fonts'])
   // And the resume lands on the first step not yet moved past.
-  assert.equal(guideEntry(DEFAULT_DESIGN, { active: true, storage }).step.id, 'typescale')
+  assert.equal(guideEntry(DEFAULT_DESIGN, { active: true, storage }).step.id, 'semantic')
 
   clearAcceptedSteps(storage)
   assert.deepEqual(acceptedSteps(storage), [])

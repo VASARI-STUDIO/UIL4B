@@ -26,8 +26,13 @@ import {
   EXPORT_SCALES,
   SIZE_PRESETS,
   exceedsCanvasLimit,
-  outputDimensions,
 } from '../utils/imageResize'
+import {
+  RADIUS_MAX, STILL_DEFAULTS, STILL_FITS, STILL_SPEC, STILL_TURNS,
+  cleanSide, clampRadius, cropRect, drawStill, orientedSize, planStill, reorientBox, scalePlan,
+} from '../utils/stillEdit'
+import { COLOURS_MAX, COLOURS_MIN, encodeIndexedPng, quantise } from '../utils/pngQuantise'
+import { KB_MAX, KB_MIN, fitSummary, fitUnderBytes, targetBytes } from '../utils/fitUnderBytes'
 import Segmented from '../components/converter/Segmented'
 import ToolRail from '../components/converter/ToolRail'
 import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from '../components/converter/railGroups'
@@ -327,6 +332,22 @@ function Delta({ orig, out }) {
   return d ? <span className={`fc-delta fc-delta--${d.dir}`}> · {d.label}</span> : null
 }
 
+const FIT_KB_DEFAULT = 100
+const STAGE_MAX_SIDE = 960 // longest side of the crop preview, in canvas pixels
+
+// canvas.toBlob yields null — or quietly a PNG — when the browser can't encode
+// the requested format, and a callback that never fires would wedge a batch.
+function canvasBlob(canvas, format, quality, label) {
+  return new Promise((resolve, reject) => {
+    const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
+    canvas.toBlob(b => {
+      clearTimeout(to)
+      if (blobMatches(b, format)) resolve(b)
+      else reject(new Error(`${label} export not supported by this browser`))
+    }, format, quality)
+  })
+}
+
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
 function ImageConvert({ toast, initialFiles, initialDraft }) {
   const gatedDownload = useGatedDownload()
@@ -339,7 +360,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // says yes, and quietly becomes WebP if it says no.
   const avifOk = useAvifEncode()
   const [chosenFormat, setFormat] = useState(() => seeded?.format ?? 'image/webp')
-  const format = usableFormat(chosenFormat, avifOk, 'image/webp')
+  const pickedFormat = usableFormat(chosenFormat, avifOk, 'image/webp')
   const outputFormats = withAvifIf(OUTPUT_FORMATS, avifOk)
   const [quality, setQuality] = useState(() => seeded?.quality ?? QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
@@ -347,6 +368,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const [jpegBg, setJpegBg] = useState('#ffffff') // fill behind transparency (JPEG has no alpha)
   const [busy, setBusy] = useState(false)
   const [zipping, setZipping] = useState(false)
+  // The still editor's edits as one value, which Undo and Redo watch. The other
+  // output settings stay plain state.
+  const [edit, setEdit] = useState(STILL_DEFAULTS)
+  const patch = useCallback((p) => setEdit(e => ({ ...e, ...p })), [])
+  const [pngColours, setPngColours] = useState(0) // 0 = full colour
+  const [fitOn, setFitOn] = useState(false)
+  const [fitKb, setFitKb] = useState(FIT_KB_DEFAULT)
+  // Rounded corners need transparency, which JPEG lacks, so they save as PNG.
+  const roundedForcesPng = edit.radius > 0 && pickedFormat === 'image/jpeg'
+  const format = roundedForcesPng ? 'image/png' : pickedFormat
+  const history = useEditHistory(edit, setEdit, items.length > 0 && !busy, STILL_SPEC)
   // The region holding the uploaded items + their output settings — the thing a
   // hand-off visitor actually came to look at.
   const queueRef = useRef(null)
@@ -453,6 +485,65 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     setItems([])
   }, [items])
 
+  // The crop box lives in the first image's picture (turned and flipped), and
+  // every image in the batch is cut the same relative way (utils/stillEdit.js).
+  const first = items[0]
+  const firstId = first?.id
+  const firstUrl = first?.srcUrl
+  const firstW = first?.srcW || 0
+  const firstH = first?.srcH || 0
+  const ref = firstW > 0 && firstH > 0 ? orientedSize(firstW, firstH, edit.turn) : null
+  const refW = ref ? ref.w : 0
+  const refH = ref ? ref.h : 0
+  const cropOn = !!edit.box
+  const stageRef = useRef(null)
+  const lastFirst = useRef(null)
+  const exactSize = edit.outW > 0 || edit.outH > 0
+  const bothSides = edit.outW > 0 && edit.outH > 0
+
+  // A different first image (or none) means the box no longer describes it.
+  useEffect(() => {
+    if (lastFirst.current !== firstId && edit.box) patch({ box: null })
+    lastFirst.current = firstId
+  }, [firstId, edit.box, patch])
+
+  // Turning or flipping carries the box with the picture.
+  const setLook = (next) => {
+    setEdit(e => {
+      const to = { ...e, ...next }
+      if (!e.box || !firstW) return to
+      return { ...to, box: reorientBox(e.box, firstW, firstH, e, to) }
+    })
+  }
+  const setBoxField = (key, raw) => {
+    if (!ref || !edit.box) return
+    const room = { x: ref.w - edit.box.w, y: ref.h - edit.box.h, w: ref.w - edit.box.x, h: ref.h - edit.box.y }[key]
+    const next = commitNumber(raw, { min: key === 'x' || key === 'y' ? 0 : 2, max: Math.max(0, room), fallback: edit.box[key] })
+    patch({ box: clampBox({ ...edit.box, [key]: next }, ref.w, ref.h) })
+  }
+  const defaultBox = ref
+    ? clampBox({ x: ref.w * 0.1, y: ref.h * 0.1, w: ref.w * 0.8, h: ref.h * 0.8 }, ref.w, ref.h)
+    : null
+  const setOutSide = (key, raw) => patch({ [key]: String(raw).trim() === '' ? 0 : cleanSide(raw) })
+
+  // The crop stage: the first image, turned and flipped as set, drawn small.
+  useEffect(() => {
+    const canvas = stageRef.current
+    if (!cropOn || !canvas || !firstUrl || !refW || !refH) return undefined
+    let live = true
+    loadImage(firstUrl).then((img) => {
+      if (!live) return
+      const k = Math.min(1, STAGE_MAX_SIDE / Math.max(refW, refH))
+      const w = Math.max(1, Math.round(refW * k))
+      const h = Math.max(1, Math.round(refH * k))
+      canvas.width = w
+      canvas.height = h
+      const plan = { w, h, src: { x: 0, y: 0, w: refW, h: refH }, dest: { x: 0, y: 0, w, h } }
+      drawStill(canvas.getContext('2d'), img, firstW, firstH, plan, { turn: edit.turn, flipH: edit.flipH, flipV: edit.flipV })
+    }).catch(() => {})
+    return () => { live = false }
+  }, [cropOn, firstUrl, firstW, firstH, refW, refH, edit.turn, edit.flipH, edit.flipV])
+
   const convertOne = useCallback(async (item) => {
     const img = await loadImage(item.srcUrl)
     // SVGs without an intrinsic size can report 0×0 — rasterise those at 1024.
@@ -462,33 +553,81 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       const blob = await encodeIco(img, iw, ih)
       return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w: 48, h: 48, note: `favicon • ${ICO_SIZES.join(' + ')} px`, noPreview: true }
     }
-    const { w, h } = outputDimensions(iw, ih, { maxDim, renderScale })
-    if (exceedsCanvasLimit(w, h)) {
-      throw new Error(`Too large to export at @${renderScale}x — pick a smaller size`)
+    const turned = orientedSize(iw, ih, edit.turn)
+    const plan = planStill({
+      srcW: iw,
+      srcH: ih,
+      turn: edit.turn,
+      crop: cropRect(edit.box, refW, refH, turned.w, turned.h),
+      outW: edit.outW,
+      outH: edit.outH,
+      fit: edit.fit,
+      maxDim,
+      renderScale,
+    })
+    if (exceedsCanvasLimit(plan.w, plan.h)) {
+      throw new Error(plan.exact ? 'Too large to export — pick a smaller size' : `Too large to export at @${renderScale}x — pick a smaller size`)
     }
-    const canvas = document.createElement('canvas')
-    canvas.width = w
-    canvas.height = h
-    const ctx = canvas.getContext('2d')
-    if (format === 'image/jpeg') { ctx.fillStyle = jpegBg; ctx.fillRect(0, 0, w, h) }
-    ctx.drawImage(img, 0, 0, w, h)
-    const q = format === 'image/png' ? undefined : quality / 100
     // canvas.toBlob yields null — or quietly a PNG — when the browser can't
     // encode the requested format (notably AVIF in some browsers), and a
     // callback that never fires would wedge the whole batch in its busy state.
-    // Guard all three so each item records a clear error and the batch keeps
-    // going, and nothing is saved under a name that isn't its real format.
+    // canvasBlob guards all three so each item records a clear error and the
+    // batch keeps going, and nothing is saved under a name that isn't its real format.
     const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
-    const blob = await new Promise((resolve, reject) => {
-      const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
-      canvas.toBlob(b => {
-        clearTimeout(to)
-        if (blobMatches(b, format)) resolve(b)
-        else reject(new Error(`${label} export not supported by this browser`))
-      }, format, q)
-    })
-    return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w, h }
-  }, [format, quality, maxDim, renderScale, jpegBg])
+    const paint = (p, factor = 1) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = p.w
+      canvas.height = p.h
+      drawStill(canvas.getContext('2d', { willReadFrequently: true }), img, iw, ih, p, {
+        turn: edit.turn,
+        flipH: edit.flipH,
+        flipV: edit.flipV,
+        radius: edit.radius * factor,
+        background: format === 'image/jpeg' ? jpegBg : null,
+      })
+      return canvas
+    }
+    const lossy = async (q) => {
+      const blob = await canvasBlob(paint(plan), format, q / 100, label)
+      return { blob, bytes: blob.size, w: plan.w, h: plan.h }
+    }
+    // colours 0 is full colour (the browser's own PNG); anything else is the
+    // median-cut palette written as an indexed PNG.
+    const png = async (colours, scale = 100) => {
+      const p = scalePlan(plan, scale / 100)
+      const canvas = paint(p, scale / 100)
+      let blob
+      if (colours) {
+        const { data } = canvas.getContext('2d').getImageData(0, 0, p.w, p.h)
+        const q = quantise(data, colours)
+        blob = new Blob([await encodeIndexedPng(p.w, p.h, q.indices, q.palette)], { type: 'image/png' })
+      } else {
+        blob = await canvasBlob(canvas, format, undefined, label)
+      }
+      return { blob, bytes: blob.size, w: p.w, h: p.h }
+    }
+    const isPng = format === 'image/png'
+    const target = fitOn ? targetBytes(fitKb) : 0
+    let made
+    let detail = ''
+    let missed = false
+    if (target) {
+      const found = await fitUnderBytes({
+        target,
+        kind: isPng ? 'png' : 'lossy',
+        encode: isPng ? ({ colours, scale }) => png(colours, scale) : ({ quality: q }) => lossy(q),
+      })
+      made = found.result
+      missed = !found.ok
+      detail = fitSummary({ ok: found.ok, bytes: made.bytes, params: found.params }, target)
+    } else if (isPng) {
+      made = await png(pngColours)
+      if (pngColours) detail = `Reduced to ${pngColours} colours`
+    } else {
+      made = await lossy(quality)
+    }
+    return { blob: made.blob, url: URL.createObjectURL(made.blob), bytes: made.bytes, w: made.w, h: made.h, detail, missed }
+  }, [format, quality, maxDim, renderScale, jpegBg, edit, refW, refH, pngColours, fitOn, fitKb])
 
   const [convertProgress, setConvertProgress] = useState({ done: 0, total: 0 })
 
@@ -497,12 +636,14 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     setBusy(true)
     setConvertProgress({ done: 0, total: items.length })
     let ok = 0
+    let missed = 0
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
       try {
         if (item.out?.url) URL.revokeObjectURL(item.out.url)
         const out = await convertOne(item)
         ok++
+        if (out.missed) missed++
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, out, error: null } : it))
       } catch (err) {
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, out: null, error: err.message } : it))
@@ -510,11 +651,12 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       setConvertProgress({ done: i + 1, total: items.length })
     }
     setBusy(false)
-    toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}` : 'Conversion failed', ok ? 'success' : 'error')
+    const note = missed ? `. ${missed} couldn’t get under ${formatBytes(targetBytes(fitKb))}` : ''
+    toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}${note}` : 'Conversion failed', ok ? (missed ? 'info' : 'success') : 'error')
     // The converted files are the cards above the settings; on a one-column
     // bench the press happened below them.
     requestAnimationFrame(() => revealResult(gridRef.current))
-  }, [items, busy, convertOne, toast])
+  }, [items, busy, convertOne, toast, fitKb])
 
   const fmt = OUTPUT_FORMATS.find(f => f.id === format)
 
@@ -524,7 +666,22 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // is a second answer waiting to disagree with the encoder.
   const sized = items
     .filter(it => it.srcW > 0 && it.srcH > 0)
-    .map(it => ({ ...it, out: outputDimensions(it.srcW, it.srcH, { maxDim, renderScale }) }))
+    .map(it => {
+      const turned = orientedSize(it.srcW, it.srcH, edit.turn)
+      const out = planStill({
+        srcW: it.srcW,
+        srcH: it.srcH,
+        turn: edit.turn,
+        crop: cropRect(edit.box, refW, refH, turned.w, turned.h),
+        outW: edit.outW,
+        outH: edit.outH,
+        fit: edit.fit,
+        maxDim,
+        renderScale,
+      })
+      return { ...it, out }
+    })
+  const roundedHeld = sized.length && edit.radius > 0 ? clampRadius(edit.radius, sized[0].out.w, sized[0].out.h) : 0
   const widestOut = sized.length ? Math.max(...sized.map(it => Math.max(it.out.w, it.out.h))) : 0
   const anyCapped = sized.some(it => it.out.capped)
 
@@ -628,6 +785,14 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               under 900px. The empty-state drop zone gives way to a slim "Add
               more" strip once the visitor's own files are on screen. */}
           <div className="fc-bench-main">
+            {cropOn && ref && !fmt.ico && (
+              <div className="fc-crop-stage">
+                <div className="fc-vstage" style={{ '--src-w': ref.w, '--src-h': ref.h }}>
+                  <canvas ref={stageRef} role="img" aria-label={`Crop preview of ${first.name}`} />
+                  <CropBox box={edit.box} size={ref} onChange={box => patch({ box })} disabled={busy} />
+                </div>
+              </div>
+            )}
             <ul className="fc-grid" aria-label="Queued images" ref={gridRef}>
               {items.map(it => (
                 <li key={it.id} className="fc-card">
@@ -647,6 +812,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                         {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
                         <Delta orig={it.file.size} out={it.out.bytes} />
                       </div>
+                      {it.out.detail && <div className={`fc-meta${it.out.missed ? ' fc-meta--warn' : ''}`}>{it.out.detail}</div>}
                       <button type="button" className="fc-btn fc-btn--primary fc-dl" onClick={() => downloadOne(it)}>
                         Download {fmt.label}
                       </button>
@@ -666,10 +832,12 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
           <aside className="fc-inspector" aria-label="Output settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
-              <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
+              <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={pickedFormat} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
                 {outputFormats.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </MenuSelect>
               {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
+              {fmt.ico && history.edits.length > 0 && <p className="fc-note">Crop, turn, size and corners don’t apply to a favicon.</p>}
+              {roundedForcesPng && <p className="fc-note fc-note--warn">Rounded corners need transparency, so this saves as PNG.</p>}
               {format === 'image/jpeg' && (
                 <div className="fc-row">
                   {/* The shared picker. Note that this control exists PRECISELY
@@ -693,10 +861,11 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
                 snaps={QUALITY_SNAPS} unit="%"
                 onChange={setQuality}
-                disabled={busy || !fmt.lossy}
+                disabled={busy || !fmt.lossy || fitOn}
                 ariaLabel="Output quality"
               />
               {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+              {fmt.lossy && fitOn && <p className="fc-note">Fit under a size picks the quality.</p>}
             </div>
 
             {!fmt.ico && (
@@ -704,13 +873,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 <div className="fc-pair fc-pair--size">
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
-                    <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy} aria-label="Output size limit">
+                    <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy || exactSize} aria-label="Output size limit">
                       {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                     </MenuSelect>
                   </div>
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-scale">Export scale</label>
-                    <MenuSelect label="Export render scale" id="fc-img-scale" className="fc-field" value={renderScale} onChange={nextValue => setRenderScale(+nextValue)} disabled={busy} aria-label="Export render scale">
+                    <MenuSelect label="Export render scale" id="fc-img-scale" className="fc-field" value={renderScale} onChange={nextValue => setRenderScale(+nextValue)} disabled={busy || exactSize} aria-label="Export render scale">
                       {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                     </MenuSelect>
                   </div>
@@ -742,10 +911,140 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     </div>
                     {/* Always one line tall, so the note arriving does not push
                         the Convert button down. */}
-                    <span className="fc-note fc-outsize-cap">{anyCapped ? 'held to the size limit' : ''}</span>
+                    <span className="fc-note fc-outsize-cap">{exactSize ? 'set by the exact size below' : anyCapped ? 'held to the size limit' : ''}</span>
                   </div>
                 )}
               </div>
+            )}
+
+            {!fmt.ico && (
+              <>
+                <div className="fc-insp-sec">
+                  <EditBar history={history} disabled={busy} />
+                  <span className="fc-eyebrow">Crop</span>
+                  <button
+                    type="button" id="fc-img-crop" className="fc-btn fc-toggle" aria-pressed={cropOn}
+                    disabled={busy || !ref} onClick={() => patch({ box: cropOn ? null : defaultBox })}
+                  >
+                    Crop the picture
+                  </button>
+                  {!ref && <p className="fc-note">Crop is ready once the first image has been read.</p>}
+                  {cropOn && ref && (
+                    <>
+                      <div className="fc-box-grid">
+                        {[['x', 'Left'], ['y', 'Top'], ['w', 'Width'], ['h', 'Height']].map(([key, label]) => (
+                          <div key={key}>
+                            <label className="fc-eyebrow" htmlFor={`fc-img-box-${key}`}>{label} (px)</label>
+                            <DraftNumber
+                              id={`fc-img-box-${key}`} className="fc-field fc-field--num" disabled={busy}
+                              shown={edit.box[key]} onCommit={raw => setBoxField(key, raw)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="fc-note">Drag the box on the preview, or type its numbers. They are pixels of {first.name}, {ref.w} × {ref.h}. Every image is cut the same way.</p>
+                      <button type="button" className="fc-btn fc-btn--quiet" onClick={() => patch({ box: defaultBox })} disabled={busy}>Reset box</button>
+                    </>
+                  )}
+                </div>
+
+                <div className="fc-insp-sec">
+                  <Segmented id="fc-img-turn" label="Turn" options={STILL_TURNS} value={edit.turn} onChange={turn => setLook({ turn })} disabled={busy} />
+                  <div className="fc-flip-pair">
+                    <button
+                      type="button" id="fc-img-flip-h" className="fc-btn fc-toggle" aria-pressed={edit.flipH}
+                      disabled={busy} onClick={() => setLook({ flipH: !edit.flipH })}
+                    >
+                      Flip horizontal
+                    </button>
+                    <button
+                      type="button" id="fc-img-flip-v" className="fc-btn fc-toggle" aria-pressed={edit.flipV}
+                      disabled={busy} onClick={() => setLook({ flipV: !edit.flipV })}
+                    >
+                      Flip vertical
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fc-insp-sec">
+                  <span className="fc-eyebrow" id="fc-img-exact">Exact size</span>
+                  <div className="fc-box-grid" role="group" aria-labelledby="fc-img-exact">
+                    <div>
+                      <label className="fc-eyebrow" htmlFor="fc-img-out-w">Width (px)</label>
+                      <DraftNumber
+                        id="fc-img-out-w" className="fc-field fc-field--num" disabled={busy}
+                        shown={edit.outW || ''} onCommit={raw => setOutSide('outW', raw)}
+                      />
+                    </div>
+                    <div>
+                      <label className="fc-eyebrow" htmlFor="fc-img-out-h">Height (px)</label>
+                      <DraftNumber
+                        id="fc-img-out-h" className="fc-field fc-field--num" disabled={busy}
+                        shown={edit.outH || ''} onCommit={raw => setOutSide('outH', raw)}
+                      />
+                    </div>
+                  </div>
+                  <p className="fc-note">Leave a side blank to keep the proportions. A size here replaces the size limit and scale.</p>
+                  <Segmented id="fc-img-fit" label="Fit to size" options={STILL_FITS} value={edit.fit} onChange={fit => patch({ fit })} disabled={busy || !bothSides} />
+                  <p className="fc-note">
+                    {!bothSides
+                      ? 'Fit, Fill and Stretch apply once both sides are set.'
+                      : edit.fit === 'fit'
+                        ? 'Fit keeps the whole picture and leaves empty space to reach the size.'
+                        : edit.fit === 'fill'
+                          ? 'Fill covers the whole size and trims what overflows.'
+                          : 'Stretch reaches the size by squashing the picture.'}
+                  </p>
+                </div>
+
+                <div className="fc-insp-sec">
+                  <label className="fc-eyebrow" htmlFor="fc-img-radius">Corner radius (px)</label>
+                  <DraftNumber
+                    id="fc-img-radius" className="fc-field fc-field--num" disabled={busy}
+                    shown={edit.radius} onCommit={raw => patch({ radius: commitNumber(raw, { min: 0, max: RADIUS_MAX, fallback: edit.radius }) })}
+                  />
+                  <p className="fc-note">
+                    {edit.radius > 0
+                      ? `The corners come out transparent.${roundedHeld && roundedHeld < edit.radius ? ` Held to ${roundedHeld} px, half the shorter side.` : ''}`
+                      : '0 keeps square corners.'}
+                  </p>
+                </div>
+
+                <div className="fc-insp-sec">
+                  {format === 'image/png' && (
+                    <>
+                      <label className="fc-eyebrow" htmlFor="fc-img-colours">PNG colours ({COLOURS_MIN} to {COLOURS_MAX})</label>
+                      <DraftNumber
+                        id="fc-img-colours" className="fc-field fc-field--num" disabled={busy || fitOn}
+                        shown={pngColours || ''}
+                        onCommit={raw => setPngColours(String(raw).trim() === '' ? 0 : commitNumber(raw, { min: COLOURS_MIN, max: COLOURS_MAX, fallback: pngColours || COLOURS_MAX }))}
+                      />
+                      <p className="fc-note">{fitOn ? 'Fit under a size picks the colours.' : 'Blank keeps every colour. Fewer colours make a smaller file.'}</p>
+                    </>
+                  )}
+                  <span className="fc-eyebrow">File size</span>
+                  <button
+                    type="button" id="fc-img-fit-on" className="fc-btn fc-toggle" aria-pressed={fitOn}
+                    disabled={busy} onClick={() => setFitOn(on => !on)}
+                  >
+                    Fit under a size
+                  </button>
+                  {fitOn && (
+                    <>
+                      <label className="fc-eyebrow" htmlFor="fc-img-fit-kb">Largest size (KB)</label>
+                      <DraftNumber
+                        id="fc-img-fit-kb" className="fc-field fc-field--num" disabled={busy}
+                        shown={fitKb} onCommit={raw => setFitKb(commitNumber(raw, { min: KB_MIN, max: KB_MAX, fallback: fitKb }))}
+                      />
+                      <p className="fc-note">
+                        {format === 'image/png'
+                          ? 'Tries full colour, then fewer colours, then a smaller picture, and keeps the largest result under the limit.'
+                          : 'Finds the highest quality that stays under the limit.'}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </>
             )}
 
           </aside>

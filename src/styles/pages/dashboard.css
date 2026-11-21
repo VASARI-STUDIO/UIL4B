@@ -8,8 +8,7 @@
  * 400 / 224 / 280 / 176 with 32px gaps, and 312 / 200 / 280 / 144 from 1343px down. Plates are 280px
  * tall, with a 12px gap to the caption row and a 24px row for the "Open in" link.
  *
- * Motion: one authored moment, the Tints ramp unrolling (clip-path, 420ms after an 80ms intent). Every
- * press is scale(.97) over 120ms. Reduced motion keeps the fades and drops the movement. */
+ * Motion: every press is scale(.97) over 120ms. Reduced motion keeps the fades and drops the movement. */
 
 /* The page runs the full width of the shell; the content column below sets its own 1240px measure. */
 .app-page:has(> .db) { max-width: none; padding-inline: 0; padding-top: var(--chrome-h); background: #060607; }
@@ -83,7 +82,7 @@
 @media (forced-colors:active){.db-ring::before{content:none}}
 /* forced colours: swatches keep their colour (it is the content), surfaces and the ink pill get a visible edge */
 @media (forced-colors:active){
-  .db-stop,.db-tstop,.db-ramp i{forced-color-adjust:none}
+  .db-stop{forced-color-adjust:none}
   .db-sheet,.db-plate.l2,.db-plate.pal,.db-pop{outline:1px solid CanvasText;outline-offset:-1px}
   .db-sk{outline:1px solid GrayText;outline-offset:-1px}
   .db-go{border:1px solid ButtonText}
@@ -145,7 +144,7 @@
 .db-sk{background:var(--raised);display:block}
 
 /* the kit strip: four parts in the next-step order, widths set by content, no boxes around them */
-.db-kit{margin-top:24px;height:348px;display:grid;grid-template-columns:400fr 224fr 280fr 176fr;column-gap:32px}
+.db-kit{margin-top:24px;height:348px;display:grid;grid-template-columns:400fr 200fr 256fr 224fr;column-gap:32px}
 .db-part{position:relative;min-width:0;border-radius:12px;transition:transform 120ms var(--ease)}
 .db-part:has(.db-link:active){transform:scale(.97)}
 .db-part:has(.db-link:focus-visible){outline:2px solid var(--ink);outline-offset:6px}
@@ -155,11 +154,13 @@
 .db-plate::after{content:'';position:absolute;inset:0;border-radius:12px;pointer-events:none;z-index:3;box-shadow:inset 0 0 0 1px oklch(1 0 0 / .1);transition:box-shadow 150ms ease}
 .db-plate.l2{background:var(--raised);transition:background-color 150ms ease}
 .db-plate.l2::after{box-shadow:inset 0 0 0 1px transparent}
-.db-plate.pal{display:flex;container-type:inline-size}
-.db-stop{flex:1;min-width:0;display:flex;align-items:flex-end;padding:0 0 12px 12px}
+.db-plate.pal{display:flex;container:dbpal / inline-size}
+.db-stop{flex:1;min-width:0;display:flex;align-items:flex-end;padding:0 0 12px 12px;container:dbstop / inline-size}
 .db-hex{font-family:var(--mono);font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
 /* five stops in a plate narrower than 400px (1200 to 1343 wide): the seven-character labels step down so none is cut */
-@container (max-width:399px){.db-stop{padding-left:8px}.db-stop .db-hex{font-size:12px}}
+@container dbpal (max-width:399px){.db-stop{padding-left:8px}.db-stop .db-hex{font-size:12px}}
+/* a stop too narrow for a seven-character label (four semantic stops in the last column) shows the colour alone; the plate label carries the values */
+@container dbstop (max-width:59px){.db-hex{display:none}}
 .db-plate.sc{padding:24px;display:flex;flex-direction:column;justify-content:space-between;font-family:'Archivo',sans-serif;font-weight:800;color:var(--ink)}
 .db-sch{font-family:'Geist',system-ui,sans-serif;font-weight:400;font-size:14px;line-height:20px;color:var(--t62);letter-spacing:0}
 .db-plate.sc .row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;white-space:nowrap;letter-spacing:-.01em}
@@ -169,19 +170,6 @@
 .db-fm{margin-top:4px;font-size:14px;line-height:20px;color:var(--t62);font-variant-numeric:tabular-nums}
 .db-fsample{margin-top:24px;font-size:16px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .db-plate.fp .db-fm.last{margin-top:auto}
-.db-plate.tn{padding:0}
-.db-tstop{position:absolute;left:0;right:0;top:0;height:88px;display:flex;align-items:flex-end;padding:0 0 12px 12px}
-.db-tnote{position:absolute;left:12px;right:12px;top:208px;font-size:14px;line-height:20px;color:var(--t62);text-wrap:balance}
-.db-ramp{position:absolute;left:0;right:0;top:88px;height:110px;display:flex;flex-direction:column;clip-path:inset(0 0 100% 0);transition:clip-path 150ms var(--db-in)}
-/* the resting preview: the same 11 steps, dimmed, labelled "Preview" in the note below; the full-strength layer unrolls over it */
-.db-ramp.rest{clip-path:none;opacity:.65;transition:none}
-.db-ramp i{flex:1;display:block}
-.db-ramp.set{top:0;height:100%;clip-path:none}
-/* the one moment: after an 80ms intent the ramp unrolls from the source stop, once, and holds */
-@media (hover:hover) and (pointer:fine){
-  .db-tn:hover .db-ramp,.db-sheet:has(.db-go.nx:hover) .db-ramp{clip-path:inset(0);transition:clip-path 420ms var(--db-out) 80ms}
-}
-.db-tn:has(.db-link:focus-visible) .db-ramp,.db-sheet:has(.db-go.nx:focus-visible) .db-ramp{clip-path:inset(0);transition:clip-path 420ms var(--db-out) 80ms}
 .db-cap{height:24px;margin-top:12px;display:flex;align-items:center;gap:8px;font-size:15px;line-height:24px;min-width:0}
 .db-cap .n{flex:none;font-weight:500;color:var(--ink)}
 .db-cap .m{min-width:0;font-size:14px;color:var(--t62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
@@ -191,9 +179,9 @@
 .db-open{margin-top:8px;height:24px;display:flex;align-items:center;gap:6px;font-size:15px;line-height:24px;font-weight:500;width:max-content;max-width:100%;text-decoration:underline;text-decoration-color:rgba(var(--ink-rgb),.35);text-decoration-thickness:1px;text-underline-offset:4px;transition:text-decoration-color 150ms ease}
 @media (hover:hover){.db-part:hover .db-open{text-decoration-color:var(--ink)}.db-part:hover .db-plate.l2{background:var(--raised-h)}.db-part:hover .db-plate.pal::after{box-shadow:inset 0 0 0 1px rgba(var(--ink-rgb),.4)}}
 .db-part:has(.db-link:focus-visible) .db-open{text-decoration-color:var(--ink)}
-.db-tnote .db-mono,.db-fm .db-mono{font-size:13px}
+.db-fm .db-mono{font-size:13px}
 @media (max-width:1343px){
-  .db-kit{grid-template-columns:312fr 200fr 280fr 144fr}
+  .db-kit{grid-template-columns:312fr 176fr 240fr 208fr}
 }
 @keyframes db-pop{from{opacity:0;transform:scale(.97)}}
 @keyframes db-fade{from{opacity:0}}
@@ -211,13 +199,6 @@
 :where(html[data-reduced-motion="true"]) :hover>.db-arrow>.db-arrow-a,
 :where(html[data-reduced-motion="true"]) :focus-visible>.db-arrow>.db-arrow-a{transform:none}
 :where(html[data-reduced-motion="true"]) .db-arrow>.db-arrow-b{visibility:hidden}
-:where(html[data-reduced-motion="true"]) .db-ramp{clip-path:none;opacity:0;transition:opacity 120ms linear}
-:where(html[data-reduced-motion="true"]) .db-ramp.set{opacity:1}
-:where(html[data-reduced-motion="true"]) .db-ramp.rest{opacity:.65}
-:where(html[data-reduced-motion="true"]) .db-tn:hover .db-ramp,
-:where(html[data-reduced-motion="true"]) .db-sheet:has(.db-go.nx:hover) .db-ramp,
-:where(html[data-reduced-motion="true"]) .db-tn:has(.db-link:focus-visible) .db-ramp,
-:where(html[data-reduced-motion="true"]) .db-sheet:has(.db-go.nx:focus-visible) .db-ramp{clip-path:none;opacity:1;transition:opacity 120ms linear}
 @media (prefers-reduced-motion:reduce){
   :where(html:not([data-reduced-motion="false"])) .db-pop{animation:db-fade 200ms ease-out both}
   :where(html:not([data-reduced-motion="false"])) .db-go:active,
@@ -232,13 +213,6 @@
   :where(html:not([data-reduced-motion="false"])) :hover>.db-arrow>.db-arrow-a,
   :where(html:not([data-reduced-motion="false"])) :focus-visible>.db-arrow>.db-arrow-a{transform:none}
   :where(html:not([data-reduced-motion="false"])) .db-arrow>.db-arrow-b{visibility:hidden}
-  :where(html:not([data-reduced-motion="false"])) .db-ramp{clip-path:none;opacity:0;transition:opacity 120ms linear}
-  :where(html:not([data-reduced-motion="false"])) .db-ramp.set{opacity:1}
-  :where(html:not([data-reduced-motion="false"])) .db-ramp.rest{opacity:.65}
-  :where(html:not([data-reduced-motion="false"])) .db-tn:hover .db-ramp,
-  :where(html:not([data-reduced-motion="false"])) .db-sheet:has(.db-go.nx:hover) .db-ramp,
-  :where(html:not([data-reduced-motion="false"])) .db-tn:has(.db-link:focus-visible) .db-ramp,
-  :where(html:not([data-reduced-motion="false"])) .db-sheet:has(.db-go.nx:focus-visible) .db-ramp{clip-path:none;opacity:1;transition:opacity 120ms linear}
 }
 /* the unset plates' one-line note */
 .db-plate.sc .rows{display:flex;flex-direction:column;gap:4px}
@@ -363,7 +337,7 @@
 .db-end { height: 96px; }
 
 /* drawn only below 1200 (see the block at the foot of this file) */
-.db-opent,.db-hexes,.db-tcm,.db-lbl,.db-bar{display:none}
+.db-opent,.db-hexes,.db-lbl,.db-bar{display:none}
 .db-gt .r{display:contents}
 .db-plate.sc .row{line-height:var(--lh,1.2)}
 
@@ -411,19 +385,6 @@
   .db-kit .db-fm { display: none; }
   .db-kit .db-fsample { margin-top: 8px; font-size: 13px; line-height: 18px; -webkit-line-clamp: 3; }
   .db-kit .db-blank { padding: 12px; font-size: 14px; line-height: 20px; color: var(--t62); }
-  .db-kit .db-tstop { height: 32px; }
-  .db-kit .db-tnote, .db-kit .db-ramp.rest { display: none; }
-  .db-kit .db-ramp { top: 32px; height: 88px; }
-  .db-kit .db-ramp.set { top: 0; height: 100%; }
-  /* the one moment, on a phone: the first time the cell is 60% in view the ramp unrolls from the source stop, and the note beside it changes */
-  .db-tn.play .db-ramp:not(.rest) { clip-path: inset(0); transition: clip-path 420ms var(--db-out); }
-  :where(html[data-reduced-motion="true"]) .db-tn.play .db-ramp:not(.rest) { clip-path: none; opacity: 1; transition: opacity 150ms linear; }
-  .db-tcm { display: grid; flex-basis: 100%; min-width: 0; font-size: 14px; line-height: 20px; color: var(--t62); }
-  .db-tcm > * { grid-area: 1 / 1; min-width: 0; transition: opacity 150ms ease; }
-  .db-tcm > .b { opacity: 0; }
-  .db-tn.play .db-tcm > .a { opacity: 0; }
-  .db-tn.play .db-tcm > .b { opacity: 1; }
-  .db-tcm .db-mono { font-size: 13px; }
 
   /* captions: the name row, then up to two lines, then the link at the cell's foot */
   .db-cap { height: auto; margin-top: 8px; flex: 1; flex-wrap: wrap; align-content: flex-start; column-gap: 8px; row-gap: 0; }
@@ -538,7 +499,6 @@
   .db-kit .db-plate.sc { padding: 10px; }
   .db-kit .db-plate.sc .row { gap: 6px; }
   .db-kit .db-plate.fp { padding: 10px; }
-  .db-tn .db-cap .m.st { flex-basis: 100%; }
   .db-open { height: 0; }
   .db-open .t { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); }
   .db-open .db-arrow { position: absolute; top: 134px; right: 0; }
@@ -571,9 +531,4 @@
   .db-open { min-height: 0; height: 0; margin-block: 0; }
   .db-opent { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; vertical-align: middle; }
   .db-opent::before { content: none; }
-}
-/* the phone's played ramp fades in instead of unrolling; at 1200 and up the ramp waits for hover and focus like the rest.
-   The explicit-setting rule sits with the played-ramp rule in the phone block above. */
-@media (prefers-reduced-motion:reduce) and (max-width:1199px){
-  :where(html:not([data-reduced-motion="false"])) .db-tn.play .db-ramp:not(.rest){clip-path:none;opacity:1;transition:opacity 150ms linear}
 }

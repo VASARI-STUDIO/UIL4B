@@ -1,6 +1,6 @@
 // A walkthrough that ends in a saved project must end in a project whose parts
 // are all filled, with the palette the walkthrough showed. These pin the pieces
-// that used to drop that on the way: parts moved past with Next, the tints part
+// that used to drop that on the way: parts moved past with Next, the tint ramp
 // nothing wrote, and the Colour Studio rebuilding a five-colour Auto palette as
 // one colour. The page-level behaviour (what the Tint tool and the Colour Studio
 // write when they open) is walked in tests/user-sim/121-tint-blank-project.spec.js
@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import { BRAND_KIT_STEPS, savePatch } from '../../src/utils/brandKitGuide.js'
 import { projectDigest, partsPresent } from '../../src/utils/userHome.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { activeColour, deriveTints, tintsCurrent, tintsFor, tintsNeedWrite, tintsStale } from '../../src/utils/projectTints.js'
+import { activeColour, deriveTints, tintScaleOf, tintsCurrent, tintsFor, tintsNeedWrite, tintsStale } from '../../src/utils/projectTints.js'
 import { reconcileStudioPalette, sameColours, studioBaseColours } from '../../src/utils/studioPalette.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
 import { generateHarmony, generateTintScale, applyAdjust } from '../../src/utils/colors.js'
@@ -47,13 +47,39 @@ test('a part never moved past, with its defaults, stays open: Fill the gaps is s
   const out = saved(withPalette(FIVE), ['color'])
   const digest = projectDigest({ design: out })
   assert.equal(digest.done < digest.total, true)
-  assert.deepEqual(digest.missing.map((m) => m.id).sort(), ['fonts', 'type-scale'])
+  assert.deepEqual(digest.missing.map((m) => m.id).sort(), ['fonts', 'semantic', 'type-scale'])
 })
 
-test('no palette work, no derived tints: a blank design does not read as nearly done', () => {
+test('tints are derived for any design with a colour, and are not a part, so a blank design does not read as nearly done', () => {
   const patch = savePatch(clone(DEFAULT_DESIGN), ['fonts', 'typescale'])
-  assert.equal(patch.tints, undefined)
-  assert.equal(projectDigest({ design: saved(clone(DEFAULT_DESIGN), ['fonts', 'typescale']) }).done, 2)
+  assert.equal(patch.tints.scale.length, 11)
+  assert.equal(patch.tints.from, DEFAULT_DESIGN.palette.colors[0])
+  const digest = projectDigest({ design: saved(clone(DEFAULT_DESIGN), ['fonts', 'typescale']) })
+  assert.equal(digest.done, 2)
+  assert.deepEqual(digest.missing.map((m) => m.id).sort(), ['palette', 'semantic'])
+})
+
+test('a design with no colour at all derives no tints', () => {
+  assert.equal(savePatch({ palette: { colors: [], base: null } }, ALL).tints, undefined)
+  assert.deepEqual(tintScaleOf({ palette: {} }), [])
+})
+
+test('the semantic step, moved past with Next, marks the semantic part as chosen', () => {
+  assert.deepEqual(savePatch(withPalette(FIVE), ['semantic']).chosen, { semantic: true })
+  const out = saved(withPalette(FIVE), ['color', 'semantic'])
+  assert.equal(partsPresent(out).semantic, true)
+  assert.equal(partsPresent(out).fonts, false)
+})
+
+test('tintScaleOf shows the saved ramp while it is current, and the derived one when stale or absent', () => {
+  const design = withPalette(FIVE)
+  assert.deepEqual(tintScaleOf(design), deriveTints(design).scale, 'no ramp saved: derived')
+  design.tints = { ...design.tints, scale: ['#111111', '#222222'], from: FIVE[0] }
+  assert.deepEqual(tintScaleOf(design), ['#111111', '#222222'], 'a current ramp is kept')
+  design.tints = { ...design.tints, from: '#FF0000' }
+  assert.equal(tintScaleOf(design).length, 11, 'a ramp made from another colour is replaced')
+  design.tints = { ...design.tints, from: undefined }
+  assert.deepEqual(tintScaleOf(design), ['#111111', '#222222'], 'a legacy ramp with no record is kept')
 })
 
 test('a tint ramp made from the active colour is kept, not replaced by the derived one', () => {
