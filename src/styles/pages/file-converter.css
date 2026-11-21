@@ -636,6 +636,10 @@
 }
 
 .fc .fc-meta--err { font-family: var(--font); font-size: 12px; color: var(--err-strong); }
+.fc .fc-meta--warn { color: var(--warn-strong); }
+
+/* The Image tab's crop stage sits above the queued cards. */
+.fc .fc-crop-stage { min-width: 0; }
 
 /* The size change. The -strong inks are the text grade of each state colour
    in both themes: --ok measured 4.32:1 on the page ground in light. */
@@ -778,7 +782,8 @@
 }
 
 .fc .fc-vstage > video,
-.fc .fc-vstage > img {
+.fc .fc-vstage > img,
+.fc .fc-vstage > canvas {
   display: block;
   width: 100%;
   height: 100%;

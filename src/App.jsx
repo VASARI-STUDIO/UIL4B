@@ -29,10 +29,12 @@ import { TOOL_VOTES_ON } from './data/toolVotes'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
+import useOnboardingHold from './hooks/useOnboardingHold'
 import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { maintenanceOn } from './config/maintenance'
+import { BrandLockup } from './components/BrandLogo'
 import RouteLoading from './components/RouteLoading'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
@@ -262,8 +264,10 @@ function AppInner({ toast }) {
   // The flag stays raised until the route is /onboarding. The login page holds
   // its own redirect while the flag is up, and clearing it before the route
   // change lands let that redirect win and skip onboarding.
+  // An export started signed out finishes its download first (exportHold.js).
+  const onboardingHeldForExport = useOnboardingHold()
   useEffect(() => {
-    if (authLoading || !authUser || !pendingOnboarding) return
+    if (authLoading || !authUser || !pendingOnboarding || onboardingHeldForExport) return
     // An account made in the Pro sign-up layer carries straight on to checkout.
     if (isProSignup() && location.pathname !== '/onboarding') {
       sendEvent(EVENTS.signUp)
@@ -280,7 +284,7 @@ function AppInner({ toast }) {
     // Google, and cleared on the next line, so this counts each sign-up once.
     sendEvent(EVENTS.signUp)
     clearPendingOnboarding()
-  }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
+  }, [authLoading, authUser, pendingOnboarding, onboardingHeldForExport, clearPendingOnboarding, location.pathname, navigate])
 
   // A returning account that opened onboarding and never finished it resumes
   // it from the signed-in home. Decided once per account per page load, the
@@ -688,17 +692,19 @@ function AppInner({ toast }) {
 }
 
 // While the maintenance switch is on (config/maintenance.js) every route shows
-// the maintenance page inside the full shell, so the nav and footer stay.
+// the maintenance page alone: the logo, the message and Check again. No nav or
+// footer, because none of their links would work.
 function MaintenanceShell() {
   return (
     <div className="app-shell">
-      <PillNav />
+      <header className="maint-head">
+        <span className="maint-logo"><BrandLockup label="UI L4B" /></span>
+      </header>
       <main className="app-page" id="main" tabIndex={-1}>
         <Suspense fallback={<RouteLoading />}>
           <Maintenance />
         </Suspense>
       </main>
-      <AppFooter />
     </div>
   )
 }

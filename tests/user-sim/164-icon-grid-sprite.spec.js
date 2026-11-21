@@ -36,6 +36,7 @@
 //   src restored byte for byte            -> all of them pass again.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { iconCell } from './icon-grid-rows.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE, headPackNames, headPackOfUrl, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer scrolling the icon library and copying an icon out of it'
@@ -182,7 +183,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'lucide')
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"] svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(`${iconCell(NAME(0))} svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
 
     // Six pages of 120, each revealed as the sentinel comes into view.
     await revealCells(page, 6 * 120)
@@ -193,7 +194,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
       const missing = uses.filter((u) => !document.querySelector(`#ig-sprite ${u.getAttribute('href')}`)).map((u) => u.getAttribute('href'))
       const cells = [...document.querySelectorAll('.ig .ic')]
       // A far-above cell is windowed to a bare name at its measured height; anything else holds art.
-      const blank = cells.filter((c) => !c.style.height && !c.querySelector('svg, img')).map((c) => c.getAttribute('aria-label'))
+      const blank = cells.filter((c) => !c.style.height && !c.querySelector('svg:not(.ic-edit), img')).map((c) => c.getAttribute('aria-label'))
       return {
         cells: cells.length,
         uses: uses.length,
@@ -219,7 +220,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'lucide')
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"] svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(`${iconCell(NAME(0))} svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
     await revealCells(page, 240)
 
     const m = await page.evaluate(() => {
@@ -247,14 +248,14 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'lucide')
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"] svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(`${iconCell(NAME(0))} svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
     for (const n of Object.keys(HOSTILE)) {
-      const cell = page.locator(`.ig .ic[aria-label="Customise ${NAME(Number(n))}"]`)
+      const cell = page.locator(iconCell(NAME(Number(n))))
       await expect(cell.locator('img'), `${NAME(Number(n))} was inlined`).toHaveCount(1, { timeout: 20_000 })
       await expect(cell.locator('svg.ig-sym')).toHaveCount(0)
     }
     // Its neighbours are still sprite cells: only the changed ones fall back.
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(4)}"] svg.ig-sym`)).toHaveCount(1)
+    await expect(page.locator(`${iconCell(NAME(4))} svg.ig-sym`)).toHaveCount(1)
     const m = await page.evaluate(() => ({
       unsafe: document.querySelectorAll('#ig-sprite :is(script, style, animate, set, foreignObject, image, filter), #ig-sprite [onload]').length,
       ran: window.__ranFromIcon === true,
@@ -402,7 +403,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'lucide')
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"] svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(`${iconCell(NAME(0))} svg.ig-sym`)).toBeVisible({ timeout: 20_000 })
 
     // The grid reveals pages by itself until the sentinel is more than 600px away; let that settle.
     const cells = () => page.locator('.ig .ic').count()
@@ -417,7 +418,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     expect(await cells(), 'positive control: the reveal is part-way, not done').toBeLessThan(base + 120)
 
     await choosePack(page, 'tabler')
-    await expect(page.locator('.ig .ic[aria-label="Customise tab-000"]')).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(iconCell('tab-000'))).toBeVisible({ timeout: 20_000 })
     await page.evaluate(() => { window.__rafDelay = 0 })
 
     // No scrolling from here: the person is already at the foot of the page.
@@ -425,8 +426,8 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
       timeout: 15_000,
       message: 'the new listing never revealed its next page (the observer did not restart)',
     }).toBeGreaterThanOrEqual(240)
-    await expect(page.locator('.ig .ic[aria-label="Customise tab-000"]')).toBeVisible()
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`), 'the old listing is still in the grid').toHaveCount(0)
+    await expect(page.locator(iconCell('tab-000'))).toBeVisible()
+    await expect(page.locator(iconCell(NAME(0))), 'the old listing is still in the grid').toHaveCount(0)
   })
 
   test('an answer that leaves the listing the same length mid-reveal does not strand the page', async ({ page }) => {

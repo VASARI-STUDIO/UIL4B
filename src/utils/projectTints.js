@@ -55,6 +55,17 @@ export function deriveTints(design) {
 /** Does this design already carry a ramp? */
 export const hasTints = (design) => Array.isArray(design?.tints?.scale) && design.tints.scale.length > 0
 
+/**
+ * The ramp to show or keep for this design, with nobody asked to make one: the
+ * saved ramp while it is current (or has no record of its colour), else the one
+ * derived from the active colour. An empty array when there is no colour yet.
+ */
+export function tintScaleOf(design) {
+  const hex = activeColour(design)
+  if (hasTints(design) && !tintsStale(design.tints, hex)) return design.tints.scale
+  return deriveTints(design)?.scale || []
+}
+
 const sameHex = (a, b) => String(a).toUpperCase() === String(b).toUpperCase()
 
 /**

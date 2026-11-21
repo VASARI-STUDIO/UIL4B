@@ -56,7 +56,7 @@ async function seedGlyphBackoff(page, ms) {
 
 // A glyph is a loaded image (the coloured packs) or a sprite symbol (every other pack).
 const painted = (page) => page.evaluate(() => [...document.querySelectorAll('.ig .ic :is(img, svg.ig-sym)')].filter((c) => (c.matches('img') ? c.complete && c.naturalWidth > 0 : !!document.querySelector(`#ig-sprite ${c.querySelector('use').getAttribute('href')}`))).length)
-const blank = (page) => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
+const blank = (page) => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg:not(.ic-edit)))').length)
 
 test.describe('a 429 from Iconify', () => {
   test.skip(isLiveIconify(), 'the live API decides what it serves; this spec pins the refused shape')

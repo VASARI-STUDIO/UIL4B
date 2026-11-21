@@ -86,7 +86,7 @@ async function pressBrandKit(page) {
 }
 
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
-const card = (page) => page.getByRole('dialog', { name: /^Step [1-4] of 4: / })
+const card = (page) => page.getByRole('dialog', { name: /^Step [1-5] of 5: / })
 
 /**
  * Wait for an element's entrance animation to FINISH before measuring or
@@ -167,7 +167,7 @@ test.describe('Brand kit walkthrough', () => {
 
     // And the flow is actually running on it.
     await expect(rail(page)).toBeVisible()
-    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(rail(page)).toContainText('Step 1 of 5')
     await inView(rail(page))
     await settle(rail(page))
 
@@ -317,7 +317,7 @@ test.describe('Brand kit walkthrough', () => {
     await expect(card(page)).toBeVisible()
   })
 
-  test('state carries between steps: step four can see what step one built', async ({ page }) => {
+  test('state carries between steps: the last step can see what step one built', async ({ page }) => {
     watch(page, 'designer checking the system holds together across steps')
     await fresh(page)
     await go(page, MENU_ROUTE)
@@ -327,17 +327,17 @@ test.describe('Brand kit walkthrough', () => {
 
     // Do real work in step one, through the tool's own control.
     await setSeed(page, '#B5179E')
-    await expect(rail(page)).toContainText('Step 1 of 4')
+    await expect(rail(page)).toContainText('Step 1 of 5')
     await expect(rail(page).getByRole('link', { name: /Colours/ })).toHaveClass(/is-done/)
 
     // Walk forward with the rail's own Next, the way the flow is meant to run.
-    await page.getByRole('button', { name: /^Next: Fonts/ }).click()
-    await expect(page).toHaveURL(/\/create\/font-pair$/)
+    await page.getByRole('button', { name: /^Next: Semantic colours/ }).click()
+    await expect(page).toHaveURL(/\/create\/semantic-color$/)
     await expect(rail(page)).toBeVisible()
 
     // Jump to the last step. The colour step still reads as done AND still
     // shows its swatches — that is the whole point of a guided flow rather than
-    // four bookmarks, and it is carried by the saved design, not by a cursor.
+    // five bookmarks, and it is carried by the saved design, not by a cursor.
     // On desktop the bar is the floating pill, which holds only the steps and
     // its buttons, so a built step's artefact (the colours step one made) is
     // never drawn in it; it is in the help panel instead.
@@ -359,10 +359,11 @@ test.describe('Brand kit walkthrough', () => {
     await expect.poll(barSwatches, { message: 'the pill draws the colours step one built; they live in the help panel' }).toBe('hidden')
     await page.getByRole('button', { name: /What.s this\?/ }).click()
     await expect(card(page)).toBeVisible()
-    await expect(card(page).locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)
+    // The colours step is the first in the list; the semantic step draws its own four swatches below it.
+    await expect(card(page).locator('.bkit-card-steps > li').first().locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)
     await page.keyboard.press('Escape')
     await expect(card(page)).toBeHidden()
-    await expect(rail(page)).toContainText('Step 4 of 4')
+    await expect(rail(page)).toContainText('Step 5 of 5')
     // The rail has to be ON SCREEN here, on the tallest page in the flow — this
     // is the claim that it is always to hand, not merely always rendered.
     await inView(rail(page))
@@ -398,9 +399,9 @@ test.describe('Brand kit walkthrough', () => {
 
     // The control says which of the two things it is about to do. A button
     // reading "Build a brand kit" that then drops you at step two has lied.
-    expect(label).toBe('Resume: Fonts')
-    await expect(page).toHaveURL(/\/create\/font-pair$/)
-    await expect(rail(page)).toContainText('Step 2 of 4')
+    expect(label).toBe('Resume: Semantic colours')
+    await expect(page).toHaveURL(/\/create\/semantic-color$/)
+    await expect(rail(page)).toContainText('Step 2 of 5')
 
     // And it does NOT re-teach: the card is not thrown up again on resume.
     await expect(card(page)).toBeHidden()
@@ -502,7 +503,7 @@ test.describe('Brand kit walkthrough: the desktop pill', () => {
       await page.addInitScript(([g, s]) => {
         try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
       }, [GUIDE_KEY, SEEN_KEY])
-      for (const path of ['/create/font-pair', '/create/type-scale', '/create/icons']) {
+      for (const path of ['/create/semantic-color', '/create/font-pair', '/create/type-scale', '/create/icons']) {
         await go(page, path)
         await expect(rail(page), path).toBeVisible()
         const m = await rail(page).evaluate((el) => {
