@@ -15,6 +15,14 @@ export const meta = {
   screenContent,  // Long Room says "free" once: the engine's example page and delivery rows read the product screen through this
   exampleDemo,  // the example page's total and account value, from the sample orders (see once.js)
   realCopy,  // the words of the slot edition that print as words, not as placeholder boxes (see real-copy.js)
+  // What the buyer pastes is what the kit pages show, so these live in the shipped components.css and tokens.css, not in the docs stylesheet:
+  // a raised card with an edge and a shadow that read in both modes, a row that can be marked as the one in hand, a skeleton that reads on the
+  // surface, and a scrim that is 60% ink (a faint view of what is behind the dialog).
+  shipped: {
+    raisedCard: true, selectedRow: true, skeleton: true, scrimShare: 60,
+    floatShadow: '0 1px 2px color-mix(in srgb, var(--text) 16%, transparent), 0 12px 28px -6px color-mix(in srgb, var(--text) 30%, transparent)',
+    floatShadowDark: '0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent), 0 14px 32px -4px rgba(0, 0, 0, 0.7)',
+  },
   id: '21-presentation', name: 'Keynote', tier: 'Pro', brand: 'kerbside',
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 },
   // the chrome face: running heads, folios, captions. Files are in fonts/; google css2 query for canvas boards.

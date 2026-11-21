@@ -34,6 +34,9 @@ export function statusText(ctx, mode, s) {
 }
 const stack = (ctx, role) => { const f = ctx.brand.fonts[role]; return `"${cssStr(f.family)}", ${role === 'mono' ? 'ui-monospace, monospace' : 'system-ui, sans-serif'}`; };
 
+// A theme whose brands carry no shadow of their own may give the float shadow (meta.shipped.floatShadow, and .floatShadowDark for the dark ground).
+const floatShadow = (ctx, mode) => { const S = ctx.theme && ctx.theme.shipped; const v = S && (mode === 'dark' ? S.floatShadowDark : S.floatShadow); return v ? cssShadow(v) : ''; };
+
 export function tokenGroups(ctx) {
   const B = ctx.brand;
   return {
@@ -42,7 +45,7 @@ export function tokenGroups(ctx) {
     width: { 'w-hairline': '1px', 'w-control': B.ui.border + 'px', 'w-focus': '2px' },
     font: { 'ff-display': stack(ctx, 'display'), 'ff-body': stack(ctx, 'body'), 'ff-mono': stack(ctx, 'mono') },
     text: Object.fromEntries(ctx.uiType.flatMap((t) => [[`fs-${t.token}`, t.size + 'px'], [`lh-${t.token}`, t.line + 'px'], [`fw-${t.token}`, String(t.weight)]])),
-    shadow: { 'shadow-float': B.ui.shadows === 'none' ? 'none' : cssShadow(B.ui.shadows) },
+    shadow: { 'shadow-float': B.ui.shadows !== 'none' ? cssShadow(B.ui.shadows) : floatShadow(ctx, 'light') || 'none' },
   };
 }
 
@@ -50,6 +53,8 @@ export function tokensCss(ctx) {
   const decl = (o) => Object.entries(o).map(([k, v]) => `  --${k}: ${v};`).join('\n');
   const g = tokenGroups(ctx);
   const light = colourMap(ctx, 'light'), dark = colourMap(ctx, 'dark');
+  const ds = ctx.brand.ui.shadows === 'none' ? floatShadow(ctx, 'dark') : '';
+  const darkShadow = ds ? `\n  --shadow-float: ${ds};` : '';
   const pal = Object.fromEntries(ctx.colours.map((c) => [`palette-${cssIdent(c.id)}`, c.hex]));
   return `/* ${commentText(ctx.brand.name)} design tokens. Light on :root, dark on [data-theme="dark"] and prefers-color-scheme. */
 :root {
@@ -64,12 +69,12 @@ ${decl(g.shadow)}
   color-scheme: light;
 }
 [data-theme="dark"] {
-${decl(dark)}
+${decl(dark)}${darkShadow}
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-${decl(dark).replace(/^ {2}/gm, '    ')}
+${decl(dark).replace(/^ {2}/gm, '    ')}${darkShadow.replace(/^ {2}/gm, '    ')}
     color-scheme: dark;
   }
 }

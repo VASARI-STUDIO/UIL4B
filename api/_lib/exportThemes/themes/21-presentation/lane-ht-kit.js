@@ -10,7 +10,7 @@ import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
 import { docOf, siteCtx, servedCtx } from './lane-ht-clean.js';
 
-import { screenContent as SC, deliveryRows, noPrices, tally } from './once.js';
+import { screenContent as SC, deliveryRows, noPrices, tally, orderMeta, orderTimeline } from './once.js';
 
 const docName = (ctx) => docOf(ctx, 'UI kit');
 // the engine writes a trailing space where a class list is empty (`ui-input `, `type="button" >`): the pages show the markup without it
@@ -65,7 +65,7 @@ const PAGES = {
   },
   elevation: (ctx) => {
     const S = SC(ctx), a = ctx.ui.card({ meta: ctx.edition === 'slot' ? 'Packed by' : S.status, title: S.rider, text: S.riderNote }), b = ctx.ui.card({ meta: S.deliverToLabel, title: S.deliverTo, text: S.eta, raised: true });
-    return { lede: ctx.brand.ui.elevationNote, live: `<div class="hk-row hk-row--2">${item(a, 'Card')}${item(b, 'Raised card')}</div>`, code: [['Card', a], ['Raised card', b]] };
+    return { lede: 'A card is the surface with a hairline. A raised card steps up a ground and casts a soft shadow.', live: `<div class="hk-row hk-row--2">${item(a, 'Card')}${item(b, 'Raised card')}</div>`, code: [['Card', a], ['Raised card', b]] };
   },
   states: (ctx) => {
     const F = SC(ctx).form, E = EX(ctx), u = ctx.ui;
@@ -80,7 +80,7 @@ const PAGES = {
   inputs: (ctx) => {
     const F = SC(ctx).form, u = ctx.ui;
     const all = [['Text', u.field({ id: 'hk-i1', label: F.pickup, value: F.pickupValue })], ['With help', u.field({ id: 'hk-i2', label: F.notes, kind: 'textarea', help: F.notesHelp })], ['Error', u.field({ id: 'hk-i3', label: F.ready, value: F.readyValue, error: F.readyError })], ['Select', u.field({ id: 'hk-i4', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] })]];
-    return { lede: 'A label above every field, and a message under it when one is needed.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
+    return { lede: 'A label above every field, and a message under it when one is needed.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(l === 'Links' ? `<div class="hk-frame">${h}</div>` : h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
   choices: (ctx) => {
     const E = EX(ctx), u = ctx.ui, F = SC(ctx).form, ch = E.checks || [F.notes], rd = E.radios || F.sizes, sw = E.switches || [F.notes];
@@ -93,12 +93,12 @@ const PAGES = {
     const o = (d) => u.card({ meta: stateLabel(ctx, d.status), title: d.to, text: d.when, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` });
     const ds = S.deliveries, late = ds[2] || ds[ds.length - 1];
     const all = [['Card', o(ds[0])], ['Card, late order', o(late)], ['Stat', u.stat(S.paid, S.paidLabel)], ['Stat, a count', u.stat(String(ds.length), E.statLabel || S.paidLabel)]];
-    return { lede: 'A card holds one order; a stat holds one number.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
+    return { lede: 'A card holds one order; a stat holds one number.', live: `<div class="hk-row hk-row--2">${all.map(([l, h]) => item(l === 'Links' ? `<div class="hk-frame">${h}</div>` : h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
   navigation: (ctx) => {
     const S = SC(ctx), u = ctx.ui, E = EX(ctx);
     const all = [['Tabs', u.tabs(E.tabs || [S.status], 0)], ['Breadcrumb', u.crumbs(E.crumbs && E.crumbs.length ? E.crumbs : [S.deliverTo])], ['Links', `<nav class="ui-topbar" aria-label="Main"><strong class="ui-display">${A(ctx.brand.logo.showcase.wordmark)}</strong><div class="ui-topbar__links">${u.links(E.links || [[S.call, 'phone']], 0)}</div></nav>`]];
-    return { lede: 'Tabs switch a view, a breadcrumb shows the way back, links move between screens.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, 'hk-i--w')).join('')}</div>`, code: all };
+    return { lede: 'Tabs switch a view, a breadcrumb shows the way back, links move between screens.', live: `<div class="hk-col">${all.map(([l, h]) => item(l === 'Links' ? `<div class="hk-frame">${h}</div>` : h, l, 'hk-i--w')).join('')}</div>`, code: all };
   },
   lists: (ctx) => { const h = deliveryRows(ctx, 6); return { lede: 'A row for each order, its status in plain words.', live: `<div class="hk-col">${item(h, 'Order rows', 'hk-i--w')}</div>`, code: [['Order rows', h]] }; },
   // the caption says what the status means; the word itself is the chip
@@ -154,7 +154,7 @@ function screen(ctx, dark, mobile) {
   const tabs = E.tabs && E.tabs.length ? u.tabs(E.tabs, 0) : '';
   const act = `<div class="hk-scr__x">${u.btn(done, { iconLeft: ctx.edition === 'slot' ? 'check' : undefined, block: mobile })}${u.btn(second, { variant: 'secondary', iconLeft: ctx.edition === 'slot' ? 'printer' : undefined, block: mobile })}</div>`;
   const scr = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}>${bar}<div class="hk-scr__body"><h2 class="hk-scr__t">${A(title)}</h2>
-<div class="hk-scr__a">${u.card({ meta: S.status, title: S.eta, text: S.pickup })}${act}</div>
+<div class="hk-scr__a">${u.card({ meta: orderMeta(ctx), title: S.eta, text: S.pickup })}${act}${mobile ? "" : orderTimeline(ctx)}</div>
 <div class="hk-scr__b">${tabs}${deliveryRows(ctx, mobile ? 4 : 6, tally(ctx).open)}</div></div></div>`;
   const h = mobile ? `<div class="hk-phone">${scr}</div>` : scr;
   return { lede: mobile ? `${title}, at phone width.` : `${title}, built from the kit's components only.`, live: `<div class="hk-col">${h}</div>`, code: [] };
@@ -189,7 +189,7 @@ function body(ctx0, K) {
 // index.html: the kit's title slide (the logo on its dark ground, a live set of components), then the contents stripes
 function cover(ctx0, K) {
   const ctx = siteCtx(ctx0), B = ctx.brand, rev = B.logo.colourways.reversed, S = SC(ctx), F = S.form, u = ctx.ui, dk = darkF(ctx);
-  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(cardAction(ctx), { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(S.deliveries[0].status)} <span class="ui-badge">${S.deliveries.filter((d) => d.status === S.deliveries[0].status).length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}${item(u.card({ meta: S.status, title: S.eta, text: S.pickup }), 'Card', 'hk-i--w')}`;
+  const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(cardAction(ctx), { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(S.deliveries[0].status)} <span class="ui-badge">${S.deliveries.filter((d) => d.status === S.deliveries[0].status).length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}${item(u.card({ meta: orderMeta(ctx), title: S.eta, text: S.pickup }), 'Card', 'hk-i--w')}`;
   const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320 })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, ['UI kit'], 0.94, stepPx(ctx, 'display', 48), 32)}">UI kit</h1>${B.product ? `<p class="hk-title__l">${A(B.product)}</p>` : ''}<p class="hk-title__v">${A(ctx.versionLine)}</p></div>
 <div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live">${live}</div></section>`;

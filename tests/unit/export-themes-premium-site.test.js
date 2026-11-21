@@ -358,3 +358,29 @@ test('theme 21 builds every page it has content for: layouts and the logo pages 
   }
   assert.match(files['layouts.html'], /class="ht-sls"/, 'the layouts page shows its slide specimens')
 })
+
+// Design review round 9 (theme 21): what the buyer pastes is what the kit page shows. The raised card's edge and shadow, the scrim and the
+// skeleton are in the SHIPPED components.css and tokens.css, and no docs-only .hk-i rule restyles a ui- component.
+//     Break: drop `shipped` from the theme's meta (themes/21-presentation/index.js), or put `.hk-i .ui-card--raised{...}` back in lane-ht-kcss.js.
+test('theme 21 ships the raised card with its edge and shadow, a visible skeleton and a scrim that is ink at a share, in light and dark, with or without a design', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('ui-kit', body)
+    const comp = files['components.css'], tokens = files['tokens.css'], docs = files['assets/kit.css']
+    assert.match(comp, /\.ui-card--raised\s*\{[^}]*border-color:\s*var\(--divider\)[^}]*box-shadow:\s*var\(--shadow-float\)/, 'the shipped raised card has no edge and shadow')
+    assert.doesNotMatch(tokens, /--shadow-float:\s*none/, 'the float shadow is none')
+    const dark = tokens.match(/\[data-theme="dark"\]\s*\{([^}]*)\}/)[1]
+    assert.match(dark, /--shadow-float:\s*[^;]*\S/, 'the dark ground has its own float shadow')
+    assert.match(comp, /\.ui-skeleton\s*\{[^}]*color-mix\(in srgb, var\(--text\)/, 'the skeleton is the sunken fill, which vanishes on a raised surface')
+    assert.match(comp, /\.ui-scrim\s*\{[^}]*color-mix\(in srgb, var\(--scrim\) 60%/, 'the scrim is a solid slab')
+    assert.match(comp, /dialog\.ui-dialog::backdrop\s*\{[^}]*color-mix\(in srgb, var\(--scrim\) 60%/, 'the backdrop is a solid slab')
+    // the docs wrapper only lays out specimens: no .hk-* rule changes a ui- component's border, shadow, colour or spacing
+    assert.ok(docs, 'assets/kit.css is in the kit')
+    const bad = []
+    for (const m of docs.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      if (!/\.hk-[\w-]+[^,{]*\s\.ui-|\.hk-[\w-]+\.ui-/.test(m[1])) continue
+      if (/\.hk-phone\b/.test(m[1])) continue // the drawn phone stands in for the under-480px rule components.css already ships
+      if (/(?:^|;)\s*(?:border|box-shadow|background|color|padding|margin|outline)[\w-]*\s*:/.test(';' + m[2])) bad.push(m[1].trim())
+    }
+    assert.deepEqual(bad, [], 'the docs wrapper restyles a shipped component, so the pasted one will not match the page')
+  }
+})

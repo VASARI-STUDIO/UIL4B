@@ -17,7 +17,7 @@ const SPECIMEN = {
 // six orders, mixed times, one late, one closed. Each row is [customer, line under the name, total].
 const ORDERS = [
   ['Maya Chen', 'Order 1042, due 11:40 am', '$84.35'],
-  ['Tom Nguyen', 'Order 1041, due 10:50 am', '$126.80'],
+  ['Tom Nguyen', 'Order 1041, due 12:20 pm', '$126.80'],
   ['Ruth Okafor', 'Order 1040, 12 min late', '$47.95'],
   ['Sam Peters', 'Order 1039, sent 8:42 am', '$212.10'],
   ['Lena Fischer', 'Order 1043, due 1:30 pm', '$58.20'],

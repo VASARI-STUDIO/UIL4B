@@ -36,18 +36,48 @@ export function tally(ctx) {
   return out;
 }
 // the engine's delivery rows (ctx.ui.deliveryRows), built from the content above (or from the given orders)
+// The row of the order the screen's card is about (the customer the card names) is marked as the one in hand: aria-current, and the selected
+// row state components.css ships (meta.shipped.selectedRow).
 export function deliveryRows(ctx, n = 5, orders) {
   const ui = ctx.ui, S = screenContent(ctx);
-  return `<ul class="ui-list">${(orders || S.deliveries).slice(0, n).map((d) => ui.row({ lead: ui.icon(d.icon || ctx.brand.ui.rowIcon || 'package', 18), title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('')}</ul>`;
+  const row = (d) => { const h = ui.row({ lead: ui.icon(d.icon || ctx.brand.ui.rowIcon || 'package', 18), title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) }); return d.to === S.deliverTo ? h.replace('class="ui-row"', 'class="ui-row" aria-current="true"') : h; };
+  return `<ul class="ui-list">${(orders || S.deliveries).slice(0, n).map(row).join('')}</ul>`;
 }
-// The example page's total and account value, for the slot edition's sample orders: the day's takings (the order totals added up here,
-// in cents) and the person signed in. A total that is not a plain price is left as the engine prints it.
+// What the card on the product screen, the kit's cover and the example page says it is: the order, its customer and its status, from the
+// one sample story ("Order 1042 · Maya Chen · Packing"). Another edition keeps the engine's own words.
+export function orderMeta(ctx) {
+  const S = screenContent(ctx), no = /Order\s+(\d+)/.exec((S.deliveries.find((d) => d.to === S.deliverTo) || {}).when || '');
+  return ctx.edition === 'slot' && no ? `Order ${no[1]} · ${S.deliverTo} · ${S.status}` : S.status;
+}
+// The open order's day as rows: what the card's own words already say (packing began, three of five items packed, due for hand-over), so the
+// column under its buttons holds the order's progress and not a gap. Slot edition only.
+export function orderTimeline(ctx) {
+  const S = screenContent(ctx);
+  if (ctx.edition !== 'slot') return '';
+  const start = /(\d{1,2}:\d{2}\s?[ap]m)/i.exec(S.pickup || ''), due = /(\d{1,2}:\d{2}\s?[ap]m)/i.exec(S.eta || '');
+  if (!start || !due) return '';
+  const r = (title, end) => ctx.ui.row({ title, end });
+  return `<ul class="ui-list">${r('Packing started', start[1])}${r(S.riderNote, 'Now')}${r('Hand over', due[1])}</ul>`;
+}
+// The example page's words and extras, for the slot edition's sample orders (engine hook: theme.exampleDemo):
+// the day's takings (the order totals added up here, in cents) and the person signed in (a total that is not a plain price is left as the
+// engine prints it); the card's order line; the list of open orders by due time; no stray count badge in the status row (nothing it counts);
+// the open list under the dialog's scrim; and the page's layout rules (equal cards, buttons on one line).
 export function exampleDemo(ctx) {
   if (ctx.edition !== 'slot') return {};
-  const S = screenContent(ctx);
+  const S = screenContent(ctx), open = tally(ctx).open;
+  const base = {
+    cardMeta: orderMeta(ctx), noBadge: true, list: deliveryRows(ctx, 5, open), behind: deliveryRows(ctx, 6, open),
+    css: `.exrow--cards>*{flex:1 1 0;min-width:220px}
+.exrow .ui-btn{white-space:nowrap}
+.ex-dlg{display:grid;border:1px solid var(--divider)}
+.ex-dlg>*{grid-area:1/1;min-width:0}
+.ex-dlg__behind{padding:16px;align-self:start}
+.ex-dlg .ui-scrim{min-height:360px}`,
+  };
   const rows = S.deliveries.map((d) => /^(\D*)(\d[\d,]*)(?:\.(\d{1,2}))?$/.exec(String(d.price || '').trim()));
-  if (!rows.length || rows.some((m) => !m)) return {};
+  if (!rows.length || rows.some((m) => !m)) return base;
   const cents = rows.reduce((a, m) => a + Number(m[2].replace(/,/g, '')) * 100 + Number((m[3] || '0').padEnd(2, '0')), 0);
   const money = `${rows[0][1]}${Math.floor(cents / 100).toLocaleString('en-AU')}.${String(cents % 100).padStart(2, '0')}`;
-  return { stat: [money, 'Taken today'], account: S.rider };
+  return { ...base, stat: [money, 'Taken today'], account: S.rider };
 }

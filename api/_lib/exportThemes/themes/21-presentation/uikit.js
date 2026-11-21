@@ -190,7 +190,7 @@ export const uikit = {
     const steps = [['Surface', 'surface', R.surface, 'The page and every card on it'], ['Raised', 'raised', R.raised, 'Raised cards, sidebars, table headers'], ['Sunken', 'sunken', R.sunken, 'Avatars, skeletons']]
       .map(([n, t, c, u]) => `<div class="kstep"><span class="kstep-sw" style="background:var(--${t})"></span><span class="kcap"><b>${A(n)}</b>${m('--' + t)}<br>${A(u)}</span></div>`).join('');
     const dlg = uniq(ui.dialog({ title: S.dialog.title, body: S.dialog.body, confirm: S.dialog.confirm, keep: S.dialog.keep, danger: true }), 'dlg-el');
-    const l = rules([A(ctx.brand.ui.elevationNote), `${m('--shadow-float')} is ${m(String(tokenGroups(ctx).shadow['shadow-float']))}. There is no blur, no spread and no glow anywhere in the kit.`, 'Depth is three things only: a step in the ground, a hairline, or a control edge.']);
+    const l = rules([A(ctx.brand.ui.elevationNote), `${m('--shadow-float')} is ${m(String(tokenGroups(ctx).shadow['shadow-float']))}. One soft shadow lifts a raised card or a dialog; nothing glows.`, 'Depth is a step in the ground, a hairline, or that one shadow.']);
     // depth as a build sequence: a step in the ground, then a hairline, then a floating dialog
     const g1 = step('Ground steps', '', `<div class="kstepl">${steps}</div>`);
     const g2 = step('Hairline', '', `<div class="kcell">${ui.card({ meta: S.status, title: S.eta, text: S.pickup })}<span class="kcap"><b>Card</b>${m('--divider')} at ${ctx.borders[0].px} px. Raised cards drop the line.</span></div>`);

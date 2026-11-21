@@ -103,9 +103,13 @@ const colourField = (ctx, c, full = false, i = 9) => ({
 
 // 3.5: one tile per colour the brand has, each filled with the colour it names and showing the version of the logo that goes on it,
 // then a tile for a photograph (a calm part of the picture takes the reversed logo)
+// the version of the logo a tile shows, in the plain names of 2.1 Logo versions (never the brand's own ground names: "On-concrete" says
+// nothing to a reader who has not seen the brand's palette)
 const cwCaption = (cw, k, ctx, hex, own) => {
-  if (own) return k === 'colour' ? 'Full-colour logo' : `${ctx.logo.labels[k] || cap1(k)} logo`;
-  return lower(inkOn(ctx, hex)) === lower(L(ctx).text) ? 'One-colour logo, in the dark text colour' : 'One-colour logo, in the light ground colour';
+  if (own && k === 'colour') return 'Full-colour logo';
+  if (own && k === 'reversed') return 'Reversed logo';
+  const ink = own ? cw[k].name : inkOn(ctx, hex), light = ctx.ratio(ink, '#000000') > ctx.ratio(ink, '#ffffff');
+  return `One-colour logo, ${light ? 'light' : 'dark'}`;
 };
 // a tile's name: the brand's own colour name, or by its job while the project is still called "Your name" (its colour names are the theme's, not the brand's)
 const tileName = (ctx, c) => (nameOf(ctx) && nameOf(ctx) !== PLACEHOLDER_NAME ? c.name : `${cap1(c.roleText || c.role)} colour`);

@@ -19,6 +19,10 @@ const st = (sel, pseudo, cls, body, extra = '') => `@media (hover:hover){${sel}:
 
 export function componentsCss(ctx) {
   const { DW, DS } = displayType(ctx), W = Object.fromEntries(Object.entries(ctx.weights).map(([k, v]) => [k, cssNum(v, `${k} weight`)]));
+  // a theme may ship firmer parts than the house default (meta.shipped): a raised card with an edge and a shadow, a list row that can be
+  // marked as the one in hand, a scrim that is ink at a share of its strength, and a skeleton that reads on the surface. Other themes keep the house CSS.
+  const SH = (ctx.theme && ctx.theme.shipped) || {};
+  const scrim = SH.scrimShare ? `color-mix(in srgb, var(--scrim) ${Number(SH.scrimShare)}%, transparent)` : 'var(--scrim)';
   const statusCss = ctx.status.filter((s) => s.custom).map((s) => `.ui-chip--s-${cssIdent(s.id)} { color: var(--status-${cssIdent(s.id)}-text); }`).join(" ");
   return `/* ${commentText(ctx.brand.name)} components. Built only on tokens.css. */
 .ui, .ui * { box-sizing: border-box; }
@@ -93,7 +97,7 @@ ${st('.ui-btn--danger', 'hover', 'is-hover', '--bg: var(--text);', ':not(:disabl
 
 /* cards: edges, not shadows */
 .ui-card { display: flex; flex-direction: column; min-width: 0; background: var(--surface); border: var(--w-hairline) solid var(--divider); border-radius: var(--r-card); overflow: hidden; }
-.ui-card--raised { background: var(--raised); border-color: transparent; }
+.ui-card--raised { background: var(--raised); ${SH.raisedCard ? 'border-color: var(--divider); box-shadow: var(--shadow-float);' : 'border-color: transparent;'} }
 .ui-card__media { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--sunken); }
 .ui-card__body { display: flex; flex-direction: column; gap: 6px; padding: 16px; }
 .ui-card__title { margin: 0; font: ${DW} var(--fs-title-s)/var(--lh-title-s) var(--ff-display); font-stretch: ${DS}%; letter-spacing: -0.01em; }
@@ -133,7 +137,8 @@ ${st('.ui-btn--danger', 'hover', 'is-hover', '--bg: var(--text);', ':not(:disabl
 .ui-row__title { margin: -4px 0; padding: 4px 0; font: ${W.medium} var(--fs-body)/var(--lh-label) var(--ff-body); overflow-wrap: break-word; }
 .ui-row__sub { margin: 0; color: var(--quiet); font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
 .ui-row__end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-variant-numeric: tabular-nums; font-size: var(--fs-label); }
-a.ui-row { color: inherit; text-decoration: none; }
+a.ui-row { color: inherit; text-decoration: none; }${SH.selectedRow ? `
+.ui-row[aria-current="true"] { background: var(--raised); box-shadow: inset 3px 0 0 var(--action); }` : ''}
 @media (hover:hover) { a.ui-row:hover { background: var(--raised); } }
 
 /* status: plain words in one colour, never a tinted pill */
@@ -160,16 +165,16 @@ ${statusCss}
 .ui-inline-msg { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-label); color: var(--text-soft); }
 .ui-spinner { width: 24px; height: 24px; border: 3px solid var(--sunken); border-top-color: var(--text); border-radius: var(--r-round); animation: ui-spin 900ms linear infinite; }
 @keyframes ui-spin { to { transform: rotate(360deg); } }
-.ui-skeleton { display: block; height: 14px; border-radius: var(--r-control); background: var(--sunken); }
+.ui-skeleton { display: block; height: 14px; border-radius: var(--r-control); background: ${SH.skeleton ? 'color-mix(in srgb, var(--text) 16%, var(--surface))' : 'var(--sunken)'}; }
 @media (prefers-reduced-motion: reduce) { .ui-spinner { animation: none; border-top-color: var(--text); border-right-color: var(--text); } .ui-btn, .ui-input, .ui-switch, .ui-switch::after { transition: none; } .ui-btn:active { transform: none; } }
 
 /* dialog */
-.ui-scrim { display: grid; place-items: center; padding: 24px; background: var(--scrim); }
+.ui-scrim { display: grid; place-items: center; padding: 24px; background: ${scrim}; }
 .ui-dialog { width: 100%; max-width: 440px; padding: 24px; background: var(--surface); color: var(--text); border: var(--w-control) solid var(--text); border-radius: var(--r-card); box-shadow: var(--shadow-float); display: flex; flex-direction: column; gap: 12px; }
 .ui-dialog__title { margin: 0; font: ${DW} var(--fs-title-s)/var(--lh-title-s) var(--ff-display); font-stretch: ${DS}%; letter-spacing: -0.01em; }
 .ui-dialog__text { margin: 0; color: var(--text-soft); }
 .ui-dialog__actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-dialog.ui-dialog::backdrop { background: var(--scrim); }
+dialog.ui-dialog::backdrop { background: ${scrim}; }
 
 /* table */
 .ui-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
@@ -272,6 +277,7 @@ main{max-width:960px;margin:0 auto;padding:24px}
 .exrow>.ui-field{flex:1 1 240px}
 .exrow--btns{align-items:center}
 .exrow--cards{align-items:stretch}
+${DM.css || ''}
 code{font-family:var(--ff-mono);font-size:13px}
 </style></head>
 <body class="ui">
@@ -280,12 +286,12 @@ code{font-family:var(--ff-mono);font-size:13px}
 ${sec('Buttons', rowOf('btns', ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true }), ui.btn(X.small, { size: 'sm' }), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' })))}
 ${sec('Inputs', row(ui.field({ id: 'e1', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'e2', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] })) + row(ui.field({ id: 'e3', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'e4', label: F.notes, kind: 'textarea', help: F.notesHelp })) + row(ui.field({ id: 'e5', label: X.account, value: DM.account !== undefined ? DM.account : ctx.brand.name, disabled: true })))}
 ${sec('Choices', row(ui.check(X.checks[0], { checked: true }), ui.check(X.checks[1]), ui.check(X.checks[2], { disabled: true }), ui.switch(X.switches[0], { checked: true }), ui.switch(X.switches[1])) + row(ui.check(X.radios[0], { type: 'radio', name: 'v', checked: true }), ui.check(X.radios[1], { type: 'radio', name: 'v' }), ui.segmented(F.sizes, 1)))}
-${sec('Status', row(...ctx.status.map((s) => ui.statusChip(s.id)), '<span class="ui-badge">3</span>'))}
-${sec('Cards', rowOf('cards', ui.card({ title: S.eta, text: S.pickup, meta: S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(DM.stat ? DM.stat[0] : S.paid, DM.stat ? DM.stat[1] : X.statLabel)))}
+${sec('Status', row(...ctx.status.map((s) => ui.statusChip(s.id)), ...(DM.noBadge ? [] : ['<span class="ui-badge">3</span>'])))}
+${sec('Cards', rowOf('cards', ui.card({ title: S.eta, text: S.pickup, meta: DM.cardMeta || S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(DM.stat ? DM.stat[0] : S.paid, DM.stat ? DM.stat[1] : X.statLabel)))}
 ${sec('Navigation', ui.crumbs([...X.crumbs, S.deliverTo]) + '<div style="height:16px"></div>' + ui.tabs(X.tabs, 0) + '<div style="height:16px"></div><nav class="ui-topbar" aria-label="Main"><strong class="ui-display">' + esc(ctx.brand.logo.showcase.wordmark) + '</strong><div class="ui-topbar__links">' + ui.links(X.links, 0) + '</div></nav>')}
-${sec('List', ui.deliveryRows(5))}
+${sec('List', DM.list || ui.deliveryRows(5))}
 ${sec('Feedback', ui.alert('warning', S.alert) + '<div style="height:12px"></div>' + ui.alert('success', S.toast) + '<div style="height:12px"></div>' + ui.toast(S.toast) + '<div style="height:12px"></div>' + row(ui.spinner(), ui.skeleton('160px')))}
-${sec('Dialog', '<div class="ui-scrim">' + ui.dialog({ ...S.dialog, danger: true }) + '</div>')}
+${sec('Dialog', DM.behind ? '<div class="ex-dlg"><div class="ex-dlg__behind" aria-hidden="true">' + DM.behind + '</div><div class="ui-scrim">' + ui.dialog({ ...S.dialog, danger: true }) + '</div></div>' : '<div class="ui-scrim">' + ui.dialog({ ...S.dialog, danger: true }) + '</div>')}
 ${sec('Empty state', `<div class="ui-empty"><h3 class="ui-empty__title">${esc(S.empty.title)}</h3><p class="ui-empty__text">${esc(S.empty.body)}</p>${ui.btn(S.empty.cta)}</div>`)}
 </main>
 <script>

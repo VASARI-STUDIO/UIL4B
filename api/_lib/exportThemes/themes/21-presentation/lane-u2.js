@@ -218,7 +218,7 @@ export const uikit = {
     const act = byRole(ctx, 'action').hex, onA = inkOn(ctx, act), ch = chromeOn(ctx, white);
     let out = field(0, 0, fx, H, act);
     out += display(ctx, 'A card holds one thing.', 56, 216, fx - 112, onA, { maxLines: 3 }).html;
-    out += copy(ctx, `A card is the surface with a ${ctx.borders[0].px} px hairline. A raised card swaps the hairline for the raised ground. Neither casts a shadow.`, 56, 256, fx - 112, onA);
+    out += copy(ctx, `A card is the surface with a ${ctx.borders[0].px} px hairline. A raised card steps up to the raised ground and casts the float shadow.`, 56, 256, fx - 112, onA);
     // the card's photo: a shot the brand has not given to its cover, else its first; a brand with no photos gets the engine's photo slot
     const shots = (B.imagery && B.imagery.shots) || [];
     // the cover shot is the brand's widest safe frame (the kit has no photo cover of its own, so it is not shown twice here)

@@ -16,7 +16,7 @@ export function kitCss(ctx) {
 .hk-title{display:flex;flex-direction:column;justify-content:flex-end;gap:20px;padding:56px;container-type:inline-size}
 .hk-top--cover .hk-title{gap:32px}
 .hk-title__h{font-size:var(--bs,64px)}
-.hk-title__l{font-size:${bd}px;line-height:1.5;font-weight:500;max-width:36ch}
+.hk-title__l{font-size:${bd}px;line-height:1.5;font-weight:500;max-width:36ch;text-wrap:pretty}
 .hk-title__v,.hk-title .ht-k{color:var(--q)}
 .hk-title .ht-k b{font-weight:400;margin-left:8px}
 .hk-logo{margin-bottom:auto}
@@ -30,7 +30,7 @@ export function kitCss(ctx) {
 .hk-i{display:flex;flex-direction:column;gap:12px;margin:0}
 .hk-i--w .hk-i__c{width:100%;max-width:960px}
 .hk-i figcaption{font-size:${cp}px;line-height:1.4;color:var(--quiet)}
-.hk-i .ui-topbar{border:1px solid var(--divider)}
+.hk-frame{border:1px solid var(--divider)}
 .hk-sg+.hk-sg{margin-top:8px}
 .hk-sg__t{margin:0 0 16px;display:flex;align-items:center;gap:12px;font-size:14px;line-height:1.3;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft)}
 .hk-sg__t::before{content:'';flex:none;width:16px;height:6px;background:var(--palette-support,var(--action))}
@@ -47,13 +47,11 @@ export function kitCss(ctx) {
 .hk-scr{background:var(--surface);color:var(--text);border:1px solid var(--divider)}
 .hk-scr__body{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px 48px;align-items:start;padding:32px}
 .hk-i .ui-empty{max-width:520px}
-.hk-scr .ui-topbar{border-bottom:1px solid var(--divider)}
 .hk-scr__t{grid-column:1/-1}
 .hk-scr__a{display:flex;flex-direction:column;gap:20px}
 .hk-scr__x{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .hk-scr .ui-card__title,.hk-scr .ui-card__meta{white-space:nowrap}
 .hk-scr .ui-card__text{text-wrap:pretty}
-.hk-scr .ui-row__end>span:first-child:not(.ui-chip){color:var(--text)}
 @media (max-width:700px){.hk-scr__body{grid-template-columns:minmax(0,1fr);padding:20px 16px}}
 .hk-scr__t{margin:0;font-size:20px;font-weight:600}
 .hk-phone{position:relative;box-sizing:border-box;width:min(100%,390px);border:10px solid var(--text);border-radius:44px;overflow:hidden;background:var(--surface);margin:0 auto}
@@ -84,7 +82,6 @@ export function kitCss(ctx) {
 .hk-code pre,.hk-tree{margin:0;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-color:var(--quiet) var(--sunken);padding:16px;background:var(--sunken);color:var(--text);font:400 ${cp}px/1.6 var(--mono);white-space:pre;overflow-wrap:normal;scrollbar-width:thin}
 @media (min-width:0px){.hk-code pre{padding-right:32px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}.hk-code pre:focus-visible{-webkit-mask-image:none;mask-image:none}}
 .hk-tree{width:auto;font-variant-numeric:tabular-nums}
-.hk-i .ui-card--raised{border-color:var(--divider);box-shadow:var(--shadow-float)}
 .hk-steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:12px}
 .hk-steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:baseline;counter-increment:s}
 .hk-steps li::before{content:counter(s);font-weight:600;font-variant-numeric:tabular-nums;color:var(--quiet)}
