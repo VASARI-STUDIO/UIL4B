@@ -19,6 +19,8 @@ const docName = (ctx) => docOf(ctx, 'guidelines');
 // Every other page shows its slide and then the notes, which add what the slide cannot carry.
 const REFLOW = new Set(['palette', 'proportion', 'contrast', 'colour-values', 'typefaces', 'hierarchy', 'type-in-use', 'logo-misuse', 'grid', 'summary', 'digital']);
 // pages whose slide already says everything the notes would: the notes are for the narrow layout alone, where the slide is not drawn
+// slides with small type (the clear space, the smallest size): below 1024 the slide is not drawn, a figure at the column's size is
+const FIG = new Set(['clear-space', 'min-size']);
 const COVERED = new Set(['intro', 'personality', 'voice', 'write-this', 'messaging', 'logo', 'logo-versions', 'photo-direction', 'clear-space', 'min-size', 'layouts']);
 // a big line's cap follows its length, so a sentence sets as a paragraph of display type and a word as a poster
 // the cap is a step of the type scale the kit shares: the headline step for a line under the page title, the title step for a long sentence
@@ -28,7 +30,7 @@ const big = (ctx, t, cls = 'ht-big') => `<p class="ht-d ${cls}" style="--bs:${fi
 
 // the slide at its own size, zoomed to the column below 1280 (it is a picture of the PDF page, its text kept as text).
 // Below 841 the engine sets --fit on [data-gs-fit]; above it the CSS sets the zoom per breakpoint.
-const stage = (ctx, id, html) => `<section class="ht-stage" id="${id}" aria-label="Slide" style="${fieldStyle(ctx, darkF(ctx), 'site stage')}"><div class="ht-fit"><div class="ht-slides" data-gs-fit>${html}</div></div></section>`;
+const stage = (ctx, id, html, cls = '') => `<section class="ht-stage${cls}" id="${id}" aria-label="Slide" style="${fieldStyle(ctx, darkF(ctx), 'site stage')}"><div class="ht-fit"><div class="ht-slides" data-gs-fit>${html}</div></div></section>`;
 // a slide the deck cannot draw for this brand (it needs a photo or a colourway the brand lacks): the deck's plain title slide,
 // the running head over the action field and the title at display size
 // A slide the page cannot draw for this brand is not drawn at all (the page's own title leads it). So is a slide that holds a placeholder
@@ -72,8 +74,8 @@ function page(ctx0, id) {
   // the first page of a section opens it with the brand's device
   const opener = /\.1$/.test(p.ref || '') ? device(ctx) : '';
   const body = `${text ? `<div class="ht-bigc">${big(ctx, text)}</div>` : ''}${notes ? `<div class="ht-nb">${notes}</div>` : ''}`;
-  return `${lead}${opener}${slide ? stage(ctx, 'slide', slide) : ''}${body ? `
-<section class="ht-notes${spread ? ' ht-notes--spread' : ''}${text ? '' : ' ht-notes--bare'}${slide && COVERED.has(id) ? ' ht-notes--narrow' : ''}" aria-label="${spread ? 'Page' : 'Notes'}">${body}</section>` : ''}`;
+  return `${lead}${opener}${slide ? stage(ctx, 'slide', slide, FIG.has(id) ? ' ht-stage--fig' : '') : ''}${body ? `
+<section class="ht-notes${spread ? ' ht-notes--spread' : ''}${text ? '' : ' ht-notes--bare'}${slide && COVERED.has(id) ? (FIG.has(id) ? ' ht-notes--fig' : ' ht-notes--narrow') : ''}" aria-label="${spread ? 'Page' : 'Notes'}">${body}</section>` : ''}`;
 }
 
 // index.html: the cover slide, then the contents as stripes of the deck's fields, a section to a stripe

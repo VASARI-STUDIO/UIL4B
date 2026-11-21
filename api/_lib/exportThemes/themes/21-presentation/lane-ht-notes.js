@@ -6,6 +6,7 @@
 import { A, L, lower, nameOfHex, fieldStyle, darkF, actF, panelF, fitSize, words, inkOn, cwFor, byRole } from './lane-ht-lib.js';
 import { onceRe, sayOnce } from './lane-g3-kit.js';
 import { distinctColours, servedFamily, ratioText, clearTimes } from './helpers.js';
+import { screenContent, exampleDemo } from './once.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -164,6 +165,53 @@ const typeInUse = (ctx) => {
   return { big: line, html: `<ol class="ht-scale">${rows.map(([x, text]) => `<li><p class="ht-k">${A(x.token === 'body' ? 'Paragraph' : cap1(x.token))}<span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span></p><p class="ht-scale__s ${x.face === 'display' ? 'ht-d' : ''}" style="font-size:${x.size}px;line-height:${x.line < 3 ? x.line : (x.line / x.size).toFixed(2)};font-weight:${x.weight};${x.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(text)}</p></li>`).join('')}</ol>` };
 };
 
+// ---- figures drawn at the column's own size. Below 1024 a slide is not scaled to the column (its 12 px type would print at 4 px): the two
+// slides that carry small type, the clear space and the smallest size, are drawn again here as figures whose type is 14 px, and the
+// layouts page shows its slides as specimens that reflow (type in container units, with a 12 px floor). ----
+const geoOf = (ctx) => ('colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0]);
+// the logo for a ground, in the colourway the brand draws for it (else one colour in the ground's ink), as a share of its container
+const logoOn = (ctx, hex, o) => {
+  const cw = ctx.brand.logo.colourways, k = cwFor(ctx, hex), own = cw[k] && lower(cw[k].ground) === lower(hex);
+  return ctx.logo.html(geoOf(ctx), { ...o, ...(own ? { colourway: k } : {}), color: own ? cw[k].name : inkOn(ctx, hex), label: 'Logo' });
+};
+// the clear space: the logo and x on every side, x drawn as a square of the action colour in each corner. Every measure is a share of the
+// zone, so the figure keeps its proportions at any width.
+const zoneFig = (ctx, ground, name, note) => {
+  const Lg = ctx.logo, g = Lg.geos.colour || Lg.geos[Lg.versions[0]], u = Lg.geo.unit, zw = g.w + 2 * u, zh = g.h + 2 * u;
+  // the squares are the action colour where it shows against the ground (on the dark ground it may be the ground itself): else an accent, else the ground's ink
+  const act = [actF(ctx), accentFor(ctx, ground)].find((h) => h && ctx.ratio(h, ground) >= 1.8) || inkOn(ctx, ground);
+  const pc = (a, b) => `${((a / b) * 100).toFixed(3)}%`;
+  const sq = (r, b) => `<i style="${r ? 'right' : 'left'}:0;${b ? 'bottom' : 'top'}:0;width:${pc(u, zw)};height:${pc(u, zh)};background:${act}"></i>`;
+  const label = `The logo on ${name}, with the clear space round it: x is ${clearTimes(Lg.clearShare)} the logo's height`;
+  return `<figure class="ht-cs"><div class="ht-cs__z" role="img" aria-label="${A(label)}" style="aspect-ratio:${zw.toFixed(2)}/${zh.toFixed(2)};background:${ground}">${sq(0, 0)}${sq(1, 0)}${sq(0, 1)}${sq(1, 1)}<span class="ht-cs__l" style="left:${pc(u, zw)};top:${pc(u, zh)};width:${pc(g.w, zw)};height:${pc(g.h, zh)}">${logoOn(ctx, ground, { share: g.w / zw })}</span></div><figcaption>${note}</figcaption></figure>`;
+};
+const clearFig = (ctx) => {
+  const cw = ctx.brand.logo.colourways, light = panelF(ctx), dark = cw.reversed && cw.reversed.ground, act = actF(ctx);
+  const key = `<span class="ht-cs__sw" style="background:${act}"></span>`;
+  return `<div class="ht-css">${zoneFig(ctx, light, 'the light ground', `${key}<b>x</b> is ${clearTimes(ctx.logo.clearShare)} the logo's height, on every side.`)}${dark && lower(dark) !== lower(light) ? zoneFig(ctx, dark, 'the dark ground', 'The same x on the dark ground.') : ''}</div>`;
+};
+// the smallest size: the logo at the pixels (and, in print, the millimetres) it is specified at, with a ruler its exact width
+const sizeFig = (ctx) => {
+  const ms = ctx.logo.minSize, cw = ctx.brand.logo.colourways, mmPx = (mm) => (mm * 96) / 25.4;
+  const side = (key, big, w, title, note) => {
+    const hex = cw[key].ground;
+    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-d ht-ms__n">${A(big)}</p><p class="ht-ms__t"><b>${A(title)}</b> ${A(note)}</p><span class="ht-ms__w" style="width:${w.toFixed(1)}px">${ctx.logo.html(geoOf(ctx), { width: w, colourway: key, color: cw[key].name, label: 'Logo' })}<span class="ht-ms__r"></span></span></div>`;
+  };
+  return `<div class="ht-mss">${side('reversed', `${ms.screenPx} px`, ms.screenPx, 'On screen', `${ms.screenPx} px wide, drawn at 1 px to the pixel.`)}${side('colour', `${ms.printMm} mm`, mmPx(ms.printMm), 'In print', `${ms.printMm} mm wide, drawn at true size at 100%.`)}</div>`;
+};
+// 6.2: three slides as the deck lays them out, drawn from the shared orders story (the count, the total and the late order are read
+// from the same sample the kit's lists use). Each is a 16:9 field whose type is in container units, so it reflows at any width.
+const layoutSlides = (ctx) => {
+  const S = screenContent(ctx), n = S.deliveries.length, late = S.deliveries.filter((d) => /late/i.test(d.when || '')).length;
+  const money = (exampleDemo(ctx).stat || [])[0], dk = darkF(ctx), act = actF(ctx), pn = panelF(ctx);
+  const sl = (hex, what, inner, t, d) => `<figure class="ht-slf"><div class="ht-sl" style="${fieldStyle(ctx, hex, `site layout ${what}`)}"><div class="ht-sl__in">${inner}</div></div><figcaption><b>${A(t)}.</b> ${A(d)}</figcaption></figure>`;
+  const tally = `${words(n)} orders${late ? `, ${words(late).toLowerCase()} late` : ''}.`;
+  const title = sl(dk, 'title', `<div class="ht-sl__lg">${logoOn(ctx, dk, { share: 0.34 })}</div><div><p class="ht-d ht-sl__d">Today's orders</p><p class="ht-sl__k">${A(tally)}</p></div>`, 'Title', 'The logo and the name of the page, on the dark field.');
+  const idea = sl(act, 'one idea', `<p class="ht-sl__k">${A(ORDER.screen)}</p><div><p class="ht-d ht-sl__d">${A(ORDER.id)} is packing.</p><p class="ht-sl__k">${A(ORDER.due)}.</p></div>`, 'One idea', 'One line at display size on the action colour.');
+  const num = sl(pn, 'number', `<p class="ht-sl__k">${A(money ? 'Taken today' : 'Orders today')}</p><div><p class="ht-d ht-sl__n">${A(money || words(n))}</p><p class="ht-sl__k">${A(tally)}</p></div>`, 'A number', 'One figure from the data, with a line to say what it counts.');
+  return `<div class="ht-sls">${title}${idea}${num}</div>`;
+};
+
 export const NOTES = {
   intro: (ctx) => { const B = ctx.brand; return { big: lead(ctx), html: p(A(keep(ctx, B.description)), 'ht-lead') + dl([['What it does', A(keep(ctx, B.product))], ['Who it serves', A(B.audience)], ['Where', A(B.city)]]) }; },
   personality: (ctx) => {
@@ -185,8 +233,8 @@ export const NOTES = {
     const Lg = ctx.logo, cw = ctx.brand.logo.colourways;
     return { big: `${words(Lg.versions.length)} versions`, html: fields(ctx, Lg.versions.map((id) => { const k = Lg.colourwayOf(id), w = cw[k]; return { hex: w.ground, what: `site logo ${id}`, html: `<div class="ht-field__logo">${Lg.html(id, { width: id === 'symbol' ? 72 : id === 'stacked' ? 120 : 200, colourway: k, color: w.name, label: Lg.labels[id] })}</div><p class="ht-field__c"><b>${A(Lg.labels[id])}</b>${ctx.brand.logo.when[id] ? `<br>${A(ctx.brand.logo.when[id])}` : ''}</p>` }; }), 2) };
   },
-  'clear-space': (ctx) => ({ big: `Keep ${clearTimes(ctx.logo.clearShare)} the logo's height clear on every side.`, html: p('The clear space is measured from the logo itself, so it grows and shrinks with it. Nothing else sits inside it: no type, no edge, no other mark.', 'ht-lead') }),
-  'min-size': (ctx) => { const ms = ctx.logo.minSize; return { big: `${ms.screenPx} px on screen. ${ms.printMm} mm in print.`, html: p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') + dl([['On screen', nv(`${ms.screenPx} px`)], ['In print', nv(`${ms.printMm} mm`)]]) }; },
+  'clear-space': (ctx) => ({ big: `Keep ${clearTimes(ctx.logo.clearShare)} the logo's height clear on every side.`, html: `<div class="ht-nf">${clearFig(ctx)}</div>` + p('The clear space is measured from the logo itself, so it grows and shrinks with it. Nothing else sits inside it: no type, no edge, no other mark.', 'ht-lead') }),
+  'min-size': (ctx) => { const ms = ctx.logo.minSize; return { big: `${ms.screenPx} px on screen. ${ms.printMm} mm in print.`, html: `<div class="ht-nf">${sizeFig(ctx)}</div>` + p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') + dl([['On screen', nv(`${ms.screenPx} px`)], ['In print', nv(`${ms.printMm} mm`)]]) }; },
   // the rule is said once, under the tiles: a tile names its ground and, where it differs, its version
   'logo-grounds': (ctx) => ({ big: 'Each ground has one version.', html: groundTiles(ctx) + p('Each tile shows the version drawn for its ground. Where none is drawn, the logo is set in one colour, dark or light, whichever reads on it.') }),
   'logo-misuse': (ctx) => ({ big: 'Use the logo as it is drawn.', html: misuseTiles(ctx) }),
@@ -225,7 +273,7 @@ export const NOTES = {
     const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page with ${G.columns} columns, ${G.margin} px margins and ${G.gutter} px gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns, ${nv(`${G.margin} px`)} margins, ${nv(`${G.gutter} px`)} gutters.</figcaption></figure>`;
     return { big: `${G.columns} columns`, html: fig + dl([['Page', 'A4 portrait'], ['Margin', nv(`${G.margin} px`)], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', nv(`${G.gutter} px`)], ['Base unit', nv(`${G.base} px`)]]) };
   },
-  layouts: (ctx) => ({ big: 'One idea a slide.', html: p(`Every slide carries one thing at display size, a line, a word or a photograph, set on a full field of ${ctx.brand.name ? `${A(ctx.brand.name)}'s` : 'the brand’s'} colours. Everything else is small.`, 'ht-lead') }),
+  layouts: (ctx) => ({ big: 'One idea a slide.', html: layoutSlides(ctx) + p(`Every slide carries one thing at display size, a line, a word or a photograph, set on a full field of ${ctx.brand.name ? `${A(ctx.brand.name)}'s` : 'the brand’s'} colours. Everything else is small.`, 'ht-lead') }),
   // 8.1: the card, the sign and the phone screen are drawn here from the palette, so the page shows them, not a list of their words
   'business-card': (ctx) => ({ big: '', html: mockups(ctx) }),
   social: (ctx) => { const S = ctx.brand.applications.social.filter((t) => ok(ctx, t)); return S.length ? { big: S[0], html: list(S.map(A)) } : NONE; },
