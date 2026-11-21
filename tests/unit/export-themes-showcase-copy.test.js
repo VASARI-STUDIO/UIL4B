@@ -53,5 +53,5 @@ test('standards UI kit cover: a long project name shrinks the construction sheet
   const short = cover('Tide'), long = cover('Fernhill Native Plant Nursery and Garden Supplies')
   assert.ok(band(short) >= band(long), 'the band type is no larger for the longer words')
   assert.ok(band(short) <= 80 && band(long) >= 36, 'the band type stays between 36 and 80 px')
-  assert.ok(sheetHeight(short) >= 252 && sheetHeight(long) >= sheetHeight(short), 'a longer lockup never gives a shorter sheet')
+  assert.ok(sheetHeight(long) >= 252 && sheetHeight(long) <= sheetHeight(short), 'a longer lockup shrinks the sheet, never below 252 px')
 })
