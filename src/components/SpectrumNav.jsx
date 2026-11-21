@@ -1,5 +1,9 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import MegaMenu from './nav/MegaMenu'
+import { finePointer } from './nav/menuMoments'
+import { NAV_SECTIONS } from '../data/toolTree'
+import { BRAND_KIT_STEPS, startGuide } from '../utils/brandKitGuide'
 import { PH_X } from './spectrum/phosphorNav'
 import { crossRouteHashClick, normPath, onSalesPage } from './spectrum/salesLinks'
 import { jumpToSection } from './spectrum/usePageAnchors'
@@ -17,13 +21,15 @@ import { useShortcutHint } from '../hooks/useShortcutHint'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
-// The marketing nav: a flat, full-width bar. On a wide screen it holds the
-// logo, three links and a search pill. At 767px and under the links move into
-// a full-screen menu, opened from a button that sits beside a search button.
+// The marketing nav: a flat, full-width bar. At 1100px and over it holds the
+// logo, the Create, Discover and Learn menus, three links, a search pill and
+// "Open the toolkit". Between 768px and 1099px the menus and the button step
+// out and the bar keeps the logo, the links and the search pill. At 767px and
+// under the links move into a full-screen menu, opened from a button that sits
+// beside a search button, and that menu lists the three sections as links.
 //
-// It is not a mega menu. Every tool is still reachable from the page's own
-// sections, the hero's tool search and the footer. Entering the app is the
-// hero's call to action, so the bar carries none.
+// The menus are the app's own mega menu (nav/MegaMenu.jsx, the one PillNav
+// draws), so a visitor sees the same tool map before and after they sign in.
 //
 // Tools is the page's `#try` section on the sales page and the `/tools` page
 // anywhere else. Plans is `/plans`, On mobile is `/mobile`.
@@ -32,6 +38,8 @@ const QUIET = [
   { id: 'pricing', label: 'Plans', to: '/plans' },
   { id: 'mobile', label: 'On mobile', to: '/mobile' },
 ]
+
+const RAIL_TOP = QUIET.length
 
 // The sales page's sections in page order: the phone menu's second list.
 const PAGE_ANCHORS = [
@@ -59,6 +67,21 @@ const MENU_EXIT_MS = 260
 // Where the phone layout ends. Past it the menu is not drawn, so an open menu
 // is closed when the window grows beyond it.
 const WIDE = '(min-width: 768px)'
+
+// The button at the end of the wide bar. It goes to the workspace, which sends
+// a visitor who has not signed in to the sign-in page.
+const CTA = { to: '/projects', label: 'Start a project' }
+
+// How long the pointer can be away from a menu opened by hover before it shuts.
+const MEGA_CLOSE_MS = 120
+
+function Chevron() {
+  return (
+    <svg className="spnav-chev" viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
+      <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 function CloseGlyph() {
   return (
@@ -168,6 +191,189 @@ export default function SpectrumNav() {
 
   useEffect(() => { openRef.current = open }, [open])
 
+  // ── THE WIDE BAR'S MENUS ──────────────────────────────────────────────────
+  // `mega` is the open section's id, or null. The behaviour is PillNav's, so a
+  // menu works the same on the sales page and in the app: hover opens it on a
+  // fine pointer, a click pins it open, the arrow keys walk the items, Tab
+  // leaves it in page order and Escape gives focus back to its trigger.
+  const navigate = useNavigate()
+  const [mega, setMega] = useState(null)
+  const megaRef = useRef(null)
+  const menuRef = useRef(null)
+  const triggerRefs = useRef({})
+  const closeTimer = useRef(null)
+  // A menu opened by hover only takes the next hover once the pointer has moved,
+  // so a menu does not open under a pointer that was resting where it appears.
+  const hoverLock = useRef(false)
+  const openedBy = useRef(null)
+  const requestMega = (next) => { megaRef.current = next; setMega(next) }
+  useEffect(() => { megaRef.current = mega }, [mega])
+
+  // The menu's motion sheet is only for a fine pointer; a touch screen never
+  // draws the wide bar's menus at all.
+  useEffect(() => { if (finePointer()) import('../styles/deferred/menu-moments.css') }, [])
+
+  // A route change closes the menu, set during render so the old page's menu is
+  // never drawn over the new one.
+  const [megaKey, setMegaKey] = useState(location.key)
+  if (megaKey !== location.key) {
+    setMegaKey(location.key)
+    setMega(null)
+  }
+
+  // The menu sits under its trigger, kept inside the window.
+  useLayoutEffect(() => {
+    if (!mega) return undefined
+    const place = () => {
+      const panel = menuRef.current
+      const trig = triggerRefs.current[mega]
+      if (!panel || !trig) return
+      const tl = trig.getBoundingClientRect().left
+      const gap = 24
+      const left = Math.max(gap, Math.min(tl, window.innerWidth - gap - panel.offsetWidth))
+      panel.style.left = `${left}px`
+      panel.style.transformOrigin = `${Math.max(0, tl - left)}px 0`
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [mega])
+
+  // A press outside the bar and the menu closes it; so does the window falling
+  // below the width the menus are drawn at.
+  useEffect(() => {
+    if (!mega) return undefined
+    const onDown = (e) => {
+      if (navRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
+      setMega(null)
+    }
+    const mq = window.matchMedia('(min-width: 1100px)')
+    const onNarrow = (e) => { if (!e.matches) setMega(null) }
+    document.addEventListener('pointerdown', onDown)
+    mq.addEventListener('change', onNarrow)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      mq.removeEventListener('change', onNarrow)
+    }
+  }, [mega])
+
+  useEffect(() => {
+    const onMove = () => { hoverLock.current = false }
+    document.addEventListener('mousemove', onMove, { passive: true })
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+    }
+  }, [])
+
+  const clearClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current)
+      closeTimer.current = null
+    }
+  }
+  const hoverOpen = (id) => {
+    clearClose()
+    if (megaRef.current === id && openedBy.current === 'click') return
+    if (hoverLock.current) return
+    if (megaRef.current === null) hoverLock.current = true
+    openedBy.current = 'hover'
+    requestMega(id)
+  }
+  const hoverLeave = () => {
+    clearClose()
+    if (openedBy.current === 'click') return
+    closeTimer.current = setTimeout(() => setMega(null), MEGA_CLOSE_MS)
+  }
+  const toggleMega = (id) => {
+    hoverLock.current = true
+    const cur = megaRef.current
+    // A click on a menu that hover already opened keeps it open, pinned.
+    if (cur === id && openedBy.current === 'hover') {
+      openedBy.current = 'click'
+      return
+    }
+    openedBy.current = 'click'
+    requestMega(cur === id ? null : id)
+  }
+  const closeMega = () => { clearClose(); setMega(null) }
+  const megaItems = () => [...(menuRef.current?.querySelectorAll('[data-pnav-menuitem]') || [])]
+    .filter((el) => el.getClientRects().length > 0)
+
+  // Tab out of the last item goes on to what follows the trigger in the bar.
+  const focusAfterTrigger = (id) => {
+    const i = NAV_SECTIONS.findIndex((s) => s.id === id)
+    const next = NAV_SECTIONS[i + 1]
+    const el = next
+      ? triggerRefs.current[next.id]
+      : navRef.current?.querySelector('.spnav-quiet a, .spnav-search')
+    el?.focus()
+  }
+
+  const onTriggerKeyDown = (event, id, index) => {
+    if (event.key === 'Tab' && !event.shiftKey && megaRef.current === id) {
+      const first = megaItems()[0]
+      if (first) {
+        event.preventDefault()
+        first.focus()
+      }
+      return
+    }
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault()
+      const step = event.key === 'ArrowRight' ? 1 : -1
+      const next = NAV_SECTIONS[(index + step + NAV_SECTIONS.length) % NAV_SECTIONS.length]
+      triggerRefs.current[next.id]?.focus()
+      return
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      openedBy.current = 'click'
+      requestMega(id)
+      const last = event.key === 'ArrowUp'
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const items = megaItems()
+        ;(last ? items[items.length - 1] : items[0])?.focus()
+      }))
+    }
+  }
+
+  const onMenuKeyDown = (event) => {
+    const items = megaItems()
+    if (!items.length) return
+    const at = items.indexOf(document.activeElement)
+    const id = megaRef.current
+    if (event.key === 'Tab') {
+      if (event.shiftKey && at === 0) {
+        event.preventDefault()
+        triggerRefs.current[id]?.focus()
+      } else if (!event.shiftKey && at === items.length - 1) {
+        event.preventDefault()
+        closeMega()
+        focusAfterTrigger(id)
+      }
+      return
+    }
+    let next = null
+    if (event.key === 'ArrowDown') next = items[(at + 1) % items.length]
+    else if (event.key === 'ArrowUp') next = items[(at - 1 + items.length) % items.length]
+    else if (event.key === 'Home') next = items[0]
+    else if (event.key === 'End') next = items[items.length - 1]
+    if (next) {
+      event.preventDefault()
+      next.focus()
+    }
+  }
+
+  // The menu's editorial card starts the brand kit walkthrough at its first step.
+  const startBrandKit = () => {
+    closeMega()
+    startGuide()
+    navigate(BRAND_KIT_STEPS[0].path, { state: { brandKitArrival: true, openBrandKitCard: true } })
+  }
+
+  const activeSection = NAV_SECTIONS.find((s) => s.id === mega) || null
+
   // Keyboard focus arriving in the bar while it is hidden brings it back at
   // once. :focus-visible, not any focus, so a mouse click on a control does
   // not pin the bar open. The stylesheet's :has(:focus-visible) shows it on
@@ -196,11 +402,11 @@ export default function SpectrumNav() {
       setScrolled(y > 8)
       const focused = document.activeElement
       const focusInBar = !!(focused && navRef.current?.contains(focused) && focused.matches(':focus-visible'))
-      const inPinnedBox = y >= HIDE_AFTER && !openRef.current && !focusInBar && viewportTopInPinnedBox()
+      const inPinnedBox = y >= HIDE_AFTER && !openRef.current && !megaRef.current && !focusInBar && viewportTopInPinnedBox()
       setPinHidden(inPinnedBox)
       if (dy >= 0) upRun.current = 0
       else upRun.current -= dy
-      if (y < HIDE_AFTER || openRef.current || focusInBar) {
+      if (y < HIDE_AFTER || openRef.current || megaRef.current || focusInBar) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         upRun.current = 0
@@ -255,11 +461,21 @@ export default function SpectrumNav() {
         closeMenu()
         return
       }
+      if (e.key === 'Escape' && megaRef.current) {
+        // A wide-bar menu closes and gives focus back to the trigger that opened it.
+        const was = megaRef.current
+        e.preventDefault()
+        if (closeTimer.current) clearTimeout(closeTimer.current)
+        setMega(null)
+        triggerRefs.current[was]?.focus()
+        return
+      }
       const chord = (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')
       if (chord) {
         if (document.querySelector('.hcmd-input')) return
         e.preventDefault()
         setOpen(false)
+        setMega(null)
         setSearchOpen(true)
         return
       }
@@ -269,6 +485,7 @@ export default function SpectrumNav() {
         if (!typing) {
           e.preventDefault()
           setOpen(false)
+          setMega(null)
           setSearchOpen(true)
         }
       }
@@ -332,6 +549,7 @@ export default function SpectrumNav() {
 
   const openSearch = () => {
     setOpen(false)
+    closeMega()
     setSearchOpen(true)
   }
 
@@ -355,6 +573,28 @@ export default function SpectrumNav() {
             </span>
             <span className="sr-only">UIL4B home</span>
           </Link>
+
+          {/* The tool map, from 1100px up. Each trigger opens the same menu the
+              app's own bar opens; below 1100px the quiet links and search stay. */}
+          <div className="spnav-menus">
+            {NAV_SECTIONS.map((section, index) => (
+              <button
+                key={section.id}
+                type="button"
+                className="spnav-trigger"
+                ref={(el) => { if (el) triggerRefs.current[section.id] = el }}
+                aria-expanded={mega === section.id}
+                aria-controls={mega === section.id ? 'pnav-mega' : undefined}
+                onClick={() => toggleMega(section.id)}
+                onMouseEnter={() => hoverOpen(section.id)}
+                onMouseLeave={hoverLeave}
+                onKeyDown={(event) => onTriggerKeyDown(event, section.id, index)}
+              >
+                {section.label}
+                <Chevron />
+              </button>
+            ))}
+          </div>
 
           <div className="spnav-end">
             <div className="spnav-quiet">
@@ -388,9 +628,28 @@ export default function SpectrumNav() {
                 </span>
               </button>
             </div>
+
+            <Link className="spnav-cta" to={CTA.to} onClick={closeMega}>{CTA.label}</Link>
           </div>
         </div>
       </nav>
+
+      <div className="spnav-mega">
+        {activeSection && (
+          <MegaMenu
+            ref={menuRef}
+            section={activeSection}
+            path={location.pathname}
+            showSoon={false}
+            onMouseEnter={clearClose}
+            onMouseLeave={hoverLeave}
+            onKeyDown={onMenuKeyDown}
+            onPick={closeMega}
+            onBrandKit={startBrandKit}
+            brandKitLabel={null}
+          />
+        )}
+      </div>
 
       {menu !== 'closed' && (
         <div
@@ -414,10 +673,10 @@ export default function SpectrumNav() {
             ))}
             {onSales && (
               <>
-                <p className="spnav-mi-label" id="spnav-menu-page" data-mi style={{ '--i': QUIET.length }}>This page</p>
+                <p className="spnav-mi-label" id="spnav-menu-page" data-mi style={{ '--i': RAIL_TOP }}>This page</p>
                 <div className="spnav-mi-group" role="group" aria-labelledby="spnav-menu-page">
                   {PAGE_ANCHORS.map((a, i) => (
-                    <QuietLink key={a.id} className="spnav-mi spnav-mi--sub" mi index={QUIET.length + 1 + i} label={a.label} href={`#${a.id}`} onClick={() => setOpen(false)} onHash={menuHash} />
+                    <QuietLink key={a.id} className="spnav-mi spnav-mi--sub" mi index={RAIL_TOP + 1 + i} label={a.label} href={`#${a.id}`} onClick={() => setOpen(false)} onHash={menuHash} />
                   ))}
                 </div>
               </>

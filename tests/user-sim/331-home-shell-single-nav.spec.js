@@ -47,7 +47,10 @@ for (const vp of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
         // The accessibility tree: no navigation landmark, no search field, but
         // the two hero buttons are there as links with real destinations.
         const tree = await page.locator('body').ariaSnapshot()
-        expect(tree, 'no navigation landmark before the real nav exists').not.toMatch(/- navigation/)
+        // The one landmark allowed is the crawlable Tools block (scripts/crawl-html.mjs): real
+        // links for a visitor with no JavaScript, outside the inert skeleton on purpose.
+        expect(tree, 'no navigation landmark before the real nav exists').not.toMatch(/- navigation(?! "Tools")/)
+        expect(tree, 'the crawlable Tools links are reachable before the app starts').toMatch(/- navigation "Tools"/)
         expect(tree, 'no textbox from the inert search frame').not.toMatch(/- textbox/)
         await expect(page.getByRole('link', { name: /Open the toolkit/ })).toHaveAttribute('href', '/projects')
         await expect(page.getByRole('link', { name: 'View plans' })).toHaveAttribute('href', '/plans')

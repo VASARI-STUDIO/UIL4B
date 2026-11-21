@@ -99,6 +99,36 @@ html[data-reduced-motion="true"] .spnav[data-nav-pinned="1"]:not(:has(:focus-vis
 html[data-reduced-motion="true"] .spnav-quiet-link{transition:none}
 html[data-reduced-motion="true"] .spnav-search{transition:none}
 html[data-reduced-motion="true"] .spnav-search:active{transform:none}
+/* THE TOOL MAP (from 1100px). Three triggers after the mark open the app's
+   own mega menu (nav/MegaMenu.jsx, styled in global.css as .pnav-menu), and an
+   ink pill at the end opens the toolkit. Below 1100px both give way: the quiet
+   links and search carry the bar, and the phone menu lists the sections.
+   Tools is hidden while the menus show, because Create's index is /tools. */
+.spnav-menus,.spnav-cta{display:none}
+@media(min-width:1100px){
+  .spnav-menus{display:flex;align-items:center;gap:4px;margin-right:auto}
+  .spnav-cta{display:inline-flex}
+}
+.spnav-trigger{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border:0;border-radius:var(--radius-pill);background:transparent;color:color-mix(in srgb,var(--t0) 68%,transparent);font-family:var(--font);font-size:14px;font-weight:400;line-height:normal;cursor:pointer;transition:color 150ms ease,background-color 150ms ease}
+@media(hover:hover) and (pointer:fine){.spnav-trigger:hover{color:var(--t0)}}
+.spnav-trigger[aria-expanded="true"]{color:var(--t0);background:color-mix(in srgb,var(--t0) 6%,transparent)}
+.spnav-chev{display:block;width:10px;height:10px;transition:transform 160ms cubic-bezier(.23,1,.32,1)}
+.spnav-trigger[aria-expanded="true"] .spnav-chev{transform:rotate(180deg)}
+.spnav-cta{align-items:center;min-height:44px;padding:0 20px;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:14px;font-weight:540;line-height:normal;text-decoration:none;white-space:nowrap;transition:background-color 150ms ease,transform 120ms cubic-bezier(.23,1,.32,1)}
+@media(hover:hover) and (pointer:fine){.spnav-cta:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}}
+.spnav-cta:active{transform:scale(.97)}
+/* The menu hangs under this bar, not the app bar it was drawn for. */
+.spnav-mega .pnav-menu{top:calc(var(--nav-top,0px) + var(--spnav-h) + var(--notice-h,0px) + 4px);max-height:calc(100dvh - var(--spnav-h) - var(--nav-top,0px) - var(--notice-h,0px) - 28px)}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-trigger,
+  html:not([data-reduced-motion="false"]) .spnav-chev,
+  html:not([data-reduced-motion="false"]) .spnav-cta{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-cta:active{transform:none}
+}
+html[data-reduced-motion="true"] .spnav-trigger,
+html[data-reduced-motion="true"] .spnav-chev,
+html[data-reduced-motion="true"] .spnav-cta{transition:none}
+html[data-reduced-motion="true"] .spnav-cta:active{transform:none}
 /* On a touch screen the pill is a 44px target, like the bar's other controls. */
 @media(pointer:coarse){.spnav-search{min-height:44px}}
 /* The phone's two buttons; hidden on a wide window. */

@@ -86,7 +86,7 @@ for (const id of CSS_IDS) {
 
 test('font-gallery: loops on a timer and holds one face under reduced motion', () => {
   const root = process.cwd()
-  const nav = fs.readFileSync(path.join(root, 'src/components/PillNav.jsx'), 'utf8')
+  const nav = fs.readFileSync(path.join(root, 'src/components/nav/MegaMenu.jsx'), 'utf8')
   const moments = fs.readFileSync(path.join(root, 'src/components/nav/menuMoments.js'), 'utf8')
   assert.match(nav, /setTimeout\(tick, GALLERY_STEP_MS\)/)
   assert.match(moments, /if \(reducedMotion\(\)\) return \[/)

@@ -223,14 +223,17 @@ function heroH1() {
  * on the sales page, written out because the component cannot be imported here.
  */
 function shellNav() {
+  const chev = '<svg class="spnav-chev" aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>'
   const glass = (size) => `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>`
   return `<nav class="spnav" aria-hidden="true" inert data-nav-hidden="0" data-nav-pinned="0" data-scrolled="0">
         <div class="spnav-bar">
           <span class="spnav-mark"><span class="spnav-word">${logoSvg({ attrs: 'class="brand-logo brand-logo--lockup brand-logo-wide" focusable="false"' })}</span></span>
+          <div class="spnav-menus"><span class="spnav-trigger">Create${chev}</span><span class="spnav-trigger">Discover${chev}</span><span class="spnav-trigger">Learn${chev}</span></div>
           <div class="spnav-end">
             <div class="spnav-quiet"><span class="spnav-quiet-link">Tools</span><span class="spnav-quiet-link">Plans</span><span class="spnav-quiet-link">On mobile</span></div>
             <span class="spnav-search">${glass(15)}<span>Search tools</span><kbd>Ctrl K</kbd></span>
             <div class="spnav-phone"><span class="spnav-icon">${glass(17)}</span><span class="spnav-icon spnav-burger"><span class="spnav-burger-ico" data-burger="out"><span></span><span></span></span></span></div>
+            <span class="spnav-cta">Start a project</span>
           </div>
         </div>
       </nav>`

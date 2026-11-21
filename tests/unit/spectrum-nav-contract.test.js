@@ -150,8 +150,10 @@ test('Beta is not a second Soon, in the app header', () => {
   // One is "not yet", the other is "yes, with a stated limit". They share the
   // badge SHAPE and differ in colour, and a Soon tool can never also be Beta
   // because a tool the tree marks Soon is not mounted.
-  const src = stripJs(read(PILL_NAV))
-  assert.match(src, /\{t\.soon && <span className="soon-badge">Soon<\/span>\}/, PILL_NAV)
+  // The menu body lives in MegaMenu.jsx now, shared by the app header and
+  // the sales page's bar.
+  const src = stripJs(read('src/components/nav/MegaMenu.jsx'))
+  assert.match(src, /\{t\.soon && <span className="soon-badge">Soon<\/span>\}/, 'MegaMenu.jsx')
   assert.match(src, /\{!t\.soon && t\.beta && <span className="beta-badge">Beta<\/span>\}/)
   const css = stripCss(read(GLOBAL_CSS))
   // The menu-scoped chip changes geometry only; the colours stay with the
@@ -160,12 +162,25 @@ test('Beta is not a second Soon, in the app header', () => {
 })
 
 test('the phone menu is the three links and the page\'s sections — not a mega menu', () => {
-  // The menu lists what the bar sheds (Tools, Plans, On mobile), then a "This
-  // page" label and the sales page's sections. The tool tree, the theme
-  // control and an account block must not come back.
+  // The menu lists what the bar sheds (Tools, Plans, On mobile), Discover and
+  // Learn, then a "This page" label and the sales page's sections. The tool
+  // tree, the theme control and an account block must not come back into it.
+  // The wide bar carries the tool tree as mega menus; the phone menu does not.
   const src = stripJs(read(SPECTRUM_NAV))
+  assert.match(src, /import MegaMenu from '\.\/nav\/MegaMenu'/, 'the wide bar no longer shares the app\'s mega menu')
+  assert.match(src, /NAV_SECTIONS\.map\(\(section, index\) => \([\s\S]{0,200}className="spnav-trigger"/, 'the wide bar lost its menu triggers')
+  const start = src.indexOf('className="spnav-rail"')
+  assert.ok(start > 0, 'the phone menu is gone')
+  const rail = src.slice(start)
   for (const [what, re] of [
-    ['the tool tree', /NAV_SECTIONS/],
+    ['the tool tree', /NAV_SECTIONS|<MegaMenu/],
+    ['the three-way theme segment', /<ThemeChoice/],
+    ['the one-press theme cycle', /ThemeCycle/],
+    ['an account block', /logout\(\)|openLogin\(/],
+  ]) {
+    assert.doesNotMatch(rail, re, `the phone menu has grown ${what} again`)
+  }
+  for (const [what, re] of [
     ['the three-way theme segment', /<ThemeChoice/],
     ['the one-press theme cycle', /ThemeCycle/],
     ['an account block', /logout\(\)|openLogin\(/],
@@ -191,11 +206,13 @@ test('the phone menu is the three links and the page\'s sections — not a mega 
     'the full-screen menu must declare itself a modal dialog')
 })
 
-test('the bar carries no "Open the toolkit"; the footer still enters the app with no sign-up gate', () => {
-  // Entering the app is the hero's call to action. Signed out or in it lands on
-  // /projects, the workspace; sign-up happens only on save or export.
+test('the bar does not repeat the hero\'s "Open the toolkit"; its own button and the footer enter the app with no sign-up gate', () => {
+  // "Open the toolkit" is the hero's call to action. The wide bar has its own
+  // button in its own words and, like the hero, it lands on /projects, the
+  // workspace, signed out or in; sign-up happens only on save or export.
   const src = stripJs(read(SPECTRUM_NAV))
-  assert.doesNotMatch(src, /Open the toolkit|spnav-cta/)
+  assert.doesNotMatch(src, /Open the toolkit/)
+  assert.match(src, /const CTA = \{ to: '\/projects', label: 'Start a project' \}/)
   const footer = stripJs(read('src/components/spectrum/SpectrumFooter.jsx'))
   assert.match(footer, /toolkitTo = '\/projects'/)
   assert.doesNotMatch(footer, /onOpenToolkit/, 'the footer CTA opens the sign-up dialog again')
@@ -218,7 +235,8 @@ test('the quiet links are the design\'s three, and each one goes somewhere real'
     assert.match(page, new RegExp(`id="${id}"`), `SpectrumNav links to #${id}, which Spectrum.jsx does not define`)
   }
   const routes = [...src.matchAll(/to: '(\/[a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(routes, ['/tools', '/plans', '/mobile'])
+  // The fourth is the wide bar's own button, which lands in the workspace.
+  assert.deepEqual(routes, ['/tools', '/plans', '/mobile', '/projects'])
   const app = stripJs(read('src/App.jsx'))
   assert.match(app, /=== '\/mobile'[\s\S]{0,400}<SpectrumMobile \/>/, 'App.jsx does not render a page at /mobile')
   assert.match(app, /=== '\/plans'[\s\S]{0,400}<Pricing \/>/, 'App.jsx does not render a page at /plans')
