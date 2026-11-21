@@ -138,6 +138,13 @@ function personality(ctx) {
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const lch = (s) => { const [L, C, H] = /oklch\(([\d.]+) ([\d.]+) ([\d.]+)\)/.exec(s).slice(1, 4).map(Number), z = (v) => v.toFixed(2).replace(/^0./, ".");  return `${z(L)} ${z(C)} ${Math.round(H)}`; };
 
+const valueLines = (col) => [`HEX ${col.hex.toUpperCase()}`, `RGB ${hexRgb(col.hex).join(' ')}`, `OKLCH ${lch(col.oklch)}`];
+// the width the longest of a field's lines needs (the three values, or the name)
+const fieldNeed = (ctx, col) => Math.max(...valueLines(col).map((v) => adv(ctx, 'dm', v, TXT, 0, 400)), adv(ctx, 'body', col.name, 16, 0, ctx.weights.medium));
+// where a field's text starts: 16 in, or 64 on the first field (the page margin), except that a first field too narrow for its values
+// at 64 (FIELD_MIN counts 16) gives up the difference rather than run its values past the field; its caption below follows it
+const padOf = (c, need) => (c.x === 0 ? Math.max(16, Math.min(64, c.w - 16 - Math.ceil(need))) : 16);
+
 // ---- 006 palette: the fields are the page, by share, full bleed, running on under the glass to 1152 ----
 function palette(ctx) {
   const T = tokens(ctx);
@@ -150,9 +157,9 @@ function palette(ctx) {
   const under = cols.map((c, i) => {
     const col = ctx.colours.find((k) => k.hex.toLowerCase() === c.hex.toLowerCase());
     if (!col) return rect0(c, Y0, H, '');
-    const fg = onFill(ctx, T, c.hex, TXT, 400), pad = i === 0 ? 64 : 16, near = ctx.ratio(c.hex, T.ground) < 1.25;
-    const vals = [`HEX ${col.hex.toUpperCase()}`, `RGB ${hexRgb(col.hex).join(' ')}`, `OKLCH ${lch(col.oklch)}`];
-    const need = Math.max(...vals.map((v) => adv(ctx, 'dm', v, TXT, 0, 400)), adv(ctx, 'body', col.name, 16, 0, ctx.weights.medium));
+    const fg = onFill(ctx, T, c.hex, TXT, 400), near = ctx.ratio(c.hex, T.ground) < 1.25;
+    const vals = valueLines(col);
+    const need = fieldNeed(ctx, col), pad = padOf(c, need);
     if (pad + need + 16 > c.w) console.warn(`30-fluted palette: ${col.name} values need ${Math.ceil(need)} px, the field leaves ${c.w - pad - 16}`);
     const inner = `<div style="position:absolute;left:${pad}px;top:16px;color:${fg};white-space:nowrap"><div style="font:${ctx.weights.medium} 16px/20px var(--body)">${A(col.name)}</div>`
       + `<div style="margin-top:8px;font:400 ${TXT}px/20px var(--dm)">${vals.map(A).join('<br>')}</div></div>`;
@@ -163,7 +170,7 @@ function palette(ctx) {
   const wrap = (text, w) => { let n = 1, at = 0; for (const wd of text.split(' ')) { const a = adv(ctx, 'chrome', wd, TXT, 0, 400), sp = at ? adv(ctx, 'chrome', ' ', TXT, 0, 400) : 0; if (at + sp + a > w && at) { n++; at = a; } else at += sp + a; } return n; };
   const key = cols.filter((c) => ctx.colours.some((k) => k.hex.toLowerCase() === c.hex.toLowerCase())).slice(0, 4).map((c) => {
     const col = ctx.colours.find((k) => k.hex.toLowerCase() === c.hex.toLowerCase());
-    const cx = c.x === 0 ? 64 : c.x + 16, cw = Math.min(c.x === 0 ? c.w - 64 - 16 : c.w - 32, 360), sentences = col.lands.split(/(?<=\.)\s+/);
+    const pad = padOf(c, fieldNeed(ctx, col)), cx = c.x === 0 ? pad : c.x + 16, cw = Math.min(c.x === 0 ? c.w - pad - 16 : c.w - 32, 360), sentences = col.lands.split(/(?<=\.)\s+/);
     // a first sentence that alone runs past 4 lines is cut at its first colon (the browser sets this face a little wider than the advance sum, so the fit uses 90% of the width)
     let land = sentences[0]; if (wrap(land, cw * 0.9) > 4 && land.includes(':')) land = `${land.split(':')[0]}.`;
     for (const s of sentences.slice(1)) { if (wrap(`${land} ${s}`, cw * 0.9) <= 4) land = `${land} ${s}`; else break; }

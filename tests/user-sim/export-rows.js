@@ -1,9 +1,10 @@
 // How a spec reaches one export file in the Export popup (src/components/export/):
-// pick the type in the rail, then the category under Brand book, then the file in
+// pick the type in the rail, then the category's tab, then the file in
 // that category's "{Category} file type" switch. Where a format lives is read from
 // src/config/dialogExport.js, so a file moved to another category is followed here.
 // What the popup SAYS (file labels, button words) is written out below, not read
 // from the source, so a reworded button fails the spec instead of agreeing with it.
+import { expect } from './base.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { exportLocation } from '../../src/config/dialogExport.js'
 
@@ -53,17 +54,22 @@ const rootOf = (panelOrPage) => (
   typeof panelOrPage.getByRole === 'function' && !panelOrPage.goto ? panelOrPage : exportPanel(panelOrPage)
 )
 
-/** The rail's type radio: "Brand book", "UI kit" or "Code". */
+// The names the popup's rail and tabs had before the four-category layout, mapped to today's, so a spec that still says "Brand book" or
+// "Slides" reaches the right place. Branding, UI, Image and Code are the rail; every category is a tab in the bar over the preview.
+const RAIL = { 'Brand book': 'Branding', 'UI kit': 'UI' }
+const TAB = { Book: 'Brand book', Slides: 'Guidelines' }
+
+/** The rail's type radio: "Branding", "UI", "Image" or "Code". */
 export const typeRadio = (panelOrPage, typeName) => rootOf(panelOrPage)
   .getByRole('radiogroup', { name: 'Export type' })
-  .getByRole('radio', { name: new RegExp(`^${typeName}`) })
+  .getByRole('radio', { name: new RegExp(`^${RAIL[typeName] || typeName}`) })
 
-/** The Brand book category radio: "Book, A4 pages, Pro", "Slides, 16:9, Pro" or "Style guide, A4, free". */
+/** The tab for a category: "Guidelines, Brand guidelines", "Brand book, A4 pages, Pro" or "Style guide, A4". */
 export const categoryRadio = (panelOrPage, categoryName) => rootOf(panelOrPage)
-  .getByRole('radiogroup', { name: 'Brand book categories' })
-  .getByRole('radio', { name: new RegExp(`^${categoryName},`) })
+  .getByRole('tablist')
+  .getByRole('tab', { name: new RegExp(`^${TAB[categoryName] || categoryName},`) })
 
-/** The File step's radiogroup for a category ("Book file type"). */
+/** The file switch under the page, a radiogroup named for the category ("Brand book file type"). */
 export const fileGroup = (panelOrPage, categoryName) => rootOf(panelOrPage)
   .getByRole('radiogroup', { name: `${categoryName} file type` })
 
@@ -91,4 +97,55 @@ export async function exportAs(page, id) {
     primaryButton(page).click(),
   ])
   return download
+}
+
+/** Open "View templates" (the grid of templates in the dialog) if it is not open, and return the grid. */
+export async function openTemplates(panelOrPage) {
+  const panel = rootOf(panelOrPage)
+  const grid = panel.locator('.xd-tpl-grid')
+  if (!(await grid.count())) await panel.getByRole('button', { name: 'View templates' }).click()
+  await grid.waitFor()
+  return grid
+}
+
+/** A template card by the template's own name (its label reads "<name>, <brand> sample brand[, Pro][, chosen]"). */
+export const templateCard = (panelOrPage, name) => rootOf(panelOrPage)
+  .locator('.xd-tpl-card')
+  .filter({ has: rootOf(panelOrPage).page().locator('.xd-tpl-n').getByText(name, { exact: true }) })
+
+/** Choose a template the way a person does: View templates, then the card. The dialog returns to the preview with it chosen. */
+export async function chooseTemplate(panelOrPage, name) {
+  const panel = rootOf(panelOrPage)
+  await openTemplates(panel)
+  await templateCard(panel, name).click()
+  await panel.locator('.xd-tpl-grid').waitFor({ state: 'detached' })
+}
+
+/** The template in use: open the grid, read the pressed card, and go back to the preview. */
+export async function expectTemplate(panelOrPage, name) {
+  const panel = rootOf(panelOrPage)
+  await openTemplates(panel)
+  await expect(templateCard(panel, name)).toHaveAttribute('aria-pressed', 'true')
+  await panel.getByRole('button', { name: 'Back to preview' }).click()
+}
+
+/** The grid as a person reads it: the card names in order, the ones that carry the Pro mark, and the chosen one. Goes back to the preview. */
+export async function readTemplates(panelOrPage) {
+  const panel = rootOf(panelOrPage)
+  const grid = await openTemplates(panel)
+  const read = await grid.locator('.xd-tpl-card').evaluateAll((cards) => ({
+    names: cards.map((c) => c.querySelector('.xd-tpl-n').textContent),
+    pro: cards.filter((c) => c.querySelector('.xd-tpl-pro')).map((c) => c.querySelector('.xd-tpl-n').textContent),
+    chosen: cards.filter((c) => c.getAttribute('aria-pressed') === 'true').map((c) => c.querySelector('.xd-tpl-n').textContent),
+  }))
+  await panel.getByRole('button', { name: 'Back to preview' }).click()
+  await grid.waitFor({ state: 'detached' })
+  return read
+}
+
+/** Open "File details" (the file list, the name, logo and identity fields) if it is closed, and return it. */
+export async function openDetails(panelOrPage) {
+  const more = rootOf(panelOrPage).locator('details.xd-more')
+  if ((await more.getAttribute('open')) === null) await more.locator('summary').click()
+  return more
 }

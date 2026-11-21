@@ -52,7 +52,7 @@
 //
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
-import { chooseFormat, exportPanel, primaryButton, actionLabel, categoryRadio } from './export-rows.js'
+import { chooseFormat, chooseTemplate, expectTemplate, exportPanel, primaryButton, actionLabel, categoryRadio } from './export-rows.js'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
@@ -230,7 +230,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
   // nav at 1280. (At 390 the nav's Export button is display:none and the
   // panel has no other entry — recorded in the PR, not asserted here.)
   // The modal is raised from the palette's colour-system wall. The export
-  // panel's "Unlock with Pro" goes straight to /plans and raises no modal at all — see the
+  // panel's "Upgrade to Pro" goes straight to /plans and raises no modal at all — see the
   // export test in flow 4. Keyboard activation for the reason the phone test
   // above gives.
   async function raiseWall(page) {
@@ -580,26 +580,16 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
     // The guidelines open on Label, a Free theme; a Pro theme is what locks the document.
-    // Under 1024 x 900 the list is folded under a "Theme: <name> · <brand>" row, which names the chosen theme; open it to pick.
-    const themes = page.getByRole('radiogroup', { name: 'Theme' })
-    const toggle = page.getByRole('button', { name: /^Theme:/ })
-    const folded = (await toggle.count()) > 0
-    if (folded) {
-      await expect(toggle, 'the guidelines open on a free theme').toHaveAccessibleName(/^Theme: Label\b/)
-      await toggle.click()
-    } else {
-      await expect(themes.getByRole('radio', { checked: true }), 'the guidelines open on a free theme').toHaveText(/^Label/)
-    }
-    await themes.getByRole('radio', { name: /^Studio\b/ }).click()
-    if (folded) await expect(toggle).toHaveAccessibleName(/^Theme: Studio\b/)
-    else await expect(themes.getByRole('radio', { checked: true })).toHaveText(/^Studio/)
-    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
-    // Slides is not tagged Pro in the rail: the theme decides, and the lock is on the preview and the button.
-    await expect(categoryRadio(page, 'Slides'), 'the rail does not call the free document Pro').toHaveAccessibleName('Slides, Brand guidelines')
-    await expect(primaryButton(page)).toHaveText('Unlock with Pro')
+    await expectTemplate(page, 'Label')
+    await chooseTemplate(page, 'Studio')
+    await expectTemplate(page, 'Studio')
+    await expect(page.locator('.xd-stage-pro'), 'the preview is locked').toHaveText(/Pro template/)
+    // Guidelines is not tagged Pro in its tab: the template decides, and the lock is on the preview and the button.
+    await expect(categoryRadio(page, 'Guidelines'), 'the tab does not call the free document Pro').toHaveAccessibleName('Guidelines, Brand guidelines')
+    await expect(primaryButton(page)).toHaveText('Upgrade to Pro')
     // The wall goes to /plans, and asks
     // for nothing on the way.
-    await page.getByRole('button', { name: /Unlock with Pro/i }).click()
+    await page.getByRole('button', { name: /Upgrade to Pro/i }).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await context.close()

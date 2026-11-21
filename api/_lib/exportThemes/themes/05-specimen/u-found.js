@@ -102,7 +102,10 @@ export const uFound = {
     const sizes = body.map((t) => t.size), weights = [...new Set(body.map((t) => t.weight))].sort((a, b) => a - b);
     const minW = ctx.logo.minSize.screenPx, steps = [400, 280, 190, 140].filter((w) => w > minW + 8).concat(minW);
     const n = ctx.sections.length;
-    const tabs = ctx.sections.map((s, i) => `<li class="ku1-tab" style="left:calc(${i} * 100% / ${n});width:calc(100% / ${n})"><span class="ku1-tabin"><b class="k-disp num">${s.n}</b><span class="k-disp ku1-tabt">${A(s.title)}</span><span class="ku1-tabr num">${range(s)}</span></span></li>`).join('');
+    // a tab title is one line at 24 px, and a long one ("Foundations") ran past its tab: the size comes down with the length, at about
+    // half an em a letter, into what the tab leaves after its padding and the section number (the pulled box is 794 - 2 x 56 wide), never under 16
+    const tabFit = (title) => Math.max(16, Math.min(24, Math.floor((682 / n - 56) / (0.5 * String(title).length))));
+    const tabs = ctx.sections.map((s, i) => `<li class="ku1-tab" style="left:calc(${i} * 100% / ${n});width:calc(100% / ${n})"><span class="ku1-tabin"><b class="k-disp num">${s.n}</b><span class="k-disp ku1-tabt" style="font-size:${tabFit(s.title)}px">${A(s.title)}</span><span class="ku1-tabr num">${range(s)}</span></span></li>`).join('');
     const last = ctx.pages.at(-1);
     const px = (w) => `<span class="num">${w}</span>`;
     const card = `<div class="ku1-lift">

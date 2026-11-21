@@ -1,5 +1,8 @@
-// The one place that decides whether a plan may have an export. Both export routes ask it, so a themed file and a document cannot
-// disagree about what is Pro, and a test can walk the whole table through one function.
+// The one function that decides whether a plan may have an export, and a test can walk the whole table through it. The live page
+// preview (api/_lib/exportPreview.js) calls it. The themed file route (api/_lib/exportThemeRoute.js, serveThemeExport) does not: it
+// checks `plan.id !== 'pro' && isThemeExportPro(row, theme)` itself, against the same table in src/data/exportThemes.js, so the two
+// agree about what is Pro because they read one table. A document export (api/_lib/exportDocument.js) serves only formats flagged `pro`
+// in src/config/exportFormats.js and reads the plan itself.
 //
 //   assertThemeAccess(plan, { theme, row, format }) -> { ok: true } | { ok: false, status, code }
 //

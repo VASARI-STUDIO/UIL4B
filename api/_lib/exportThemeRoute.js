@@ -79,10 +79,11 @@ function withCsp(html) {
 }
 
 // One document of every page, for printing (fonts embedded) or for a zip (fonts beside it).
-function pagesDoc(E, T, ctx, kind, standalone) {
+function pagesDoc(E, T, ctx, kind, standalone, only) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
-  const list = kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES
+  // `only` is one page id: the preview draws a single page and not the whole document.
+  const list = (kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES).filter((p) => only === undefined || p.id === only)
   // A theme draws only the pages it has written (a guidelines-only theme has twelve); the engine's list keeps their order.
   // A page whose layout cannot hold this brand's words (a theme checks every fit and throws) is left out rather than failing the
   // whole file; only a document with no page at all is a failed build.
@@ -134,6 +135,20 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
   const { files } = await bookSite(E, T, brand, slug)
   return { name: `${slug}-brand-book-${theme}.zip`, zip: await zipOf(E, files, `${slug}-brand-book-${theme}`) }
+}
+
+/**
+ * One page of a theme for the live preview, drawn the way renderThemeExport draws it for a print document (stand-alone, fonts
+ * embedded, CSP meta first). `kind` is 'uikit' or 'guidelines' and `page` an engine page id; kind 'book' is the book's first
+ * screen and takes no page. Returns { html }.
+ */
+export async function renderThemePage({ theme, kind, page, design, projectName }, engine) {
+  const E = engine || await loadEngine()
+  const brand = E.projectToBrand({ design, projectName })
+  const T = await THEMES[theme]()
+  if (kind === 'book') return { html: withCsp(bookPrint(E, T, brand, brand.slug)) }
+  const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand)
+  return { html: withCsp(pagesDoc(E, T, ctx, kind, true, page)) }
 }
 
 const safePath = (p) => (typeof p === 'string' && /^[A-Za-z0-9_.[\]-]{1,120}$/.test(p) ? p : undefined)

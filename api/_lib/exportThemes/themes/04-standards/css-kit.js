@@ -84,9 +84,9 @@ ${componentsCss(ctx).replace(/^\/\*[^\n]*\n/, '')}
 .kc-spec li{display:grid;grid-template-columns:28px minmax(0,1fr);padding:10px 0;border-bottom:1px solid var(--dark-ink)}
 .kc-spec span{font-variant-numeric:tabular-nums}
 .kc-band{display:flex;align-items:center;gap:40px;height:112px;border-top:1px solid var(--dark-ink);border-bottom:1px solid var(--dark-ink)}
-.kc-band .disp{font-size:80px;white-space:nowrap}
-.kc-to{flex:1;min-width:0}
-.kc-chip{display:inline-flex;align-items:center;color:var(--buoy);font:600 20px/1 var(--body);white-space:nowrap}
+.kc-band .disp{font-size:var(--kcs,80px);white-space:nowrap;flex:none}
+.kc-band .kc-to{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.kc-chip{display:inline-flex;align-items:center;flex:none;color:var(--buoy);font:600 20px/1 var(--body);white-space:nowrap}
 .pg--kcover .cv-bot p{font-size:13px;line-height:1.6;text-align:right}
 
 /* contents */

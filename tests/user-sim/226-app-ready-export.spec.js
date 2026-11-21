@@ -16,7 +16,7 @@
 //   - Write the dark Figma file from the light tokens: "light and dark differ" fails.
 //   - Give the apps category pro:false: every free-account test fails.
 //   - Skip the Pro check for app-bundle in useExportRunner.run: "no download" fails.
-//   - Remove 'apps' from EXPORT_TYPES: the keyboard test fails at the App-ready radio.
+//   - Remove 'apps' from the UI type's categories: the keyboard test fails at the App-ready bundle tab.
 //
 // Screenshots: set APP_READY_CAPTURES to a folder and the preview tests save viewport
 // shots there; with it unset they save nothing.
@@ -25,7 +25,7 @@ import path from 'node:path'
 import JSZip from 'jszip'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { exportPanel, typeRadio, primaryButton, dockStatus, dockError } from './export-rows.js'
+import { exportPanel, typeRadio, categoryRadio, primaryButton, dockStatus, dockError } from './export-rows.js'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
 
 const PRIMARY = '#1F4B8E'
@@ -83,11 +83,12 @@ async function openFromHeader(page) {
   return settled(page)
 }
 
-/** Open the popup and choose App-ready. */
+/** Open the popup and choose the App-ready bundle: the UI type, then its App-ready bundle tab. */
 async function openAppReady(page) {
   const panel = await openFromHeader(page)
-  await typeRadio(panel, 'App-ready').click()
-  await expect(typeRadio(panel, 'App-ready')).toHaveAttribute('aria-checked', 'true')
+  await typeRadio(panel, 'UI').click()
+  await categoryRadio(panel, 'App-ready bundle').click()
+  await expect(categoryRadio(panel, 'App-ready bundle')).toHaveAttribute('aria-selected', 'true')
   return panel
 }
 
@@ -239,7 +240,7 @@ test.describe('a free signed-in account', () => {
           }
         })
         const panel = await openAppReady(page)
-        await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+        await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
         await expect(dockStatus(panel)).toContainText('Pro unlocks the app-ready bundle.')
 
         await primaryButton(panel).click()
@@ -331,7 +332,7 @@ test.describe('signed out', () => {
     page.on('download', (d) => downloads.push(d.suggestedFilename()))
     await go(page, WORKED_BOARD)
     const panel = await openAppReady(page)
-    await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
+    await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     await expect(panel.locator('.xfp[data-kind="bundle"] .xfp-box')).toHaveAttribute('data-state', 'ready')
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
@@ -354,12 +355,15 @@ test.describe('with the keyboard', () => {
     const panel = await settled(page)
     await expect(panel.getByRole('heading', { level: 2 }), 'focus starts on the title').toBeFocused()
 
-    await typeRadio(panel, 'Brand book').focus()
-    for (const next of ['UI kit', 'Code', 'App-ready']) {
-      await page.keyboard.press('ArrowDown')
-      await expect(typeRadio(panel, next)).toBeFocused()
-      await expect(typeRadio(panel, next)).toHaveAttribute('aria-checked', 'true')
-    }
+    await typeRadio(panel, 'Branding').focus()
+    await page.keyboard.press('ArrowDown')
+    await expect(typeRadio(panel, 'UI')).toBeFocused()
+    await expect(typeRadio(panel, 'UI')).toHaveAttribute('aria-checked', 'true')
+    // UI opens on its UI kit tab; the arrow along the tabs reaches the App-ready bundle.
+    await categoryRadio(panel, 'UI kit').focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(categoryRadio(panel, 'App-ready bundle')).toBeFocused()
+    await expect(categoryRadio(panel, 'App-ready bundle')).toHaveAttribute('aria-selected', 'true')
     await expect(primaryButton(panel)).toHaveText('Export app-ready bundle')
     await expect(panel.locator('.xfp[data-kind="bundle"] .xfp-box')).toHaveAttribute('data-state', 'ready')
 

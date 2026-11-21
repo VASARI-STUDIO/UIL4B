@@ -199,9 +199,11 @@ test('the export panel offers the raster formats and loads them on demand', () =
   assert.ok(/await import\('\.\.\/utils\/styleGuideRaster'\)/.test(runner),
     'the raster path must be code-split so an HTML export does not pay for it')
   assert.ok(!/^import .*styleGuideRaster/m.test(runner), 'styleGuideRaster is imported statically')
-  const guide = EXPORT_TYPES.flatMap((t) => t.categories).find((c) => c.id === 'guide')
+  // The two rasters are the Image rail's free style-guide sub-category.
+  const guide = EXPORT_TYPES.find((t) => t.id === 'image')?.categories.find((c) => c.id === 'guide-image')
   assert.ok(guide?.files.includes('png') && guide.files.includes('jpeg'),
     'the dialog must offer both raster formats, or the assertions above describe an array nobody uses')
+  assert.equal(guide.pro, false, 'the raster style guides are free in the dialog too')
 })
 
 test('a failed export keeps the dialog open and explains itself', () => {

@@ -112,7 +112,7 @@ export function bookCss(ctx) {
 .pz-bp__t{font:500 26px/36px var(--ff-body);max-width:28ch}
 .pz-bp__nh{margin-top:48px}
 .pz-state__h{line-height:.95;max-width:12em}
-.pz-state__o{display:flex;flex-wrap:wrap;gap:16px 64px;margin-top:64px}
+.pz-state__o{display:flex;flex-wrap:wrap;gap:16px 64px;margin-top:32px}
 .pz-state__o li{font-size:40px;color:var(--soft)}
 
 /* 3 logo */

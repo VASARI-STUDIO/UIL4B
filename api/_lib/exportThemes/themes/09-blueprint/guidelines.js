@@ -35,7 +35,7 @@ const own = {
 <div class="g-tbc g-c2">${cell('Project', `${B.name}, renovation builders, ${B.city}`)}</div>
 <div class="g-tbc"><span class="k">Scale</span>1×. Every redline is the size as drawn.</div>
 <div class="g-tbc"><span class="k">Graphic scale, px</span><div class="g-bar" aria-hidden="true">${bar}<b class="rn" style="left:0;top:14px">0</b><b class="rn" style="left:100px;top:14px;transform:translateX(-50%)">100</b><b class="rn" style="left:200px;top:14px;transform:translateX(-100%)">200</b></div></div>
-<div class="g-tbc"><span class="k">Date</span>${A(ctx.date)}. Example project.</div>
+<div class="g-tbc"><span class="k">Date</span>${A(ctx.date)}. ${A(B.name)}.</div>
 <div class="g-tbc g-sec"><span class="k">Sections</span><ul>${sections}</ul></div>
 </div>
 </section>`;

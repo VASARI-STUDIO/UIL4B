@@ -3,22 +3,18 @@ import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
 import { useAuth } from '../../contexts/AuthContext'
 import useExportDesign from '../../hooks/useExportDesign'
-import { defaultTemplate, liveTemplates, readExportTemplates } from '../../config/exportTemplates'
+import { liveTemplates } from '../../config/exportTemplates'
 import { readLogo } from '../../utils/brandLogo'
 import { readIdentity } from '../../utils/kitIdentity'
 import { formatFileName } from '../../utils/exportFileName'
-import ExportFormatSwitch from '../ExportFormatSwitch'
-import ExportProPreview from '../ExportProPreview'
 import KitIdentityFields from '../KitIdentityFields'
 import BrandLogoField from '../BrandLogoField'
-import ExportFreePreview from './ExportFreePreview'
-import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
 import ExportSignIn from './ExportSignIn'
-import { UI_KIT_PAGES, freeGuidelinesThemeNames, freeThemeNames, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
+import { UI_KIT_PAGES, freeGuidelinesThemeNames, freeThemeNames, pickerTheme, themedFile, themedZipName } from '../../config/exportThemePicker'
 
-// The main column of the Export dialog (Preview, File, Layout, Details) and the
-// dock under it. Everything here follows the category and file the rail and the
-// File step have chosen; the building is done by useExportRunner, one level up.
+// The file details of the Export dialog (what the files are called, the layout note, the name and logo) and the dock under it.
+// Everything here follows the category and file the rail and the tabs have chosen; the building is done by useExportRunner, one
+// level up. The picture, the file switch and the gallery are ExportPreview's.
 
 // What each file is called, what it is, and what the button says. Keyed by
 // format id, so the book's PDF and the slides' PDF each keep their own sentence.
@@ -51,6 +47,10 @@ const CREDIT_LINE = {
   'contrast-json': 'This file carries no credit line.',
 }
 const copyOf = (id) => FILE_COPY[id] || { label: String(id).toUpperCase(), blurb: '', action: 'Export' }
+
+/** The file types a category makes, as the switch lists them: { id, label }. */
+// eslint-disable-next-line react-refresh/only-export-components
+export const fileOptions = (cat) => cat.files.map((id) => ({ id, label: copyOf(id).label }))
 
 // What the dock tells someone whose PDF has opened in a print window.
 const PRINT_LINE = 'In the print dialog choose Save as PDF, Margins None, and turn Headers and footers off.'
@@ -112,42 +112,6 @@ function NameLine({ lead, name, project, onRenameState }) {
   )
 }
 
-// The picture at the top of the column. The two Pro documents are drawn by
-// ExportProPreview, blurred in the pixels for a free account (and while the plan
-// is read, never sharp on a guess); the free ones by the free preview. Both sit
-// in a box whose height is reserved before any picture lands.
-function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen, shown }) {
-  const kind = cat.preview
-  if (themedFile(file)) {
-    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file shows a blurred stand-in, with the lock the live Pro previews carry.
-    // A file the account cannot export shows the blurred stand-in pictures, and never the real ones on a guess while the plan is
-    // read; the lock waits until the account is known not to be Pro.
-    const standin = kind !== 'kit' && !isPro && themedFileIsPro(file, shown.id)
-    const locked = standin && !checking
-    const lines = themeLines(kind, shown)
-    return (
-      <div className="xd-prev">
-        <ThemeStage kind={kind} theme={shown} locked={locked} standin={standin} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
-        <p className="xd-theme-cap">{lines.caption}</p>
-      </div>
-    )
-  }
-  if (kind === 'book' || kind === 'guidelines') {
-    // The book as page images has its own single layout, so it shows the default one.
-    const template = file === 'book-png' ? defaultTemplate('book') : chosen[cat.layouts]
-    return (
-      <div className={`xd-frame xd-frame--${kind}`}>
-        <ExportProPreview kind={kind} template={template} design={design} projectName={name} blurred={!isPro} showLock={false} fit />
-      </div>
-    )
-  }
-  return (
-    <div className="xd-prev">
-      <ExportFreePreview kind={kind} file={file} watermark={!isPro} project={fileProject} />
-    </div>
-  )
-}
-
 // The files a category makes, one row each: the name as it will download, then what
 // is in it. The row for the chosen file is marked. On the phone sheet a category with
 // several files folds to one line ("4 files") that opens in place.
@@ -177,13 +141,11 @@ function Manifest({ rows, file, folded }) {
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, name, fileProject = '', project, strip, onRenameState, theme, onTheme }) {
+export default function ExportSteps({ cat, file, name, fileProject = '', project, strip, onRenameState, theme }) {
   const uid = useId()
-  const { isPro, planKnown } = useSubscription()
+  const { isPro } = useSubscription()
   const { design: working } = useProject()
   const design = useExportDesign()
-  const checking = planKnown === false
-  const chosen = readExportTemplates(working)
   // The guidelines blurbs count the chosen theme's pages: a guidelines-only theme draws twelve, the others thirty-three.
   const guidePages = pickerTheme(theme).guidePages
   const files = cat.files.map((id) => {
@@ -199,7 +161,6 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
     return zip ? { ...f, saved: zip } : { ...f, saved: 'Print document', plain: true }
   })
   const themed = Boolean(themedFile(file))
-  const shown = pickerTheme(theme)
   const showLayout = !themed && Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
   const lead = NAME_LEAD[cat.preview]
   const hasLogo = Boolean(readLogo(working))
@@ -228,32 +189,10 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
       )
   }
 
-  // The Theme step sits under the picture at every width, so a chosen theme is seen at once. On a phone its list is folded to one row
-  // that already reads "Theme: <name> · <brand>", so the heading is for screen readers only there.
-  const themeStep = themed && (
-    <section className="xd-step" aria-labelledby={`${uid}-theme`}>
-      <h3 className={`xd-step-l${strip ? ' sr-only' : ''}`} id={`${uid}-theme`}>Theme</h3>
-      <ExportThemeRow value={theme} onChange={onTheme} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} strip={strip} />
-      <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
-    </section>
-  )
-
   return (
     <>
-      <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} shown={shown} />
-
-      {themeStep}
-
       <section className="xd-step" aria-labelledby={`${uid}-file`}>
         <h3 className="xd-step-l" id={`${uid}-file`}>File</h3>
-        {files.length > 1 && (
-          <ExportFormatSwitch
-            label={`${cat.name} file type`}
-            options={files.map((f) => ({ id: f.id, label: f.label }))}
-            value={file}
-            onChange={onFile}
-          />
-        )}
         <Manifest rows={rows} file={file} folded={strip && rows.length > 1} />
       </section>
 
@@ -281,7 +220,7 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
 // `onPrimary` decides what the click does: after an export it is "Done" and closes the
 // dialog, and `onAnother` is the other way on, back to the file step. After a 429 the
 // button counts `retryIn` seconds down (aria-disabled, and still readable), then is live again.
-export function ExportDock({ cat, file, busy, stage, error, notice, done, retryIn = 0, onPrimary, onAnother, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn }) {
+export function ExportDock({ cat, file, busy, stage, error, notice, done, retryIn = 0, onPrimary, onAnother, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn, templates = null, wayOut = null, onWayOut }) {
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
   const checking = planKnown === false
@@ -313,7 +252,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, retryI
   if (busy) label = BUSY_LABEL[stage] || 'Exporting…'
   else if (checking) label = 'Checking your plan…'
   else if (waiting) label = `Try again in ${retryIn >= 60 ? `${Math.floor(retryIn / 60)}:${String(retryIn % 60).padStart(2, '0')}` : `${retryIn}s`}`
-  else if (locked) label = 'Unlock with Pro'
+  else if (locked) label = 'Upgrade to Pro'
   else if (done) label = 'Done'
 
   // The sign-in step takes the dock over: the same form as the account dialog, in place.
@@ -326,6 +265,16 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, retryI
         {error && <p className="xd-error" role="alert">{error}</p>}
       </div>
       <div className="xd-dock-acts">
+        {templates && (
+          <button type="button" className="btn xd-act xd-templates" onClick={templates.onClick} aria-pressed={templates.open} disabled={busy}>
+            {templates.open ? 'Back to preview' : 'View templates'}
+          </button>
+        )}
+        {locked && wayOut && !done && (
+          <button type="button" className="xd-link xd-wayout" onClick={onWayOut} disabled={busy}>
+            {wayOut.label}
+          </button>
+        )}
         {cat.preview === 'code' && (
           <button type="button" className="btn xd-act" onClick={onCopy} disabled={busy}>
             Copy file

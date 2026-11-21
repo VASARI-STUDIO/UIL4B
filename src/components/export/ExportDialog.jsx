@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
 import { stashResumeTarget } from '../../contexts/LoginPromptContext'
@@ -7,18 +7,21 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import useExportRunner from '../../hooks/useExportRunner'
-import { DEFAULT_PRESET, EXPORT_TYPES, readLastPick, readLastTheme, resolvePreset, startFor, storeLastPick } from '../../config/dialogExport'
+import { DEFAULT_PRESET, EXPORT_TYPES, freeWayOut, readLastPick, readLastTheme, resolvePreset, startFor, storeLastPick } from '../../config/dialogExport'
+import { readExportTemplates } from '../../config/exportTemplates'
 import { defaultThemeId, themeFitsFile, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
-import ExportNav from './ExportNav'
-import ExportSteps, { ExportDock } from './ExportSteps'
+import ExportNav, { ExportTabs } from './ExportNav'
+import ExportPreview from './ExportPreview'
+import ExportTemplates from './ExportTemplates'
+import ExportSteps, { ExportDock, fileOptions } from './ExportSteps'
 // The reused pieces (pills, tiles, fields, the Pro preview) are styled by the
 // overlay sheet; the dialog's own layout is in export-dialog.css.
 import '../../styles/deferred/overlay.css'
 import '../../styles/pages/export-dialog.css'
 
-// The Export popup: a rail (what you are making), one scrolling column (preview,
-// file, layout, details) and a dock that always shows the price line and the
-// Export button. It works from any page; `preset` says where it opens and
+// The Export popup: a rail of four kinds of export, a bar of tabs for what the chosen kind makes, one scrolling area (the page
+// preview and its gallery, the file switch, the file details; or the grid of templates) and a dock with View templates on the left and
+// Export on the right. It works from any page; `preset` says where it opens and
 // `projectId` is the saved project, if one is open (it enables Rename and the
 // trial path). Files are built by useExportRunner; nothing here makes one.
 //
@@ -45,7 +48,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const runner = useExportRunner()
   const { busy } = runner
   const { isPro, planKnown } = useSubscription()
-  const { projects } = useProject()
+  const { projects, design: working } = useProject()
   const signInGate = useRef(null)
   const [signingIn, setSigningIn] = useState(false)
   const design = useExportDesign()
@@ -123,6 +126,9 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const dialogRef = useModalDialog(requestClose, { initialFocus: '.xd-title' })
 
   const mainRef = useRef(null)
+  const panelId = useId()
+  // 'main' is the preview; 'templates' is the grid of templates for the chosen file, in place of it.
+  const [view, setView] = useState('main')
   const [localError, setLocalError] = useState('')
   const theme = themePick && themeFitsFile(themePick, pick.file) ? themePick : defaultThemeId(isPro, pick.file)
 
@@ -130,6 +136,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     if (next.type === pick.type && next.category === pick.category && next.file === pick.file) return
     const moved = next.type !== pick.type || next.category !== pick.category
     touched.current = true
+    setView('main')
     setPick(next)
     storeLastPick(next)
     runner.reset()
@@ -148,6 +155,19 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   }
   const onType = (id) => pickCategory(id, EXPORT_TYPES.find((t) => t.id === id).categories[0].id)
   const onCategory = (id) => pickCategory(type.id, id)
+
+  // Coming back from the templates grid (a pick, "Back to preview", a way out) lands on the top of the preview. The column keeps
+  // the grid's scroll position otherwise, and the stage and its Pro chip come back cut off. In a short window the whole body
+  // scrolls, so it is reset with the column. Instant, and no focus moves: the dock button that was pressed keeps it.
+  const lastView = useRef(view)
+  useLayoutEffect(() => {
+    const from = lastView.current
+    lastView.current = view
+    if (from !== 'templates' || view !== 'main') return
+    const col = mainRef.current
+    col?.scrollTo({ top: 0, behavior: 'auto' })
+    col?.closest('.xd-body')?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [view])
   const onFile = (id) => {
     lastFile.current[cat.id] = id
     apply({ ...pick, file: id })
@@ -155,17 +175,38 @@ export default function ExportDialog({ onClose, preset, projectId }) {
 
   const checking = planKnown === false
   const themedNow = Boolean(themedFile(pick.file))
+  const chosen = readExportTemplates(working)
   const locked = themedNow ? !isPro && themedFileIsPro(pick.file, theme) : cat.pro && !isPro
+  // Locked by the route table for this plan, or because the server already refused this pick with a 403: either way the button is the one Upgrade offer.
+  const blocked = locked || runner.isRefused(pick.file, themedNow ? theme : undefined)
 
   // run() sends a free account on a Pro file to checkout or /plans itself; the
   // dialog only has to get out of the way. After an export the button is "Done": it closes the dialog.
+  // A Pro template's way out: the free document, with its free template, in one click.
+  const wayOut = blocked ? freeWayOut(pick, theme) : null
+  const onWayOut = () => {
+    if (!wayOut) return
+    lastFile.current[wayOut.pick.category] = wayOut.pick.file
+    apply(wayOut.pick)
+    setView('main')
+    setThemePick(wayOut.theme ?? null)
+    runner.reset()
+  }
+  const onTemplate = (id) => {
+    touched.current = true
+    setThemePick(id)
+    setView('main')
+    runner.reset()
+    setLocalError('')
+  }
+
   const onPrimary = async () => {
     if (busy || checking || runner.retryIn > 0) return
     if (runner.done) { onCloseRef.current(); return }
     setLocalError('')
     if (signingIn) return
     // The Pro button leaves the dialog for checkout or /plans; the theme goes into the saved pick so the way back finds it.
-    if (locked) storeLastPick(pick, { theme })
+    if (blocked) storeLastPick(pick, { theme })
     const result = await runner.run(pick.file, { projectId, theme: themedNow ? theme : undefined, signIn: askToSignIn })
     if (result?.status === 'upgrade') onCloseRef.current()
   }
@@ -267,32 +308,52 @@ export default function ExportDialog({ onClose, preset, projectId }) {
           </button>
         </header>
         <div className="xd-body">
-          <ExportNav
-            types={EXPORT_TYPES}
-            typeId={type.id}
-            categoryId={cat.id}
-            onType={onType}
-            onCategory={onCategory}
-            strip={strip}
-            disabled={busy || signingIn}
-            showTags={!isPro && !checking}
-          />
+          <ExportNav types={EXPORT_TYPES} typeId={type.id} onType={onType} disabled={busy || signingIn} />
           <div className="xd-col">
-            <div className="xd-scroll" ref={mainRef} onFocus={onScrollFocus}>
+            <ExportTabs
+              typeName={type.name}
+              categories={type.categories}
+              categoryId={cat.id}
+              onCategory={onCategory}
+              disabled={busy || signingIn}
+              showTags={!isPro && !checking}
+              panelId={panelId}
+            />
+            <div className="xd-scroll" ref={mainRef} onFocus={onScrollFocus} role="tabpanel" id={panelId} aria-labelledby={`${panelId}-tab-${cat.id}`}>
               {/* Keyed by category: a swap replays the 150ms fade. Fields stop while a file builds. */}
               <fieldset className="xd-swap" key={`${type.id}/${cat.id}`} disabled={busy || signingIn}>
-                <ExportSteps
-                  cat={cat}
-                  file={pick.file}
-                  onFile={onFile}
-                  name={name || 'Design System'}
-                  fileProject={name}
-                  project={project}
-                  strip={strip}
-                  onRenameState={onRenameState}
-                  theme={theme}
-                  onTheme={(id) => { touched.current = true; setThemePick(id); runner.reset(); setLocalError('') }}
-                />
+                {view === 'templates' && themedNow ? (
+                  <ExportTemplates file={pick.file} value={theme} onPick={onTemplate} isPro={isPro} checking={checking} label={`${cat.name} templates`} />
+                ) : (
+                  <>
+                    <ExportPreview
+                      cat={cat}
+                      file={pick.file}
+                      files={fileOptions(cat)}
+                      onFile={onFile}
+                      themeId={theme}
+                      name={name || 'Design System'}
+                      fileProject={name}
+                      isPro={isPro}
+                      checking={checking}
+                      design={design}
+                      chosen={chosen}
+                    />
+                    <details className="xd-more">
+                      <summary>File details</summary>
+                      <ExportSteps
+                        cat={cat}
+                        file={pick.file}
+                        name={name || 'Design System'}
+                        fileProject={name}
+                        project={project}
+                        strip={strip}
+                        onRenameState={onRenameState}
+                        theme={theme}
+                      />
+                    </details>
+                  </>
+                )}
               </fieldset>
             </div>
             <ExportDock
@@ -308,9 +369,12 @@ export default function ExportDialog({ onClose, preset, projectId }) {
               onAnother={onAnother}
               onCopy={onCopy}
               primaryRef={primaryRef}
-              locked={locked}
+              locked={blocked}
               signingIn={signingIn}
               onSignIn={finishSignIn}
+              templates={themedNow ? { open: view === 'templates', onClick: () => setView((v) => (v === 'templates' ? 'main' : 'templates')) } : null}
+              wayOut={wayOut}
+              onWayOut={onWayOut}
             />
           </div>
         </div>

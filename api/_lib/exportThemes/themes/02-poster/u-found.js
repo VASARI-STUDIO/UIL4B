@@ -83,7 +83,7 @@ export const uFound = {
     const face = `<div class="tu1-cv__face"><div class="tu1-cv__top"><span class="tk-sn">${serial(1, 3)}</span><span class="tk-sn">${A(B.city)}</span></div>
 <div class="tu1-cv__logo">${logo}</div>${fields([['Document', 'UI kit'], ['Version', A(B.version.number), 'num'], ['Date', A(ctx.date)]], 'tu1-ff')}</div>`;
     const kit = `<div class="tu1-cv__kit">${perf(stock, hole)}<span class="tk-sn">${serial(2, 3)}</span><p class="disp tu1-cv__name">UI kit</p><p class="tu1-cv__line">${A(B.lines.primary)}</p>
-${fields([['Kept by', 'Example project']], 'tu1-ff tu1-ff--kept')}</div>`;
+${fields([['Kept by', A(B.name)]], 'tu1-ff tu1-ff--kept')}</div>`;
     // the last ticket on the roll says how much kit there is: its sections and its pages
     const tail = `<div class="tu1-cv__tail">${perf(stock, hole)}<span class="tk-sn">${serial(3, 3)}</span>${fields([['Sections', `<span class="num">${ctx.sections.length}</span>`], ['Pages', `<span class="num">${ctx.pageNo(last)}</span>`]], 'tu1-ff tu1-ff--stack tu1-ff--tail')}</div>`;
     const roll = `<div class="tu1-cv__roll" style="background:${red.hex};color:${ink}">${face}${kit}${tail}</div>`;

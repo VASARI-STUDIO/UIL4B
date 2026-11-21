@@ -49,9 +49,9 @@ const KEEP = {
   row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'ied-pj',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
-    // the export dialog's rail: type and category rows in a list, like the preview dialog's
-    'xd-type', 'xd-cat',
-    // its inline Theme list: one row per theme, Free and In Pro
+    // the export dialog's rail: one row per kind of export, like the preview dialog's; its tab bar, page thumbnails and template cards are square-cornered picks
+    'xd-type', 'xd-tab', 'xd-gal-b', 'xd-thumb', 'xd-tpl-card',
+    // the template card's shared class
     'xd-theme-opt',
     // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
     'pvd-state',
