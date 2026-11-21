@@ -168,8 +168,9 @@ export const uikit = {
   cover: (ctx) => {
     const T = tokens(ctx), B = ctx.brand, F = sc(ctx).form || {}, W = ctx.weights, label = F.book || 'Continue';
     const logo = `<div class="a" style="left:64px;top:96px">${logoHtml(ctx, T, 'colour', { width: 280 })}</div>`;
-    const hs = Math.min(96, fitSize(ctx, 'display', 'UI kit', 96, 440 / 1.03, TRACK, W.heading, 48));
-    const head = put(ctx, { x: 64, y: 224, w: 460, cls: 'disp', html: `<div style="font-size:${hs}px;line-height:96px;color:var(--ink)">UI kit</div><div style="font-size:${hs}px;line-height:96px;color:var(--quiet)">${A(`Version ${B.version.number}`)}</div>` });
+    // both lines share one size, the largest (to 96) at which the longer of them fits the 460 px box; a long version number shrinks both, never past 48
+    const ver = `Version ${B.version.number}`, hs = Math.min(96, ...['UI kit', ver].map((t) => fitSize(ctx, 'display', t, 96, 440 / 1.03, TRACK, W.heading, 48)));
+    const head = put(ctx, { x: 64, y: 224, w: 460, cls: 'disp', html: `<div style="font-size:${hs}px;line-height:96px;color:var(--ink)">UI kit</div><div style="font-size:${hs}px;line-height:96px;color:var(--quiet)">${A(ver)}</div>` });
     const prod = lead(ctx, A(B.product), { x: 548, y: 240, w: 468 });
     // the button: 44 px high, its label at the control size with 24 px either side (componentsCss), drawn k times its size, k the largest whole number up to 8 that fits 952 px
     const fs = 16, lw = adv(ctx, 'body', label, fs, 0, W.medium), bw1 = lw + 48, k = Math.max(3, Math.min(8, Math.floor(952 / (bw1 * 1.03))));
