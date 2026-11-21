@@ -17,28 +17,39 @@ const list = (items) => `<ol class="ht-list">${items.map((x) => `<li><span>${x}<
 const p = (t, cls = 'ht-p') => (t ? `<p class="${cls}">${t}</p>` : '');
 const m = (t) => `<span class="ht-m">${A(t)}</span>`;
 const pct = (n) => `${Math.round(n * 100)}%`;
-// fields that meet at straight edges; a field on the page ground gets a hairline so it reads against the ground
-const fields = (ctx, items, n = items.length) => `<div class="ht-fields" style="--n:${n}">${items.map((f) => `<div class="ht-field${lower(f.hex) === lower(L(ctx).surface) ? ' ht-field--hair' : ''}${lower(f.hex) === lower(darkF(ctx)) ? ' ht-field--dk' : ''}" style="${fieldStyle(ctx, f.hex, f.what || 'site notes field', f.size || 15)}${f.style || ''}">${f.html}</div>`).join('')}</div>`;
-const misuse = ['Do not stretch, squash or skew it.', 'Do not recolour it outside the versions above.', 'Do not rotate it.', 'Do not add shadows, glows or other effects.', 'Do not set it on a busy part of a photo.', 'Do not outline it or put it in a box.'];
-// The six misuses as tiles, each the real mark with its fault applied and crossed through (a grid of three, of two on a phone, where the slide is not drawn).
-// The mark sits above everything in its tile (z-index 1 in an isolated tile), so no ground can cover it.
+// fields that meet at straight edges; a field on the page ground gets a hairline so it reads against the ground.
+// The grid fits its content: when the last row would be short, the last field takes the rest of it (--ls at the wide layout; a lone last
+// field takes the whole row of the two-up tablet layout), so a row of five in three columns has no empty cell.
+const fields = (ctx, items, n = items.length) => {
+  const k = items.length, rest = k % n, ls = rest ? n - rest + 1 : 1;
+  return `<div class="ht-fields" style="--n:${n};--ls:${ls}">${items.map((f, i) => `<div class="ht-field${lower(f.hex) === lower(L(ctx).surface) ? ' ht-field--hair' : ''}${lower(f.hex) === lower(darkF(ctx)) ? ' ht-field--dk' : ''}${i === k - 1 && ls > 1 ? ' ht-field--last' : ''}${i === k - 1 && k % 2 ? ' ht-field--odd' : ''}" style="${fieldStyle(ctx, f.hex, f.what || 'site notes field', f.size || 15)}${f.style || ''}">${f.html}</div>`).join('')}</div>`;
+};
+const misuse = ['Do not stretch, squash or skew it.', 'Do not recolour it outside the versions above.', 'Do not rotate it.', 'Do not add shadows, glows or other effects.', 'Do not set it on a busy part of a photo. The pattern here stands in for one.', 'Do not outline it or put it in a box.'];
+// The six misuses as tiles, each the real mark with its fault really applied (stretched, recoloured, rotated, shadowed, set on a busy ground, boxed)
+// and a small red mark in the corner that says "wrong". Three across on a wide page, two on a phone. The mark sits above its ground (z-index 1 in an isolated tile).
 const misuseTiles = (ctx) => {
   const cw = ctx.brand.logo.colourways, g = cw.reversed.ground, act = actF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0];
   const seen = [], spare = ctx.colours.map((c) => c.hex).filter((h) => { const k = lower(h); if (seen.includes(k)) return false; seen.push(k); return k !== lower(g) && k !== lower(cw.reversed.name); });
-  const bands = spare.length ? spare.slice(0, 3) : [L(ctx).surface, L(ctx).text];
-  const xc = ctx.ratio(act, g) >= 3 ? act : cw.reversed.name;
+  const bands = spare.length ? spare.slice(0, 4) : [L(ctx).surface, L(ctx).text];
   const shade = ctx.ratio(L(ctx).text, g) >= 1.8 ? L(ctx).text : L(ctx).surface;
-  const stripes = bands.concat(bands, bands).slice(0, 7).map((c, i) => `<span class="ht-tile__b" style="left:${i * 14.2857}%;width:14.2857%;background:${c}"></span>`).join('');
+  // a fill that visibly differs from the version's own colour and still shows on the ground
+  const wrong = [act, ...spare, L(ctx).surface].find((c) => ctx.ratio(c, g) >= 3 && ctx.ratio(c, cw.reversed.name) >= 1.3) || act;
+  const bad = L(ctx).danger?.fg || '#C0392B';
+  // twelve narrow stripes turned off the square: a busy ground, labelled as the pattern it is
+  const stripes = `<span class="ht-tile__p">${bands.concat(bands, bands).slice(0, 12).map((c, i) => `<span class="ht-tile__b" style="left:${(i * 100) / 12}%;width:${100 / 12}%;background:${c}"></span>`).join('')}</span>`;
+  const mark = (extra = {}) => ctx.logo.html(geo, { width: 88, colourway: 'reversed', color: cw.reversed.name, label: 'Logo', ...extra });
   const items = [
-    ['Stretched', 'transform:scale(1.4,0.8)'], ['Recoloured', 'filter:hue-rotate(150deg) saturate(1.6)'], ['Rotated', 'transform:rotate(-14deg)'],
-    ['Effects', `filter:drop-shadow(0 6px 6px ${shade})`], ['Busy ground', '', stripes], ['Outlined or boxed', `border:1.5px solid ${cw.reversed.name};padding:10px`],
+    ['Stretched', 'transform:scale(1.5,0.5)', '', mark()], ['Recoloured', '', '', ctx.logo.forMisuse(88, { fill: wrong })], ['Rotated', 'transform:rotate(-14deg)', '', mark()],
+    ['Effects', `filter:drop-shadow(0 6px 6px ${shade})`, '', mark()], ['Busy ground', '', stripes, mark()], ['Outlined or boxed', `border:1.5px solid ${cw.reversed.name};padding:10px`, '', mark()],
   ];
-  return `<ul class="ht-tiles">${items.map(([t, st, bg = ''], i) => `<li class="ht-tile"><div class="ht-tile__a" style="${fieldStyle(ctx, g, 'site misuse tile')}">${bg}<span class="ht-tile__m" style="${st}">${ctx.logo.html(geo, { width: 88, colourway: 'reversed', color: cw.reversed.name, label: 'Logo' })}</span><svg class="ht-tile__x" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M2 2L98 98M98 2L2 98" stroke="${xc}" stroke-width="2" vector-effect="non-scaling-stroke" fill="none"/></svg></div><p class="ht-tile__t">${A(t)}</p><p class="ht-tile__n">${A(misuse[i])}</p></li>`).join('')}</ul>`;
+  const no = `<span class="ht-tile__no" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="${bad}"/><path d="M8 8l8 8M16 8l-8 8" stroke="${L(ctx).surface}" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg></span>`;
+  return `<ul class="ht-tiles">${items.map(([t, st, bg, m], i) => `<li class="ht-tile"><div class="ht-tile__a" style="${fieldStyle(ctx, g, 'site misuse tile')}">${bg}<span class="ht-tile__m" style="${st}">${m}</span>${no}</div><p class="ht-tile__t">${A(t)}</p><p class="ht-tile__n">${A(misuse[i])}</p></li>`).join('')}</ul>`;
 };
 const doDont = (rules) => pair(rules.map((r) => [A(r.do), A(r.dont)]), ['Do', 'Do not']);
-const colourField = (ctx, c, big) => ({
+// a colour as a field: its name, what it is for in words, then its values. `full` adds the RGB and the role line the palette slide carries.
+const colourField = (ctx, c, big, full = false) => ({
   hex: c.hex, what: `site colour ${c.name}`, size: big ? 32 : 15,
-  html: `<p class="ht-d ht-field__w" style="--ws:${big ? 'clamp(32px, 14cqw, 56px)' : 'clamp(24px, 12cqw, 32px)'}">${A(c.name)}</p><p class="ht-field__c">${A(c.lands || '')}<span class="ht-m">${A(c.hex)}</span></p>`,
+  html: `<p class="ht-d ht-field__w" style="--ws:${big ? 'clamp(32px, 14cqw, 56px)' : 'clamp(24px, 12cqw, 32px)'}">${A(c.name)}</p><p class="ht-field__c">${A(c.lands || '')}<span class="ht-m">${A(c.hex)}</span>${full ? `<span class="ht-m">rgb(${ctx.C.hexToRgb(c.hex).join(', ')})</span><span class="ht-field__r">The ${A(c.roleText || c.role)} colour.</span>` : ''}</p>`,
 });
 
 export const NOTES = {
@@ -65,7 +76,7 @@ export const NOTES = {
   'logo-misuse': (ctx) => ({ big: 'Use the logo as it is drawn.', html: misuseTiles(ctx) }),
   palette: (ctx) => {
     const cs = distinctColours(ctx).sort((a, b) => (a.role === 'action' ? -1 : b.role === 'action' ? 1 : 0));
-    return { big: `${words(cs.length)} colours`, html: fields(ctx, cs.map((c, i) => colourField(ctx, c, i === 0)), 2) };
+    return { big: `${words(cs.length)} colours`, html: fields(ctx, cs.map((c, i) => colourField(ctx, c, i === 0, true)), 3) };
   },
   proportion: (ctx) => {
     const cs = distinctColours(ctx).sort((a, b) => b.share - a.share);

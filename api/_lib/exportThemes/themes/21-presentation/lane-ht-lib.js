@@ -73,3 +73,13 @@ export function nextField(ctx, { next, prev, nextLabel = 'Next', prevLabel = 'Pr
   const p = prev ? `<a class="ht-prev" href="${prev.href}" rel="prev"><span class="ht-k">${prevLabel}</span> ${prev.ref ? `<b class="num">${A(prev.ref)}</b> ` : ''}${A(prev.title)}</a>` : '';
   return `<nav class="ht-next" aria-label="Previous and next" style="${fieldStyle(ctx, act, 'site next field', 32)}">${n}${p}</nav>`;
 }
+
+// the skip link every page opens with: the first tab stop, jumps over the bar and the contents to the page itself
+export const skipLink = () => '<a class="ht-skip" href="#ht-main">Skip to the content</a>';
+// the contents as one spread: a row to a section, in three columns (its number, its title with the page count, its pages as links). One ground, hairlines between rows;
+// nothing alternates. A section of one page is a row of one link.
+export function contentsGrid(ctx, sections, { label = 'Contents' } = {}) {
+  const hs = fitSize(ctx, sections.map((s) => s.title), 0.9, 44, 28);
+  const rows = sections.map((s) => `<li class="ht-cx__r"><p class="ht-cx__n num">${A(s.n)}</p><div class="ht-cx__h"><h2 class="ht-d ht-cx__t" style="--bs:${hs}">${A(s.title)}</h2><p class="ht-cx__c num">${s.pages.length === 1 ? '1 page' : `${s.pages.length} pages, ${A(s.pages[0].ref)} to ${A(s.pages[s.pages.length - 1].ref)}`}</p></div><ol class="ht-cx__p">${s.pages.map((u) => `<li><a href="${u.href}"><span class="num">${A(u.ref)}</span><span>${A(u.title)}</span></a></li>`).join('')}</ol></li>`).join('');
+  return `<section class="ht-cx" id="contents" aria-label="${A(label)}"><ol>${rows}</ol></section>`;
+}

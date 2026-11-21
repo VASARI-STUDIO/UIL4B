@@ -9,9 +9,11 @@ import { cssKit } from './css-kit.js';
 import { cssBook, bookCss as baseBookCss } from './css-book.js';
 import { brandBook as baseBrandBook } from './book.js';
 import { cssR1 } from './css-r1.js';
+import { realCopy } from './real-copy.js';
 
 export const meta = {
   screenContent,  // Long Room says "free" once: the engine's example page and delivery rows read the product screen through this
+  realCopy,  // the words of the slot edition that print as words, not as placeholder boxes (see real-copy.js)
   id: '21-presentation', name: 'Keynote', tier: 'Pro', brand: 'kerbside',
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 },
   // the chrome face: running heads, folios, captions. Files are in fonts/; google css2 query for canvas boards.

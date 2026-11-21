@@ -173,9 +173,18 @@ export const KIT_JS = `(function () {
   // disclosure (Contents at 390)
   document.querySelectorAll('[data-disclosure]').forEach(function (b) {
     var p = document.getElementById(b.getAttribute('aria-controls'));
-    function set(open) { b.setAttribute('aria-expanded', String(open)); if (p) p.classList.toggle('is-open', open); }
+    var main = document.querySelector('main');
+    function inside() { return p ? [].slice.call(p.querySelectorAll('a[href],button:not([disabled])')).filter(function (x) { return x.offsetParent !== null; }) : []; }
+    // opening moves focus into the panel and sets the page behind it aside; Tab stays between the panel and its button; Escape closes and gives focus back
+    function set(open) { b.setAttribute('aria-expanded', String(open)); if (p) p.classList.toggle('is-open', open); if (main) main.inert = open; if (open) { var f = inside(); if (f.length) f[0].focus(); } }
     b.addEventListener('click', function () { set(b.getAttribute('aria-expanded') !== 'true'); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && b.getAttribute('aria-expanded') === 'true') { set(false); b.focus(); } });
+    document.addEventListener('keydown', function (e) {
+      if (b.getAttribute('aria-expanded') !== 'true') return;
+      if (e.key === 'Escape') { set(false); b.focus(); return; }
+      if (e.key !== 'Tab') return;
+      var f = [b].concat(inside()), i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    });
   });
   // the bench: a variant control and a state strip drive the live figure, its label and the states matrix
   document.querySelectorAll('[data-bench]').forEach(function (bench) {

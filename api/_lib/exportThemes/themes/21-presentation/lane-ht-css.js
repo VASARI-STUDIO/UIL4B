@@ -19,8 +19,10 @@ export function htCss(ctx) {
 .ht-m{font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:0}
 .ht-k{font-size:13px;line-height:1.4;font-weight:600}
 .ht :focus-visible{outline:2px solid currentColor;outline-offset:3px}
-.ht-skip{position:absolute;left:16px;top:-80px;z-index:4;padding:8px 12px;background:var(--g);color:var(--t)}
-.ht-skip:focus{top:8px}
+/* the live components keep one ring, not two: the page ink at 2px, offset by a 2px gap, in place of their own 4px ring in the focus token's colour (about 1.6:1 on a light ground) */
+.ht .ui :focus-visible,.ht .ui .is-focus{outline:2px solid var(--t);outline-offset:2px;box-shadow:none}
+.ht-skip{position:absolute;left:16px;top:-80px;z-index:4;padding:12px 16px;background:var(--g);color:var(--t);border:1px solid var(--t);font:500 14px/1.2 var(--body);text-decoration:none}
+.ht-skip:focus,.ht-skip:focus-visible{top:8px;outline:2px solid var(--t);outline-offset:3px}
 
 /* the bar: the deck's running head, one line, the same on every page */
 .ht-bar{position:relative;z-index:3;display:flex;align-items:center;gap:24px;height:56px;padding:0 56px;background:var(--g);color:var(--q);font-size:13px;line-height:1.3;border-bottom:1px solid var(--h)}
@@ -40,7 +42,6 @@ export function htCss(ctx) {
 /* contents: every section a stripe of the deck's fields */
 .ht-toc{display:none;position:fixed;top:56px;left:0;right:0;bottom:0;z-index:2;overflow:auto;overscroll-behavior:contain;background:var(--g)}
 .ht-toc[data-open="true"],.ht-toc.is-open{display:block}
-.ht-toc .ht-mode{display:none}
 .ht-toc__f{display:block;padding:20px 56px;font-weight:600;text-decoration:none;border-bottom:1px solid var(--h)}
 .ht-toc__s{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px;padding:28px 56px}
 .ht-toc__n{font-family:var(--disp);font-weight:${dw};font-stretch:${f.display.stretch || 100}%;font-size:32px;line-height:1.05;letter-spacing:-0.01em}
@@ -62,6 +63,10 @@ export function htCss(ctx) {
 
 /* the notes: one big line, the readable text beside it */
 .ht-notes{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:64px;padding:96px 56px 112px;max-width:1440px;margin:0 auto;container-type:inline-size}
+.ht-notes--spread{grid-template-columns:minmax(0,1fr);gap:56px;padding:80px 56px 112px}
+.ht-notes--spread .ht-nb{max-width:none;gap:56px}
+.ht-notes--spread :is(.ht-lead,.ht-p){max-width:68ch}
+.ht-notes--spread :is(.ht-dl,.ht-scale){max-width:960px}
 .ht-bigc{container-type:inline-size;min-width:0}
 .ht-big{font-size:var(--bs,56px);color:var(--t);overflow-wrap:anywhere}
 .ht-notes b{font-weight:600}
@@ -85,6 +90,8 @@ export function htCss(ctx) {
 
 /* fields inside the notes: colours, logo versions, traits. They meet at straight edges, as on the slides */
 .ht-fields{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr))}
+.ht-field--last{grid-column:span var(--ls,1)}
+.ht-field__r{display:block;margin-top:12px}
 .ht-field{display:flex;flex-direction:column;justify-content:space-between;gap:32px;min-height:240px;padding:24px;container-type:inline-size}
 .ht-field__w{font-size:var(--ws,40px)}
 .ht-field__c{font-size:14px;line-height:1.5}
@@ -96,13 +103,14 @@ export function htCss(ctx) {
 .ht-field__logo>*{max-width:100%}
 .ht-stripe{display:flex;height:160px}
 .ht-stripe>div{display:flex;align-items:flex-end;padding:16px;font-size:14px;line-height:1.3;min-width:0}
-.ht-tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+.ht-tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 24px}
 .ht-tile{display:flex;flex-direction:column;gap:6px;min-width:0}
 .ht-tile__a{position:relative;isolation:isolate;overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
-.ht-tile__b{position:absolute;top:0;bottom:0;z-index:0}
+.ht-tile__p{position:absolute;inset:-30%;z-index:0;transform:rotate(18deg)}
+.ht-tile__b{position:absolute;top:0;bottom:0}
 .ht-tile__m{position:relative;z-index:1;display:block;max-width:60%}
 .ht-tile__m svg,.ht-tile__m img{display:block;max-width:100%;height:auto}
-.ht-tile__x{position:absolute;inset:0;width:100%;height:100%;z-index:2}
+.ht-tile__no{position:absolute;top:10px;right:10px;z-index:2;line-height:0}
 .ht-tile__t{font-size:14px;line-height:1.4;font-weight:600;color:var(--t);margin-top:6px}
 .ht-tile__n{font-size:14px;line-height:1.5;color:var(--s)}
 .ht-scale>li{display:grid;grid-template-columns:120px minmax(0,1fr);gap:24px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--h)}
@@ -128,22 +136,17 @@ export function htCss(ctx) {
 .ht-cv{padding:72px 56px 56px;container-type:inline-size}
 .ht-cv__t{font-size:var(--bs,96px)}
 .ht-cv__l{margin-top:24px;font-size:22px;line-height:1.45;font-weight:500;max-width:36ch;color:var(--q)}
-.ht-ix>li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:32px;padding:40px 56px 48px;container-type:inline-size}
-.ht-ix__h{font-size:var(--bs,64px)}
-.ht-ix__h b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%}
-.ht-ix__hc{min-width:0}
-.ht-ix__c{margin-top:16px;font-size:14px;line-height:1.4}
-.ht-ix ol{display:flex;flex-direction:column;align-self:end}
-@media (min-width:841px){
-.ht-ix--list{grid-template-columns:minmax(0,1fr)!important;gap:28px!important}
-.ht-ix--list ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 48px;align-self:stretch}
-.ht-ix--flip{grid-template-columns:minmax(0,7fr) minmax(0,5fr)!important}
-.ht-ix--flip .ht-ix__hc{order:2}
-}
-.ht-ix ol a{display:grid;grid-template-columns:56px minmax(0,1fr);padding:10px 0;border-top:1px solid currentColor;text-decoration:none;font-size:17px;line-height:1.4}
-.ht-ix ol a .num{color:var(--q)}
-@media (hover:hover){.ht-ix ol a:hover span:last-child{text-decoration:underline;text-underline-offset:4px}}
-
+.ht-cx{padding:48px 56px 96px;max-width:1440px;margin:0 auto}
+.ht-cx>ol{border-top:2px solid var(--t)}
+.ht-cx__r{display:grid;grid-template-columns:72px minmax(0,4fr) minmax(0,8fr);gap:0 32px;padding:32px 0 36px;border-bottom:1px solid var(--h)}
+.ht-cx__n{font-family:var(--disp);font-weight:${dw};font-stretch:${f.display.stretch || 100}%;font-size:32px;line-height:1.05;color:var(--q)}
+.ht-cx__h{container-type:inline-size;min-width:0}
+.ht-cx__t{font-size:min(var(--bs,44px),44px)}
+.ht-cx__c{margin-top:12px;font-size:14px;line-height:1.4;color:var(--q)}
+.ht-cx__p{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;align-content:start}
+.ht-cx__p a{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:baseline;min-height:44px;padding:10px 0;border-bottom:1px solid var(--h);text-decoration:none;font-size:16px;line-height:1.4}
+.ht-cx__p a .num{color:var(--q)}
+@media (hover:hover){.ht-cx__p a:hover span:last-child{text-decoration:underline;text-underline-offset:4px}}
 @media (min-width:841px){.ht-slides{zoom:0.56}}
 @media (min-width:1000px){.ht-slides{zoom:0.68}}
 @media (min-width:1200px){.ht-slides{zoom:0.84}}
@@ -158,6 +161,7 @@ export function htCss(ctx) {
 }
 /* the page's title: a display h1 over the slide on wide screens (the bar already carries the running head); on a phone it also leads the page, under the running head */
 .ht-ml{display:block;padding:72px 56px 8px;container-type:inline-size}
+.ht-ml--spread{padding-bottom:56px}
 .ht-ml__hd{display:none}
 .ht-ml__t{font-size:min(var(--bs,96px),clamp(48px,6vw,96px));line-height:0.98}
 .ht-ml__t b{display:block;font-family:var(--body);font-weight:400;font-size:15px;letter-spacing:0;line-height:1.4;margin-bottom:12px;font-stretch:100%;color:var(--q)}
@@ -166,13 +170,11 @@ export function htCss(ctx) {
 .ht-ml__hd{display:flex;justify-content:space-between;gap:12px;font-size:13px;line-height:1.3;color:var(--q)}
 .ht-ml__hd b{font-weight:400}
 .ht-ml__t{font-size:min(var(--bs,40px),64px)}
-.ht-stage--reflow{display:none}
 .ht-bar{gap:12px;padding:0 20px}
 .ht-home,.ht-doc{display:none}
 .ht-bar{height:auto;min-height:56px;padding-top:10px;padding-bottom:10px}
-.ht-bar>.ht-mode{display:none}
-.ht-toc .ht-mode{display:flex;padding:16px 20px;border-bottom:1px solid var(--h)}
-.ht-btn{padding:0 12px}
+.ht-btn,.ht-mode button{height:44px;padding:0 14px}
+.ht-btn{margin-right:auto}
 .ht-toc__f{padding:16px 20px}
 .ht-toc__s{grid-template-columns:minmax(0,1fr);gap:12px;padding:24px 20px}
 .ht-toc__n{font-size:26px}
@@ -192,8 +194,13 @@ export function htCss(ctx) {
 .ht-pair p:first-child{border-bottom:0;padding-bottom:0}
 .ht-pair .ht-pair__h{display:none}
 .ht-pair__k{display:block;font-size:13px;line-height:1.4;font-weight:600;color:var(--t);margin-bottom:4px}
-.ht-fields{grid-template-columns:minmax(0,1fr)}
+.ht-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ht-field--last{grid-column:auto}
+.ht-field--odd{grid-column:1/-1}
 .ht-field{min-height:160px;padding:20px}
+.ht-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+.ht-notes--spread{padding:48px 20px 64px;gap:40px}
+.ht-notes--spread .ht-nb{gap:40px}
 .ht-stripe{height:auto;flex-direction:column}
 .ht-stripe>div{flex:none!important;min-height:56px}
 .ht-scale>li{grid-template-columns:minmax(0,1fr);gap:8px}
@@ -201,7 +208,17 @@ export function htCss(ctx) {
 .ht-foot{flex-direction:column;gap:4px;padding:16px 20px}
 .ht-cv{padding:48px 20px 40px}
 .ht-cv__l{font-size:19px}
-.ht-ix>li{grid-template-columns:minmax(0,1fr);gap:20px;padding:32px 20px 36px}
+.ht-cx{padding:32px 20px 64px}
+.ht-cx__r{grid-template-columns:minmax(0,1fr);gap:12px;padding:28px 0 32px}
+.ht-cx__p{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:1100px){.ht-cx__r{grid-template-columns:72px minmax(0,1fr)}.ht-cx__p{grid-column:2}}
+@media (max-width:840px){.ht-cx__r{grid-template-columns:minmax(0,1fr)}.ht-cx__p{grid-column:auto}}
+@media (max-width:520px){
+.ht-run{display:none}
+.ht-fields{grid-template-columns:minmax(0,1fr)}
+.ht-field--odd{grid-column:auto}
+.ht-field--last{grid-column:auto}
 }
 @media (prefers-reduced-motion:reduce){.ht *{transition:none!important}}`;
 }

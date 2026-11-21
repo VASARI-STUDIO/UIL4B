@@ -3,7 +3,9 @@
 // the components show in the mode the reader picked). Under it, the markup of every component shown, ready to copy. The components
 // are the code package's own (ctx.ui, componentsCss); nothing here restyles them.
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
-import { A, L, darkF, actF, panelF, fieldStyle, fitSize, bar, tocPanel, nextField } from './lane-ht-lib.js';
+import { cssIdent } from '../../engine/escape.js';
+import { A, darkF, actF, panelF, fieldStyle, fitSize, bar, tocPanel, nextField, skipLink, contentsGrid } from './lane-ht-lib.js';
+import { distinctColours } from './helpers.js';
 import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
 
@@ -16,9 +18,17 @@ const tok = (name) => `<span class="ht-m">${A(name)}</span>`;
 const item = (html, label, cls = '') => `<figure class="hk-i ${cls}"><div class="hk-i__c">${html}</div><figcaption>${A(label)}</figcaption></figure>`;
 
 // ---- the live part and the markup notes of each page ----
+// the roles in groups of three and four (no short last row, no empty cell), then the brand's own palette, whose second colour is the kit's accent
+const SW_GROUPS = [['Surfaces', ['surface', 'raised', 'sunken']], ['Text', ['text', 'text-soft', 'quiet']], ['Edges and focus', ['edge', 'divider', 'focus']], ['Action', ['action', 'action-hover', 'action-pressed', 'action-label']]];
+const accentOf = (ctx) => (ctx.colours.find((c) => c.id === 'support') || ctx.colours[1] || ctx.colours[0]).hex;
 function swatches(ctx, mode) {
-  const map = colourMap(ctx, mode), keys = ['surface', 'raised', 'sunken', 'text', 'text-soft', 'quiet', 'edge', 'divider', 'action', 'action-hover', 'action-pressed', 'action-label', 'focus'].filter((k) => map[k]);
-  return { live: `<ul class="hk-sw"${mode === 'dark' ? ' data-theme="dark"' : ''}>${keys.map((k) => `<li><span class="hk-sw__c" style="background:${map[k]}"></span><b>${A(ctx.cap ? ctx.cap(k.replace(/-/g, ' ')) : k)}</b>${tok(`--${k}`)}<span class="ht-m">${A(map[k])}</span></li>`).join('')}</ul>`, dark: mode === 'dark', code: [[mode === 'dark' ? 'Dark mode roles' : 'Light mode roles', keys.map((k) => `--${k}: ${map[k]};`).join(String.fromCharCode(10))]] };
+  const map = colourMap(ctx, mode), keys = SW_GROUPS.flatMap(([, ks]) => ks).filter((k) => map[k]);
+  const cell = (c, name, token, value) => `<li><span class="hk-sw__c" style="background:${c}"></span><b>${A(name)}</b>${tok(token)}<span class="ht-m">${A(value)}</span></li>`;
+  const group = (t, cells, n) => `<section class="hk-sg" aria-label="${A(t)}"><h2 class="hk-sg__t">${A(t)}</h2><ul class="hk-sw" style="--n:${n}"${mode === 'dark' ? ' data-theme="dark"' : ''}>${cells.join('')}</ul></section>`;
+  const roles = SW_GROUPS.map(([t, ks]) => [t, ks.filter((k) => map[k])]).filter(([, ks]) => ks.length).map(([t, ks]) => group(t, ks.map((k) => cell(map[k], ctx.cap ? ctx.cap(k.replace(/-/g, ' ')) : k, `--${k}`, map[k])), ks.length));
+  const brand = distinctColours(ctx);
+  const own = brand.length ? [group('Brand palette', brand.map((c) => cell(c.hex, c.name, `--palette-${cssIdent(c.id)}`, c.hex)), Math.min(brand.length, 5))] : [];
+  return { live: roles.concat(own).join(''), dark: mode === 'dark', code: [[mode === 'dark' ? 'Dark mode roles' : 'Light mode roles', keys.map((k) => `--${k}: ${map[k]};`).join(String.fromCharCode(10))]] };
 }
 const PAGES = {
   'colour-light': (ctx) => ({ lede: 'The roles every component reads in light mode.', ...swatches(ctx, 'light') }),
@@ -116,8 +126,9 @@ function body(ctx, K) {
   const p = K.page, d = PAGES[p.id](ctx), sec = p.section ? p.section.n : 1, hex = grounds(ctx)[(sec - 1) % 4];
   const ts = fitSize(ctx, K.pages.filter((q) => q.section).map((q) => q.title), 0.94, 72, 32);
   const top = `<section class="hk-top"><div class="hk-title" style="${fieldStyle(ctx, hex, 'kit title field', 32)}"><div class="hk-title__in"><p class="ht-k">${A(p.section.title)} <b class="num">${A(p.ref)}</b></p><h1 class="ht-d hk-title__h" style="--bs:${ts}">${A(p.title)}</h1><p class="hk-title__l">${A(d.lede)}</p></div></div>
+<div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live"${d.dark ? ' data-theme="dark"' : ''}>${d.live}</div></section>`;
-  const code = d.code.length ? `<section class="hk-code" aria-labelledby="hk-code-h"><h2 class="ht-d hk-code__h" id="hk-code-h">The markup</h2><ol>${d.code.map(([l, h], i) => `<li id="m-${i + 1}" data-rd-n="${p.ref}.${i + 1}"><p class="ht-k"><span class="num">${p.ref}.${i + 1}</span> ${A(l)}</p><pre><code>${A(pretty(K, h))}</code></pre>${copyBtn(pretty(K, h), l)}</li>`).join('')}</ol></section>` : '';
+  const code = d.code.length ? `<section class="hk-code" aria-labelledby="hk-code-h"><h2 class="ht-d hk-code__h" id="hk-code-h">The markup</h2><ol>${d.code.map(([l, h], i) => `<li id="m-${i + 1}" data-rd-n="${p.ref}.${i + 1}"><p class="ht-k"><span class="num">${p.ref}.${i + 1}</span> ${A(l)}</p><pre tabindex="0" role="region" aria-label="${A(l)} markup"><code>${A(pretty(K, h))}</code></pre>${copyBtn(pretty(K, h), l)}</li>`).join('')}</ol></section>` : '';
   return top + code;
 }
 // index.html: the kit's title slide (the logo on its dark ground, a live set of components), then the contents stripes
@@ -125,23 +136,22 @@ function cover(ctx, K) {
   const B = ctx.brand, rev = B.logo.colourways.reversed, F = SC(ctx).form, E = EX(ctx), u = ctx.ui, dk = darkF(ctx);
   const live = `<div class="hk-row">${item(u.btn(F.book), 'Primary')}${item(u.btn(E.secondary || F.book, { variant: 'secondary' }), 'Secondary')}${item(`${u.statusChip(SC(ctx).deliveries[0].status)} <span class="ui-badge">${SC(ctx).deliveries.length}</span>`, 'Status and count')}</div>${item(u.field({ id: 'hk-c1', label: F.pickup, value: F.pickupValue }), 'Field', 'hk-i--w')}`;
   const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320, label: 'Your logo goes here' })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, [docName(ctx)], 0.94, 72, 32)}">${A(docName(ctx))}</h1><p class="hk-title__l">${A(B.product)}</p><p class="hk-title__v">${A(ctx.versionLine)}</p></div>
+<div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live">${live}</div></section>`;
   return top + contents(ctx, K);
 }
 function contents(ctx, K) {
-  const g = [darkF(ctx), actF(ctx), panelF(ctx)], hs = fitSize(ctx, K.sections.map((s) => s.title), 0.9, 72, 32);
-  return `<ol class="ht-ix" id="contents" aria-label="Contents">${K.sections.map((s, i) => `<li style="${fieldStyle(ctx, g[i % 3], 'kit contents section', 32)}"><h2 class="ht-d ht-ix__h" style="--bs:${hs}"><b class="num">${s.n}</b>${A(s.title)}</h2><ol>${s.pages.map((q) => { const r = K.pages.find((x) => x.id === q.id); return `<li><a href="${K.href(q.id)}"><span class="num">${r.ref}</span><span>${A(r.title)}</span></a></li>`; }).join('')}</ol></li>`).join('')}</ol>`;
+  return contentsGrid(ctx, K.sections.map((x) => ({ n: x.n, title: x.title, pages: x.pages.map((q) => { const r = K.pages.find((y) => y.id === q.id); return { href: K.href(q.id), ref: r.ref, title: r.title }; }) })));
 }
 
 function shell(ctx, K, inner) {
   const p = K.page, toggle = `<button class="ht-btn" type="button" data-disclosure aria-expanded="false" aria-controls="ht-toc">Contents</button>`;
-  const mode = `<div class="ht-mode" role="group" aria-label="Colour mode"><button type="button" data-mode="light" aria-pressed="true">Light</button><button type="button" data-mode="dark" aria-pressed="false">Dark</button></div>`;
   const sections = K.sections.map((s) => ({ n: s.n, title: s.title, pages: s.pages.map((q) => K.pages.find((x) => x.id === q.id)) }));
-  const toc = tocPanel(ctx, { id: 'ht-toc', sections, href: K.href, current: p.id, front: 'Cover and contents' }).replace('<ol class="ht-toc__l">', `${mode}<ol class="ht-toc__l">`);
+  const toc = tocPanel(ctx, { id: 'ht-toc', sections, href: K.href, current: p.id, front: 'Cover and contents' });
   const nx = (q) => q && { href: K.href(q.id), ref: q.ref, title: q.id === 'cover' ? 'Cover and contents' : q.title };
   const next = K.next && K.next.id === 'contents' ? K.pages[K.pages.indexOf(K.next) + 1] : K.next;
   return `<div class="sx ht ht--kit" data-page="${p.id}">
-
+${skipLink()}
 ${bar(ctx, { home: 'index.html', doc: docName(ctx), ref: p.ref, title: p.section ? p.title : 'Cover and contents', no: ctx.pageNo(p.id), toggle })}
 ${toc}
 <main id="ht-main" tabindex="-1"><article class="sx-art" data-rd-doc>

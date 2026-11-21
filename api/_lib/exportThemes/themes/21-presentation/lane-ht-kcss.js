@@ -4,24 +4,35 @@ export function kitCss() {
   return `body{margin:0}
 .ht--kit,.ht--kit *,.ht--kit *::before,.ht--kit *::after{box-sizing:border-box}
 .ht--kit{--g:var(--surface);--t:var(--text);--s:var(--text-soft);--q:var(--quiet);--h:var(--divider)}
-.hk-top{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);min-height:min(calc(100vh - 56px),520px)}
+/* a page is a band: the title field on top (the title left, its line right), a flat accent rule, then the live area sized to what is in it.
+   Only the cover keeps the split, and it is sized by its content too (no min-height, so no empty half-panel) */
+.hk-top{display:grid;grid-template-columns:minmax(0,1fr)}
+.hk-top--cover{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+.hk-top--cover .hk-title{grid-column:1;grid-row:1}
+.hk-top--cover .hk-live{grid-column:2;grid-row:1}
+.hk-rule{height:6px;grid-column:1/-1;grid-row:2}
 @media (min-width:1100px){.hk-live .hk-row,.hk-live .hk-col>.hk-i,.hk-live .hk-row--2{zoom:1.25}}
 .hk-title{display:flex;flex-direction:column;justify-content:flex-end;gap:20px;padding:56px;container-type:inline-size}
+.hk-top--cover .hk-title{gap:32px}
 .hk-title__h{font-size:var(--bs,64px)}
 .hk-title__l{font-size:19px;line-height:1.5;font-weight:500;max-width:36ch}
 .hk-title__v,.hk-title .ht-k{color:var(--q)}
 .hk-title .ht-k b{font-weight:400;margin-left:8px}
 .hk-logo{margin-bottom:auto}
-.hk-live{display:flex;flex-direction:column;justify-content:center;gap:40px;padding:56px;background:var(--surface);color:var(--text)}
+.hk-live{display:flex;flex-direction:column;justify-content:center;gap:40px;padding:56px;min-width:0;background:var(--surface);color:var(--text)}
 .hk-row{display:flex;flex-wrap:wrap;gap:32px 40px;align-items:flex-end}
 .hk-row--2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
-.hk-col{display:flex;flex-direction:column;gap:40px}
+.hk-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:40px 48px;align-items:start}
+.hk-col>.hk-i--w{grid-column:1/-1;max-width:880px}
 .hk-stack{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .hk-i{display:flex;flex-direction:column;gap:12px;margin:0}
 .hk-i--w .hk-i__c{width:100%;max-width:560px}
 .hk-i figcaption{font-size:13px;line-height:1.4;color:var(--quiet)}
 .hk-links{display:flex;gap:24px;flex-wrap:wrap}
-.hk-sw{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 16px;background:var(--surface);color:var(--text)}
+.hk-sg+.hk-sg{margin-top:8px}
+.hk-sg__t{margin:0 0 16px;display:flex;align-items:center;gap:12px;font-size:12px;line-height:1.3;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft)}
+.hk-sg__t::before{content:'';flex:none;width:16px;height:6px;background:var(--palette-support,var(--action))}
+.hk-sw{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:24px 16px;background:var(--surface);color:var(--text)}
 .hk-sw li{display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.4}
 .hk-sw__c{display:block;height:72px;box-shadow:inset 0 0 0 1px var(--divider);margin-bottom:8px}
 .hk-ts>li,.hk-sp>li{display:grid;grid-template-columns:160px minmax(0,1fr);gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--divider)}
@@ -45,8 +56,10 @@ export function kitCss() {
 .hk-scr__t{margin:0;font-size:20px;font-weight:600}
 .hk-tok{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px;margin:0}
 .hk-title__in{display:flex;flex-direction:column;gap:20px}
-.ht[data-page="tokens"] .hk-title{justify-content:flex-start}
-.ht[data-page="tokens"] .hk-title__in{position:sticky;top:80px}
+.hk-top:not(.hk-top--cover) .hk-title__in{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:16px 56px;align-items:end}
+.hk-top:not(.hk-top--cover) .hk-title__in>.ht-k{grid-column:1/-1}
+.hk-top:not(.hk-top--cover) .hk-title__h{grid-column:1}
+.hk-top:not(.hk-top--cover) .hk-title__l{grid-column:2}
 .hk-tg+.hk-tg{margin-top:56px}
 .hk-tg__h{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
 .hk-tg__t{margin:0;font-size:28px;line-height:1.1;font-weight:600}
@@ -60,18 +73,29 @@ export function kitCss() {
 .hk-code ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 32px}
 .hk-code ol:has(>li:only-child){grid-template-columns:minmax(0,1fr);max-width:720px}
 .hk-code li{display:flex;flex-direction:column;gap:12px;align-items:flex-start;min-width:0}
-.hk-code pre{margin:0;width:100%;max-width:100%;overflow:auto;padding:16px;background:var(--sunken);color:var(--text);font:400 13px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.hk-code pre{margin:0;width:100%;max-width:100%;overflow:auto;padding:16px;background:var(--sunken);color:var(--text);font:400 13px/1.6 var(--mono);white-space:pre;overflow-wrap:normal}
+.hk-code pre:focus-visible{outline:2px solid var(--t);outline-offset:2px}
 .hk-code code{font:inherit}
 .hk-sw b{font-weight:600}
 .hk-copy.is-done{background:var(--t);color:var(--g)}
 @media (max-width:840px){
-.ht[data-page="tokens"] .hk-title__in{position:static}
-.hk-top{grid-template-columns:minmax(0,1fr);min-height:0}
+.hk-top,.hk-top--cover{grid-template-columns:minmax(0,1fr)}
+.hk-top--cover .hk-title,.hk-top--cover .hk-live{grid-column:1;grid-row:auto}
+.hk-top--cover .hk-rule{grid-row:auto}
+.hk-top:not(.hk-top--cover) .hk-title__in{grid-template-columns:minmax(0,1fr)}
+.hk-top:not(.hk-top--cover) .hk-title__l{grid-column:1}
 .hk-title,.hk-live{padding:40px 20px}
-.hk-row--2,.hk-sw,.hk-rd,.hk-tok,.hk-code ol{grid-template-columns:minmax(0,1fr)}
+.hk-row--2,.hk-rd,.hk-tok,.hk-code ol{grid-template-columns:minmax(0,1fr)}
+.hk-sw{grid-template-columns:repeat(var(--n,3),minmax(0,1fr))}
+.hk-sw[style*="--n:4"],.hk-sw[style*="--n:5"]{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hk-ts>li,.hk-sp>li{grid-template-columns:minmax(0,1fr);gap:6px}
 .hk-code{padding:56px 20px}
 .hk-code__h{font-size:32px}
 .hk-empty{padding:24px}
+}
+@media (max-width:520px){
+.hk-sw,.hk-sw[style*="--n:4"],.hk-sw[style*="--n:5"]{grid-template-columns:minmax(0,1fr);gap:12px}
+.hk-sw li{display:grid;grid-template-columns:56px minmax(0,1fr);column-gap:16px;align-items:center}
+.hk-sw li>.hk-sw__c{grid-row:1/4;height:56px;margin:0}
 }`;
 }

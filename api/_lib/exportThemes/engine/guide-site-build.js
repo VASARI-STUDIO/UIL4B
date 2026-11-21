@@ -39,9 +39,21 @@ const CLIENT_JS = `(function () {
   var tg = document.querySelectorAll('[data-gs-toggle]');
   for (var t = 0; t < tg.length; t++) (function (btn) {
     var panel = document.getElementById(btn.getAttribute('aria-controls'));
-    function set(open, focusBtn) { btn.setAttribute('aria-expanded', String(open)); if (panel) panel.setAttribute('data-open', String(open)); if (!open && focusBtn) btn.focus(); }
+    var main = document.querySelector('main');
+    function inside() { return panel ? [].slice.call(panel.querySelectorAll('a[href],button:not([disabled])')).filter(function (x) { return x.offsetParent !== null; }) : []; }
+    // opening moves focus into the panel and sets the page behind it aside; Tab stays between the panel and its button; Escape closes and gives focus back
+    function set(open, focusBtn) {
+      btn.setAttribute('aria-expanded', String(open)); if (panel) panel.setAttribute('data-open', String(open)); if (main) main.inert = open;
+      if (open) { var f = inside(); if (f.length) f[0].focus(); } else if (focusBtn) btn.focus();
+    }
     btn.addEventListener('click', function () { set(btn.getAttribute('aria-expanded') !== 'true'); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') { e.preventDefault(); set(false, true); } });
+    document.addEventListener('keydown', function (e) {
+      if (btn.getAttribute('aria-expanded') !== 'true') return;
+      if (e.key === 'Escape') { e.preventDefault(); set(false, true); return; }
+      if (e.key !== 'Tab') return;
+      var f = [btn].concat(inside()), i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    });
   })(tg[t]);
   // the outline marks the last entry whose target has passed the top third of the screen
   var ol = document.querySelector('[data-gs-outline]');

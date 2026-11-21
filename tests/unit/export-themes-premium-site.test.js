@@ -134,7 +134,9 @@ test('the palette page counts and lists each colour once, and carries no writing
   const files = await exportZip('21-presentation', 'slides')
   const page = files['palette.html']
   const distinct = new Set(DESIGN.palette.colors.map((c) => c.toLowerCase()))
-  assert.match(page, new RegExp(`>${distinct.size} colours, each named`), 'the count is the number of distinct colours (the label colour on the action is the canvas: it must not make a sixth)')
+  const words = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][distinct.size]
+  assert.match(page, new RegExp(`>${words} colours<`), 'the headline counts the distinct colours (the label colour on the action is the canvas: it must not make a sixth)')
+  assert.equal((page.match(/class="ht-field[ "]/g) || []).length, distinct.size, 'one field a colour, each once')
   assert.doesNotMatch(page, /Writing rule/, 'a writing-rule slot in the colour strip')
 })
 
@@ -154,5 +156,27 @@ test('the kit tokens are drawn from the palette: no stock blue, and no pure whit
     assert.ok(m, `${token} in tokens.css`)
     assert.notEqual(m[1].toUpperCase(), '#2563EB', `${token} is the stock blue`)
     assert.notEqual(m[1].toUpperCase(), '#FFFFFF', `${token} is pure white`)
+  }
+})
+
+// Design review round 2 (r2) found these; each is one thing a later edit could quietly bring back.
+test('the slide is never hidden at narrow widths, and every page opens with a skip link to the main area', async () => {
+  for (const row of ['slides', 'ui-kit']) {
+    const files = await exportZip('21-presentation', row)
+    const css = Object.entries(files).filter(([n]) => /^assets\/.+\.css$/.test(n)).map(([, t]) => t).join('\n')
+    assert.doesNotMatch(css, /\.ht-stage--reflow[^{}]*\{[^}]*display:\s*none/, `${row}: a reflow slide hidden by display:none (the palette and type values went missing at 768 and 390)`)
+    for (const p of htmlPages(files).filter((n) => n !== 'example.html')) {
+      assert.match(files[p], /<a class="ht-skip" href="#ht-main">/, `${p}: no skip link`)
+      assert.match(files[p], /<main id="ht-main"/, `${p}: the skip link has no main to point at`)
+    }
+  }
+})
+
+test('with a project name given, no button specimen in the kit is a placeholder box', async () => {
+  const files = await exportZip('21-presentation', 'ui-kit')
+  for (const p of ['buttons.html', 'index.html', 'inputs.html', 'dialog.html', 'feedback.html']) {
+    const buttons = [...files[p].matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g)].map((m) => m[0])
+    assert.ok(buttons.length > 0, `${p}: no buttons found`)
+    for (const b of buttons) assert.doesNotMatch(b, /class="[^"]*\bph-[bc]\b/, `${p}: a placeholder box inside a button: ${b.slice(0, 90)}`)
   }
 })
