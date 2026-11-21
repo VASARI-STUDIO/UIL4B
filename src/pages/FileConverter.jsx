@@ -785,7 +785,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
         toast(`Downloaded ZIP with ${ready.length} images`)
       }
     } catch {
-      toast('Failed to create ZIP file', 'error')
+      toast('Couldn’t build the ZIP. Download the images one at a time, or try fewer at once.', 'error')
     }
     setZipping(false)
   }, [items, fmt, downloadOne, toast, gatedDownload, baseNameFor])
@@ -2595,7 +2595,7 @@ function VideoFrames({ toast }) {
         toast(`Downloaded ZIP with ${frames.length} frames`)
       }
     } catch {
-      toast('Failed to create ZIP file', 'error')
+      toast('Couldn’t build the ZIP. Download the frames one at a time, or extract fewer.', 'error')
     }
     setZipping(false)
   }, [frames, file, toast, gatedDownload])

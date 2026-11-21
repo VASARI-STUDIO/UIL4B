@@ -1515,7 +1515,9 @@ html[data-reduced-motion="true"] .fc .fc-rail-sheet { animation: none; }
   border: 1px solid var(--tl-line-on, var(--bd)); border-radius: 8px;
   transition: border-color .15s ease, background-color .15s ease;
 }
-.fc .fc-lock:hover { border-color: var(--v3-ink); }
+@media (hover: hover) {
+  .fc .fc-lock:hover { border-color: var(--v3-ink); }
+}
 .fc .fc-lock[aria-disabled="true"] { opacity: .6; cursor: default; }
 .fc .fc-lock-text { display: flex; flex-direction: column; min-width: 0; }
 .fc .fc-lock-name { font-size: 13px; line-height: 20px; font-weight: 600; }
@@ -1551,4 +1553,9 @@ html[data-reduced-motion="true"] .fc .fc-rail-sheet { animation: none; }
 .fc .fc-rail-sheet-item:focus-visible { outline-color: var(--tl-focus); }
 .fc .fc-scrub,
 .fc .fc-check input { accent-color: var(--v3-ink); }
+/* The Quality slider (SnapSlider) wears the app-wide thumb, an accent ring. On this page the
+   controls are ink, so the thumb is too. */
+.fc .snapv input[type="range"]::-webkit-slider-thumb { border-color: var(--v3-ink); }
+.fc .snapv input[type="range"]::-moz-range-thumb { border-color: var(--v3-ink); }
+.fc .snapv input[type="range"]:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 .fc .fc-progress-bar { background: var(--v3-ink); }
