@@ -1272,6 +1272,18 @@ export default async function handler(req, res) {
     })
   }
 
+  // The Export dialog's live page previews: POST /api/ai?export=preview { theme, page, brand }. Same token + plan gate as the
+  // document above, and a Free account on a Pro template gets a 403 with no page; see api/_lib/exportPreview.js.
+  if (req.method === 'POST' && req.query?.export === 'preview') {
+    const { serveExportPreview } = await import('./_lib/exportPreview.js')
+    return serveExportPreview(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      credentialProblem,
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+      consume: async (opts) => (await import('./_lib/rateLimit.js')).consume(adminDb(), opts),
+    })
+  }
+
   // ── The soft stand-in for a locked palette ─────────────────────────────
   // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
   // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.
