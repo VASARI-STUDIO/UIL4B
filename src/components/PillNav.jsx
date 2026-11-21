@@ -26,6 +26,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { isAdminEmail } from '../utils/constants'
 import NavIcon from './NavIcon'
+import { INTENT_MS, MOMENT_OF, GALLERY_STEP_MS, faceByKey, facesAttr, finePointer, galleryRun, warmFaces } from './nav/menuMoments'
 import ThemeChoice from './ThemeChoice'
 import ThemeCycle from './nav/ThemeCycle'
 import PhoneTabBar from './nav/PhoneTabBar'
@@ -418,6 +419,11 @@ function AppHeader() {
   const closeAccountMenu = useCallback(() => setMenu(null), [])
   const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   const stateRef = useRef({ open: null, menu: null, sheet: false })
+  // The menu's moments (hover loops and their guards) are a separate sheet, fetched after
+  // first paint and only where a fine pointer can hover. Until it lands, the rows rest.
+  useEffect(() => {
+    if (finePointer()) import('../styles/deferred/menu-moments.css')
+  }, [])
   useEffect(() => {
     openRef.current = open
     stateRef.current.open = open
@@ -1238,16 +1244,30 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
   // the section's own line when nothing is. Tracked by delegation on the grid
   // (pointerover and focus bubble), not a handler per row. The section id rides
   // along so a row id both menus share (Font Gallery) cannot carry over.
-  const [active, setActive] = useState({ section: section.id, id: null })
+  // `mode` rides along for the hover moments (nav/menuMoments.js): 'pointer' for a
+  // fine pointer, 'key' for keyboard focus, null for anything that gets no moment.
+  // The same handlers set it, so there is no second tracker.
+  const [active, setActive] = useState({ section: section.id, id: null, mode: null })
   const activeId = active.section === section.id ? active.id : null
+  const activeMode = active.section === section.id ? active.mode : null
   const rowOf = (el) => el?.closest?.('[data-row-id]')?.getAttribute('data-row-id') || null
-  const setRow = (id) => setActive((prev) => (
-    prev.section === section.id && prev.id === id ? prev : { section: section.id, id }
+  const setRow = (id, mode = null) => setActive((prev) => (
+    prev.section === section.id && prev.id === id && prev.mode === (id ? mode : null)
+      ? prev
+      : { section: section.id, id, mode: id ? mode : null }
   ))
   // Nothing under the pointer: fall back to the row keyboard focus is in, or to none.
   const settleRow = (grid) => {
     const f = grid.contains(document.activeElement) ? document.activeElement : null
-    setRow(rowOf(f))
+    setRow(rowOf(f), keyboardRow(f))
+  }
+  const keyboardRow = (el) => (el?.matches?.(':focus-visible') ? 'key' : null)
+  const pointerMode = (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return null
+    if (!finePointer()) return null
+    // A pointer arriving on the row keyboard focus is already on keeps that moment.
+    const row = e.target.closest?.('[data-row-id]')
+    return row && row === document.activeElement ? keyboardRow(row) || 'pointer' : 'pointer'
   }
   const activeRow = activeId
     ? stacks.flat().flatMap((col) => col.tools).find((t) => t.id === activeId)
@@ -1257,12 +1277,52 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
     : null
   const readoutText = activeRow && activeDesc ? activeDesc : null
 
+  // THE HOVER MOMENT. data-live goes on the active row: at once for keyboard focus,
+  // INTENT_MS after a fine pointer arrives. Leaving or blurring clears it at once
+  // (activeId changes), and the timer's cleanup drops a pending start.
+  const [intentId, setIntentId] = useState(null)
+  useEffect(() => {
+    if (activeMode !== 'pointer' || !activeId) return undefined
+    const t = setTimeout(() => setIntentId(activeId), INTENT_MS)
+    return () => { clearTimeout(t); setIntentId(null) }
+  }, [activeId, activeMode])
+  const liveId = activeMode === 'key' ? activeId : activeMode === 'pointer' && intentId === activeId ? activeId : null
+
+  // Faces for the name moments: warmed once, on the first menu open, and used only
+  // once ready. data-faces on the root tells the CSS which are.
+  const [faces, setFaces] = useState(facesAttr)
+  const warms = section.id === 'create' || section.id === 'discover'
+  useEffect(() => {
+    if (!warms) return undefined
+    let alive = true
+    warmFaces().then(() => { if (alive) setFaces(facesAttr()) })
+    return () => { alive = false }
+  }, [warms])
+
+  // Font Gallery: the name steps through the shuffled ready faces and loops while the
+  // row is live. Going quiet resets it; a run of one face (reduced motion) just sets it.
+  const [galleryFace, setGalleryFace] = useState(null)
+  const galleryLive = liveId === 'font-gallery' && finePointer()
+  useEffect(() => {
+    if (!galleryLive) return undefined
+    const run = galleryRun()
+    let step = 0
+    let timer = null
+    const tick = () => {
+      setGalleryFace(run[step % run.length].key)
+      step += 1
+      if (run.length > 1) timer = setTimeout(tick, GALLERY_STEP_MS)
+    }
+    if (run.length) timer = setTimeout(tick, 0)
+    return () => { clearTimeout(timer); setGalleryFace(null) }
+  }, [galleryLive])
   return (
     <div
       ref={ref}
       id="pnav-mega"
       className="pnav-menu"
       data-menu={section.id}
+      data-faces={faces || undefined}
       role="region"
       aria-label={`${section.label} menu`}
       onMouseEnter={onMouseEnter}
@@ -1274,9 +1334,9 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
           <div
             className="pnav-grid"
             data-cols={stacks.length}
-            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id); else settleRow(e.currentTarget) }}
+            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id, pointerMode(e)); else settleRow(e.currentTarget) }}
             onPointerLeave={(e) => settleRow(e.currentTarget)}
-            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id) }}
+            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id, keyboardRow(e.target)) }}
             onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRow(null) }}
           >
             {stacks.map((stack) => (
@@ -1285,7 +1345,10 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                   <div className="pnav-col" key={col.label}>
                     <p className="pnav-col-label">{col.label}</p>
                     <ul className="pnav-toollist">
-                      {col.tools.map((t) => (
+                      {col.tools.map((t) => {
+                        const moment = MOMENT_OF[t.id]
+                        const face = moment === 'font-gallery' && t.id === liveId ? faceByKey(galleryFace) : null
+                        return (
                         <li key={t.id}>
                           <Link
                             className="pnav-tool"
@@ -1293,6 +1356,8 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             data-soon={t.soon ? 'true' : undefined}
                             data-hue={t.hue}
                             data-row-id={t.id}
+                            data-moment={moment}
+                            data-live={moment && t.id === liveId ? '' : undefined}
                             aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
                             aria-current={isHere(t) ? 'page' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
@@ -1300,10 +1365,19 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             data-pnav-menuitem
                           >
                             <span className="pnav-tool-ico" aria-hidden="true">
-                              <NavIcon id={t.icon} />
+                              <NavIcon id={t.icon} moment={moment} />
                             </span>
                             <span className="pnav-tool-label">
-                              <span className="pnav-tool-nm" data-text={t.label}>{t.label}</span>
+                              {moment === 'font-pair'
+                                // A real space between the words, so textContent stays "Font Pair".
+                                ? <span className="pnav-tool-nm"><span className="w1">Font</span> <span className="w2">Pair</span></span>
+                                : (
+                                  <span
+                                    className="pnav-tool-nm"
+                                    data-face={face ? face.key : undefined}
+                                    style={face ? { fontFamily: face.family, fontWeight: face.weight } : undefined}
+                                  >{t.label}</span>
+                                )}
                             </span>
                             {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
@@ -1315,7 +1389,8 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             )}
                           </Link>
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
                   </div>
                 ))}

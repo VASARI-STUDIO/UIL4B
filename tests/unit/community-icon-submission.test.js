@@ -314,8 +314,10 @@ test('an unsent submission can still be sent — the hole the other three flows 
   // Gradients, palettes and designs all keep a local copy when the publish
   // fails and then offer no route to the account at all, which re-enters the
   // exact bug the queue was built to end.
-  assert.match(HUB, /const retry = useCallback\(\(row\) => \(row\.kind === 'icon' \? sendIcon\(row\)/,
+  assert.match(HUB, /const retry = useCallback\(\(row\) => \{\s*if \(row\.kind === 'icon'\) return sendIcon\(row\)/,
     'the retry is gone')
+  assert.match(HUB, /row\.kind === 'palette' \? sendPalette\(row\) : sendDesign\(row\)/,
+    'a palette retry is sent as a design, which the rules refuse for its shape')
   assert.match(PROFILE, /hub\.retry\(row\)/, 'the list no longer offers the retry')
   assert.match(PROFILE, /row\.synced === false/, 'the retry is no longer limited to what did not reach the account')
   assert.match(HUB, /submissionStatusLabel\(\{ status: row\.status, synced: row\.synced/,

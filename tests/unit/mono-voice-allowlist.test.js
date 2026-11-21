@@ -69,6 +69,9 @@ const ALLOWED = {
     '.ig-attrib code': 'code',
     '.pl-modal-prompt pre': 'ask',
   },
+  'deferred/menu-moments.css': {
+    '.pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2': 'glyph',
+  },
   'deferred/overlay.css': {
     '.cp-kbd': 'kbd',
   },
