@@ -2,7 +2,7 @@
 // (config/exportPreviewData.js) is the one place that knows where a picture lives; this file only picks pages out of it
 // and decides, for a viewer, whether a page is drawn at its own density or as a 1x sample.
 
-import { previewPages } from '../../config/exportPreviewData'
+import { previewPages } from '../../config/exportPreviewData.js'
 
 // The pages of each document, in the order they are shown.
 const KIND_PAGES = Object.freeze({
