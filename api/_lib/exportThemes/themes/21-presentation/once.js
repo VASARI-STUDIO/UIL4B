@@ -35,6 +35,13 @@ export function tally(ctx) {
   for (const d of screenContent(ctx).deliveries) { const t = tone(d.status); (t === 'neutral' ? out.closed : t === 'warning' || t === 'danger' ? out.late : out.open).push(d); }
   return out;
 }
+// minutes into the day of the first "11:40 am" in a line; a line with no time sorts after the ones that have one
+const clock = (t) => { const m = /(\d{1,2}):(\d{2})\s?([ap])m/i.exec(t || ''); return m ? (Number(m[1]) % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0)) * 60 + Number(m[2]) : Infinity; };
+// the orders as a table lists them, in the order the product screen tells: the late ones first, then the open ones by due time, the closed last
+export function ordersByDue(ctx) {
+  const t = tally(ctx);
+  return [...t.late, ...[...t.open].sort((a, b) => clock(a.when) - clock(b.when)), ...t.closed];
+}
 // the engine's delivery rows (ctx.ui.deliveryRows), built from the content above (or from the given orders)
 // The row of the order the screen's card is about (the customer the card names) is marked as the one in hand: aria-current, and the selected
 // row state components.css ships (meta.shipped.selectedRow).

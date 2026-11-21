@@ -10,7 +10,7 @@ import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
 import { docOf, siteCtx, servedCtx } from './lane-ht-clean.js';
 
-import { screenContent as SC, deliveryRows, noPrices, tally, orderMeta, orderTimeline } from './once.js';
+import { screenContent as SC, deliveryRows, noPrices, tally, orderMeta, orderTimeline, ordersByDue } from './once.js';
 
 const docName = (ctx) => docOf(ctx, 'UI kit');
 // the engine writes a trailing space where a class list is empty (`ui-input `, `type="button" >`): the pages show the markup without it
@@ -102,7 +102,7 @@ const PAGES = {
   },
   lists: (ctx) => { const h = deliveryRows(ctx, 6); return { lede: 'A row for each order, its status in plain words.', live: `<div class="hk-col">${item(h, 'Order rows', 'hk-i--w')}</div>`, code: [['Order rows', h]] }; },
   // the caption says what the status means; the word itself is the chip
-  status: (ctx) => { const all = ctx.status.map((s) => [TONE_SAYS[s.tone] || s.tone, ctx.ui.statusChip(s.id)]); return { lede: 'Status is said in words, in one colour that reads on the ground.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all }; },
+  status: (ctx) => { const all = ctx.status.map((s) => [TONE_SAYS[s.id === 'new' ? 'action' : s.tone] || s.tone, ctx.ui.statusChip(s.id)]); return { lede: 'Status is said in words, in one colour that reads on the ground.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all }; },
   feedback: (ctx) => {
     const S = SC(ctx), u = ctx.ui;
     const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Error', u.alert('danger', "Payment didn't go through. Check the card details and try again.")], ['Toast', u.toast(S.toast)], ['Loading', `${u.spinner()}${u.skeleton('220px')}${u.skeleton('150px')}`]];
@@ -119,8 +119,8 @@ const PAGES = {
     return { lede: 'A dialog asks one question and names both answers.', live: `<div class="hk-row hk-row--2">${item(move, 'Confirm', 'hk-i--w')}${item(second, 'Cannot be undone', 'hk-i--w')}</div>`, code: [['Confirm', move], ['Cannot be undone', second]] };
   },
   table: (ctx) => {
-    const S = SC(ctx), u = ctx.ui, d = S.deliveries;
-    const h = `<table class="ui-table"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td><strong>${A(x.to)}</strong><br>${A(x.when)}</td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
+    const S = SC(ctx), u = ctx.ui, d = ordersByDue(ctx), when = (t) => A(t).replace(/\d{1,2}:\d{2} ?[ap]m/gi, (m) => `<span class="ui-time">${m}</span>`);
+    const h = `<table class="ui-table"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td><strong>${A(x.to)}</strong><br>${when(x.when)}</td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
     return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Orders table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="ui-empty"><h3 class="ui-empty__title">${A(E.title)}</h3><p class="ui-empty__text">${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
@@ -193,12 +193,14 @@ function cover(ctx0, K) {
   const top = `<section class="hk-top hk-top--cover"><div class="hk-title" style="${fieldStyle(ctx, rev.ground || dk, 'kit cover field', 32)}"><div class="hk-logo">${ctx.logo.html('reversed', { width: 320 })}</div><h1 class="ht-d hk-title__h" style="--bs:${fitSize(ctx, ['UI kit'], 0.94, stepPx(ctx, 'display', 48), 32)}">UI kit</h1>${B.product ? `<p class="hk-title__l">${A(B.product)}</p>` : ''}<p class="hk-title__v">${A(ctx.versionLine)}</p></div>
 <div class="hk-rule" style="background:${accentOf(ctx)}" aria-hidden="true"></div>
 <div class="ui hk-live">${live}</div></section>`;
-  // the cover names the sections, each a link into it; the contents page lists every page
-  return top + contentsGrid(ctx, K.sections.map((x) => ({ n: x.n, title: x.title, href: K.href(x.pages[0].id), pages: x.pages.map((q) => ({ ref: K.pages.find((y) => y.id === q.id).ref })) })), { brief: true });
+  // the cover lists every page of each section as a link, as the guide's index does
+  return top + kitContents(ctx, K);
+}
+function kitContents(ctx, K) {
+  return contentsGrid(ctx, K.sections.map((x) => ({ n: x.n, title: x.title, pages: x.pages.map((q) => { const r = K.pages.find((y) => y.id === q.id); return { href: K.href(q.id), ref: r.ref, title: r.title }; }) })));
 }
 function contents(ctx0, K) {
-  const ctx = siteCtx(ctx0);
-  return contentsGrid(ctx, K.sections.map((x) => ({ n: x.n, title: x.title, pages: x.pages.map((q) => { const r = K.pages.find((y) => y.id === q.id); return { href: K.href(q.id), ref: r.ref, title: r.title }; }) })));
+  return kitContents(siteCtx(ctx0), K);
 }
 
 function shell(ctx0, K, inner) {

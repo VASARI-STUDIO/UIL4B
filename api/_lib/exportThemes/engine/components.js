@@ -182,7 +182,8 @@ dialog.ui-dialog::backdrop { background: ${scrim}; }
 .ui-table th button { all: unset; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .ui-table th button:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus); }
 .ui-table td { height: 52px; padding: 0 12px; border-bottom: var(--w-hairline) solid var(--divider); }
-.ui-table .is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.ui-table .is-num { text-align: right; font-variant-numeric: tabular-nums; }${SH.timeNowrap ? `
+.ui-time { white-space: nowrap; font-variant-numeric: tabular-nums; }` : ''}
 .ui-table tbody tr[aria-selected="true"] { background: var(--raised); box-shadow: inset 3px 0 0 var(--action); }
 @media (hover:hover) { .ui-table tbody tr:hover { background: var(--raised); } }
 .ui-table tbody tr.is-hover { background: var(--raised); }
