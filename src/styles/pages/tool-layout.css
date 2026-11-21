@@ -44,7 +44,7 @@
   --tl-wash-2: var(--v3-rowh);
   --tl-wash-on: var(--v3-rowc);
   --tl-row-on: var(--v3-rowc);
-  --tl-focus: var(--v3-ink);
+  --tl-focus: var(--focus-ink);
   --tl-link: var(--link, var(--accent-text));
   --tl-ease: var(--v3-ease);
 }
@@ -441,7 +441,7 @@
   transition: transform 120ms var(--tl-ease), background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 :is(.tl, .tl-sheet-layer) .tl-pill:active { transform: scale(.97); }
-:is(.tl, .tl-sheet-layer) .tl-pill.is-on { border-color: var(--tl-line-on); background: var(--tl-wash-on); color: var(--tl-ink); }
+:is(.tl, .tl-sheet-layer) .tl-pill.is-on { border-color: var(--sel-edge); background: var(--tl-wash-on); color: var(--tl-ink); }
 :is(.tl, .tl-sheet-layer) .tl-pill[disabled] { cursor: not-allowed; opacity: .5; }
 :is(.tl, .tl-sheet-layer) .tl-pills--block { flex-wrap: nowrap; }
 :is(.tl, .tl-sheet-layer) .tl-pills--block .tl-pill { flex: 1; justify-content: center; padding: 9px 12px; border-radius: var(--btn-radius); }
@@ -463,7 +463,7 @@
   box-sizing: border-box;
   width: var(--si-w);
   height: var(--si-h);
-  border: 1px solid var(--tl-line-on);
+  border: 1px solid var(--sel-edge);
   border-radius: var(--si-r, 999px);
   background: var(--tl-wash-on);
   transform: translate(var(--si-x), var(--si-y));
@@ -523,16 +523,23 @@
   height: 15px;
   margin-top: -4.5px;
   border-radius: 999px;
-  background: #FAFAF8;
-  border: 2px solid var(--tl-card);
-  box-shadow: 0 2px 7px rgba(0, 0, 0, .6);
+  background: var(--range-thumb);
+  border: 2px solid var(--range-thumb-edge);
 }
 :is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]::-moz-range-thumb {
   width: 13px;
   height: 13px;
   border-radius: 999px;
-  background: #FAFAF8;
-  border: 2px solid var(--tl-card);
+  background: var(--range-thumb);
+  border: 2px solid var(--range-thumb-edge);
+}
+/* Focus moves from the 24px input box to the thumb. These three rules go
+   together: without the thumb rings a slider would have no visible focus. */
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]:focus-visible { outline: none; }
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--focus-halo), 0 0 0 4px var(--focus-ink); }
+:is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--focus-halo), 0 0 0 4px var(--focus-ink); }
+@media (forced-colors: active) {
+  :is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
 }
 
 /* ── Code well ───────────────────────────────────────────────────────────── */

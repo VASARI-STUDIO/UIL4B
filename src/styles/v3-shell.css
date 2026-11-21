@@ -40,6 +40,57 @@
   --v3-ring:rgba(239,238,234,.14);--v3-seg-on:rgba(239,238,234,.12);
   --v3-h-colour:#EBC84B;--v3-h-type:#35C7E6;--v3-h-icons:#3DD68C;--v3-h-imagery:#F0873A;--v3-h-ai:#EC6FA8;
 }
+
+/* ── Focus and selected: one style, in ink (D31) ───────────────────────── */
+:root,[data-theme]{
+  /* focus-visible */
+  --focus-ink:var(--v3-ink);
+  --focus-halo:var(--v3-on-ink);          /* the inner tone of the two-tone ring */
+  --focus-w:2px;
+  --focus-offset:2px;
+  --focus-offset-inset:-2px;               /* rows, menu items, clipped scrollers */
+  --focus-ring-media:0 0 0 var(--focus-offset) var(--focus-halo); /* fills the offset gap on photo or colour grounds */
+
+  /* selected */
+  --sel-ink:var(--v3-ink);                 /* label of a selected item */
+  --sel-edge:var(--v3-ink);                /* 1px edge, 2px underline, swatch ring */
+  --sel-wash:var(--v3-rowc);               /* optional tint under the edge; never alone */
+  --sel-solid:var(--v3-ink);               /* segment and tray fill */
+  --sel-on-solid:var(--v3-on-ink);         /* label on --sel-solid */
+  --sel-ring:0 0 0 2px var(--v3-on-ink),0 0 0 4px var(--v3-ink); /* swatches */
+
+  /* native controls */
+  --control-accent:var(--v3-ink);          /* accent-color: checkbox, radio, progress */
+  --range-track:var(--v3-rowhc);
+  --range-thumb:var(--v3-ink);
+  --range-thumb-edge:var(--v3-raised);
+}
+
+/* Inset ring: rows, menu items, anything inside an overflow:auto/hidden scroller
+   that would clip a 4px outside ring. On an ink-filled element the inset ring
+   turns on-ink so it stays visible. */
+.focus-inset:focus-visible{outline-offset:var(--focus-offset-inset)}
+.focus-inset:is([aria-pressed="true"],[aria-checked="true"],[aria-selected="true"]).sel-seg:focus-visible{outline-color:var(--sel-on-solid)}
+
+/* Two-tone ring on photo, swatch, canvas or colour-ramp grounds: the on-ink
+   halo fills the 2px offset gap and the ink outline sits outside it. Opt-in
+   only, because it takes over box-shadow. */
+.focus-media:focus-visible{box-shadow:var(--focus-ring-media)}
+
+/* Selected: one rule per kind of control. State comes from ARIA; the shape cue
+   (edge, solid block, underline, ring) is what passes 3:1, never the tint alone. */
+.sel-chip:is([aria-pressed="true"],[aria-checked="true"]){border-color:var(--sel-edge);background:var(--sel-wash);color:var(--sel-ink)}
+.sel-seg:is([aria-pressed="true"],[aria-checked="true"],[aria-selected="true"]){background:var(--sel-solid);color:var(--sel-on-solid)}
+.sel-tab[aria-selected="true"]{color:var(--sel-ink);box-shadow:inset 0 -2px 0 var(--sel-edge)}
+.sel-row:is([aria-selected="true"],[aria-checked="true"]){background:var(--sel-wash);color:var(--sel-ink)}
+.sel-swatch:is([aria-pressed="true"],[aria-checked="true"]){box-shadow:var(--sel-ring)}
+.sel-swatch:focus-visible{outline-offset:6px}
+
+@media (forced-colors:active){
+  :focus-visible{outline-color:Highlight}
+  .focus-media:focus-visible{box-shadow:none;outline:2px solid Highlight}
+  :is([aria-pressed="true"],[aria-checked="true"],[aria-selected="true"]):is(.sel-chip,.sel-seg,.sel-row){border:2px solid Highlight}
+}
 @property --mi-a{syntax:'<angle>';inherits:false;initial-value:0deg}
 
 /* ── The bar ───────────────────────────────────────────────────────────── */
