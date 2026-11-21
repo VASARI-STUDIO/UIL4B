@@ -1,7 +1,8 @@
 // The maintenance switch. Nothing in the app turns it on by itself.
 //
 //   · Build flag: set VITE_MAINTENANCE=1 for a deploy and every visitor sees the
-//     maintenance page inside the full shell. A deploy without it clears it.
+//     maintenance page on its own (logo, message,
+//     Check again). A deploy without it clears it.
 //   · Test seam: in dev and test builds, `uil4b-maintenance` = `on` in
 //     sessionStorage shows the page without a rebuild. It does nothing in a
 //     production build.

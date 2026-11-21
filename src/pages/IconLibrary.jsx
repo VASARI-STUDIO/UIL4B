@@ -30,6 +30,7 @@ import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
+import { COLORED_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
@@ -122,12 +123,6 @@ const API_HOSTS = [
   'https://api.iconify.design',
 ]
 
-const COLORED_PACKS = new Set([
-  'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
-  'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
-  'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
-  'meteocons',
-])
 // Theme-adaptive tint for the GRID/rail only (inverts monochrome art in dark mode).
 // The customizer Stage does NOT use this — it fixes contrast via a luminance swap.
 const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
@@ -171,8 +166,6 @@ const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => I
 // the catalogue's groups; `custom` is not a member of GROUP_ORDER and never was.
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
-// Packs whose default style is genuinely stroke-based (the stroke slider applies).
-const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons'])
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
@@ -890,9 +883,11 @@ const gridShowsPack = (list) => {
 
 // What a cell is called to assistive tech: the action, the icon, and the pack
 // when the grid mixes packs (the visible label only appears on hover).
-const cellLabel = (icon, packName) => {
+// An icon whose line style the customiser can change says so as well.
+const cellLabel = (icon, packName, editable) => {
   const base = icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`
-  return packName ? `${base}, ${packName}` : base
+  const named = packName ? `${base}, ${packName}` : base
+  return editable ? `${named}, line style editable` : named
 }
 
 // Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
@@ -1089,6 +1084,16 @@ function cellGlyph(icon, src, onGlyphError, gone) {
   )
 }
 
+// Corner mark on a tile whose line style can be edited. The tile's accessible name says it.
+function EditMark() {
+  return (
+    <svg className="ic-edit" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
 // Memoised so a grid change re-renders only the cells it touches. Appending a
 // page, a tranche of markup landing or the customizer opening used to re-run
 // every mounted cell; every prop here is a primitive, a stable callback or the
@@ -1114,6 +1119,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
   // focused cell still has to say which pack it is from.
   const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
   const drawnPack = showPack ? packName : null
+  const editable = isGalleryEditable(icon)
   return (
     <div
       className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
@@ -1121,7 +1127,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
-      aria-label={cellLabel(icon, packName)}
+      aria-label={cellLabel(icon, packName, editable)}
       onClick={() => onPick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(icon) } }}
       onMouseEnter={() => onWarm(icon, false)}
@@ -1129,6 +1135,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       onFocus={() => onWarm(icon, true)}
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
+      {!ghost && editable && <EditMark key="e" />}
       <span key="n" className="ic-name">{icon.name}</span>
       {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
@@ -1749,7 +1756,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
       // loaded SVG; until it arrives the pack list is the first guess.
       if (COLORED_PACKS.has(activeIcon.pack)) return false
       if (strokeFromMarkup !== null) return strokeFromMarkup
-      return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
+      return cdnPackIsStroke(activeIcon.pack, activeIcon.name)
     }
     return !activeIcon.filled
   }, [activeIcon, strokeFromMarkup])

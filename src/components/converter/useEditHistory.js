@@ -33,14 +33,15 @@ export function historyKey(e) {
  * @param apply   puts a recipe back into the controls
  * @returns canUndo, canRedo, undo, redo, the edits as phrases, a line for screen readers and reset(changes)
  * @param active  whether the keyboard shortcuts are live (a file is loaded and nothing is running)
+ * @param spec    the tab's keys and phrases (utils/editHistory.js); the Video tab's when left out
  */
-export default function useEditHistory(recipe, apply, active) {
+export default function useEditHistory(recipe, apply, active, spec) {
   const [hist, setHist] = useState(() => startHistory(recipe))
   const [said, setSaid] = useState('')
   const live = useRef({ hist, apply, active, recipe })
   useEffect(() => { live.current = { hist, apply, active, recipe } })
 
-  useEffect(() => { setHist(h => record(h, recipe, Date.now())) }, [recipe])
+  useEffect(() => { setHist(h => record(h, recipe, Date.now(), spec)) }, [recipe, spec])
 
   const step = useCallback((kind) => {
     const { hist: h, apply: put, active: on } = live.current
@@ -50,9 +51,9 @@ export default function useEditHistory(recipe, apply, active) {
     live.current.hist = next
     setHist(next)
     put(next.present)
-    const names = changedEditNames(h.present, next.present)
+    const names = changedEditNames(h.present, next.present, spec)
     setSaid(`${kind === 'undo' ? 'Undid' : 'Redid'} ${names.join(' and ') || 'an edit'}`)
-  }, [])
+  }, [spec])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -79,7 +80,7 @@ export default function useEditHistory(recipe, apply, active) {
     canRedo: canRedo(hist),
     undo: useCallback(() => step('undo'), [step]),
     redo: useCallback(() => step('redo'), [step]),
-    edits: describeEdits(recipe),
+    edits: describeEdits(recipe, spec),
     said,
     reset,
   }
