@@ -383,6 +383,10 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     // the head button is offered once the table head has scrolled under the nav
     await page.locator('thead').getByRole('link', { name: /free trial|Upgrade to Pro/ }).click()
     await expect(popup, 'the docked bar button did not open the upgrade layer').toBeVisible()
+    // The layer is painted before its keyboard handler is attached; the handler
+    // goes on in the same effect that moves focus inside, so wait for that.
+    await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-pro-layer]')),
+      { message: 'focus never moved into the upgrade layer' }).toBe(true)
     await page.keyboard.press('Escape')
     await expect(popup).toHaveCount(0)
     await expect(page).toHaveURL(/\/plans$/)

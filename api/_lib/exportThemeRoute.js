@@ -16,7 +16,8 @@
 //
 // Every file name comes from brand.slug (limited to [a-z0-9-] by the engine) and the theme id, never from the project name.
 
-import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeExportPro, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
+import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
+import { assertThemeAccess } from './themeAccess.js'
 
 export const MAX_THEME_BODY_CHARS = 256 * 1024
 // First in the head of every print document. Inline styles and data: fonts and images are all a print document holds. base-uri and
@@ -197,8 +198,11 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
   const { theme, row, format } = body
   const problem = themeRequestProblem(body)
   if (problem) return res.status(400).json(problem)
-  if (plan.id !== 'pro' && isThemeExportPro(row, theme)) {
-    return res.status(403).json({ error: 'Pro plan required', code: 'pro_required', row, theme })
+  const access = assertThemeAccess(plan, { theme, row, format })
+  if (!access.ok) {
+    return res.status(access.status).json(access.code === 'pro_required'
+      ? { error: 'Pro plan required', code: 'pro_required', row, theme }
+      : { error: 'Export not available', code: access.code })
   }
 
   // The stated length first: an oversize request costs no limiter write and no stringify.
