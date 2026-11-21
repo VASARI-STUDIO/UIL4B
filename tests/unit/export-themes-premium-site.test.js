@@ -565,7 +565,7 @@ test('theme 21 brand photograph: the 2.4 tile and the 5.1 drawing share one sour
     assert.equal((pic.match(/class="ht-hands"/g) || []).length, 2, 'two people are two hands groups')
     assert.match(pic, /aria-label="Two people at a market counter/)
     assert.doesNotMatch(pic, /two pairs of hands/i, 'the label names hands that are not drawn')
-    assert.match(files['assets/guidelines.css'], /\.ht-field--pic \.ht-field__imglogo\{inset:24px 0 26px/, 'the picture tile logo is off the centre line of the sky')
+    assert.match(files['assets/guidelines.css'], /\.ht-field--pic \.ht-field__imglogo\{inset:0;align-items:flex-start;padding-top:24px\}/, 'the picture tile logo is not held to the top of the sky')
   }
 })
 
@@ -634,4 +634,131 @@ test('theme 21 round 13 minors: grid page layout, type line, number caption, loa
   for (const f of ['example.html', 'feedback.html']) assert.match(kit[f], /Loading<\/(span|p)>[\s\S]*?ui-skeleton/, `${f} has no labelled loading row`)
   const one = await pagesFor('slides', { design: {} })
   assert.match(one['summary.html'], /ht-sum__ty">Commissioner: extra bold for headlines, regular for text\./, 'one family for both jobs does not name the weights')
+})
+
+const BOTH = [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]
+
+// Design review round 14 (theme 21), N12: the logo on the picture tile is the size of its siblings' and sits in the sky, held to the top
+// of the tile (not centred on the awning), and the tile is the drawing's own 400:270 shape at every width so the sky never fills it.
+//     Break: set the tile's `.ht-field__imglogo` back to `inset:24px 0 26px`, give the picture tile its own logo width in lane-ht-notes.js,
+//     or change the tile's aspect-ratio (lane-ht-css.js).
+test('theme 21 logo on a picture: same logo size as the other tiles, held to the sky, tile at the drawing shape', async () => {
+  for (const body of BOTH) {
+    const files = await pagesFor('slides', body), html = files['logo-grounds.html'], css = files['assets/guidelines.css']
+    const width = (cls) => [...html.matchAll(new RegExp(`class="${cls}"[^>]*><span class="ht-wm[^"]*"[^>]*style="[^"]*?width:([\\d.]+)px`, 'g'))].map((m) => m[1])
+    const sib = width('ht-field__logo'), pic = width('ht-field__imglogo')
+    assert.ok(sib.length >= 4, `the ground tiles carry logos (${sib.length})`)
+    assert.equal(pic.length, 1, 'the picture tile carries one logo')
+    assert.equal(new Set([...sib, ...pic]).size, 1, `logo widths differ across tiles: ${[...sib, ...pic].join(', ')}`)
+    assert.match(css, /\.ht-field--pic \.ht-field__imglogo\{inset:0;align-items:flex-start;padding-top:24px\}/, 'the logo is not held to the top of the sky')
+    assert.match(css, /\.ht-field--pic \.ht-field__img\{[^}]*aspect-ratio:400\/270/, 'the picture tile is not the drawing shape')
+  }
+})
+
+// Design review round 14 (theme 21), N13: the photograph reads as a drawing of two people, not clip art: no dark outline stroked under a
+// limb (no path drawn twice), and the skin tones are two literals that no brand colour is.
+//     Break: draw `limb()` twice again (an outline under the stroke) in lane-ht-notes.js, or take the skin from the brand palette.
+test('theme 21 brand photograph: hands have no outline stroke and the skin is not a brand colour', async () => {
+  for (const body of BOTH) {
+    const files = await pagesFor('slides', body), pic = files['photo-direction.html']
+    const hands = pic.match(/<g class="ht-hands">[\s\S]*?<\/g>/g) || []
+    assert.equal(hands.length, 2)
+    const skin = new Set()
+    for (const g of hands) {
+      const ds = [...g.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1])
+      assert.equal(new Set(ds).size, ds.length, 'a path is drawn twice (an outline under a stroke)')
+      for (const m of g.matchAll(/<path[^>]*stroke="(#[0-9A-Fa-f]{6})"[^>]*stroke-width="7"/g)) skin.add(m[1].toUpperCase())
+      assert.ok(/<ellipse[^>]*fill="#(C68E6A|8D5A3C)"/.test(g), 'each person has a palm in a skin tone')
+    }
+    assert.deepEqual([...skin].sort(), ['#8D5A3C', '#C68E6A'], 'the fingers are not the two skin tones, one a person')
+    for (const f of ['palette.html', 'colour-values.html', 'summary.html']) assert.doesNotMatch(files[f] || '', /#C68E6A|#8D5A3C/i, `${f}: a skin tone is among the brand's colours`)
+  }
+})
+
+// Design review round 14 (theme 21), n50 and n51: the Next band is the page ground with a 4px rule in the action colour (no filled field, so
+// no dark box), and the stripe under the title keeps the page margin and an 8px gap.
+//     Break: give nextField a fieldStyle again (lane-ht-lib.js); drop the 56px/20px margins on `.ht-dev` (lane-ht-css.js).
+test('theme 21 Next band is a rule on the ground, and the device stripe keeps the margin', async () => {
+  const files = await pagesFor('slides', BOTH[0]), css = files['assets/guidelines.css']
+  for (const p of ['palette.html', 'grid.html']) {
+    assert.match(files[p], /<nav class="ht-next" aria-label="Previous and next" style="border-top:4px solid var\(--palette-primary\)">/, `${p}: the Next band is not a 4px rule`)
+  }
+  assert.match(css, /\.ht-dev\{[^}]*margin:8px 56px 0\}/)
+  assert.match(css, /\.ht-dev\{margin:8px 20px 0\}/, 'the narrow stripe has no margin')
+})
+
+// Design review round 14 (theme 21), n52: the photograph's words say what sits in the sky, and the label, caption and brief agree. With no
+// headline written the sky holds the brand name, so it is "the name", not "a headline". (A brand with a headline is not covered: the route
+// gives the fixtures none.)
+//     Break: say "a headline" unconditionally in lane-ht-notes.js (`said`).
+test('theme 21 photography page: the sky is described as what it holds', async () => {
+  for (const body of BOTH) {
+    const pd = (await pagesFor('slides', body))['photo-direction.html']
+    assert.match(pd, /clear sky above for the name\./, 'the caption does not say what the sky is for')
+    assert.match(pd, /the name set in the clear sky above/, 'the label does not agree with the caption')
+    assert.doesNotMatch(pd, /a headline set in the clear sky/, 'the label calls the brand name a headline')
+  }
+})
+
+// Design review round 14 (theme 21), n53 and n54: the contrast page lists each pair once, "Both ways" when the reverse also passes, with the
+// ratio set as a figure, and its count is the rows. The typefaces page counts the three roles.
+//     Break: stop merging a pair with its reverse (`rows` in contrast, lane-ht-notes.js); count a number other than the roles in `typefaces`.
+test('theme 21 contrast and typefaces pages count what they list', async () => {
+  const num = ['None', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
+  for (const body of BOTH) {
+    const files = await pagesFor('slides', body), c = files['contrast.html'], t = files['typefaces.html']
+    const rows = c.match(/<li><p class="ht-k"><b class="num">/g) || []
+    assert.ok(rows.length >= 2)
+    assert.match(c, new RegExp(`>${num[rows.length]} pairs that pass<`), `the count does not match the ${rows.length} rows`)
+    const ratios = [...c.matchAll(/<b class="num">([\d.]+) : 1<\/b>/g)].map((m) => m[1])
+    assert.equal(new Set(ratios).size, ratios.length, 'a pair is listed twice (once each way)')
+    assert.match(c, /<span>Both ways<\/span>/, 'no pair says it passes both ways')
+    assert.match(files['assets/guidelines.css'], /\.ht-scale--ratio \.ht-k b\{display:block;font-family:var\(--disp\)/)
+    assert.equal((t.match(/class="ht-spec"/g) || []).length, 3)
+    assert.match(t, />Three faces</)
+  }
+})
+
+// Design review round 14 (theme 21), n55 and n57: the figure pages keep room under their notes at desktop; the grid page's miniature has a
+// ground, an edge on the page and on the columns, and padding so the wordmark is not on the column line.
+//     Break: drop the `.ht-notes--fig` bottom padding or the `.ht-gp__n,.ht-gp__h` padding (lane-ht-css.js).
+test('theme 21 figure pages and the grid miniature keep their room and edges', async () => {
+  const css = (await pagesFor('slides', BOTH[0]))['assets/guidelines.css']
+  assert.match(css, /@media \(min-width:1024px\)\{\.ht-notes--fig\{padding-bottom:24px\}\}/)
+  assert.match(css, /\.ht-gp__pg\{background:var\(--g\);box-shadow:inset 0 0 0 1px var\(--h\)/)
+  assert.match(css, /\.ht-gp__in>span\{display:block;box-shadow:inset 0 0 0 1px color-mix\(in srgb,var\(--t\) 30%,transparent\)\}/)
+  assert.match(css, /\.ht-gp__n,\.ht-gp__h\{padding:0 1\.5cqw\}/)
+})
+
+// Design review round 14 (theme 21), N11 follow-up: a figure page (clear space, minimum size) opens with its heading band as the spread band, then
+// its heading and lead, then the slide, at every width.
+//     Break: put `st + nt` back for FIG pages, or drop `ledBy` (lane-ht.js `page`).
+test('theme 21 figure pages lead with the heading, then the notes, then the slide', async () => {
+  const files = await pagesFor('slides', BOTH[0])
+  for (const p of ['clear-space.html', 'min-size.html']) {
+    const h = files[p], notes = h.search(/class="ht-notes ht-notes--fig"/), stage = h.search(/class="ht-stage[^"]*"/)
+    assert.ok(h.search(/class="ht-ml ht-ml--spread"/) > 0, `${p}: the heading band is not the spread band`)
+    assert.ok(notes > 0 && notes < stage, `${p}: the slide comes before its notes`)
+  }
+})
+
+// Design review round 14 (theme 21), n56: a run of sibling tags in a kit code sample is broken one attribute to a line for all of them or
+// none, never one tag in a run broken and its neighbours not.
+//     Break: go back to breaking by a single line's length in `breakAttrs` (lane-ht-kit.js).
+test('theme 21 kit code samples break a run of sibling tags together', async () => {
+  const nav = (await pagesFor('ui-kit', BOTH[0]))['navigation.html'], at = nav.indexOf('class=&quot;ui-tabs&quot; role=&quot;tablist&quot;')
+  assert.ok(at > 0, 'the tabs sample is missing')
+  const block = nav.slice(at, nav.indexOf('&lt;/div&gt;', at)).split('\n').filter((l) => /^\s*&lt;button/.test(l))
+  assert.equal(block.length, 3, 'three tab buttons')
+  const broken = block.filter((l) => /&lt;button$/.test(l.trim())).length
+  assert.ok(broken === 0 || broken === 3, `${broken} of 3 tab buttons are broken over lines`)
+})
+
+// Design review round 14 (theme 21), n47: the dark-theme edge on a disabled choice is theme 21's own (meta.shipped disabledEdge); a theme
+// without it keeps the shared engine's CSS.
+//     Break: emit the `[data-theme="dark"] .ui-choice input:disabled:not(.ui-switch)` rule for every theme (engine/components.js).
+test('theme 21 disabled choice edge in dark is not in another theme', async () => {
+  const mine = await exportZip('21-presentation', 'ui-kit'), other = await exportZip('22-ticket', 'ui-kit')
+  assert.match(mine['components.css'], /\[data-theme="dark"\] \.ui-choice input:disabled:not\(\.ui-switch\)/)
+  assert.doesNotMatch(other['components.css'], /\[data-theme="dark"\] \.ui-choice input:disabled:not\(\.ui-switch\)/)
 })

@@ -24,24 +24,25 @@ const VOICE_PAIRS = [
 // (5.1) draws it whole at 3:2; the "On a picture" tile (2.4) is a crop of the same drawing with the same fills (sceneTile), so there is one
 // photograph and not two. The sky, awning, counter and ground run past the frame on both sides, so any crop is complete.
 const accentFor = (ctx, ...against) => [(byRole(ctx, 'accent') || {}).hex, L(ctx).accent, ...distinctColours(ctx).map((c) => c.hex)].find((h) => h && against.every((g) => ctx.ratio(h, g) >= 1.8)) || '';
+const SKIN = ['#C68E6A', '#8D5A3C']
 const sceneHands = (ctx, label, o = {}) => {
-  const act = actF(ctx), dk = darkF(ctx), pn = panelF(ctx), sky = L(ctx).sunken;
+  const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken;
   // the warm colour: the first of the brand's own that is neither the action nor the dark colour and shows on the dark counter (hands, awning, fruit)
   const hand = distinctColours(ctx).map((c) => c.hex).find((h) => lower(h) !== lower(act) && lower(h) !== lower(dk) && lower(h) !== lower(sky) && ctx.ratio(h, dk) >= 4) || accentFor(ctx, dk) || L(ctx).surface, acc = hand;
-  // a limb is an outline stroke under a fill stroke, so a finger or a thumb reads as its own shape on the sky and on the counter
-  const limb = (d, w) => `<path d="${d}" stroke="${dk}" stroke-width="${w + 4}" stroke-linecap="round" fill="none"/><path d="${d}" stroke="${hand}" stroke-width="${w}" stroke-linecap="round" fill="none"/>`;
-  // the left person reaches in from the counter's left, palm to the crate's side, three fingers fanned and the thumb up
-  const left = `<path d="M18 300h96l42-56-48-28z" fill="${act}" stroke="${dk}" stroke-width="2"/><path d="M138 226c12-10 26-10 36-4l-2 26c-12 6-28 4-38-6z" fill="${hand}" stroke="${dk}" stroke-width="2"/>${limb('M170 224l16-2M172 234l18 0M170 244l16 4', 7)}${limb('M148 226l10-20', 8)}`;
-  // the right person comes in from the right and higher, a paper sleeve with an action cuff and a rounder hand, fingers curled over the crate's top corner, the thumb up
-  const right = `<path d="M394 300h-70l-36-60 26-24z" fill="${pn}" stroke="${dk}" stroke-width="2"/><path d="M287 241l28-26" stroke="${act}" stroke-width="9"/><ellipse cx="260" cy="218" rx="19" ry="13" transform="rotate(30 260 218)" fill="${hand}" stroke="${dk}" stroke-width="2"/>${limb('M247 210l-14-8M245 218l-16-2M246 226l-14 6', 7)}${limb('M266 207l-8-14', 8)}`;
+  // a limb is one flat stroke (no outline): skin is two fixed tones, one per person, never a brand colour, so the brand colours stay on the awning, the crate, the fruit and the sleeves
+  const limb = (d, w, c) => `<path d="${d}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  // the left person reaches in from the counter's left and lifts a fruit out of the crate: the sleeve ends at the wrist, the palm under the fruit, the fingers round it, the thumb over it
+  const left = `<path d="M-8 354L16 378L152 232L128 208z" fill="${act}"/><ellipse cx="147" cy="214" rx="17" ry="12" transform="rotate(-47 147 214)" fill="${SKIN[0]}"/><circle cx="168" cy="186" r="10" fill="${act}"/>${limb('M158 212q14 2 20-14M152 218q16 6 28-6M146 205q4-14 14-22', 7, SKIN[0])}`;
+  // the right person comes in from the right and higher: a sleeve in the brand's warm colour with an action cuff, and a hand that holds the crate's top edge, fingers over it
+  const right = `<path d="M251 235L273 209L428 333L407 359z" fill="${hand}"/><path d="M253 239L278 210" stroke="${act}" stroke-width="9"/><ellipse cx="253" cy="212" rx="18" ry="12" transform="rotate(38 253 212)" fill="${SKIN[1]}"/>${limb('M244 208q-4-10-10-12M248 214q-8-4-14 0M258 204q-2-8-8-12', 7, SKIN[1])}`;
   // the awning's stripes overlap by 1 px where the band meets the scallops, so no hairline shows between them
   const awn = Array.from({ length: 29 }, (_, i) => `<rect x="${i * 40 - 380}" y="120" width="40" height="27" fill="${i % 2 ? acc : act}"/><path d="M${i * 40 - 380} 146h40a20 12 0 0 1-40 0z" fill="${i % 2 ? acc : act}"/>`).join('');
   const crate = `<rect x="160" y="198" width="80" height="38" fill="${dk}"/>`;
-  return `<svg class="ht-scene" viewBox="${o.vb || '0 0 400 300'}" preserveAspectRatio="${o.par || 'xMidYMid slice'}" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-2000" y="-1000" width="4400" height="1300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect x="-2000" y="240" width="4400" height="800" fill="${dk}"/><rect x="-2000" y="234" width="4400" height="8" fill="${act}"/>${crate}${[178, 200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${k % 2 ? hand : act}"/>`).join('')}<g class="ht-hands">${left}</g><g class="ht-hands">${right}</g></svg>`;
+  return `<svg class="ht-scene" viewBox="${o.vb || '0 0 400 300'}" preserveAspectRatio="${o.par || 'xMidYMid slice'}" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-2000" y="-1000" width="4400" height="1300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect x="-2000" y="240" width="4400" height="800" fill="${dk}"/><rect x="-2000" y="234" width="4400" height="8" fill="${act}"/>${crate}${[200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${k % 2 ? act : hand}"/>`).join('')}<g class="ht-hands">${left}</g><g class="ht-hands">${right}</g></svg>`;
 };
-// the tile's crop of that drawing, from the same source with the same fills: the sky above the awning's top, filling the tile (slice, anchored
-// to the top, so the sky is where the logo sits at any tile height)
-const sceneTile = (ctx) => sceneHands(ctx, '', { vb: '0 20 400 190', par: 'xMidYMin slice' });
+// the tile's crop of that drawing, from the same source with the same fills: from 140 units of sky down to the hands, filling the tile (slice,
+// anchored to the top, so the sky is where the logo sits at any tile height; the tile is drawn at the drawing's own proportions where it is narrow)
+const sceneTile = (ctx) => sceneHands(ctx, '', { vb: '0 -20 400 270', par: 'xMidYMin slice' });
 const PHOTO_BRIEF = [['Subject', 'People at work, caught mid-task, not posed.'], ['Light', 'Daylight from the side. No flash.'], ['Crop', 'Close in, with clear space round the subject for type.']];
 
 const dl = (rows) => { const r = rows.filter(([, v]) => v); return r.length ? `<dl class="ht-dl">${r.map(([k, v]) => `<dt>${A(k)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''; };
@@ -143,7 +144,7 @@ const groundTiles = (ctx) => {
   // the picture tile is a crop of the photo direction's drawing (sceneHands, the same fills), the logo set in its sky as the other tiles set theirs
   // on their colour (one-colour, dark or light, whichever reads on the sky), with the caption on the dark ground the counter stands on
   const sky = L(ctx).sunken, sk = cwFor(ctx, sky), sown = cw[sk] && lower(cw[sk].ground) === lower(sky), sink = sown ? cw[sk].name : inkOn(ctx, sky);
-  tiles.push({ hex: dk, what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneTile(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 130, ...(sown ? { colourway: sk } : {}), color: sink, label: 'Logo' })}</div></div><p class="ht-field__c" style="${fieldStyle(ctx, dk, 'site logo ground photo caption')}"><b>On a picture</b><br>${A(cwCaption(cw, sk, ctx, sky, sown))}, in the sky.</p>` });
+  tiles.push({ hex: dk, what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneTile(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 180, ...(sown ? { colourway: sk } : {}), color: sink, label: 'Logo' })}</div></div><p class="ht-field__c" style="${fieldStyle(ctx, dk, 'site logo ground photo caption')}"><b>On a picture</b><br>${A(cwCaption(cw, sk, ctx, sky, sown))}, in the sky.</p>` });
   return fields(ctx, tiles, 3);
 };
 
@@ -301,12 +302,21 @@ export const NOTES = {
     const cs = distinctColours(ctx).sort((a, b) => b.share - a.share), ps = pcts(cs);
     return { big: `${ps[0]} ${cs[0].name}`, html: `<div class="ht-stripe" role="img" aria-label="${A(cs.map((c, i) => `${c.name} ${ps[i]}`).join(', '))}">${cs.map((c, i) => `<div style="flex:${c.share};${fieldStyle(ctx, c.hex, `site proportion ${c.name}`)}${lower(c.hex) === lower(L(ctx).surface) ? ';box-shadow:inset 0 0 0 1px var(--h)' : ''}"><span class="num">${ps[i]}</span></div>`).join('')}</div>` + dl(cs.map((c, i) => [c.name, `<span class="num">${ps[i]}</span>. ${A(c.lands || '')}`])) + p('The bar under the first title of each section is this proportion in small: each colour as wide as its share, widest first, with the page ground left out.') };
   },
-  contrast: (ctx) => ({
-    big: `${words(ctx.pairs.length)} pairs that pass`,
-    html: `<ol class="ht-scale">${ctx.pairs.map((q) => `<li><p class="ht-k">${A(ratioText(q.ratioText))}<span>${q.large ? '24 px and over' : 'Any size'}</span></p><p class="ht-scale__s" style="background:${q.bgHex};color:${q.fgHex};padding:16px 20px;font-size:${q.large ? 24 : 17}px;line-height:1.35;${q.large ? 'font-weight:600;' : ''}${lower(q.bgHex) === lower(L(ctx).surface) ? 'box-shadow:inset 0 0 0 1px var(--h)' : ''}">${A(nameOfHex(ctx, q.fgHex))} on ${A(nameOfHex(ctx, q.bgHex))}. ${A(q.use || '')}</p></li>`).join('')}</ol>`,
-  }),
+  // the ratio is the measure this page shows, so it leads in its own column at the title step; a pair and its reverse are one row, "both ways"
+  contrast: (ctx) => {
+    const rows = [];
+    for (const q of ctx.pairs) {
+      const r = rows.find((x) => lower(x.fgHex) === lower(q.bgHex) && lower(x.bgHex) === lower(q.fgHex) && x.ratioText === q.ratioText);
+      if (r) { r.both = true; r.large = r.large && q.large; } else rows.push({ ...q, both: false });
+    }
+    return {
+      big: `${words(rows.length)} pairs that pass`,
+      html: `<ol class="ht-scale ht-scale--ratio">${rows.map((q) => `<li><p class="ht-k"><b class="num">${A(ratioText(q.ratioText))}</b><span>${q.large ? '24 px and over' : 'Any size'}</span>${q.both ? '<span>Both ways</span>' : ''}</p><p class="ht-scale__s" style="background:${q.bgHex};color:${q.fgHex};padding:16px 20px;font-size:${q.large ? 24 : 17}px;line-height:1.35;${q.large ? 'font-weight:600;' : ''}${lower(q.bgHex) === lower(L(ctx).surface) ? 'box-shadow:inset 0 0 0 1px var(--h)' : ''}">${A(nameOfHex(ctx, q.fgHex))} on ${A(nameOfHex(ctx, q.bgHex))}. ${A(q.use || '')}</p></li>`).join('')}</ol>`,
+    };
+  },
   'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...distinctColours(ctx), ...ctx.tones].map((c) => [c.name, `<span class="ht-vals">${m(c.hex)}${m(`rgb(${ctx.C.hexToRgb(c.hex).join(", ")})`)}${m(ctx.C.cmykOf(c))}</span>`])) }),
-  typefaces: (ctx) => { const F = ctx.brand.fonts; return { big: F.display.family, html: `<div class="ht-specs">${['display', 'body', 'mono'].map((r) => specimen(ctx, r)).join('')}</div>${p('The mono face is for literal values only: hex codes, sizes in code, file names.')}` }; },
+  // the h2 counts the faces (each specimen keeps its own family name), so one face does not head all three
+  typefaces: (ctx) => { const roles = ['display', 'body', 'mono']; return { big: `${words(roles.length)} faces`, html: `<div class="ht-specs">${roles.map((r) => specimen(ctx, r)).join('')}</div>${p('The mono face is for literal values only: hex codes, sizes in code, file names.')}` }; },
   hierarchy: (ctx) => ({
     big: `${words(ctx.brand.type.scale.length)} steps`,
     html: `<ol class="ht-scale">${ctx.brand.type.scale.map((t) => { const role = t.face === 'display' ? 'ht-d' : ''; return `<li><p class="ht-k">${A(t.token)}<span class="num">${t.size} px, weight ${t.weight}</span></p><p class="ht-scale__s ${role}" style="font-size:min(${t.size}px, 12cqw);line-height:${t.line < 3 ? t.line : (t.line / t.size).toFixed(2)};font-weight:${t.weight};${t.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(t.use)}</p></li>`; }).join('')}</ol>`,
@@ -317,9 +327,10 @@ export const NOTES = {
   'photo-direction': (ctx) => {
     const D = ctx.brand.imagery.direction, rows = Object.entries(D).filter(([k, v]) => k !== 'subject' && v).map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)]);
     // a sample headline is set in the sky (the display face, at the title step), so "clear sky for type" is shown and not only claimed
-    const line = lead(ctx), head = line || nameOf(ctx), sky = L(ctx).sunken;
-    const frame = `<figure class="ht-pf"><div class="ht-pf__pic">${sceneHands(ctx, `Two people at a market counter, one each side of a crate of fruit${head ? `, ${line ? 'a headline' : 'the brand name'} set in the clear sky above` : ''}: the direction at 3:2`)}${head ? `<p class="ht-d ht-pf__h" style="${fieldStyle(ctx, sky, 'photo direction headline', 40)};background:transparent">${A(head)}</p>` : ''}</div><figcaption>The direction at 3:2: two people at the counter, close in on their hands, with clear sky above for a headline.</figcaption></figure>`;
-    return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.map(([k, v]) => [k, A(v)])) };
+    const line = lead(ctx), head = line || nameOf(ctx), sky = L(ctx).sunken, said = head && head !== nameOf(ctx) ? 'a headline' : head ? 'the name' : 'a headline';
+    const frame = `<figure class="ht-pf"><div class="ht-pf__pic">${sceneHands(ctx, `Two people at a market counter, one each side of a crate of fruit${head ? `, ${said} set in the clear sky above` : ''}: the direction at 3:2`)}${head ? `<p class="ht-d ht-pf__h" style="${fieldStyle(ctx, sky, 'photo direction headline', 40)};background:transparent">${A(head)}</p>` : ''}</div><figcaption>The direction at 3:2: two people at the counter, close in on their hands, with clear sky above for ${said}.</figcaption></figure>`;
+    // the subject is the h2, so the table starts after it and does not say it twice
+    return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.slice(1).map(([k, v]) => [k, A(v)])) };
   },
   // with no shots written there is no list: a row of empty crop-mark frames is not a page
   'shot-list': (ctx) => { const S = ctx.brand.imagery.shots.filter((s) => s.caption || s.alt); return S.length ? { big: `${words(S.length)} shots`, html: list(S.map((s) => `<b>${A(s.caption || s.alt)}</b>${A(s.alt)}${s.credit && !s.generated ? ` Photo: ${A(s.credit)}.` : ''}`)) } : NONE; },

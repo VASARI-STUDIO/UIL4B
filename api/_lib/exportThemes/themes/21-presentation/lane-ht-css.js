@@ -243,9 +243,9 @@ export function htCss(ctx) {
 .ht-field__img .ht-scene{position:absolute;inset:0}
 .ht-field__imglogo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .ht-field--pic{min-height:0}
-.ht-field--pic .ht-field__img{flex:1 1 auto;margin:0;aspect-ratio:auto;min-height:170px}
-/* the logo sits where the other tiles' logos sit: their padding (24px) above, and their padding and gap (56px) below the caption, less this tile's own caption padding */
-.ht-field--pic .ht-field__imglogo{inset:24px 0 26px}
+.ht-field--pic .ht-field__img{flex:none;margin:0;aspect-ratio:400/270;min-height:0}
+/* the picture is drawn at 400:270 at every width, so the hands show at 1440 as at 390; the logo sits in the sky, at the top of the picture, under the other tiles' padding (24px) and not centred on the box */
+.ht-field--pic .ht-field__imglogo{inset:0;align-items:flex-start;padding-top:24px}
 .ht-field--pic .ht-field__c{padding:14px 24px 16px}
 /* the faces as specimens */
 .ht-specs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--h)}
@@ -286,7 +286,7 @@ export function htCss(ctx) {
 .ht-pf__h{position:absolute;left:5cqw;top:5cqw;margin:0;max-width:70cqw;font-size:clamp(26px,6.5cqw,72px);line-height:1.02;text-wrap:balance}
 .ht-pf figcaption,.ht-gp figcaption{font-size:14px;line-height:1.5;color:var(--s)}
 /* the brand's device: its colours as flat blocks, a bar under a section's title and stepped on the cover */
-.ht-dev{display:flex;align-items:flex-end;height:16px;margin:0 56px}
+.ht-dev{display:flex;align-items:flex-end;height:16px;margin:8px 56px 0}
 .ht-dev>span{display:block;height:100%;min-width:0}
 .ht-dev--cv{height:112px;margin:0}
 /* a value table: tabular figures in the body face; the mono face is for hex and code */
@@ -296,6 +296,9 @@ export function htCss(ctx) {
 .ht-scale .ht-k{display:block}
 .ht-scale .ht-k span{display:block;margin-top:4px}
 @media (max-width:1023px){.ht-scale .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}.ht-scale .ht-k span{display:inline;margin:0;white-space:nowrap}}
+/* contrast: the ratio leads in the display face at the title step, its size and "both ways" under it in the label size */
+.ht-scale--ratio .ht-k b{display:block;font-family:var(--disp);font-weight:${dw};font-stretch:${f.display.stretch || 100}%;letter-spacing:-0.01em;font-size:${(B.type.scale.find((x) => x.token === 'title') || {}).size || 24}px;line-height:1.1;white-space:nowrap}
+@media (max-width:1023px){.ht-scale--ratio .ht-k b{flex:none}}
 /* type in use: each sample first, at the column's width, its name and measures under it */
 .ht-scale--use>li{display:flex;flex-direction:column;gap:10px;align-items:stretch}
 .ht-scale--use .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}
@@ -306,17 +309,18 @@ export function htCss(ctx) {
 .ht-gp{display:flex;flex-direction:column;gap:12px;max-width:360px;margin:0}
 .ht-gg{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
 @media (min-width:1024px){.ht-gg{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:64px;align-items:start}}
-.ht-gp__pg{background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box;width:100%}
+.ht-gp__pg{background:var(--g);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box;width:100%}
 .ht-gp__pg{container-type:inline-size}
 .ht-gp__in{display:grid;height:100%;position:relative;outline:1px dashed color-mix(in srgb,var(--t) 40%,transparent);outline-offset:0}
 /* the brand's own page on the grid: name, headline and photograph on the columns, at the page's own scale */
 .ht-gp__c{position:absolute;inset:0;display:grid;align-content:start;row-gap:6cqw;min-width:0}
 .ht-gp__c>*{margin:0;min-width:0}
 .ht-gp__n{font-size:5cqw;line-height:1.1;color:var(--t)}
+.ht-gp__n,.ht-gp__h{padding:0 1.5cqw}
 .ht-gp__h{font-size:8cqw;line-height:1.05;color:var(--t);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .ht-gp__p{aspect-ratio:3/2;overflow:hidden}
 .ht-gp__p .ht-scene{height:100%}
-.ht-gp__in>span{display:block;background:color-mix(in srgb,var(--t) 14%,transparent)}
+.ht-gp__in>span{display:block;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t) 30%,transparent)}
 /* the applications spread: a card, a sign and a phone on one sheet */
 .ht-mks--sp{grid-template-columns:minmax(0,1fr) 340px;gap:32px 48px;align-items:start}
 .ht-mks--sp .ht-mk--card{grid-column:1}
@@ -367,7 +371,7 @@ export function htCss(ctx) {
 /* a slide is a picture of a PDF page: below 841 it is the same figure scaled to the column (the engine sets --fit), above the notes */
 .ht-fit{overflow:hidden}
 .ht-notes--narrow{display:grid}
-.ht-dev{margin:0 20px}
+.ht-dev{margin:8px 20px 0}
 .ht-dev--cv{margin:0;height:72px}
 .ht-mks--sp,.ht-mks--dg{grid-template-columns:minmax(0,1fr)}
 .ht-mks--sp .ht-mk--phone,.ht-mk--sum{grid-column:1;grid-row:auto}
@@ -382,6 +386,7 @@ export function htCss(ctx) {
    the slide keeps the figure and the notes under it carry the page's line and its lead alone */
 .ht-notes--fig .ht-nf{display:none}
 @media (max-width:1023px){.ht-stage--fig{display:none}.ht-notes--fig .ht-nf{display:block}}
+@media (min-width:1024px){.ht-notes--fig{padding-bottom:24px}}
 .ht-css{display:flex;flex-direction:column;gap:24px}
 .ht-cs__h{margin:0;font-size:14px;line-height:1.5;color:var(--s)}
 .ht-csr{display:flex;flex-wrap:wrap;gap:24px 20px;align-items:flex-end}

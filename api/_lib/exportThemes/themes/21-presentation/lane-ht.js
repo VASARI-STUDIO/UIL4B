@@ -69,13 +69,16 @@ function page(ctx0, id) {
   const { ctx, text, notes, slide } = contentOf(ctx0, id);
   // below 841 the slide is a figure scaled to the column (the engine sets --fit), above the notes. The bar carries the running head,
   // so the lead is the page's title alone. A spread page has no slide at any width: the lead is its title and the notes are the page.
-  const p = ctx.pages.find((x) => x.id === id), spread = !slide;
-  const lead = `<section class="ht-ml${spread ? ' ht-ml--spread' : ''}" aria-label="Page heading" style="${fieldStyle(ctx, darkF(ctx), 'site narrow lead')}"><h1 class="ht-d ht-ml__t" style="--bs:${fitSize(ctx, [p.title], 0.9, stepPx(ctx, 'display', 48), 32)}">${p.ref ? `<b class="num">${A(p.ref)}</b>` : ''}${A(p.title)}</h1></section>`;
+  const p = ctx.pages.find((x) => x.id === id), spread = !slide, ledBy = spread || FIG.has(id);
+  const lead = `<section class="ht-ml${ledBy ? ' ht-ml--spread' : ''}" aria-label="Page heading" style="${fieldStyle(ctx, darkF(ctx), 'site narrow lead')}"><h1 class="ht-d ht-ml__t" style="--bs:${fitSize(ctx, [p.title], 0.9, stepPx(ctx, 'display', 48), 32)}">${p.ref ? `<b class="num">${A(p.ref)}</b>` : ''}${A(p.title)}</h1></section>`;
   // the first page of a section opens it with the brand's device
   const opener = /\.1$/.test(p.ref || '') ? device(ctx) : '';
   const body = `${text ? `<div class="ht-bigc">${big(ctx, text)}</div>` : ''}${notes ? `<div class="ht-nb">${notes}</div>` : ''}`;
-  return `${lead}${opener}${slide ? stage(ctx, 'slide', slide, FIG.has(id) ? ' ht-stage--fig' : '') : ''}${body ? `
-<section class="ht-notes${spread ? ' ht-notes--spread' : ''}${text ? '' : ' ht-notes--bare'}${slide && COVERED.has(id) ? (FIG.has(id) ? ' ht-notes--fig' : ' ht-notes--narrow') : ''}" aria-label="${spread ? 'Page' : 'Notes'}">${body}</section>` : ''}`;
+  const st = slide ? stage(ctx, 'slide', slide, FIG.has(id) ? ' ht-stage--fig' : '') : '';
+  const nt = body ? `
+<section class="ht-notes${spread ? ' ht-notes--spread' : ''}${text ? '' : ' ht-notes--bare'}${slide && COVERED.has(id) ? (FIG.has(id) ? ' ht-notes--fig' : ' ht-notes--narrow') : ''}" aria-label="${spread ? 'Page' : 'Notes'}">${body}</section>` : '';
+  // a figure page leads with its line and lead at every width (below 1024 the slide is not drawn, so the order there was already this one)
+  return `${lead}${opener}${slide && FIG.has(id) ? nt + st : st + nt}`;
 }
 
 // index.html: the cover slide, then the contents as stripes of the deck's fields, a section to a stripe

@@ -165,13 +165,25 @@ function screen(ctx, dark, mobile) {
 // A long opening tag has its attributes one to a line, so no line of markup runs past what a reader can take in at once
 const WRAP_AT = 72;
 const TAG_LINE = /^(\s*)<([a-z][a-z0-9-]*)((?:\s+[^\s=>"]+(?:="[^"]*")?)+)\s*(\/?>)(.*)$/;
+// A run of siblings (the opening tags at one indent, with whatever nests under them between) is broken as one: when any opening tag in
+// the run is too long, every tag in it that has attributes to split is broken, else none is, so a block does not mix the two
 function breakAttrs(s) {
-  return String(s).split('\n').map((line) => {
-    const m = line.length > WRAP_AT && TAG_LINE.exec(line);
+  const lines = String(s).split('\n'), indent = (l) => /^\s*/.exec(l)[0].length, broken = new Set();
+  lines.forEach((l, i) => {
+    const m = TAG_LINE.exec(l);
+    if (!m || broken.has(i)) return;
+    // the run: from this line out through the lines at its indent or deeper, up to the first line that is shallower
+    const n = indent(l), run = [];
+    for (let j = i; j < lines.length && (!lines[j].trim() || indent(lines[j]) >= n); j++) if (indent(lines[j]) === n && TAG_LINE.test(lines[j])) run.push(j);
+    for (let j = i - 1; j >= 0 && (!lines[j].trim() || indent(lines[j]) >= n); j--) if (indent(lines[j]) === n && TAG_LINE.test(lines[j])) run.push(j);
+    if (run.some((j) => lines[j].length > WRAP_AT)) run.forEach((j) => broken.add(j));
+  });
+  return lines.map((line, i) => {
+    const m = broken.has(i) && TAG_LINE.exec(line);
     const attrs = m && m[3].match(/[^\s=>"]+(?:="[^"]*")?/g);
     if (!attrs || attrs.length < 2) return line;
     const [, ind, tag, , end, rest] = m, pad = `${ind}  `;
-    return `${ind}<${tag}\n${attrs.map((a, i) => `${pad}${a}${i === attrs.length - 1 ? end + rest : ''}`).join('\n')}`;
+    return `${ind}<${tag}\n${attrs.map((a, i2) => `${pad}${a}${i2 === attrs.length - 1 ? end + rest : ''}`).join('\n')}`;
   }).join('\n');
 }
 const pretty = (K, h) => (String(h).trim().startsWith('<') ? breakAttrs(settle(K.prettyHtml(tidy(h)))) : h);
