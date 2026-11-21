@@ -5941,7 +5941,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     <p>{query.trim()
                       ? (CATEGORY_EMPTY[category]?.(query.trim()) || `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`)
                       : loadError
-                        ? (category === 'all' ? 'No built-in icons to show right now.' : 'No built-in icons in this category right now.')
+                        ? (category !== 'all' ? 'No built-in icons in this category right now.' : selectValue !== 'all' ? 'No icons to show — try another pack or search.' : 'No built-in icons to show right now.')
                         : 'No icons to show — try another pack or search.'}</p>
                     {/* The outage's answer is trying again, not another pack (which asks the same service). */}
                     {!query.trim() && loadError && (

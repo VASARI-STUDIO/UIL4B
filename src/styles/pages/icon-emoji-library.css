@@ -391,10 +391,10 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 .iel-page .lbry-filters .lbry-filter[data-active="true"]:focus-visible{outline-color:var(--bg-0)}
 /* S2: category first, style second, with a clear gap so two pressed pills do not read as one control. */
 .iel-page.lib-surface .lbry-toolbar-filters{gap:16px}
-/* P1: locked pill padlock at 12px with a full-contrast stroke; chip padding follows so the label keeps clear air. */
+/* P1: locked pill padlock at 12px with a full-contrast stroke. The chip keeps the same 30px of side padding as an open one (9 + 21), so marking a category locked costs no tray width. */
 .iel-page.lib-surface .lbry-filter-lock{right:4px;width:12px;height:12px;opacity:1}
 .iel-page.lib-surface .lbry-filter-lock svg{width:12px;height:12px;stroke-width:2.2}
-.iel-page.lib-surface .lbry-filters .lbry-filter:has(.lbry-filter-lock){padding-right:21px}
+.iel-page.lib-surface .lbry-filters .lbry-filter:has(.lbry-filter-lock){padding-left:9px;padding-right:21px}
 @media(max-width:340px){.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:has(.lbry-filter-lock){padding:0 20px 0 6px}}
 /* P1: gate preview, a bundled static sample of the locked category, blurred, with the lock and a plain label sharp over it. */
 .iel-page .ig-gate-sample{position:relative}
