@@ -191,8 +191,9 @@ function Profile({ hub, person, own, toast }) {
   const all = own ? [] : piecesBy(person.handle)
   const shown = all.filter((p) => (tab === 'inspiration') === isInspiration(p))
   const counts = { made: all.filter((p) => !isInspiration(p)).length, inspiration: all.filter(isInspiration).length }
-  // Everything sent from this account: what is waiting or turned down, and what was approved.
-  const n = hub.rows.length + hub.live.length
+  // Everything sent from this account. Rows hold every status; an approved gradient is only in live.
+  const rowIds = new Set(hub.rows.map((r) => r.id))
+  const n = hub.rows.length + hub.live.filter((r) => !rowIds.has(r.id)).length
 
   return (
     <div className="cm-page cm-profile">
