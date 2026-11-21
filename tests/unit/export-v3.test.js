@@ -369,7 +369,7 @@ test('the runner moved the gate tables over unchanged, and asks the server for t
 
 test('the runner exports one hook with the contract names, and copy() never runs the account gate', () => {
   assert.match(runner, /export default function useExportRunner\(\)/)
-  assert.match(runner, /return \{ run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn \}/)
+  assert.match(runner, /return \{ run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn, isRefused \}/)
   const copyBody = runner.slice(runner.indexOf('const copy = async'), runner.indexOf('const reset = '))
   assert.ok(copyBody.length > 100)
   assert.doesNotMatch(copyBody, /requireExportAccount|navigate|reportUpgradeGate/)

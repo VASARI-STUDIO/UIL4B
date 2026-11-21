@@ -164,11 +164,13 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const themedNow = Boolean(themedFile(pick.file))
   const chosen = readExportTemplates(working)
   const locked = themedNow ? !isPro && themedFileIsPro(pick.file, theme) : cat.pro && !isPro
+  // Locked by the route table for this plan, or because the server already refused this pick with a 403: either way the button is the one Upgrade offer.
+  const blocked = locked || runner.isRefused(pick.file, themedNow ? theme : undefined)
 
   // run() sends a free account on a Pro file to checkout or /plans itself; the
   // dialog only has to get out of the way. After an export the button is "Done": it closes the dialog.
   // A Pro template's way out: the free document, with its free template, in one click.
-  const wayOut = locked ? freeWayOut(pick, theme) : null
+  const wayOut = blocked ? freeWayOut(pick, theme) : null
   const onWayOut = () => {
     if (!wayOut) return
     lastFile.current[wayOut.pick.category] = wayOut.pick.file
@@ -191,7 +193,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     setLocalError('')
     if (signingIn) return
     // The Pro button leaves the dialog for checkout or /plans; the theme goes into the saved pick so the way back finds it.
-    if (locked) storeLastPick(pick, { theme })
+    if (blocked) storeLastPick(pick, { theme })
     const result = await runner.run(pick.file, { projectId, theme: themedNow ? theme : undefined, signIn: askToSignIn })
     if (result?.status === 'upgrade') onCloseRef.current()
   }
@@ -354,7 +356,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
               onAnother={onAnother}
               onCopy={onCopy}
               primaryRef={primaryRef}
-              locked={locked}
+              locked={blocked}
               signingIn={signingIn}
               onSignIn={finishSignIn}
               templates={themedNow ? { open: view === 'templates', onClick: () => setView((v) => (v === 'templates' ? 'main' : 'templates')) } : null}
