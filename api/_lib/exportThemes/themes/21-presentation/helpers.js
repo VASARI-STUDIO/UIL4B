@@ -38,3 +38,9 @@ export const softOnDark = (ctx, hex) => {
   const c = '#' + a.map((v, i) => Math.round(v * 0.72 + b[i] * 0.28).toString(16).padStart(2, '0')).join('').toUpperCase();
   return ctx.ratio(c, hex) >= 4.5 ? c : null;
 };
+
+/** The clear space as a multiple of the logo's height ("1×", "0.6×"), from the engine's share: a measure a designer can lay a ruler to, not a percentage. */
+export const clearTimes = (share) => {
+  const k = share / 100;
+  return Math.abs(k - 1) <= 0.06 ? '1×' : `${(Math.round(k * 10) / 10).toString().replace(/^0\./, '0.')}×`;
+};

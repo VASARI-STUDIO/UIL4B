@@ -5,7 +5,7 @@
 // empty value is a line, a row or a block that is not printed.
 import { A, L, lower, nameOfHex, fieldStyle, darkF, actF, panelF, fitSize, words, inkOn, cwFor, byRole } from './lane-ht-lib.js';
 import { onceRe, sayOnce } from './lane-g3-kit.js';
-import { distinctColours, servedFamily, ratioText } from './helpers.js';
+import { distinctColours, servedFamily, ratioText, clearTimes } from './helpers.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -185,7 +185,7 @@ export const NOTES = {
     const Lg = ctx.logo, cw = ctx.brand.logo.colourways;
     return { big: `${words(Lg.versions.length)} versions`, html: fields(ctx, Lg.versions.map((id) => { const k = Lg.colourwayOf(id), w = cw[k]; return { hex: w.ground, what: `site logo ${id}`, html: `<div class="ht-field__logo">${Lg.html(id, { width: id === 'symbol' ? 72 : id === 'stacked' ? 120 : 200, colourway: k, color: w.name, label: Lg.labels[id] })}</div><p class="ht-field__c"><b>${A(Lg.labels[id])}</b>${ctx.brand.logo.when[id] ? `<br>${A(ctx.brand.logo.when[id])}` : ''}</p>` }; }), 2) };
   },
-  'clear-space': (ctx) => ({ big: `Keep ${ctx.logo.clearShare}% of the logo's height clear on every side.`, html: p('The clear space is measured from the logo itself, so it grows and shrinks with it. Nothing else sits inside it: no type, no edge, no other mark.', 'ht-lead') }),
+  'clear-space': (ctx) => ({ big: `Keep ${clearTimes(ctx.logo.clearShare)} the logo's height clear on every side.`, html: p('The clear space is measured from the logo itself, so it grows and shrinks with it. Nothing else sits inside it: no type, no edge, no other mark.', 'ht-lead') }),
   'min-size': (ctx) => { const ms = ctx.logo.minSize; return { big: `${ms.screenPx} px on screen. ${ms.printMm} mm in print.`, html: p('Below the smallest size the logo stops reading as one shape. Where a space is smaller, use the symbol.', 'ht-lead') + dl([['On screen', nv(`${ms.screenPx} px`)], ['In print', nv(`${ms.printMm} mm`)]]) }; },
   // the rule is said once, under the tiles: a tile names its ground and, where it differs, its version
   'logo-grounds': (ctx) => ({ big: 'Each ground has one version.', html: groundTiles(ctx) + p('Each tile shows the version drawn for its ground. Where none is drawn, the logo is set in one colour, dark or light, whichever reads on it.') }),

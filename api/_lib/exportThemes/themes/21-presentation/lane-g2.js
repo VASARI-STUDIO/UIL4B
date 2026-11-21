@@ -3,7 +3,7 @@
 // The deck has a horizon at y 576 (the Personality fields end there), and the logo pages stand their objects on it.
 // Colours come by role and by the brand's own colourways, never by id; the helpers below are copied from guidelines-r1.js, which does not export them.
 import { plateImg } from '../../engine/plate.js';
-import { A } from './helpers.js';
+import { A, clearTimes } from './helpers.js';
 import { outline, capHeight } from '../../engine/logo.js';
 import { loadFont } from '../../engine/nodeFont.js';
 
@@ -143,8 +143,8 @@ export const guidelines = {
     // the edge the zone is measured from: a hairline round the logo's own box (the slot frame already draws one)
     const edge = ctx.edition === 'slot' ? '' : box(zx + X, zy + X, lw, lh, `box-shadow:0 0 0 1px ${chromeOn(ctx, panel)}`);
     const first = [...(B.logo.showcase.wordmark || B.name)][0];
-    const unit = ctx.edition === 'slot' || Math.abs(Lg.geo.unit - Lg.geo.cap) > 0.01 ? `x is ${Lg.clearShare}% of the logo’s height.`
-      : `x is the cap height of the ${/[A-Z]/.test(first) ? first : 'name'}, ${Lg.clearShare}% of the logo’s height.`;
+    const unit = ctx.edition === 'slot' || Math.abs(Lg.geo.unit - Lg.geo.cap) > 0.01 ? `x is ${clearTimes(Lg.clearShare)} the logo’s height.`
+      : `x is the cap height of the ${/[A-Z]/.test(first) ? first : 'name'}, ${clearTimes(Lg.clearShare)} the logo’s height.`;
     const soft = L(ctx).textSoft;
     const right = box(944, 104, 280, 0, '', `<p class="r-t12 r-w600" style="color:${L(ctx).text}">Clear space</p>` +
       `<p class="r-t15" style="color:${soft};margin-top:8px">Keep x clear on every side of the logo. ${A(unit)}</p>` +

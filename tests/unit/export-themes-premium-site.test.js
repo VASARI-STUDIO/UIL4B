@@ -202,7 +202,7 @@ test('a brand with nothing written yet gets a guide and a kit with no dashed box
     assert.equal(res.code, 200, row)
     const zip = await JSZip.loadAsync(res.buffer)
     for (const [name, f] of Object.entries(zip.files)) {
-      if (f.dir || !/^[^/]+\/[^/]+\.html$/.test(name) || /example\.html$/.test(name)) continue
+      if (f.dir || !/^[^/]+\/[^/]+\.html$/.test(name)) continue
       const html = await f.async('string')
       assert.doesNotMatch(html, /class="[^"]*\b(ph-b|ph-c|logo-slot)\b/, `${row} ${name}: a placeholder box`)
       assert.doesNotMatch(html, /\uE000/, `${row} ${name}: an unswapped placeholder`)
@@ -304,4 +304,19 @@ test('the typeset wordmark reads as the brand name, spaces kept, with a name and
       if (/</.test(inner)) assert.equal(bareText(inner), '', name + ': a wordmark holds a bare text run, which loses its space beside the accent tag: ' + t)
     }
   }
+})
+
+// Design review round 7: a project with no design is shown under one plain name everywhere, and its clear space is a multiple of the logo, not a percentage.
+//     Break: drop the siteBrand() call in renderThemeExport (api/_lib/exportThemeRoute.js), or print Lg.clearShare with a "%" again in lane-g2.js.
+test('with no design, the guide and the kit say "Your name" in titles, comments and the example, and the clear space is drawn in multiples of the logo', async () => {
+  const guide = await pagesFor('slides', { design: {} })
+  const kit = await pagesFor('ui-kit', { design: {} })
+  for (const [n, html] of [...Object.entries(guide), ...Object.entries(kit)]) {
+    assert.doesNotMatch(html, /Brand name|class="[^"]*\bph-[bc]\b|data-ph=/, n + ': an unwritten-name box or label')
+    if (/\.html$/.test(n)) assert.match(html.match(/<title>([^<]*)/)[1], /Your name/, n + ': the title does not carry the name the page shows')
+  }
+  assert.match(kit['example.html'], /<strong class="ui-display">Your name<\/strong>/, 'the example topbar names the brand')
+  assert.match(kit['tokens.css'], /^\/\* Your name /, 'the tokens comment names the brand')
+  assert.match(guide['clear-space.html'], /Keep \d(?:\.\d)?× the logo's height clear/, 'the clear space is not a multiple of the logo height')
+  assert.doesNotMatch(guide['clear-space.html'], /\d+% of the logo/, 'the clear space is a percentage')
 })
