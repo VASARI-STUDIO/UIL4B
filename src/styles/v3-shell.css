@@ -4,8 +4,8 @@
    global.css; every rule here is scoped to a selector this file owns, and
    matches the specificity of the global rule it replaces.
 
-   Rules of the surface: no blur, no glow, no gradient (the one exception is
-   the chroma ring on Upgrade), no blue. Focus is a 2px ink outline. Radii are
+   Rules of the surface: no blur, no glow, no gradient (the exceptions are
+   the chroma ring on Upgrade and the footer and gallery-slab horizon light), no blue. Focus is a 2px ink outline. Radii are
    16 / 12 / 8 / 999. Controls are 36px on desktop and 44px on the phone. */
 
 /* ── Roles ─────────────────────────────────────────────────────────────── */

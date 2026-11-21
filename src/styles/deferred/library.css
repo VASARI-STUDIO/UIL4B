@@ -595,7 +595,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .dgh-hero p{
   max-width:min(58ch,100%);margin:10px 0 0;
   font-size:clamp(14px,1.2vw,15.5px);line-height:1.5;
-  color:rgba(247,247,244,.68);
+  color:rgba(247,247,244,.8);
 }
 .lib-surface .dgh-action{margin-top:16px}
 /* The 2-line clamp below 641 survives untouched: it is `.dgh-copy>p` in
