@@ -503,14 +503,17 @@ test.describe('Brand kit walkthrough: the desktop pill', () => {
       await page.addInitScript(([g, s]) => {
         try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
       }, [GUIDE_KEY, SEEN_KEY])
-      for (const path of ['/create/semantic-color', '/create/font-pair', '/create/type-scale', '/create/icons']) {
+      // Next is the one filled button in the pill. On the Icon Library page
+      // (a `.lib-surface`) every primary button is the V3 ink fill (--v3-ink),
+      // not the accent, so that page is measured against --v3-ink.
+      for (const [path, fillVar] of [['/create/semantic-color', '--accent-fill'], ['/create/font-pair', '--accent-fill'], ['/create/type-scale', '--accent-fill'], ['/create/icons', '--v3-ink']]) {
         await go(page, path)
         await expect(rail(page), path).toBeVisible()
-        const m = await rail(page).evaluate((el) => {
+        const m = await rail(page).evaluate((el, fillName) => {
           const r = el.getBoundingClientRect()
           const cs = getComputedStyle(el)
           const steps = el.querySelector('.bkit-steps')
-          const fill = getComputedStyle(document.documentElement).getPropertyValue('--accent-fill')
+          const fill = getComputedStyle(document.documentElement).getPropertyValue(fillName)
           const swatch = document.createElement('i')
           swatch.style.backgroundColor = fill
           document.body.append(swatch)
@@ -523,7 +526,7 @@ test.describe('Brand kit walkthrough: the desktop pill', () => {
             fits: el.scrollWidth === el.clientWidth && steps.scrollWidth === steps.clientWidth,
             filled: [...el.querySelectorAll('*')].filter((n) => n.getBoundingClientRect().width > 0 && getComputedStyle(n).backgroundColor === accent).map((n) => n.className.split(' ').find((c) => c.startsWith('bkit-')) || n.tagName),
           }
-        })
+        }, fillVar)
         expect(m, path).toEqual({ w: 896, h: 50, bottomGap: 16, centred: true, round: true, glass: 'saturate(1.6) blur(24px)', overflow: 'visible', fits: true, filled: ['bkit-rail-next'] })
       }
     })
