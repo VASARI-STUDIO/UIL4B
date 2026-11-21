@@ -409,7 +409,8 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 }
 .iel-page .ig-gate-sample-lock svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:640px){.iel-page .ig-gate-sample-grid{grid-auto-rows:72px;gap:2px;height:146px}.iel-page .ig-gate-sample-grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}}
-@media(prefers-reduced-motion:reduce){.iel-page .ig-gate-sample-grid{filter:blur(3px)}}
+html[data-reduced-motion="true"] .iel-page .ig-gate-sample-grid{filter:blur(3px)}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .iel-page .ig-gate-sample-grid{filter:blur(3px)}}
 /* P2 polish: the active category beside "Filters" on the 641 to 1000 range where the groups fold into the popover. */
 .iel-page .lbry-filtersbtn-hint{display:inline-block;max-width:13ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:var(--t2)}
 @media(max-width:640px){.iel-page .lbry-filtersbtn-hint{display:none}}
