@@ -416,7 +416,7 @@ test('theme 21 logo grounds: a tile names its logo version plainly, and the phot
     for (const t of tiles.filter((x) => /logo/i.test(x) && !/picture|sky/i.test(x))) assert.match(t, /^(?:Full-colour logo|Reversed logo|One-colour logo, (?:dark|light))$/, 'a tile names a logo version plainly')
     assert.doesNotMatch(files['logo-grounds.html'], /On-[a-z]+ logo/, 'no theme vocabulary')
     const pd = files['photo-direction.html']
-    assert.match(pd, /<figure class="ht-pf"><svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two pairs of hands/, 'the photo direction is drawn as hands at the counter')
+    assert.match(pd, /<figure class="ht-pf"[^>]*><svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two pairs of hands/, 'the photo direction is drawn as hands at the counter')
     assert.doesNotMatch(files['assets/guidelines.css'], /\.ht-pf\{[^}]*max-width/, 'the photo direction runs the full column width')
   }
 })
