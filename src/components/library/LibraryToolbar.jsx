@@ -95,6 +95,9 @@ function LibraryToolbar({
   // Filters control once the groups have moved behind it, so hidden state is
   // still stated (the same reason a collapsed trigger names its selection).
   activeFilters = 0,
+  // A short word for what the folded filters hold, drawn after "Filters" on a wide screen where the label shows
+  // (the active category, say). Decorative: the accessible name stays "Filters". Optional; a surface that omits it is unchanged.
+  filtersHint,
   className = '',
   // The phone sheet's heading, and a class for the layer it is portalled into
   // (the sheet sits outside the page root, so a page scopes its styling here).
@@ -259,6 +262,7 @@ function LibraryToolbar({
             setOpen={setOpen}
             close={close}
             activeFilters={activeFilters}
+            hint={filtersHint}
             sheetTitle={sheetTitle}
             sheetClassName={sheetClassName}
             groups={panelGroups}
@@ -285,7 +289,7 @@ function LibraryToolbar({
 export default memo(LibraryToolbar)
 
 // The one control the groups collapse into, and the panel it opens.
-function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action, sheetTitle, sheetClassName }) {
+function FiltersControl({ phone, open, setOpen, close, activeFilters, hint, groups, action, sheetTitle, sheetClassName }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const firstControl = ':is(button,a[href],input,select,textarea,[tabindex]):not([disabled]):not([aria-disabled="true"]):not([tabindex="-1"])'
   // Desktop: the app's non-modal disclosure (usePopover — dismissal, focus-in,
@@ -327,6 +331,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
       >
         <FiltersGlyph />
         <span className="lbry-filtersbtn-label">Filters</span>
+        {hint ? <span className="lbry-filtersbtn-hint" aria-hidden="true">{` · ${hint}`}</span> : null}
         {activeFilters > 0 && <span className="lbry-filtersbtn-count">{activeFilters}</span>}
       </button>
       {open && !phone && (

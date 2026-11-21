@@ -5,16 +5,16 @@
 //      answers from the built-in set without asking, but Try again is the visitor asking on purpose.
 //   3. A saved custom icon is cleaned with the allow-list sanitiser when it opens, so a saved
 //      <animate> or <foreignObject> never reaches the customiser's stage.
-//   4. The Filters badge counts a weight only in All, where the weight bar is shown: Bold stored
-//      and Coloured -> Flags chosen reads 2 (Coloured, Flags), never 3 (the Bold is not counted).
+//   4. On a phone the Filters badge counts only what the Filters sheet holds, the pack menu: the category
+//      and style controls sit in the quick row, so Bold, Coloured and Flags never raise it.
 //
 // MUTATIONS (each turns its test red):
 //   - put `emoji: { label: 'Emoji', packs: [...] }` back in ICON_GROUPS / GROUP_ORDER -> test 1.
 //   - drop `&& !manualRetry` from the cdnOk check in doSearch -> test 2 (no request goes out).
 //   - build localBase for a saved icon from the raw svg again -> test 3.
-//   - count the weight outside All in activeFilters -> test 4 (the badge reads 3).
+//   - count the category or style on a phone in filtersCount (IconLibrary.jsx) -> test 4 (a badge appears).
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify } from './iconify-stub.js'
 
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
@@ -110,23 +110,25 @@ test('a saved custom icon with <animate> and <foreignObject> opens in the custom
   expect(markup).not.toMatch(/foreignObject/i)
 })
 
-test('the Filters badge reads 2 with Bold stored and Coloured, Flags chosen, because the weight counts only in All', async ({ page }) => {
+test('on a phone the Filters badge counts only the pack menu inside the sheet, not the category or style in the quick row', async ({ page }) => {
   watch(page, 'someone who chose Bold and then Flags')
   await page.setViewportSize({ width: 390, height: 844 })
   await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
-  const filters = page.getByRole('button', { name: /^Filters\b/ })
-  const count = filters.locator('.lbry-filtersbtn-count')
-  await page.locator('.lbry-toolbar-quick .ig-weight').getByRole('button', { name: /^Bold/ }).click()
-  await expect(count, 'POSITIVE CONTROL: Bold alone counts').toHaveText('1')
-
-  // On a phone the category control and the style bar both sit in the quick row under the search; only
-  // the pack menu is in the Filters sheet.
+  const count = page.locator('.lbry-filtersbtn-count')
   const quick = page.locator('.lbry-toolbar-quick')
+  // On a phone the category control and the style bar both sit in the quick row under the search; only
+  // the pack menu is in the Filters sheet, so none of these touches the badge.
+  await quick.locator('.ig-weight').getByRole('button', { name: /^Bold/ }).click()
+  await expect(count, 'Bold sits outside the sheet').toHaveCount(0)
   await quick.getByRole('group', { name: 'Icon category' }).getByRole('button', { name: /^Coloured/ }).click()
-  await expect(count, 'POSITIVE CONTROL: Coloured replaces the stored Bold in the count').toHaveText('1')
+  await expect(count, 'Coloured sits outside the sheet').toHaveCount(0)
   await quick.getByRole('group', { name: 'Coloured icon type' }).getByRole('button', { name: 'Flags', exact: true }).click()
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
-  await expect(count, 'Coloured and Flags count, the stored Bold does not').toHaveText('2')
+  await expect(count, 'Flags sits outside the sheet').toHaveCount(0)
+  // POSITIVE CONTROL: the pack menu is inside the sheet, and it does count.
+  await page.locator('.lbry-filtersbtn:visible').first().click()
+  await chooseMenuOption(page, page.locator('.lbry-sheet .lbry-select'), 'flag')
+  await expect(count, 'a chosen pack counts').toHaveText('1')
 })

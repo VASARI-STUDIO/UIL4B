@@ -386,3 +386,37 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 @media(max-width:400px){.iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span{padding:0 10px}}
 /* At 340 and under the four category labels only fit with less padding and gap; every segment keeps a 44px touch width. */
 @media(max-width:340px){.iel-page .lbry-toolbar-quick>.lbry-filters[aria-label]{gap:2px}.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter{flex:1 0 auto;min-width:44px;padding:0 6px;font-size:12px}.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:has(.lbry-filter-lock){padding:0 17px 0 6px}}
+
+/* D33 review r1. S1: the pressed category pill is ink on ink, so its focus ring flips to the page colour (the style bar does the same above). */
+.iel-page .lbry-filters .lbry-filter[data-active="true"]:focus-visible{outline-color:var(--bg-0)}
+/* S2: category first, style second, with a clear gap so two pressed pills do not read as one control. */
+.iel-page.lib-surface .lbry-toolbar-filters{gap:16px}
+/* P1: locked pill padlock at 12px with a full-contrast stroke; chip padding follows so the label keeps clear air. */
+.iel-page.lib-surface .lbry-filter-lock{right:4px;width:12px;height:12px;opacity:1}
+.iel-page.lib-surface .lbry-filter-lock svg{width:12px;height:12px;stroke-width:2.2}
+.iel-page.lib-surface .lbry-filters .lbry-filter:has(.lbry-filter-lock){padding-right:21px}
+@media(max-width:340px){.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:has(.lbry-filter-lock){padding:0 20px 0 6px}}
+/* P1: gate preview, a bundled static sample of the locked category, blurred, with the lock and a plain label sharp over it. */
+.iel-page .ig-gate-sample{position:relative}
+.iel-page .ig-gate-sample-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));grid-auto-rows:92px;gap:10px;height:194px;overflow:hidden;filter:blur(3px);opacity:.85}
+.iel-page .ig-gate-sample-cell{display:grid;place-items:center;color:var(--t0)}
+.iel-page .ig-gate-sample-cell svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.iel-page .ig-gate-sample-cell svg [data-fill]{fill:currentColor;stroke:none}
+.iel-page .ig-gate-sample-lock{
+  position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:var(--radius-pill);background:var(--bg-0);color:var(--t0);border:1px solid var(--border);
+  font:600 13px/1 var(--font);white-space:nowrap;
+}
+.iel-page .ig-gate-sample-lock svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:640px){.iel-page .ig-gate-sample-grid{grid-auto-rows:72px;gap:2px;height:146px}.iel-page .ig-gate-sample-grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}}
+@media(prefers-reduced-motion:reduce){.iel-page .ig-gate-sample-grid{filter:blur(3px)}}
+/* P2 polish: the active category beside "Filters" on the 641 to 1000 range where the groups fold into the popover. */
+.iel-page .lbry-filtersbtn-hint{display:inline-block;max-width:13ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:var(--t2)}
+@media(max-width:640px){.iel-page .lbry-filtersbtn-hint{display:none}}
+/* P3: retry button under the category empty line. */
+.iel-page .ig-empty-actions{display:flex;justify-content:center;margin-top:10px}
+/* Forced colours: pressed category and style pills fill with Highlight so they differ from a focused one (outline only). */
+@media (forced-colors: active){
+  .iel-page .lbry-filters .lbry-filter[data-active="true"],.iel-page .ig-weight-btn[aria-pressed="true"]{forced-color-adjust:none;background:Highlight;color:HighlightText}
+  .iel-page .lbry-filters .lbry-filter[data-active="true"]:focus-visible,.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline:2px solid CanvasText;outline-offset:-2px}
+}

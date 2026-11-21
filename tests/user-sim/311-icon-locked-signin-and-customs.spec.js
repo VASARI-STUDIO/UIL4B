@@ -45,7 +45,7 @@ test.describe('(a) a Pro pack for a signed-out visitor', () => {
     await chooseMenuOption(page, page.locator('.lbry-select'), 'simple-icons')
     const wall = page.locator('.ig-gate')
     await expect(wall).toBeVisible()
-    await expect(wall).toContainText('Simple Icons is a Pro pack')
+    await expect(wall).toContainText('Simple Icons is Pro')
     await expect(wall.getByRole('link', { name: 'See Pro plans' })).toHaveAttribute('href', '/plans')
     await expect(wall.getByRole('link', { name: 'See what Pro includes' }), 'no straight-to-plans primary').toHaveCount(0)
 

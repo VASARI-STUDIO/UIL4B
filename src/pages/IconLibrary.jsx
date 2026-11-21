@@ -88,7 +88,7 @@ import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 import { iconSynonymFor } from '../data/iconSynonyms'
-import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
+import GalleryEndGate from '../components/library/GalleryEndGate'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -161,11 +161,12 @@ const STYLE_OPTIONS = {
   editable: [{ id: 'lucide', label: 'Lucide' }, { id: 'tabler', label: 'Tabler' }, { id: 'iconoir', label: 'Iconoir' }, { id: 'heroicons', label: 'Heroicons' }],
 }
 const STYLE_BAR_LABELS = { coloured: 'Coloured icon type', animated: 'Animated icon set', editable: 'Editable icon pack' }
-// A search that matches nothing inside a category: names the category and the next step.
+// A search that matches nothing inside a category: names the category and the next step. The "search in All"
+// step is a button under the line (see the empty block), not a word inside it.
 const CATEGORY_EMPTY = {
-  coloured: (q) => `No coloured icons match “${q}”. Try All, or search the pack menu's Real brand logos (Logo.dev) for brand names.`,
-  animated: (q) => `No animated icons match “${q}”. Clear the search to browse all three sets, or try All.`,
-  editable: (q) => `No editable icons match “${q}”. Editable icons are the line icons in Lucide, Tabler, Iconoir and Heroicons. Try All to search every pack.`,
+  coloured: (q) => `No coloured icons match “${q}”. For brand names, search the pack menu's Real brand logos (Logo.dev).`,
+  animated: (q) => `No animated icons match “${q}”. Clear the search to browse all three sets.`,
+  editable: (q) => `No editable icons match “${q}”. Editable icons are the line icons in Lucide, Tabler, Iconoir and Heroicons.`,
 }
 // ?category= and ?style= (read once, on mount). An unknown value, or a style that does not belong to the category,
 // falls back to the default without a word. In All the style is a weight; elsewhere it is the segment's id.
@@ -3570,19 +3571,96 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
 // The wall's words for a SIGNED-OUT visitor on a Pro scope. Logging in is the way in, but it does
-// not open a Pro pack, so the copy says so before the button does. Kept here rather than in
+// not open a Pro set, so the copy says so before the button does. Kept here rather than in
 // data/iconPackTiers.js, which the entry chunk imports and which sits at the bulk-data budget.
+// "pack" stays out of the wall's words: the pack menu beside it already owns that word.
 const GATE_COPY_PRO_ANON = {
-  heading: (label) => `${label} is a Pro pack`,
+  heading: (label) => `${label} is Pro`,
   body: 'Log in to get started. Pro unlocks brand marks, flags and the coloured sets.',
   action: 'Log in',
   secondary: 'See Pro plans',
 }
 
+// What the wall says under its heading, per kind of scope. The shared copy names brand marks and flags
+// whatever was picked, which is wrong on Animated; this names what the chosen scope holds.
+const GATE_BODY = {
+  coloured: 'Pro unlocks coloured brand marks, flags and flat icons.',
+  animated: 'Pro unlocks the animated sets: Line MD, Spinners and Meteocons.',
+}
+function gateBodyFor({ need, kind, anon, fallback }) {
+  if (need === 'free') return 'A free account opens this set and lifts the signed-out cap.'
+  const line = GATE_BODY[kind]
+  if (!line) return fallback
+  return anon ? `Log in to get started. ${line}` : line
+}
+
+// Which sample the wall draws: the locked scope's own look, never a fetched icon.
+function gateSampleKind({ category, group, pack }) {
+  if (category === 'animated' || group === 'animated' || isAnimatedPack(pack)) return 'animated'
+  if (category === 'coloured' || group === 'brands' || group === 'flags' || group === 'flat' || COLORED_PACKS.has(pack)) return 'coloured'
+  return 'plain'
+}
+
+// Eight small original drawings per kind, 24 viewBox. Static and bundled: choosing a locked scope still
+// makes no request. Coloured ones are flat fills (data-fill), animated ones are frozen frames of the
+// loops the set draws, plain ones are line icons.
+const GATE_SAMPLE_SETS = {
+  coloured: [
+    <svg key="a" viewBox="0 0 24 24"><circle data-fill cx="12" cy="12" r="9" /></svg>,
+    <svg key="b" viewBox="0 0 24 24"><rect data-fill x="3" y="6" width="5.5" height="12" /><rect x="9.5" y="6" width="5" height="12" fill="none" /><rect data-fill x="15.5" y="6" width="5.5" height="12" opacity=".55" /></svg>,
+    <svg key="c" viewBox="0 0 24 24"><path data-fill d="M12 2.5l8 4.5v10l-8 4.5-8-4.5V7z" /></svg>,
+    <svg key="d" viewBox="0 0 24 24"><path data-fill d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" /></svg>,
+    <svg key="e" viewBox="0 0 24 24"><rect data-fill x="3.5" y="5" width="17" height="15.5" rx="2.5" /><rect x="3.5" y="9" width="17" height="1.6" fill="var(--bg-0)" stroke="none" /></svg>,
+    <svg key="f" viewBox="0 0 24 24"><circle data-fill cx="12" cy="12" r="9.5" /><path d="M10 8.2v7.6l6-3.8z" fill="var(--bg-0)" stroke="none" /></svg>,
+    <svg key="g" viewBox="0 0 24 24"><path data-fill d="M4 5h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 17h-8l-5 4v-4H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 5z" /></svg>,
+    <svg key="h" viewBox="0 0 24 24"><path data-fill d="M12 20.5l-1.4-1.3C5.9 15 3 12.4 3 9.1 3 6.5 5 4.5 7.5 4.5c1.7 0 3.3.8 4.5 2.3 1.2-1.5 2.8-2.3 4.5-2.3C19 4.5 21 6.5 21 9.1c0 3.3-2.9 5.9-7.6 10.1z" /></svg>,
+  ],
+  animated: [
+    <svg key="a" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></svg>,
+    <svg key="b" viewBox="0 0 24 24"><circle data-fill cx="5" cy="12" r="2" /><circle data-fill cx="12" cy="12" r="2" opacity=".6" /><circle data-fill cx="19" cy="12" r="2" opacity=".3" /></svg>,
+    <svg key="c" viewBox="0 0 24 24"><path d="M6 20v-6M12 20V6M18 20v-10" /></svg>,
+    <svg key="d" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M7.8 12.4l3 3 5.4-6" /></svg>,
+    <svg key="e" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5" /><circle cx="12" cy="12" r="6" opacity=".6" /><circle cx="12" cy="12" r="9.5" opacity=".3" /></svg>,
+    <svg key="f" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>,
+    <svg key="g" viewBox="0 0 24 24"><path d="M7 18.5h10a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.1 9.6 4.5 4.5 0 0 0 7 18.5z" /></svg>,
+    <svg key="h" viewBox="0 0 24 24"><path d="M6.5 3.5h11M6.5 20.5h11M8 3.5c0 4 3 5 4 8.5-1 3.5-4 4.5-4 8.5M16 3.5c0 4-3 5-4 8.5 1 3.5 4 4.5 4 8.5" /></svg>,
+  ],
+  plain: [
+    <svg key="a" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" /></svg>,
+    <svg key="b" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-4.9-4.9" /></svg>,
+    <svg key="c" viewBox="0 0 24 24"><path d="M12 20.5l-1.4-1.3C5.9 15 3 12.4 3 9.1 3 6.5 5 4.5 7.5 4.5c1.7 0 3.3.8 4.5 2.3 1.2-1.5 2.8-2.3 4.5-2.3C19 4.5 21 6.5 21 9.1c0 3.3-2.9 5.9-7.6 10.1z" /></svg>,
+    <svg key="d" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.8l6-.8z" /></svg>,
+    <svg key="e" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" /></svg>,
+    <svg key="f" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 20.5c.8-4 4-6 8-6s7.2 2 8 6" /></svg>,
+    <svg key="g" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 9.5h17M8 3v4M16 3v4" /></svg>,
+    <svg key="h" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>,
+  ],
+}
+
+// The locked scope's look, blurred, with the lock and a plain label sharp over it. 24 cells drawn from the
+// eight, stepped by 5 so neighbours differ. Decorative: it rides the gate's aria-hidden fade, the heading
+// and the button carry the meaning. The blur is a still filter, so reduced motion has nothing to switch off.
+function IconGateSample({ kind, need }) {
+  const set = GATE_SAMPLE_SETS[kind] || GATE_SAMPLE_SETS.plain
+  return (
+    <div className="ig-gate-sample">
+      <div className="ig-gate-sample-grid">
+        {Array.from({ length: 24 }, (_, i) => (
+          <span className="ig-gate-sample-cell" key={i}>{set[(i * 5) % set.length]}</span>
+        ))}
+      </div>
+      <span className="ig-gate-sample-lock">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+        {need === 'free' ? 'Free account' : 'Pro'}
+      </span>
+    </div>
+  )
+}
+
 // A pack or group this viewer cannot open: the same closing block as the end of
-// the grid, over placeholder glyph rows. No icon of the locked pack is fetched
-// or drawn; the rows are neutral shapes.
-function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
+// the grid, over a blurred bundled sample of what is locked. Nothing of the locked
+// scope is fetched; the sample is drawn from this file.
+function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary, sampleKind }) {
   return (
     <GalleryEndGate
       kind={kind}
@@ -3593,7 +3671,7 @@ function IconGateWall({ heading, body, action, onAction, kind, secondary, onSeco
       live="copy"
       primary={{ label: action, onClick: onAction }}
       secondary={secondary ? { label: secondary, to: '/plans', onClick: onSecondary } : undefined}
-      fade={<GateFadeCards shape="glyph" count={24} min={92} />}
+      fade={<IconGateSample kind={sampleKind} need={kind} />}
     />
   )
 }
@@ -5116,6 +5194,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // plans are the second link); a signed-in free viewer gets the Pro wall.
   const anonOnPro = !!gated && gated.need !== 'free' && tier === 'anon'
   const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? GATE_COPY_PRO_ANON : ICON_GATE_COPY.lockedPro) : null
+  const gateSample = gated ? gateSampleKind({ category, group, pack }) : null
+  // The Filters badge counts what the Filters panel holds. From 641px up the category and style fold into it
+  // (see LibraryToolbar), so all three count; on a phone both sit in the quick row and the sheet holds only the
+  // pack menu, so only that counts and the badge never points at a sheet that does not explain it.
+  const phone = useMediaQuery('(max-width: 640px)')
+  const filtersCount = (selectValue !== 'all' ? 1 : 0) + (phone ? 0
+    : (category !== 'all' ? 1 : 0) + (category === 'all' ? (weight !== 'regular' && weightState(weight).ok ? 1 : 0) : (facet ? 1 : 0)))
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
   const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
@@ -5547,8 +5632,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         <div className="ig-band" ref={bandRef}>
         <LibraryToolbar
           className="ig-toolbar"
-          quick={[1, 0]}
-          activeFilters={(selectValue !== 'all' ? 1 : 0) + (category !== 'all' ? 1 : 0) + (category === 'all' ? (weight !== 'regular' && weightState(weight).ok ? 1 : 0) : (facet ? 1 : 0))}
+          quick={[0, 1]}
+          activeFilters={filtersCount}
+          filtersHint={!phone && category !== 'all' ? CATEGORY_LABELS[category] : undefined}
           search={{
             value: query,
             onChange: handleQueryChange,
@@ -5581,14 +5667,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             </button>
           )}
         >
-          {/* FIRST, so a phone keeps it on screen under the search (the
-              toolbar's quick row) exactly where the design's phone mock draws it; the
-              collection chips go to the Filters sheet. */}
-          {category === 'all' ? (
-            <IconStyleSeg label="Icon weight" options={ICON_WEIGHTS} value={weight} stateOf={weightState} onChange={handleWeight} />
-          ) : (
-            <IconStyleSeg label={STYLE_BAR_LABELS[category]} options={STYLE_OPTIONS[category]} value={facet} stateOf={styleOk} onChange={handleFacet} />
-          )}
+          {/* CATEGORY FIRST at every width (the quick row on a phone, the tray beside the
+              search above it), then the style that belongs to it, with a 16px gap between
+              the two. The style bar answers "which look of this category", so it reads after
+              the question it depends on. The phone keeps both in the quick row. */}
           <LibraryFilterGroup
             label="Icon category"
             triggerLabel="Category"
@@ -5596,6 +5678,11 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             onChange={handleCategory}
             options={categoryOptions}
           />
+          {category === 'all' ? (
+            <IconStyleSeg label="Icon weight" options={ICON_WEIGHTS} value={weight} stateOf={weightState} onChange={handleWeight} />
+          ) : (
+            <IconStyleSeg label={STYLE_BAR_LABELS[category]} options={STYLE_OPTIONS[category]} value={facet} stateOf={styleOk} onChange={handleFacet} />
+          )}
         </LibraryToolbar>
         {/* The result count is announced, not drawn: the row has no room for it. */}
         <p id="ig-result-count" className="sr-only" role="status">{toolbarCount ? (category === 'all' ? toolbarCount : `${CATEGORY_LABELS[category]}, ${toolbarCount}`) : ''}</p>
@@ -5766,7 +5853,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
               <IconGateWall
                 kind={gated.need}
                 heading={gateCopy.heading(gated.label)}
-                body={gateCopy.body}
+                body={gateBodyFor({ need: gated.need, kind: gateSample, anon: anonOnPro, fallback: gateCopy.body })}
+                sampleKind={gateSample}
                 action={gateCopy.action}
                 onAction={() => (anonOnPro ? requireLogin('open this icon pack') : openGate(gated.need))}
                 secondary={anonOnPro ? gateCopy.secondary : undefined}
@@ -5849,9 +5937,21 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     </button>
                   </>
                 ) : (
-                  <p>{query.trim()
-                    ? (CATEGORY_EMPTY[category]?.(query.trim()) || `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`)
-                    : 'No icons to show — try another pack or search.'}</p>
+                  <>
+                    <p>{query.trim()
+                      ? (CATEGORY_EMPTY[category]?.(query.trim()) || `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`)
+                      : loadError
+                        ? (category === 'all' ? 'No built-in icons to show right now.' : 'No built-in icons in this category right now.')
+                        : 'No icons to show — try another pack or search.'}</p>
+                    {/* The outage's answer is trying again, not another pack (which asks the same service). */}
+                    {!query.trim() && loadError && (
+                      <button type="button" className="btn pl-empty-try" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
+                    )}
+                    {/* "Try All" as a real control, not a word 250px from the category control. */}
+                    {query.trim() && category !== 'all' && CATEGORY_EMPTY[category] && (
+                      <button type="button" className="btn pl-empty-try" onClick={() => handleCategory('all')}>Search in All</button>
+                    )}
+                  </>
                 )}
               </div>
             )}
