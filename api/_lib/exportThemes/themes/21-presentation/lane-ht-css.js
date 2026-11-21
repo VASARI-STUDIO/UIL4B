@@ -68,7 +68,6 @@ export function htCss(ctx) {
 .ht-notes--spread{grid-template-columns:minmax(0,1fr);gap:56px;padding:80px 56px 112px}
 .ht-notes--spread .ht-nb{max-width:none;gap:56px}
 .ht-notes--spread :is(.ht-lead,.ht-p){max-width:68ch}
-.ht-notes--spread :is(.ht-dl,.ht-scale){max-width:960px}
 .ht-bigc{container-type:inline-size;min-width:0}
 .ht-big{font-size:var(--bs,56px);color:var(--t);overflow-wrap:anywhere}
 .ht-notes b{font-weight:600}
@@ -127,7 +126,7 @@ export function htCss(ctx) {
 .ht-next{display:flex;flex-direction:column;gap:40px;padding:72px 56px 56px;container-type:inline-size}
 .ht-next__a{display:flex;flex-direction:column;gap:16px;text-decoration:none}
 .ht-next__a .ht-k b{font-weight:400;margin-left:8px}
-.ht-next__t{display:block;max-width:14ch}
+.ht-next__t{display:block;text-wrap:balance}
 .ht-prev{font-size:14px;line-height:1.4;text-decoration:none}
 .ht-prev .ht-k{margin-right:12px}
 .ht-prev b{font-weight:400;margin-right:6px}
@@ -242,10 +241,10 @@ export function htCss(ctx) {
 .ht-field__img{position:relative;flex:1;min-height:140px;overflow:hidden;margin:-24px -24px 0;aspect-ratio:4/3}
 .ht-scene{display:block;width:100%;height:100%}
 .ht-field__img .ht-scene{position:absolute;inset:0}
-.ht-field__imglogo{position:absolute;left:16px;top:16px}
+.ht-field__imglogo{position:absolute;left:0;right:0;top:14px;display:flex;justify-content:center}
 .ht-field--pic{min-height:0}
 .ht-field--pic .ht-field__img{flex:1 1 auto;margin:0;aspect-ratio:auto;min-height:170px}
-.ht-field--pic .ht-field__c{padding:16px 24px 20px}
+.ht-field--pic .ht-field__c{padding:14px 24px 16px}
 /* the faces as specimens */
 .ht-specs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--h)}
 .ht-spec{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:32px;padding:32px 0;border-bottom:1px solid var(--h)}
@@ -280,7 +279,9 @@ export function htCss(ctx) {
 .ht-mk__btn{display:flex;align-items:center;justify-content:center;min-height:48px;font-weight:600;font-size:16px}
 /* a photograph direction: a scene drawn from the palette */
 .ht-pf{display:flex;flex-direction:column;gap:12px}
+.ht-pf__pic{position:relative;container-type:inline-size}
 .ht-pf .ht-scene{aspect-ratio:3/2;height:auto}
+.ht-pf__h{position:absolute;left:5cqw;top:5cqw;margin:0;max-width:70cqw;font-size:clamp(26px,6.5cqw,72px);line-height:1.02;text-wrap:balance}
 .ht-pf figcaption,.ht-gp figcaption{font-size:14px;line-height:1.5;color:var(--s)}
 /* the brand's device: its colours as flat blocks, a bar under a section's title and stepped on the cover */
 .ht-dev{display:flex;align-items:flex-end;height:16px;margin:0 56px}
@@ -288,13 +289,21 @@ export function htCss(ctx) {
 .ht-dev--cv{height:112px;margin:0}
 /* a value table: tabular figures in the body face; the mono face is for hex and code */
 .ht-vals{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:baseline}
-.ht-dl .num{white-space:nowrap}
+.ht-dl .num,.ht-dl .ht-m{white-space:nowrap}
 .ht-field__c .num{display:block;margin-top:4px}
 .ht-scale .ht-k{display:block}
 .ht-scale .ht-k span{display:block;margin-top:4px}
 @media (max-width:1023px){.ht-scale .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}.ht-scale .ht-k span{display:inline;margin:0;white-space:nowrap}}
+/* type in use: each sample first, at the column's width, its name and measures under it */
+.ht-scale--use>li{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.ht-scale--use .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}
+.ht-scale--use .ht-k span{display:inline;margin:0;white-space:nowrap}
+/* colour values: hex, rgb and cmyk in the one mono face, each in its own column where the row has room */
+@media (min-width:1024px){.ht-vals>.ht-m:nth-child(1){min-width:9ch}.ht-vals>.ht-m:nth-child(2){min-width:19ch}}
 /* the grid as an A4 portrait page */
-.ht-gp{display:flex;flex-direction:column;gap:12px;max-width:360px}
+.ht-gp{display:flex;flex-direction:column;gap:12px;max-width:360px;margin:0}
+.ht-gg{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
+@media (min-width:1024px){.ht-gg{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:64px;align-items:start}}
 .ht-gp__pg{background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box;width:100%}
 .ht-gp__in{display:grid;height:100%}
 .ht-gp__in>span{display:block;background:color-mix(in srgb,var(--t) 14%,transparent)}
@@ -306,15 +315,20 @@ export function htCss(ctx) {
 .ht-mks--sp :is(.ht-mk__card,.ht-mk__sign){max-width:none}
 .ht-mks--sp .ht-mk--phone{grid-row:1}
 .ht-mks--sp .ht-mk__sign{aspect-ratio:2/1}
+/* the sign on the spread is a row (the logo, then its line) wherever it is wide enough to hold both: no empty middle */
+@media (min-width:600px){.ht-mks--sp .ht-mk__sign{aspect-ratio:3/1;flex-direction:row;align-items:center;justify-content:space-between;gap:24px;padding:0 6%}.ht-mks--sp .ht-mk__sign .ht-mk__line{margin:0;text-align:right}}
 .ht-mk--sum{grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:12px;min-width:0}
 .ht-sum__pal{display:grid;gap:8px}
 .ht-sum__pal li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;font-size:14px;line-height:1.3;color:var(--t)}
 .ht-sum__sw{width:28px;height:28px;border:1px solid var(--h);box-sizing:border-box}
+/* dark: a swatch as dark as the page keeps a visible edge (the divider token is too faint to hold a dark swatch), and the phone's panels take the dark tokens */
+[data-theme="dark"] .ht-sum__sw{border-color:color-mix(in srgb,var(--t) 45%,transparent)}
+[data-theme="dark"] .ht-dg__st,[data-theme="dark"] .ht-mk__panel{background:var(--g2)!important;color:var(--t)!important}
 .ht-sum__v{font-size:17px;line-height:1.45;color:var(--t);margin:0}
 .ht-sum__ty{font-size:14px;line-height:1.5;color:var(--s);margin:0}
 /* the website drawn on a laptop and a phone */
-.ht-mks--dg{grid-template-columns:minmax(0,720px) minmax(0,300px);justify-content:start;gap:40px 64px;align-items:start}
-.ht-lt{container-type:inline-size;width:100%;max-width:720px}
+.ht-mks--dg{grid-template-columns:minmax(0,1fr) 300px;gap:40px 64px;align-items:start}
+.ht-lt{container-type:inline-size;width:100%}
 .ht-lt__s{border:8px solid var(--t);border-bottom-width:10px;border-radius:12px 12px 0 0;overflow:hidden;background:var(--g);box-sizing:border-box}
 .ht-lt__base{height:12px;background:var(--t);border-radius:0 0 12px 12px;margin:0 -3%}
 .ht-dg__nav{display:flex;align-items:center;gap:4cqw;padding:2.4cqw 3cqw}
@@ -369,7 +383,8 @@ export function htCss(ctx) {
 .ht-cs__sw{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px}
 .ht-mss{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .ht-ms{box-shadow:inset 0 0 0 1px var(--h);container-type:inline-size;padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0}
-.ht-ms__t{font-size:14px;line-height:1.5;margin:0}
+.ht-ms__big{margin:0;font-size:clamp(40px,14cqw,72px);line-height:1;letter-spacing:-.02em;white-space:nowrap}
+.ht-ms__t,.ht-ms__f{font-size:14px;line-height:1.5;margin:0}
 .ht-ms__w{display:flex;flex-direction:column;gap:8px}
 .ht-ms__w svg{display:block;max-width:none}
 .ht-ms__r{display:block;height:8px;border:1px solid currentColor;border-top:0;opacity:.7}

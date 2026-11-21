@@ -19,24 +19,23 @@ const VOICE_PAIRS = [
   ['Order 1042 is packing. It will be ready by 11:40 am.', 'Your order has been processed and will be dispatched in due course.'],
   ['We could not take that card. Check the details and try again.', 'Error 402: payment declined.'],
 ];
-// A photograph the brand has still to choose is shown as a drawn scene in its own colours (a market stall at work), so a frame is never
-// empty: the sky is the calm part of the picture, where the type or the reversed logo goes.
+// A photograph the brand has still to choose is shown as one drawn scene in its own colours: two pairs of hands at a market counter, a
+// crate of fruit between them, and clear sky above (the top 40% holds no object, so type or the reversed logo has somewhere to go). The
+// photo direction (5.1) draws it whole at 3:2; the "On a picture" tile (2.4) is a crop of the same drawing, so there is one photograph
+// and not two. The sky, awning, counter and ground run past the frame on both sides, so any crop is complete and never cuts a figure.
 const accentFor = (ctx, ...against) => [(byRole(ctx, 'accent') || {}).hex, L(ctx).accent, ...distinctColours(ctx).map((c) => c.hex)].find((h) => h && against.every((g) => ctx.ratio(h, g) >= 1.8)) || '';
-const scene = (ctx, { sky, a, b, post, crate, fruit, ground, vb = '0 0 400 300', par = 'xMidYMid' }, label = '') => {
-  const awn = (_, i) => `<rect x="${48 + i * 38}" y="88" width="38" height="30" fill="${i % 2 ? b : a}"/><path d="M${48 + i * 38} 118h38a19 14 0 0 1-38 0z" fill="${i % 2 ? b : a}"/>`;
-  const crates = [52, 120, 268].map((x, i) => { return `<rect x="${x}" y="162" width="64" height="34" fill="${crate}"/><rect x="${x}" y="176" width="64" height="3" fill="${post}"/>${[12, 32, 52].map((d, k) => `<circle cx="${x + d}" cy="156" r="10" fill="${fruit[(i + k) % 2]}"/>`).join('')}`; }).join('');
-  return `<svg class="ht-scene" viewBox="${vb}" preserveAspectRatio="${par} slice" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-100" y="-100" width="600" height="500" fill="${sky}"/><rect x="-100" y="250" width="600" height="150" fill="${ground}"/><rect x="60" y="88" width="8" height="162" fill="${post}"/><rect x="332" y="88" width="8" height="162" fill="${post}"/>${Array.from({ length: 8 }, awn).join('')}<path d="M204 196V176a22 14 0 0 1 44 0v20z" fill="${b}"/><circle cx="226" cy="150" r="11" fill="${post}"/><rect x="40" y="196" width="320" height="54" fill="${post}"/><rect x="34" y="190" width="332" height="10" fill="${a}"/>${crates}</svg>`;
+const sceneHands = (ctx, label, o = {}) => {
+  const act = actF(ctx), dk = darkF(ctx), hand = L(ctx).surface, sky = o.sky || L(ctx).sunken, acc = accentFor(ctx, act, sky) || dk;
+  const a = o.a || act, b = o.b || acc, sleeve = o.sleeve || act, bar = o.bar || act, fruit = o.fruit || [act, accentFor(ctx, hand, dk) || act];
+  // a hand: a palm and four fingers, each its own shape with air between, reaching over the crate's edge
+  const arm = `<path d="M30 300h86l38-56-46-20z" fill="${sleeve}"/><ellipse cx="140" cy="232" rx="21" ry="14" transform="rotate(-25 140 232)" fill="${hand}"/><path d="M155 214l22-8M158 223l25-3M158 232l24 4M154 241l20 10" stroke="${hand}" stroke-width="6" stroke-linecap="round" fill="none"/>`;
+  // the awning's stripes overlap by 1 px where the band meets the scallops, so no hairline shows between them
+  const awn = Array.from({ length: 29 }, (_, i) => `<rect x="${i * 40 - 380}" y="120" width="40" height="27" fill="${i % 2 ? b : a}"/><path d="M${i * 40 - 380} 146h40a20 12 0 0 1-40 0z" fill="${i % 2 ? b : a}"/>`).join('');
+  const crateTop = `<rect x="160" y="198" width="80" height="38" fill="${dk}"/><rect x="160" y="216" width="80" height="3" fill="${sky}"/>`;
+  return `<svg class="ht-scene" viewBox="${o.vb || '0 0 400 300'}" preserveAspectRatio="${o.par || 'xMidYMid slice'}" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-2000" y="-1000" width="4400" height="1300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect x="-2000" y="240" width="4400" height="800" fill="${dk}"/><rect x="-2000" y="234" width="4400" height="8" fill="${bar}"/>${crateTop}${[178, 200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${fruit[k % 2]}"/>`).join('')}${arm}<g transform="translate(400 0) scale(-1 1)">${arm}</g></svg>`;
 };
-// the photo direction itself, drawn at 3:2: close in on two pairs of hands at the counter, a crate of fruit between them, and clear sky above
-// (the top 40% holds no object, so type has somewhere to go). The same brand colours as the scene above.
-const sceneHands = (ctx, label) => {
-  const act = actF(ctx), dk = darkF(ctx), sky = L(ctx).sunken, b = accentFor(ctx, act, sky) || dk, hand = L(ctx).surface, fruit = [act, accentFor(ctx, hand, dk) || act];
-  const arm = `<path d="M30 300h86l38-56-46-20z" fill="${act}"/><ellipse cx="140" cy="230" rx="22" ry="14" transform="rotate(-25 140 230)" fill="${hand}"/><path d="M154 222l12-5M157 230h11M155 238l11 4" stroke="${hand}" stroke-width="8" stroke-linecap="round" fill="none"/>`;
-  const awn = Array.from({ length: 11 }, (_, i) => `<rect x="${i * 40 - 20}" y="120" width="40" height="26" fill="${i % 2 ? b : act}"/><path d="M${i * 40 - 20} 146h40a20 12 0 0 1-40 0z" fill="${i % 2 ? b : act}"/>`).join('');
-  return `<svg class="ht-scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${A(label)}"><rect width="400" height="300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect y="240" width="400" height="60" fill="${dk}"/><rect y="234" width="400" height="8" fill="${act}"/><rect x="160" y="198" width="80" height="38" fill="${hand}"/><rect x="160" y="216" width="80" height="3" fill="${dk}"/>${[178, 200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${fruit[k % 2]}"/>`).join('')}${arm}<g transform="translate(400 0) scale(-1 1)">${arm}</g></svg>`;
-};
-// the scene as a photograph the logo is set on: the action colour is the sky, the reversed logo sits on it
-const sceneOnAction = (ctx, par) => { const act = actF(ctx), dk = darkF(ctx), light = L(ctx).surface; return scene(ctx, { sky: act, a: light, b: accentFor(ctx, act, dk) || dk, post: dk, crate: light, fruit: [accentFor(ctx, act, dk) || light, dk], ground: dk, par }); };
+// the tile's crop of that drawing: the action colour is the sky (the reversed logo sits in it), the awning is light and accent
+const sceneTile = (ctx) => { const act = actF(ctx), dk = darkF(ctx), light = L(ctx).surface, acc = accentFor(ctx, act, dk) || dk; return sceneHands(ctx, '', { sky: act, a: light, b: acc, sleeve: acc, bar: light, fruit: [light, acc], vb: '0 40 400 260', par: 'xMidYMid meet' }); };
 const PHOTO_BRIEF = [['Subject', 'People at work, caught mid-task, not posed.'], ['Light', 'Daylight from the side. No flash.'], ['Crop', 'Close in, with clear space round the subject for type.']];
 
 const dl = (rows) => { const r = rows.filter(([, v]) => v); return r.length ? `<dl class="ht-dl">${r.map(([k, v]) => `<dt>${A(k)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''; };
@@ -63,7 +62,8 @@ export const device = (ctx, cover = false) => {
   // both the width and (on the cover) the height of a block come from its share of the colour proportion
   const top = cs[0].share || 1;
   const h = (c) => (cover ? `height:${Math.max(18, Math.round(((c.share || 1) / top) * 100))}%;` : '');
-  return `<div class="ht-dev${cover ? ' ht-dev--cv' : ''}" aria-hidden="true">${cs.map((c) => `<span style="flex:${c.share || 1};${h(c)}background:${c.hex}"></span>`).join('')}</div>`;
+  // it says what it is: the colours in proportion, which the proportion page (2.7) explains
+  return `<div class="ht-dev${cover ? ' ht-dev--cv' : ''}" role="img" aria-label="${A(`The brand's colours in proportion, widest first: ${cs.map((c) => tileName(ctx, c)).join(', ')}`)}">${cs.map((c) => `<span style="flex:${c.share || 1};${h(c)}background:${c.hex}"></span>`).join('')}</div>`;
 };
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // fields that meet at straight edges; a field on the page ground gets a hairline so it reads against the ground.
@@ -126,8 +126,9 @@ const groundTiles = (ctx) => {
     const k = cwFor(ctx, c.hex), own = lower(c.hex) !== lower(dk) && cw[k] && lower(cw[k].ground) === lower(c.hex), ink = own ? cw[k].name : inkOn(ctx, c.hex);
     return { hex: c.hex, what: `site logo ground ${c.name}`, html: `<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, ...(own ? { colourway: k } : {}), color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(tileName(ctx, c))}</b><br>${A(cwCaption(cw, k, ctx, c.hex, own))}</p>` };
   });
-  // the picture tile is the drawing, full width, over its own caption on the panel colour
-  tiles.push({ hex: panelF(ctx), what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneOnAction(ctx, 'xMidYMin')}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 150, colourway: 'reversed', color: inkOn(ctx, act), label: 'Logo' })}</div></div><p class="ht-field__c"><b>On a picture</b><br>Set the reversed logo on the calmest part of the picture, here the sky.</p>` });
+  // the picture tile is a crop of the photo direction's drawing (sceneHands, fitted to the tile, never cutting a figure: the sky and the ground
+  // run out to its sides), with the caption set on the dark ground the counter stands on, as every other tile sets its caption on its own colour
+  tiles.push({ hex: act, what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneTile(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 130, colourway: 'reversed', color: inkOn(ctx, act), label: 'Logo' })}</div></div><p class="ht-field__c" style="${fieldStyle(ctx, dk, 'site logo ground photo caption')}"><b>On a picture</b><br>Reversed logo, on the calm sky.</p>` });
   return fields(ctx, tiles, 3);
 };
 
@@ -158,28 +159,39 @@ const mockups = (ctx, { spread = false, extra = '' } = {}) => {
   const cardHtml = `<div class="ht-mk__card" style="${fieldStyle(ctx, act, 'site mock-up card')}"><div class="ht-mk__logo">${wm(act, 150)}</div>${rule ? `<span class="ht-mk__rule" style="background:${rule}"></span>` : ''}<p class="ht-mk__p">${lines.map(A).join('<br>')}</p></div>`;
   const signHtml = `<div class="ht-mk__sign" style="${fieldStyle(ctx, dk, 'site mock-up sign')}"><div class="ht-mk__logo">${wm(dk, 170)}</div><p class="ht-d ht-mk__line">${A(sign)}</p>${base ? `<span class="ht-mk__bar" style="background:${base}"></span>` : ''}</div>`;
   const phoneHtml = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div><div class="ht-mk__scr"><p class="ht-d ht-mk__h">${ORDER.screen}</p><div class="ht-mk__panel" style="${fieldStyle(ctx, ph, 'site mock-up phone card')}"><p class="ht-k">${ORDER.id}</p><p class="ht-d ht-mk__v">${ORDER.status}</p><p class="ht-k">${ORDER.due}</p><p class="ht-mk__pr num">${ORDER.total}</p></div><p class="ht-mk__btn" style="${fieldStyle(ctx, act, 'site mock-up phone button')}">${ORDER.action}</p></div></div>`;
-  return `<div class="ht-mks${spread ? ' ht-mks--sp' : ''}">${fig('ht-mk--card', cardHtml, 'Business card', `90 × 55 mm. The logo reversed on the action colour${rule ? ', with a rule in the accent' : ''}.`)}${fig('ht-mk--sign', signHtml, 'Sign panel', `The logo reversed on the dark field${base ? ', with the accent as its base' : ''}.`)}${fig('ht-mk--phone', phoneHtml, 'Phone screen', '390 px wide. The action colour for the bar and the button, the page ground behind.')}${extra}</div>`;
+  return `<div class="ht-mks${spread ? ' ht-mks--sp' : ''}">${fig('ht-mk--card', cardHtml, 'Business card', `90 × 55 mm. The logo reversed on the action colour${rule ? ', with a rule in the accent' : ''}.`)}${fig('ht-mk--sign', signHtml, 'Sign panel', `The logo reversed on the dark field${base ? ', with the accent as its base' : ''}.`)}${fig('ht-mk--phone', spread ? digitalPhone(ctx) : phoneHtml, 'Phone screen', '390 px wide. The action colour for the bar and the button, the page ground behind.')}${extra}</div>`;
 };
 // 8.5: the website on a laptop and on a phone, drawn from the palette and the shared sample order
-const digitalFigs = (ctx) => {
+const digitalParts = (ctx) => {
   const act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], ph = L(ctx).sunken;
   const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' }), TL = tally(ctx);
   const btn = (c) => `<p class="ht-dg__b" style="${fieldStyle(ctx, c, 'site mock-up website button')}">${ORDER.action}</p>`;
   const hero = (cls) => `<div class="ht-dg__hero ${cls}" style="${fieldStyle(ctx, dk, 'site mock-up website hero')}"><p class="ht-d ht-dg__h">Where is my order?</p><p class="ht-dg__t">${ORDER.id} is packing. <span style="white-space:nowrap">${ORDER.due}.</span></p>${btn(act)}</div>`;
+  // the stat panels sit on the sunken token; in dark the stylesheet swaps in the dark one (.ht-dg__st), so no light panel stays on a dark page
   const stat = (n, t) => `<div class="ht-dg__st" style="${fieldStyle(ctx, ph, 'site mock-up website stat')}"><p class="ht-d ht-dg__n">${n}</p><p class="ht-dg__t">${t}</p></div>`;
-  const laptop = `<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
-  const phone = `<div class="ht-mk__phone ht-dg__ph"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}<div class="ht-dg__col">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div>`;
+  return { act, wm, TL, hero, stat };
+};
+// the portrait phone: the lead, then the three counts as a column. 8.5 Digital and 9.1 Summary both draw it.
+const digitalPhone = (ctx) => {
+  const { act, wm, TL, hero, stat } = digitalParts(ctx);
+  return `<div class="ht-mk__phone ht-dg__ph"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}<div class="ht-dg__col">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div>`;
+};
+const digitalFigs = (ctx) => {
+  const { act, wm, TL, hero, stat } = digitalParts(ctx);
+  const laptop =`<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
   const fig = (cls, body, t, n) => `<figure class="ht-mk ${cls}">${body}<figcaption><b>${A(t)}</b> ${A(n)}</figcaption></figure>`;
-  return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', phone, 'On a phone', 'The same lead, then the three counts in one column.')}</div>`;
+  return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', digitalPhone(ctx), 'On a phone', 'The same lead, then the three counts in one column.')}</div>`;
 };
 
 // 5.1 type in use: every step of the scale at the size it is specified at, set with the sample order the screens and the kit use
 const PRICE = '$84.35';
 const typeInUse = (ctx) => {
-  const T = ctx.brand.type, line = lead(ctx) || nameOf(ctx) || 'Headline';
+  const T = ctx.brand.type;
   const sample = { display: nameFor(ctx), headline: 'Where is my order?', title: 'Order 1042', body: `Order 1042 is packing. Due 11:40 am. Total ${PRICE}.`, label: 'Track order', caption: `Total ${PRICE}` };
   const rows = T.scale.filter((x) => sample[x.token]).map((x) => [x, sample[x.token]]);
-  return { big: line, html: `<ol class="ht-scale">${rows.map(([x, text]) => `<li><p class="ht-k">${A(x.token === 'body' ? 'Paragraph' : cap1(x.token))}<span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span></p><p class="ht-scale__s ${x.face === 'display' ? 'ht-d' : ''}" style="font-size:${x.size}px;line-height:${x.line < 3 ? x.line : (x.line / x.size).toFixed(2)};font-weight:${x.weight};${x.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(text)}</p></li>`).join('')}</ol>` };
+  // each sample is set first and its name and measures sit under it, so the sample has the whole column; the page has no headline of its own
+  // (the Display sample is the largest line on it, and a headline over it would say the same thing twice)
+  return { big: '', html: `<ol class="ht-scale ht-scale--use">${rows.map(([x, text]) => `<li><p class="ht-scale__s ${x.face === 'display' ? 'ht-d' : ''}" style="font-size:${x.size}px;line-height:${x.line < 3 ? x.line : (x.line / x.size).toFixed(2)};font-weight:${x.weight};${x.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(text)}</p><p class="ht-k"><b>${A(x.token === 'body' ? 'Paragraph' : cap1(x.token))}</b><span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span></p></li>`).join('')}</ol>` };
 };
 
 // ---- figures drawn at the column's own size. Below 1024 a slide is not scaled to the column (its 12 px type would print at 4 px): the two
@@ -216,15 +228,15 @@ const clearFig = (ctx) => {
   const main = zoneFig(ctx, ground, mp, { title: `The logo on ${gname}`, note: `${key}<b>x</b> is ${clearTimes(Lg.clearShare)} the logo's height, on every side. Shown on ${A(gname)}.` });
   return `<div class="ht-css">${main}${others.length ? `<p class="ht-cs__h">The same x on the other versions</p><div class="ht-csr">${others.join('')}</div>` : ''}</div>`;
 };
-// the smallest size: the logo drawn at exactly the pixels (and, in print, the millimetres) it is specified at, with a ruler of the same width.
-// The values are said once, in the caption.
+// the smallest size, with the same words as the slide at every width: the width is the big number (said once), the height is in the note, and
+// the logo is drawn at exactly the pixels (and, in print, the millimetres) it is specified at, with a ruler of the same width.
 const sizeFig = (ctx) => {
   const ms = ctx.logo.minSize, cw = ctx.brand.logo.colourways, mmPx = (mm) => (mm * 96) / 25.4;
-  const side = (key, w, title, note) => {
+  const side = (key, w, big, title, note, foot) => {
     const hex = cw[key].ground, px = +w.toFixed(1);
-    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-ms__t"><b>${A(title)}</b> ${A(note)}</p><span class="ht-ms__w" style="width:${px}px">${inkMark(ctx, hex).svg(px)}<span class="ht-ms__r"></span></span></div>`;
+    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-d ht-ms__big num">${A(big)}</p><p class="ht-ms__t"><b>${A(title)}</b><br>${A(note)}</p><span class="ht-ms__w" style="width:${px}px">${inkMark(ctx, hex).svg(px)}<span class="ht-ms__r"></span></span><p class="ht-ms__f">${A(foot)}</p></div>`;
   };
-  return `<div class="ht-mss">${side('reversed', ms.screenPx, 'On screen', `${ms.screenPx} px wide, drawn at 1 px to the pixel.`)}${side('colour', mmPx(ms.printMm), 'In print', `${ms.printMm} mm wide, drawn at true size at 100%.`)}</div>`;
+  return `<div class="ht-mss">${side('reversed', ms.screenPx, `${ms.screenPx} px`, 'On screen', `${ms.screenH} px high: the smallest it appears on a page or a screen.`, 'Drawn at 1 px to the pixel.')}${side('colour', mmPx(ms.printMm), `${ms.printMm} mm`, 'In print', `${ms.printH} mm high: the smallest it prints, on any paper.`, 'Drawn at true size when this page prints at 100%.')}</div>`;
 };
 // 6.2: three slides as the deck lays them out, drawn from the shared orders story (the count, the total and the late order are read
 // from the same sample the kit's lists use). Each is a 16:9 field whose type is in container units, so it reflows at any width.
@@ -233,7 +245,7 @@ const layoutSlides = (ctx) => {
   const money = (exampleDemo(ctx).stat || [])[0], dk = darkF(ctx), act = actF(ctx), pn = panelF(ctx);
   const sl = (hex, what, inner, t, d) => `<figure class="ht-slf"><div class="ht-sl" style="${fieldStyle(ctx, hex, `site layout ${what}`)}"><div class="ht-sl__in">${inner}</div></div><figcaption><b>${A(t)}.</b> ${A(d)}</figcaption></figure>`;
   const countLine = `${words(n)} orders${late ? `, ${words(late).toLowerCase()} late` : ''}.`;
-  const title = sl(dk, 'title', `<div class="ht-sl__lg">${logoOn(ctx, dk, { share: 0.34 })}</div><div><p class="ht-d ht-sl__d">Today's orders</p><p class="ht-sl__k">${A(countLine)}</p></div>`, 'Title', 'The logo and the name of the page, on the dark field.');
+  const title = sl(dk, 'title', `<div class="ht-sl__lg">${logoOn(ctx, dk, { share: 0.34 })}</div><div><p class="ht-d ht-sl__d">Today's orders</p><p class="ht-sl__k">Open, late and closed.</p></div>`, 'Title', 'The logo and the name of the page, on the dark field.');
   const idea = sl(act, 'one idea', `<p class="ht-sl__k">${A(ORDER.screen)}</p><div><p class="ht-d ht-sl__d">${A(ORDER.id)} is packing.</p><p class="ht-sl__k">${A(ORDER.due)}.</p></div>`, 'One idea', 'One line at display size on the action colour.');
   const num = sl(pn, 'number', `<p class="ht-sl__k">${A(money ? 'Taken today' : 'Orders today')}</p><div><p class="ht-d ht-sl__n">${A(money || words(n))}</p><p class="ht-sl__k">${A(countLine)}</p></div>`, 'A number', 'One figure from the data, with a line to say what it counts.');
   return `<div class="ht-sls">${title}${idea}${num}</div>`;
@@ -272,13 +284,13 @@ export const NOTES = {
   },
   proportion: (ctx) => {
     const cs = distinctColours(ctx).sort((a, b) => b.share - a.share), ps = pcts(cs);
-    return { big: `${ps[0]} ${cs[0].name}`, html: `<div class="ht-stripe" role="img" aria-label="${A(cs.map((c, i) => `${c.name} ${ps[i]}`).join(', '))}">${cs.map((c, i) => `<div style="flex:${c.share};${fieldStyle(ctx, c.hex, `site proportion ${c.name}`)}${lower(c.hex) === lower(L(ctx).surface) ? ';box-shadow:inset 0 0 0 1px var(--h)' : ''}"><span class="num">${ps[i]}</span></div>`).join('')}</div>` + dl(cs.map((c, i) => [c.name, `<span class="num">${ps[i]}</span>. ${A(c.lands || '')}`])) };
+    return { big: `${ps[0]} ${cs[0].name}`, html: `<div class="ht-stripe" role="img" aria-label="${A(cs.map((c, i) => `${c.name} ${ps[i]}`).join(', '))}">${cs.map((c, i) => `<div style="flex:${c.share};${fieldStyle(ctx, c.hex, `site proportion ${c.name}`)}${lower(c.hex) === lower(L(ctx).surface) ? ';box-shadow:inset 0 0 0 1px var(--h)' : ''}"><span class="num">${ps[i]}</span></div>`).join('')}</div>` + dl(cs.map((c, i) => [c.name, `<span class="num">${ps[i]}</span>. ${A(c.lands || '')}`])) + p('The bar under the first title of each section is this proportion in small: each colour as wide as its share, widest first, with the page ground left out.') };
   },
   contrast: (ctx) => ({
     big: `${words(ctx.pairs.length)} pairs that pass`,
     html: `<ol class="ht-scale">${ctx.pairs.map((q) => `<li><p class="ht-k">${A(ratioText(q.ratioText))}<span>${q.large ? '24 px and over' : 'Any size'}</span></p><p class="ht-scale__s" style="background:${q.bgHex};color:${q.fgHex};padding:16px 20px;font-size:${q.large ? 24 : 17}px;line-height:1.35;${q.large ? 'font-weight:600;' : ''}${lower(q.bgHex) === lower(L(ctx).surface) ? 'box-shadow:inset 0 0 0 1px var(--h)' : ''}">${A(nameOfHex(ctx, q.fgHex))} on ${A(nameOfHex(ctx, q.bgHex))}. ${A(q.use || '')}</p></li>`).join('')}</ol>`,
   }),
-  'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...distinctColours(ctx), ...ctx.tones].map((c) => [c.name, `<span class="ht-vals">${m(c.hex)}<span class="num">rgb(${ctx.C.hexToRgb(c.hex).join(', ')})</span>${ctx.C.cmykOf(c) ? `<span class="num">${A(ctx.C.cmykOf(c))}</span>` : ''}</span>`])) }),
+  'colour-values': (ctx) => ({ big: 'Copy the values as written.', html: dl([...distinctColours(ctx), ...ctx.tones].map((c) => [c.name, `<span class="ht-vals">${m(c.hex)}${m(`rgb(${ctx.C.hexToRgb(c.hex).join(", ")})`)}${m(ctx.C.cmykOf(c))}</span>`])) }),
   typefaces: (ctx) => { const F = ctx.brand.fonts; return { big: F.display.family, html: `<div class="ht-specs">${['display', 'body', 'mono'].map((r) => specimen(ctx, r)).join('')}</div>${p('The mono face is for literal values only: hex codes, sizes in code, file names.')}` }; },
   hierarchy: (ctx) => ({
     big: `${words(ctx.brand.type.scale.length)} steps`,
@@ -289,7 +301,9 @@ export const NOTES = {
   // 6.1: a frame for the photograph the brand has still to choose, with its direction beside it (the brand's own where it wrote one)
   'photo-direction': (ctx) => {
     const D = ctx.brand.imagery.direction, rows = Object.entries(D).filter(([k, v]) => k !== 'subject' && v).map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)]);
-    const frame = `<figure class="ht-pf">${sceneHands(ctx, 'Two pairs of hands at a market counter, a crate of fruit between them, clear sky above: the direction at 3:2')}<figcaption>The direction at 3:2, close in on the hands at the counter, with clear sky above for type.</figcaption></figure>`;
+    // a sample headline is set in the sky (the display face, at the title step), so "clear sky for type" is shown and not only claimed
+    const head = lead(ctx) || nameOf(ctx), sky = L(ctx).sunken;
+    const frame = `<figure class="ht-pf"><div class="ht-pf__pic">${sceneHands(ctx, 'Two pairs of hands at a market counter, a crate of fruit between them, a headline set in the clear sky above: the direction at 3:2')}${head ? `<p class="ht-d ht-pf__h" style="${fieldStyle(ctx, sky, 'photo direction headline', 40)};background:transparent">${A(head)}</p>` : ''}</div><figcaption>The direction at 3:2, close in on the hands at the counter, with clear sky above for a headline.</figcaption></figure>`;
     return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.map(([k, v]) => [k, A(v)])) };
   },
   // with no shots written there is no list: a row of empty crop-mark frames is not a page
@@ -298,8 +312,11 @@ export const NOTES = {
   // the grid drawn as the page it is for: A4 portrait (794 x 1123 px), its margins, its columns and the gutters between them
   grid: (ctx) => {
     const G = ctx.brand.layout, W = 794, H = 1123, gt = ((G.gutter / (W - 2 * G.margin)) * 100).toFixed(2);
-    const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page with ${G.columns} columns, ${G.margin} px margins and ${G.gutter} px gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns, ${nv(`${G.margin} px`)} margins, ${nv(`${G.gutter} px`)} gutters.</figcaption></figure>`;
-    return { big: `${G.columns} columns`, html: fig + dl([['Page', 'A4 portrait'], ['Margin', nv(`${G.margin} px`)], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', nv(`${G.gutter} px`)], ['Base unit', nv(`${G.base} px`)]]) };
+    // a page for print is measured in millimetres (the grid is stored at 96 dpi: 794 x 1123 px is 210 x 297 mm)
+    const mm = (px) => `${+((px * 25.4) / 96).toFixed(1)} mm`;
+    const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page, 210 by 297 mm, with ${G.columns} columns, ${mm(G.margin)} margins and ${mm(G.gutter)} gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns across the page, inside the margins.</figcaption></figure>`;
+    // the diagram stands beside its measures, so the row runs the whole column
+    return { big: `${G.columns} columns`, html: `<div class="ht-gg">${fig}${dl([['Page', nv('A4 portrait, 210 × 297 mm')], ['Margin', nv(mm(G.margin))], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', nv(mm(G.gutter))], ['Base unit', nv(`${G.base} px`)]])}</div>` };
   },
   layouts: (ctx) => ({ big: 'One idea a slide.', html: layoutSlides(ctx) + p(`Every slide carries one thing at display size, a line or a number, set on a full field of the brand’s colours. Everything else is small.`, 'ht-lead') }),
   // 8.1: the card, the sign and the phone screen are drawn here from the palette, so the page shows them, not a list of their words
@@ -314,8 +331,11 @@ export const NOTES = {
   summary: (ctx) => {
     const B = ctx.brand, P = B.voice.principles.find((x) => ok(ctx, x.title) && ok(ctx, x.example));
     const sw = distinctColours(ctx).slice(0, 5).map((c) => `<li><span class="ht-sum__sw" style="${fieldStyle(ctx, c.hex, 'summary colour')}"></span><span>${A(tileName(ctx, c))}</span><span class="ht-m num">${A(c.hex.toUpperCase())}</span></li>`).join('');
-    const extra = `<div class="ht-mk--sum"><p class="ht-k">Colour</p><ul class="ht-sum__pal">${sw}</ul>${P ? `<p class="ht-k">Voice</p><p class="ht-sum__v">${A(P.example)}</p>` : ''}<p class="ht-k">Type</p><p class="ht-sum__ty">${A(faceName(B.fonts.display))} for headlines, ${A(faceName(B.fonts.body))} for text.</p></div>`;
-    return { big: lead(ctx), html: mockups(ctx, { spread: true, extra }) };
+    // the voice is one line of the brand's own, else the sample the voice page shows (the shared orders story)
+    const extra = `<div class="ht-mk--sum"><p class="ht-k">Colour</p><ul class="ht-sum__pal">${sw}</ul><p class="ht-k">Voice</p><p class="ht-sum__v">${A(P ? P.example : VOICE_PAIRS[0][0])}</p><p class="ht-k">Type</p><p class="ht-sum__ty">${A(faceName(B.fonts.display))} for headlines, ${A(faceName(B.fonts.body))} for text.</p></div>`;
+    // a lead line that is only the brand's name repeats the logo drawn three times below it: the page is then the figures alone
+    const line = lead(ctx);
+    return { big: line && line !== B.name && line !== nameOf(ctx) ? line : '', html: mockups(ctx, { spread: true, extra }) };
   },
   // the version and date alone are not a page: it is built only when the project named who owns the guidelines or how to reach them
   'contact-scope': (ctx) => { const B = ctx.brand; if (!B.contact.owner && !B.contact.email) return NONE; return { big: B.contact.email || '', html: dl([['Owner', A(B.contact.owner)], ['Email', m(B.contact.email)], ['Version', `<span class="num">${A(B.version.number)}</span>`], ['Issued', A(ctx.versionLine)]]) }; },

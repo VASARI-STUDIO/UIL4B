@@ -67,9 +67,11 @@ export function exampleDemo(ctx) {
   if (ctx.edition !== 'slot') return {};
   const S = screenContent(ctx), open = tally(ctx).open;
   const base = {
-    cardMeta: orderMeta(ctx), noBadge: true, list: deliveryRows(ctx, 5, open), behind: deliveryRows(ctx, 6, open),
-    css: `.exrow--cards>*{flex:1 1 0;min-width:220px}
+    cardMeta: orderMeta(ctx), noBadge: true, sizesRow: true, list: deliveryRows(ctx, 5, open), behind: deliveryRows(ctx, 6, open),
+    css: `.exrow--cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:720px){.exrow--cards{grid-template-columns:minmax(0,1fr)}}
 .exrow .ui-btn{white-space:nowrap}
+.exrow__l{flex:none;min-width:48px;font:500 13px/1.4 var(--ff-body);color:var(--quiet)}
 .ex-dlg{display:grid;border:1px solid var(--divider)}
 .ex-dlg>*{grid-area:1/1;min-width:0}
 .ex-dlg__behind{padding:16px;align-self:start}

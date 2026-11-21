@@ -371,8 +371,12 @@ test('theme 21 ships the raised card with its edge and shadow, a visible skeleto
     const dark = tokens.match(/\[data-theme="dark"\]\s*\{([^}]*)\}/)[1]
     assert.match(dark, /--shadow-float:\s*[^;]*\S/, 'the dark ground has its own float shadow')
     assert.match(comp, /\.ui-skeleton\s*\{[^}]*color-mix\(in srgb, var\(--text\)/, 'the skeleton is the sunken fill, which vanishes on a raised surface')
-    assert.match(comp, /\.ui-scrim\s*\{[^}]*color-mix\(in srgb, color-mix\(in srgb, var\(--scrim\) 70%, #000\) 60%/, 'the scrim is a solid slab')
-    assert.match(comp, /dialog\.ui-dialog::backdrop\s*\{[^}]*color-mix\(in srgb, color-mix\(in srgb, var\(--scrim\) 70%, #000\) 60%/, 'the backdrop is a solid slab')
+    assert.match(comp, /\.ui-scrim\s*\{[^}]*color-mix\(in srgb, var\(--scrim-deep, var\(--scrim\)\) 60%, transparent\)/, 'the scrim is a solid slab')
+    assert.match(comp, /dialog\.ui-dialog::backdrop\s*\{[^}]*color-mix\(in srgb, var\(--scrim-deep, var\(--scrim\)\) 60%, transparent\)/, 'the backdrop is a solid slab')
+    assert.match(tokens, /--scrim-deep:\s*#[0-9A-Fa-f]{6}/, 'tokens.css carries the deeper scrim ink, so components.css has no raw black')
+    assert.match(dark, /--scrim-deep:\s*#[0-9A-Fa-f]{6}/, 'the dark ground has its own deeper scrim ink')
+    assert.doesNotMatch(comp, /\.ui-scrim\s*\{[^}]*#000/, 'the scrim has no raw black')  // Break: put #000 back in the scrim colour-mix (engine/components.js scrim)
+    assert.doesNotMatch(comp, /dialog\.ui-dialog::backdrop\s*\{[^}]*#000/, 'the backdrop has no raw black')
     // the docs wrapper only lays out specimens: no .hk-* rule changes a ui- component's border, shadow, colour or spacing
     assert.ok(docs, 'assets/kit.css is in the kit')
     const bad = []
@@ -416,7 +420,7 @@ test('theme 21 logo grounds: a tile names its logo version plainly, and the phot
     for (const t of tiles.filter((x) => /logo/i.test(x) && !/picture|sky/i.test(x))) assert.match(t, /^(?:Full-colour logo|Reversed logo|One-colour logo, (?:dark|light))$/, 'a tile names a logo version plainly')
     assert.doesNotMatch(files['logo-grounds.html'], /On-[a-z]+ logo/, 'no theme vocabulary')
     const pd = files['photo-direction.html']
-    assert.match(pd, /<figure class="ht-pf"[^>]*><svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two pairs of hands/, 'the photo direction is drawn as hands at the counter')
+    assert.match(pd, /<figure class="ht-pf"[^>]*>(?:<div class="ht-pf__pic"[^>]*>)?<svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two pairs of hands/, 'the photo direction is drawn as hands at the counter')
     assert.doesNotMatch(files['assets/guidelines.css'], /\.ht-pf\{[^}]*max-width/, 'the photo direction runs the full column width')
   }
 })

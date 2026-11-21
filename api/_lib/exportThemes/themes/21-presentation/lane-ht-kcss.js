@@ -73,7 +73,7 @@ export function kitCss(ctx) {
 .ui [data-slot]{outline:0}
 .hk-tok>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--divider)}
 .hk-tok dd{margin:0;display:flex;gap:12px;align-items:center}
-.hk-code{padding:96px 56px;max-width:1440px;margin:0 auto}
+.hk-code{padding:40px 56px 96px;max-width:1440px;margin:0 auto}
 .hk-code__h{font-size:${hd}px;margin-bottom:40px}
 .hk-code ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 32px}
 .hk-code ol:has(>li:only-child){grid-template-columns:minmax(0,1fr);max-width:720px}
@@ -99,7 +99,7 @@ export function kitCss(ctx) {
 .hk-sw{grid-template-columns:repeat(var(--n,3),minmax(0,1fr))}
 .hk-sw[style*="--n:4"],.hk-sw[style*="--n:5"]{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hk-ts>li,.hk-sp>li{grid-template-columns:minmax(0,1fr);gap:6px}
-.hk-code{padding:56px 20px}
+.hk-code{padding:24px 20px 56px}
 .hk-code__h{font-size:${tt}px}
 }
 @media (max-width:520px){

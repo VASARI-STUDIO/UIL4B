@@ -22,7 +22,7 @@ export function componentsCss(ctx) {
   // a theme may ship firmer parts than the house default (meta.shipped): a raised card with an edge and a shadow, a list row that can be
   // marked as the one in hand, a scrim that is ink at a share of its strength, and a skeleton that reads on the surface. Other themes keep the house CSS.
   const SH = (ctx.theme && ctx.theme.shipped) || {};
-  const scrim = SH.scrimShare ? `color-mix(in srgb, color-mix(in srgb, var(--scrim) 70%, #000) ${Number(SH.scrimShare)}%, transparent)` : 'var(--scrim)';
+  const scrim = SH.scrimShare ? `color-mix(in srgb, var(--scrim-deep, var(--scrim)) ${Number(SH.scrimShare)}%, transparent)` : 'var(--scrim)';
   const statusCss = ctx.status.filter((s) => s.custom).map((s) => `.ui-chip--s-${cssIdent(s.id)} { color: var(--status-${cssIdent(s.id)}-text); }`).join(" ");
   return `/* ${commentText(ctx.brand.name)} components. Built only on tokens.css. */
 .ui, .ui * { box-sizing: border-box; }
@@ -77,7 +77,7 @@ ${st('.ui-btn--danger', 'hover', 'is-hover', '--bg: var(--text);', ':not(:disabl
 .ui-choice input[type="radio"]:checked { border-color: var(--text); }
 .ui-choice input[type="radio"]:checked::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-round); background: var(--text); }
 .ui-choice input:focus-visible, .ui-choice input.is-focus { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus); }
-.ui-choice input:disabled { background: var(--disabled-bg); border-color: transparent; }
+.ui-choice input:disabled { background: var(--disabled-bg); border-color: ${SH.disabledEdge ? "var(--divider)" : "transparent"}; }
 .ui-choice input:disabled ~ span { color: var(--disabled-text); }
 .ui-choice:has(input:disabled) { cursor: not-allowed; }
 .ui-choice input.ui-switch { position: relative; flex: none; width: 44px; height: 26px; margin: 0; appearance: none; border: var(--w-control) solid var(--edge); border-radius: var(--r-round); background: var(--surface); cursor: pointer; transition: background-color 120ms ease-out; }
@@ -283,7 +283,9 @@ code{font-family:var(--ff-mono);font-size:13px}
 <body class="ui">
 <header class="ex-head"><h1>${esc(ctx.brand.name)} components</h1><div class="ui-segmented" role="group" aria-label="Colour mode"><button type="button" aria-pressed="true" data-mode="light">Light</button><button type="button" aria-pressed="false" data-mode="dark">Dark</button></div></header>
 <main>
-${sec('Buttons', rowOf('btns', ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true }), ui.btn(X.small, { size: 'sm' }), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' })))}
+${sec('Buttons', DM.sizesRow
+  ? rowOf('btns', ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true })) + rowOf('btns', '<span class="exrow__l">Sizes</span>', ui.btn(X.small, { size: 'sm' }), ui.btn(F.book), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' }))
+  : rowOf('btns', ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true }), ui.btn(X.small, { size: 'sm' }), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' })))}
 ${sec('Inputs', row(ui.field({ id: 'e1', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'e2', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] })) + row(ui.field({ id: 'e3', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'e4', label: F.notes, kind: 'textarea', help: F.notesHelp })) + row(ui.field({ id: 'e5', label: X.account, value: DM.account !== undefined ? DM.account : ctx.brand.name, disabled: true })))}
 ${sec('Choices', row(ui.check(X.checks[0], { checked: true }), ui.check(X.checks[1]), ui.check(X.checks[2], { disabled: true }), ui.switch(X.switches[0], { checked: true }), ui.switch(X.switches[1])) + row(ui.check(X.radios[0], { type: 'radio', name: 'v', checked: true }), ui.check(X.radios[1], { type: 'radio', name: 'v' }), ui.segmented(F.sizes, 1)))}
 ${sec('Status', row(...ctx.status.map((s) => ui.statusChip(s.id)), ...(DM.noBadge ? [] : ['<span class="ui-badge">3</span>'])))}

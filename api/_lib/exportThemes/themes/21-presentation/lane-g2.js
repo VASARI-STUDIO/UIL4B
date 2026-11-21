@@ -186,8 +186,8 @@ export const guidelines = {
     const B = ctx.brand, Lg = ctx.logo, m = Lg.minSize, W = ctx.size.w, cw = B.logo.colourways, half = W / 2, dw = dispW(ctx);
     const mmPx = (mm) => (mm * 96) / 25.4;
     const sides = [
-      { bg: cw.reversed.ground, key: 'reversed', big: `${m.screenPx} px`, w: m.screenPx, title: 'On screen', note: `${m.screenPx} px wide and ${m.screenH} px high: the smallest it appears on a page or a screen.`, foot: 'Drawn at 1 px to the pixel.' },
-      { bg: cw.colour.ground, key: 'colour', big: `${m.printMm} mm`, w: mmPx(m.printMm), title: 'In print', note: `${m.printMm} mm wide and ${m.printH} mm high: the smallest it prints, on any paper.`, foot: 'Drawn at true size when this page prints at 100%.' },
+      { bg: cw.reversed.ground, key: 'reversed', big: `${m.screenPx} px`, w: m.screenPx, title: 'On screen', note: `${m.screenH} px high: the smallest it appears on a page or a screen.`, foot: 'Drawn at 1 px to the pixel.' },
+      { bg: cw.colour.ground, key: 'colour', big: `${m.printMm} mm`, w: mmPx(m.printMm), title: 'In print', note: `${m.printH} mm high: the smallest it prints, on any paper.`, foot: 'Drawn at true size when this page prints at 100%.' },
     ];
     const size = fitSize(ctx, 'display', dw, sides.map((s) => s.big), 200, 96, half - 112, 1, -0.02);
     const inner = sides.map((s, i) => {

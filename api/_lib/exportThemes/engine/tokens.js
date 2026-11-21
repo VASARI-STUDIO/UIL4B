@@ -14,6 +14,8 @@ export function colourMap(ctx, mode) {
   const r = ctx.roles[mode], o = {};
   for (const k in ROLE_NAMES) o[ROLE_NAMES[k]] = r[k];
   for (const t of TONES) { o[t] = r[t].fg; o[t + '-bg'] = r[t].bg; }
+  // a theme whose scrim is ink at a share of its strength (meta.shipped.scrimShare) gets the deeper ink as a token, so no raw black is in the CSS
+  if (ctx.theme && ctx.theme.shipped && ctx.theme.shipped.scrimShare && /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(r.scrim)) o['scrim-deep'] = C.rgbToHex(C.hexToRgb(r.scrim).map((v) => v * 0.7));
   // an action edge, when either mode gives one (the other mode falls back to the fill, so the border vanishes)
   if (ctx.roles.light.actionEdge || ctx.roles.dark.actionEdge) o['action-edge'] = r.actionEdge || r.action;
   // statuses with their own colours: --status-<id>, -bg, -edge

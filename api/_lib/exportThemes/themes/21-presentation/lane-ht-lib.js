@@ -74,6 +74,8 @@ export function inkMark(ctx, hex, id = 'colour') {
     const made = plainLogo({ brand: { name: nameFor(ctx), logo: { showcase: {} } }, font: inkFont(ctx), outline, capHeight });
     const g = made[id];
     geo = { w: g.w, h: g.h, parts: g.parts.map((p) => ({ d: p.d, tf: p.tf })), accent: '' };
+    // the stacked lockup draws its symbol flush left over the name: centre it on the name's width (the symbol is the first part, drawn at 1.6x)
+    if (id === 'stacked' && made.symbol && geo.parts.length > 1) geo.parts[0].tf = geo.parts[0].tf.replace(/^translate\(0\.00 0\.00\)/, `translate(${((g.w - made.symbol.w * 1.6) / 2).toFixed(2)} 0.00)`);
   }
   const label = `${nameFor(ctx)} logo`;
   return { w: geo.w, h: geo.h, svg: (width) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${geo.w.toFixed(2)} ${geo.h.toFixed(2)}"${width ? ` width="${width}" height="${((width * geo.h) / geo.w).toFixed(2)}"` : ''} role="img" aria-label="${A(label)}">${geo.parts.map((p) => `<path d="${p.d}" fill="${p.accent ? geo.accent : color}" transform="${p.tf}"/>`).join('')}</svg>` };
