@@ -28,7 +28,7 @@ const HIDDEN = new RegExp(`\\s(?:r|opacity|width|height)\\s*=\\s*"${ZERO}"|\\str
 const attrOf = (attrs, name) => attrs.match(new RegExp(`\\s${name}\\s*=\\s*"([^"]*)"`))?.[1] ?? null
 function withAttr(attrs, name, value) {
   const re = new RegExp(`(\\s${name}\\s*=\\s*)"[^"]*"`)
-  return re.test(attrs) ? attrs.replace(re, `$1"${value}"`) : `${attrs} ${name}="${value}"`
+  return re.test(attrs) ? attrs.replace(re, (_, head) => `${head}"${value}"`) : `${attrs} ${name}="${value}"`
 }
 
 /** True when the markup draws something: a shape that is not sized or faded to nothing. */
