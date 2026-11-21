@@ -4,21 +4,21 @@
 // numbers can be unit-tested as numbers.
 //
 // What is a recipe and what is not: trim, crop (shape, position, box, fit),
-// cut-out (shape, corner radius, what fills outside), turn, flip, speed and
-// direction. How the file is WRITTEN (format, frame rate, width, quality, loop,
+// cut-out (shape, corner radius, what fills outside), turn, flip, speed,
+// direction and the Look sliders. How the file is WRITTEN (format, frame rate, width, quality, loop,
 // colours) is not an edit, so stepping back never changes it.
 //
 // One history belongs to one file. A new file starts a new history
 // (`startHistory`), and the old steps are gone with the old file.
 import {
-  CORNER_DEFAULT, DIRECTIONS, FILL_DEFAULT, SPEEDS, TRANSPARENT, TURNS,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, CENSOR_DEFAULTS, CENSOR_MODES, CORNER_DEFAULT, DIRECTIONS, FILL_DEFAULT, KEY_DEFAULTS, SPEEDS, TRANSPARENT, TURNS, clampAdjust,
 } from './mediaEncode.js'
 
 /** Steps kept. An edit is a few numbers, so this is about memory for the list only. */
 export const HISTORY_DEPTH = 100
 
-/** Dragging a crop box makes dozens of changes a second; these keys merge into one step. */
-const GESTURE_KEYS = ['box']
+/** Dragging a crop box or a slider makes dozens of changes a second; these keys merge into one step. */
+const GESTURE_KEYS = ['box', 'adjust', 'censor']
 /** Changes to a gesture key closer together than this are one drag. */
 export const GESTURE_MS = 500
 
@@ -38,13 +38,16 @@ export const EDIT_DEFAULTS = Object.freeze({
   flipV: false,
   speed: 1,
   direction: 'forward',
+  adjust: ADJUST_DEFAULTS,
+  censor: CENSOR_DEFAULTS,
+  colourKey: KEY_DEFAULTS,
 })
 
 export const EDIT_KEYS = Object.keys(EDIT_DEFAULTS)
 
 /** The keys whose value differs between two recipes. */
-export function changedKeys(a, b) {
-  return EDIT_KEYS.filter(k => JSON.stringify(a[k]) !== JSON.stringify(b[k]))
+export function changedKeys(a, b, keys = EDIT_KEYS) {
+  return keys.filter(k => JSON.stringify(a[k]) !== JSON.stringify(b[k]))
 }
 
 export const sameRecipe = (a, b) => changedKeys(a, b).length === 0
@@ -65,13 +68,13 @@ export const canRedo = h => h.future.length > 0
  * (which is how an undo that has just restored them is told apart from an edit).
  * A real edit adds a step and empties the redo line.
  */
-export function record(h, next, now = 0) {
-  const keys = changedKeys(h.present, next)
+export function record(h, next, now = 0, spec = VIDEO_SPEC) {
+  const keys = changedKeys(h.present, next, spec.keys)
   if (!keys.length) return h
-  const drag = keys.every(k => GESTURE_KEYS.includes(k))
+  const drag = keys.every(k => spec.gestureKeys.includes(k))
     && h.past.length > 0
     && h.keys.length > 0
-    && h.keys.every(k => GESTURE_KEYS.includes(k))
+    && h.keys.every(k => spec.gestureKeys.includes(k))
     && now - h.at < GESTURE_MS
   return {
     past: drag ? h.past : [...h.past, h.present].slice(-HISTORY_DEPTH),
@@ -163,15 +166,41 @@ const GROUPS = [
     keys: ['direction'],
     say: r => (r.direction === 'forward' ? null : `Plays ${(DIRECTIONS.find(o => o.id === r.direction)?.label || r.direction).toLowerCase()}`),
   },
+  {
+    name: 'adjust',
+    keys: ['adjust'],
+    say: r => {
+      const v = clampAdjust(r.adjust)
+      const names = ADJUST_FIELDS.filter(f => v[f.id] !== 0).map(f => f.label.toLowerCase())
+      return names.length ? `Adjusted ${names.join(', ')}` : null
+    },
+  },
+  {
+    name: 'censor',
+    keys: ['censor'],
+    say: r => (r.censor?.on ? `Censored a region (${(CENSOR_MODES.find(o => o.id === r.censor.mode)?.label || r.censor.mode).toLowerCase()})` : null),
+  },
+  {
+    name: 'colour key',
+    keys: ['colourKey'],
+    say: r => (r.colourKey?.on ? `Removed the colour ${r.colourKey.colour}` : null),
+  },
 ]
 
+/**
+ * What a tab's edit list is made of: the recipe's keys, the phrase groups and the
+ * keys a drag merges into one step. The Video tab's is the default; the Image
+ * tab passes its own (utils/stillEdit.js).
+ */
+export const VIDEO_SPEC = Object.freeze({ keys: EDIT_KEYS, groups: GROUPS, gestureKeys: GESTURE_KEYS })
+
 /** The edits a recipe holds, as short plain phrases, in a fixed order. Empty when it holds none. */
-export function describeEdits(recipe) {
-  return GROUPS.map(g => g.say(recipe)).filter(Boolean)
+export function describeEdits(recipe, spec = VIDEO_SPEC) {
+  return spec.groups.map(g => g.say(recipe)).filter(Boolean)
 }
 
 /** The plain names of the kinds of edit that differ between two recipes ("turn", "crop"). */
-export function changedEditNames(a, b) {
-  const keys = changedKeys(a, b)
-  return GROUPS.filter(g => g.keys.some(k => keys.includes(k))).map(g => g.name)
+export function changedEditNames(a, b, spec = VIDEO_SPEC) {
+  const keys = changedKeys(a, b, spec.keys)
+  return spec.groups.filter(g => g.keys.some(k => keys.includes(k))).map(g => g.name)
 }

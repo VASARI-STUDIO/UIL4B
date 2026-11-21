@@ -191,13 +191,16 @@ test.describe('the pack name shows on hover only', () => {
       label: el.getAttribute('aria-label'),
       name: el.querySelector('.ic-name')?.textContent.trim(),
       pack: el.querySelector('.ic-pack')?.textContent.trim(),
+      editable: !!el.querySelector('.ic-edit'),
     })))
     expect(cells.length).toBe(65)
-    for (const { label, name, pack } of cells) {
-      expect(pack, `${name} has a pack name`).toBeTruthy()
-      expect(label, `${name}'s accessible name`).toBe(`Customise ${name}, ${pack}`)
+    // An icon whose line style can be edited carries the mark and says so at the end of its name.
+    const labelOf = ({ name, pack, editable }) => `Customise ${name}, ${pack}${editable ? ', line style editable' : ''}`
+    for (const cell of cells) {
+      expect(cell.pack, `${cell.name} has a pack name`).toBeTruthy()
+      expect(cell.label, `${cell.name}'s accessible name`).toBe(labelOf(cell))
     }
     expect(new Set(cells.map((c) => c.pack)).size, 'the sample spans the five anonymous sets').toBe(5)
-    await expect(page.getByRole('button', { name: `Customise ${cells[0].name}, ${cells[0].pack}`, exact: true })).toHaveCount(1)
+    await expect(page.getByRole('button', { name: labelOf(cells[0]), exact: true })).toHaveCount(1)
   })
 })
