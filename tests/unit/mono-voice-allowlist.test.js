@@ -61,6 +61,9 @@ const ALLOWED = {
     '.adm-stripe-env': 'token',
     '.adm-stripe-input input': 'code',
   },
+  'deferred/colour-picker.css': {
+    '.cpk-hint-value': 'hex',
+  },
   'deferred/colour.css': {
     '.plb-picker-hex': 'hex',
     '.plb-tint-hex': 'hex',
@@ -89,7 +92,6 @@ const ALLOWED = {
     '.adm-table .mono': 'code',
     '.code': 'code',
     '.cpk-hex': 'hex',
-    '.cpk-hint-value': 'hex',
     '.fnote-todo-where code': 'code',
     '.hcmd-kbd kbd': 'kbd',
     '.pgal-hex': 'hex',
