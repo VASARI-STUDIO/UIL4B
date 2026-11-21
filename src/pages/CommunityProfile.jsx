@@ -8,11 +8,12 @@ import { PieceGrid } from '../components/community/pieceUi'
 import { usePageTitle, usePieceActions, useTileMenu } from '../components/community/pieceActions'
 import { MakerMark } from './CommunityPiece'
 import { isInspiration, makerByHandle, piecesBy } from '../data/communityShowcase'
+import { gradientCss } from '../data/gradientGallery'
 import '../styles/pages/community.css'
 
 const HEX = /^#[0-9a-fA-F]{6}$/
 const TABS = [{ id: 'made', label: 'Made' }, { id: 'inspiration', label: 'Inspiration' }]
-const KIND_WORD = { icon: 'Icon', design: 'Design', image: 'Image' }
+const KIND_WORD = { icon: 'Icon', design: 'Design', palette: 'Palette', gradient: 'Gradient', image: 'Image' }
 
 const dateOf = (iso) => {
   const d = new Date(iso)
@@ -62,7 +63,20 @@ function Thumb({ row }) {
   if (row.kind === 'icon') {
     return <span className="cm-thumb"><IconSubmissionPreview svg={row.svg} name={row.name} size={28} /></span>
   }
-  if (row.kind === 'design') {
+  if (row.kind === 'gradient') {
+    const stops = (row.stops || []).filter((st) => HEX.test(st?.color) && Number.isFinite(Number(st?.position)))
+      .map((st) => ({ color: st.color, position: Number(st.position) }))
+    if (stops.length >= 2) {
+      return <span className="cm-thumb cm-thumb-grad" aria-hidden="true" style={{ background: gradientCss(row.type, Number(row.angle) || 0, stops) }} />
+    }
+  }
+  if (row.kind === 'palette' && Array.isArray(row.colors)) {
+    const colours = row.colors.filter((c) => HEX.test(c)).slice(0, 6)
+    if (colours.length > 0) {
+      return <span className="cm-thumb cm-thumb-strip" aria-hidden="true">{colours.map((c, i) => <i key={i} style={{ background: c }} />)}</span>
+    }
+  }
+  if (row.kind === 'design' || row.kind === 'palette') {
     const a = HEX.test(row.c1) ? row.c1 : '#1A1A1A'
     const b = HEX.test(row.c2) ? row.c2 : '#E6E4DE'
     return <span className="cm-thumb cm-thumb-strip" aria-hidden="true"><i style={{ background: a }} /><i style={{ background: b }} /></span>
@@ -71,6 +85,28 @@ function Thumb({ row }) {
     <span className="cm-thumb" aria-hidden="true">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="m4 18 5-5 4 4 3-3 4 4" /></svg>
     </span>
+  )
+}
+
+const LIBRARY_OF = { palette: '/discover/palettes', gradient: '/discover/gradients' }
+
+/** The owner's approved work, with a way to see each piece where it now lives. */
+function LiveList({ rows }) {
+  return (
+    <ul className="cm-sub-list cm-live-list" aria-label="Approved work">
+      {rows.map((row) => (
+        <li key={row.id} className="cm-sub cm-live">
+          <Thumb row={row} />
+          <div className="cm-sub-text">
+            <p className="cm-sub-name">{row.name}</p>
+            <p className="cm-sub-meta">{[KIND_WORD[row.kind], dateOf(row.createdAt)].filter(Boolean).join(' · ')}</p>
+          </div>
+          {LIBRARY_OF[row.kind]
+            ? <Link className="cm-btn cm-btn-text cm-live-go" to={LIBRARY_OF[row.kind]}>See in library</Link>
+            : <span className="cm-sub-status" data-status="Approved">Approved</span>}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -155,7 +191,9 @@ function Profile({ hub, person, own, toast }) {
   const all = own ? [] : piecesBy(person.handle)
   const shown = all.filter((p) => (tab === 'inspiration') === isInspiration(p))
   const counts = { made: all.filter((p) => !isInspiration(p)).length, inspiration: all.filter(isInspiration).length }
-  const n = hub.rows.length
+  // Everything sent from this account. Rows hold every status; an approved gradient is only in live.
+  const rowIds = new Set(hub.rows.map((r) => r.id))
+  const n = hub.rows.length + hub.live.filter((r) => !rowIds.has(r.id)).length
 
   return (
     <div className="cm-page cm-profile">
@@ -172,14 +210,16 @@ function Profile({ hub, person, own, toast }) {
 
       <Tabs value={tab} onChange={setTab} counts={own ? null : counts} />
       <div role="tabpanel" id="cm-tabpanel" aria-labelledby={`cm-tab-${tab}`} className="cm-tabpanel">
-        {shown.length > 0 ? (
+        {own && tab === 'made' && hub.live.length > 0 ? (
+          <LiveList rows={hub.live} />
+        ) : shown.length > 0 ? (
           <div className="cm-swap" key={tab}>
             <PieceGrid pieces={shown} actions={actions} tileMenu={tileMenu} showMaker={false} label={tab === 'made' ? 'Made' : 'Inspiration'} />
           </div>
         ) : (
           <div className="cm-empty cm-empty-left">
             <h2 className="cm-empty-h">{tab === 'made' ? 'Nothing made here yet' : 'No inspiration here yet'}</h2>
-            <p className="cm-empty-t">{own ? 'What you have shared is listed under Your submissions below.' : 'This sample brand has nothing in this section.'}</p>
+            <p className="cm-empty-t">{own ? 'Work a reviewer approves shows here and in the libraries. What is still waiting is under Your submissions below.' : 'This sample brand has nothing in this section.'}</p>
           </div>
         )}
       </div>
