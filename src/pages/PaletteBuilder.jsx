@@ -26,6 +26,7 @@ import { freeVariationIds, paletteVariations, scorePalette } from '../utils/pale
 import { colorName, randomPaletteName } from '../utils/paletteNames'
 import { isOnLink } from '../utils/elementSignature'
 import { roleLabel } from '../utils/paletteRoles'
+import { paletteCss } from '../utils/palettePreviewRoles'
 import { barRef, colRef } from '../utils/paletteBoard'
 import { VISION_HUES, VISION_MODES, VISION_NOTE, visionAnnouncement, visionMode } from '../utils/visionModes'
 import { BRAND_ROWS, LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
@@ -2803,7 +2804,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       const role = i < ROLES.length ? ROLES[i].toLowerCase() : `alternative-${i - ROLES.length + 1}`
       return `  --color-${role}: ${c};`
     })
-    return `:root {\n${lines.join('\n')}\n}`
+    return paletteCss(lines, adjusted)
   }, [adjusted])
 
   // The single export path. Both "Copy CSS variables" (save menu) and the

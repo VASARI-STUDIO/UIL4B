@@ -22,13 +22,14 @@ import '../../styles/pages/home-footer.css'
 //
 // WHERE IT DEPARTS FROM THE FILE, AND WHY:
 //
-//   · ONE EXTRA COLUMN, EXPLORE. This footer replaces AppFooter on the
-//     marketing screens, and every destination AppFooter reaches has to stay
-//     reachable (tests/unit/spectrum-structure.test.js holds that). The three
-//     drawn columns have no room for Discover, Learn, Community, Principles,
-//     Plans, Sitemap, Help, Info and Feedback, so they share one column in the
-//     same style, placed before LEGAL. Five cells fit the 220px floor at 1440
-//     in one row.
+//   · TWO EXTRA COLUMNS, EXPLORE AND SUPPORT. This footer replaces AppFooter
+//     on the marketing screens, and every destination AppFooter reaches has to
+//     stay reachable (tests/unit/spectrum-structure.test.js holds that). The
+//     three drawn columns have no room for Discover, Learn, Community,
+//     Principles, Plans and Sitemap, so they share EXPLORE; Help, Info and
+//     Feedback get their own SUPPORT column, with AppFooter's heading and
+//     order, so a person looking for help finds it under that name. Both sit
+//     in the same style, before LEGAL.
 //   · CREDITS SITS IN LEGAL, where Cookies was. There is no cookies page, so
 //     Cookies is dropped; /credits is a licence condition (the CC-BY icon sets
 //     and OFL faces ask for their notices to be reachable).
@@ -69,6 +70,10 @@ const EXPLORE = [
   ['/plans', 'Plans'],
   ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
   ['/sitemap', 'Sitemap'],
+]
+
+// SUPPORT — the same three links, heading and order as AppFooter's Support.
+const SUPPORT = [
   ['/learn/help', 'Help centre'],
   ['/info', 'Info centre'],
   ['/feedback', 'Send feedback'],
@@ -229,6 +234,11 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
             )}
             <Column heading="Explore">
               {EXPLORE.map(([to, label]) => (
+                <li key={to}><NavLink to={to}>{label}</NavLink></li>
+              ))}
+            </Column>
+            <Column heading="Support">
+              {SUPPORT.map(([to, label]) => (
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>
               ))}
             </Column>
