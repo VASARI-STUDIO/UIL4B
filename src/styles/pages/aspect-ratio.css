@@ -218,7 +218,7 @@
 .arc-page .arc-opt.on { background: var(--tl-row-on); }
 .arc-page .arc-opt-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .arc-page .arc-opt-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.arc-page .arc-opt-name { font-size: 13px; font-weight: 500; color: var(--tl-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arc-page .arc-opt-name { font-size: 13px; font-weight: 540; color: var(--tl-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .arc-page .arc-opt-meta { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 @media (hover: hover) and (pointer: fine) {
   .arc-page .arc-select-btn:hover { background: var(--tl-wash-2); }

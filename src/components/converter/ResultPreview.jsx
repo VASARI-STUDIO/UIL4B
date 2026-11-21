@@ -57,7 +57,7 @@ function paint(cv, el, v) {
 
 export default function ResultPreview({
   mediaRef, isImage, srcSize, plan, turn, flipH, flipV, cut, radius, outside,
-  outSize, dir, speed, fps, start, len, facts,
+  outSize, dir, speed, fps, start, len, facts, filter = '',
 }) {
   const canvasRef = useRef(null)
   const live = useRef(null)
@@ -147,7 +147,10 @@ export default function ResultPreview({
   return (
     <div className="fc-preview">
       <div className="fc-stage-view">
-        <canvas ref={canvasRef} className="fc-stage-canvas" width={cw} height={ch} role="img" aria-label="Preview of the saved file" />
+        <canvas
+          ref={canvasRef} className="fc-stage-canvas" width={cw} height={ch} role="img" aria-label="Preview of the saved file"
+          style={filter ? { filter } : undefined}
+        />
       </div>
       <div className="fc-scrub-row">
         <button type="button" className="fc-btn" onClick={() => setPlaying((p) => !p)} disabled={!canPlay}>

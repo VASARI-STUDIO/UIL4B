@@ -64,7 +64,7 @@
   padding: 0 15px;
   font-family: var(--font);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 540;
   line-height: 1.2;
   color: var(--tl-ink);
   background: var(--tl-card);
@@ -188,7 +188,7 @@
 
 .v3d .v3d-empty-glyph svg { width: 22px; height: 22px; }
 
-.v3d .v3d-empty-line { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.01em; color: var(--tl-ink); }
+.v3d .v3d-empty-line { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
 
 .v3d .v3d-empty-formats {
   max-width: 46ch;
@@ -230,7 +230,7 @@
   margin: 0;
   overflow: hidden;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 560;
   color: var(--tl-ink);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -320,7 +320,7 @@
   padding: 0 11px;
   font-family: var(--font);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 540;
   color: var(--tl-dim);
   white-space: nowrap;
   background: transparent;
@@ -523,9 +523,9 @@
 
 .v3d .v3d-out.is-off .v3d-out-dot { border-color: var(--tl-line); }
 
-.v3d .v3d-out-l { display: grid; min-width: 0; font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--tl-ink); pointer-events: none; }
+.v3d .v3d-out-l { display: grid; min-width: 0; font-size: 13px; font-weight: 560; line-height: 1.2; color: var(--tl-ink); pointer-events: none; }
 
-.v3d .v3d-out-sub { font-size: 12px; font-weight: 500; color: var(--tl-dim); }
+.v3d .v3d-out-sub { font-size: 12px; font-weight: 450; color: var(--tl-dim); }
 
 .v3d .v3d-out.is-off .v3d-out-l { color: var(--tl-dim); text-decoration: line-through; }
 
@@ -548,7 +548,7 @@
   border-top: 1px solid var(--tl-line);
 }
 
-.v3d .v3d-result-name { min-width: 0; font-weight: 500; color: var(--tl-ink); overflow-wrap: anywhere; }
+.v3d .v3d-result-name { min-width: 0; font-weight: 560; color: var(--tl-ink); overflow-wrap: anywhere; }
 
 .v3d .v3d-result-size { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; letter-spacing: 0; }
 

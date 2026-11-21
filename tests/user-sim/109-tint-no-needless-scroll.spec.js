@@ -6,7 +6,8 @@
 // half empty. The notes are a grid under the chart now, and the side card runs
 // edge to edge.
 //
-// 1. At 1440x900 (light and dark) the document is no taller than the window.
+// 1. At 1440x900 (light and dark) the document is no taller than the window, and
+//    no inner scroller is needed: the three note rows fit.
 // 2. At 390x844 nothing scrolls inside the page (no nested scroller, no sideways
 //    scroll) and the document ends where the content ends, bar the tab bar.
 // 3. At 390x500, where it genuinely does not fit, the last contrast note can
@@ -35,6 +36,7 @@ const measure = (page) => page.evaluate(() => {
     }
   }
   const notes = document.querySelector('.tt-notes').getBoundingClientRect()
+  const panelBox = document.querySelector('.tt-panel').getBoundingClientRect()
   const dockEl = document.querySelector('[data-tl-dock]')
   const dock = dockEl && dockEl.getBoundingClientRect().height > 0 ? dockEl.getBoundingClientRect() : null
   return {
@@ -43,6 +45,8 @@ const measure = (page) => page.evaluate(() => {
     sideways: document.documentElement.scrollWidth - window.innerWidth,
     scrollers,
     notesBottom: Math.round(notes.bottom + window.scrollY),
+    // Below 768 the controls come last, so the page ends with the side card.
+    panelBottom: Math.round(panelBox.bottom + window.scrollY),
     // The phone dock (below 768) is fixed above the tab bar; null where absent.
     dock: dock ? { h: Math.round(dock.height), top: Math.round(dock.top) } : null,
   }
@@ -72,8 +76,9 @@ test.describe('the Tint page scrolls only when it must', () => {
       expect(geo.noteInPanel, 'the notes are back in the side card').toBe(false)
       expect(geo.notesTopBelowChart, 'the notes are not under the chart').toBe(true)
       expect(geo.notesLeftOfPanel, 'the notes sit under the side card').toBe(true)
-      // Side-card sections own their padding; the card adds none and clips nothing.
-      expect([geo.padTop, geo.padLeft, geo.overflow]).toEqual(['0px', '0px', 'visible'])
+      // Side-card sections own their padding; the card adds none. It scrolls
+      // (overflow auto) only on a screen too short for the controls; here it fits.
+      expect([geo.padTop, geo.padLeft, geo.overflow]).toEqual(['0px', '0px', 'auto'])
       await ctx.close()
     })
   }
@@ -84,22 +89,23 @@ test.describe('the Tint page scrolls only when it must', () => {
     expect(m.scrollers, 'something inside the page scrolls on its own').toEqual([])
     expect(m.sideways, 'the page scrolls sideways').toBeLessThanOrEqual(0)
     // The page is the only scroller and it stops at the last note plus the
-    // phone's tab bar and the tool dock, with no empty run beneath. Tint's
+    // phone's tab bar and the tool dock, with no empty run beneath (the notes
+    // come before the controls when stacked, so the controls end the page). Tint's
     // primary action sits in the dock below 768, and the page reserves the dock's
-    // height once (measured at 390x844: notes end 1446, dock 69px tall, 12px
-    // gap, tab bar 61px, page 1588 = 142 past the notes). So the allowance is
-    // the old 96px plus the dock's own height, and the notes must end above the
+    // height once (measured at 390x844: side card ends 1726, dock 69px tall, 12px
+    // gap, tab bar 61px, page 1871 = 145 past the card). So the allowance is
+    // the old 96px plus the dock's own height, and the card must end above the
     // dock's top edge when scrolled to the bottom, so nothing hides behind it.
     expect(m.dock, 'the tool dock is not shown on Tint at 390px').not.toBeNull()
-    expect(m.docH - m.notesBottom, 'the page runs on past its content').toBeLessThanOrEqual(96 + m.dock.h)
+    expect(m.docH - m.panelBottom, 'the page runs on past its content').toBeLessThanOrEqual(96 + m.dock.h)
     const dockTopAtEnd = m.docH - m.winH + m.dock.top
-    expect(m.notesBottom, 'the last note ends behind the dock').toBeLessThanOrEqual(dockTopAtEnd)
-    // The controls come before the notes when stacked.
+    expect(m.panelBottom, 'the side card ends behind the dock').toBeLessThanOrEqual(dockTopAtEnd)
+    // Stacked: the swatches, the chart and the notes come before the controls.
     const order = await page.evaluate(() => {
       const top = (s) => document.querySelector(s).getBoundingClientRect().top
-      return top('.tt-panel') < top('.tt-notes')
+      return top('.tt-stage') < top('.tt-chart') && top('.tt-chart') < top('.tt-notes') && top('.tt-notes') < top('.tt-panel')
     })
-    expect(order, 'the notes come before the controls').toBe(true)
+    expect(order, 'the order is not stage, chart, notes, controls').toBe(true)
     await ctx.close()
   })
 
@@ -109,16 +115,25 @@ test.describe('the Tint page scrolls only when it must', () => {
     expect(m.docH, 'the page fits a 500px window, so there is nothing to test').toBeGreaterThan(m.winH)
     const last = page.locator('.tt-note').last()
     await expect(last.locator('.tt-note-step')).toHaveText('950')
-    // Scroll as far as the page goes; the note must then be the thing under its
-    // own centre (not behind the phone's tab bar) and wholly inside the window.
+    // The notes come before the controls now, so the note is not at the very end
+    // of the page. Wheel down a screen at a time until it is wholly inside the
+    // window and the thing under its centre is the note itself (so it is not
+    // behind the dock or the phone's tab bar).
     //
     // A wheel that arrives within Lenis's 250ms resize debounce of the tool
-    // mounting (the page grows 689 -> 1372px about 35ms before this runs) is
-    // clamped to the old limit and comes to rest at 189 of 872px. Wheel again,
-    // as a person would, until the page stops moving at its real end.
-    for (let tries = 0, atEnd = false; !atEnd && tries < 4; tries++) {
-      await wheelToRest(page, 6000, 'the Tint page at 390x500')
-      atEnd = await page.evaluate(() => window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1)
+    // mounting is clamped to the old limit; wheel again, as a person would.
+    const seen = () => last.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      return r.top >= 0 && r.bottom <= window.innerHeight && !!hit && el.contains(hit)
+    })
+    for (let tries = 0; tries < 12; tries++) {
+      if (await seen()) {
+        await page.waitForTimeout(400) // let any smooth scroll settle, then look again
+        if (await seen()) break
+      } else {
+        await wheelToRest(page, 300, 'the Tint page at 390x500')
+      }
     }
     const reach = await last.evaluate((el) => {
       const r = el.getBoundingClientRect()

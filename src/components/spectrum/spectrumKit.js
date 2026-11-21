@@ -63,7 +63,7 @@ export const BASES = [
   { label: 'Cyan', h: 196, c: 0.092 },
   { label: 'Moss', h: 150, c: 0.088 },
   { label: 'Amber', h: 80, c: 0.128 },
-  { label: 'Signal', h: 28, c: 0.152 },
+  { label: 'Signal', h: 37.7, c: 0.2108 },
   { label: 'Fuchsia', h: 348, c: 0.142 },
 ].map((b) => ({ ...b, color: oklchToHex(0.62, b.c, b.h) }))
 

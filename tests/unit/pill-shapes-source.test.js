@@ -138,7 +138,7 @@ test('the index search field keeps its spec shape: 44px, 12px corners, raised fi
   assert.ok(base, 'the index search field sets no height')
   assert.equal(declared(base.body, 'height'), '44px')
   assert.equal(declared(base.body, 'border-radius'), '12px')
-  assert.equal(declared(base.body, 'background'), 'var(--card)')
+  assert.equal(declared(base.body, 'background'), 'var(--srf-raised)')
   assert.equal(declared(base.body, 'border'), '0')
   assert.match(declared(base.body, 'box-shadow') || '', /^inset 0 0 0 1px /)
 })

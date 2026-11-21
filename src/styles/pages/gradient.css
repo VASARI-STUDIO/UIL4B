@@ -452,7 +452,7 @@
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 /* A free account sees "Pro" as a word beside Tints, not a second padlock. */
-.grd .grd-pro-tag { font-size: var(--fs-caption); font-weight: 500; letter-spacing: normal; color: var(--tl-dim); }
+.grd .grd-pro-tag { font-size: var(--fs-caption); font-weight: 600; letter-spacing: normal; color: var(--tl-dim); }
 
 /* The line in the Selected stop and Geometry label rows that says what a lock does.
    Its line box is the label's height, so the row keeps the height it had. */
@@ -730,9 +730,9 @@
   margin-bottom: 14px;
 }
 .grd .grd-presets-title { display: grid; gap: 4px; min-width: 0; }
-.grd .grd-presets-head h2 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
+.grd .grd-presets-head h2 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
 .grd .grd-presets-title p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
-.grd .grd-presets-sub { margin: 0 0 8px; font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--tl-dim); }
+.grd .grd-presets-sub { margin: 0 0 8px; font-size: 13px; font-weight: 560; line-height: 1.3; color: var(--tl-dim); }
 .grd .grd-mine-grid { margin-bottom: 24px; }
 .grd .grd-preset-grid,
 .grd .grd-mine-grid {
@@ -802,7 +802,7 @@
   background: var(--tl-card);
 }
 .grd .grd-explore-copy { display: grid; justify-items: start; gap: 12px; min-width: 0; }
-.grd .grd-explore h2 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
+.grd .grd-explore h2 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.015em; line-height: 1.2; color: var(--tl-ink); }
 .grd .grd-explore p { margin: 0; max-width: 46ch; font-size: 14px; line-height: 1.55; color: var(--tl-dim); text-wrap: pretty; }
 .grd .grd-explore-cta { margin-top: 4px; }
 /* The caret points onward, so it follows the label rather than leading it. */
@@ -925,7 +925,7 @@
 .grd .grd-gen-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; column-gap: 8px; }
 /* The label sits level with the first line of chips (28px tall, so 6px down), however many lines they take. */
 .grd .grd-gen-k { padding-top: 6px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
-.grd .grd-gen-pro { display: block; font-size: var(--fs-caption); font-weight: 500; line-height: 12px; letter-spacing: normal; color: var(--tl-dim); }
+.grd .grd-gen-pro { display: block; font-size: var(--fs-caption); font-weight: 600; line-height: 12px; letter-spacing: normal; color: var(--tl-dim); }
 .grd .grd-gen-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .grd .tl-pill.grd-gen-chip {
   justify-content: center;
@@ -1380,12 +1380,12 @@
 }
 .grd .grd-fill-pop:focus-visible { outline: none; }
 .grd .grd-fill-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
-.grd .grd-fill-title { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--tl-ink); }
+.grd .grd-fill-title { margin: 0; font-size: 13px; font-weight: 560; line-height: 1.3; color: var(--tl-ink); }
 .grd .grd-fill-done {
   flex: none; min-height: 28px; padding: 0 12px;
   border: 0; border-radius: 999px;
   background: var(--v3-ink); color: var(--v3-on-ink);
-  font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 560; cursor: pointer;
   touch-action: manipulation;
 }
 .grd .grd-fill-done:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
@@ -1396,7 +1396,7 @@
   font: inherit; font-size: 12px; line-height: 1.25; text-align: left; cursor: pointer;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
-.grd .grd-fill-tile.is-on { color: var(--tl-ink); font-weight: 500; }
+.grd .grd-fill-tile.is-on { color: var(--tl-ink); font-weight: 560; }
 .grd .grd-fill-thumb {
   position: relative; display: block;
   aspect-ratio: 4 / 3; border-radius: 8px;
