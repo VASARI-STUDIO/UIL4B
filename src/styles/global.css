@@ -3383,14 +3383,6 @@ html.lenis{scroll-behavior:auto!important}
 /* The refusal under the value field: a live region that is empty, and so takes no room, until a typed value is refused. */
 .cpk-hint{margin:0;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong)}
 .cpk-hint:not(:empty){margin-top:var(--s-1)}
-/* The tools row under the value field: notation and eyedropper left, Copy right. It shrinks and never wraps. */
-.cpk-tools{display:flex;flex-wrap:nowrap;align-items:center;gap:var(--s-1);margin-top:var(--s-1);min-width:0}
-/* Copy. Both labels share one grid cell, so the button is always as wide as "Copied" and the row never moves. */
-.cpk-copy{flex:0 0 auto;display:inline-grid;place-items:center;margin-inline-start:auto;height:32px;min-width:44px;padding:0 var(--s-2);border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:0;text-transform:none;cursor:pointer}
-.cpk-copy:hover{color:var(--t0);border-color:var(--bh)}
-.cpk-copy-label{grid-area:1/1}
-.cpk-copy-label[aria-hidden="true"]{visibility:hidden}
-.cpk-hint-value{font-family:var(--mono)}
 /* Eyedropper. Present only where the browser has the API — see the component. */
 .cpk-dropper{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),border-color var(--dur-1) var(--ease-out)}
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
@@ -3448,11 +3440,9 @@ html.lenis{scroll-behavior:auto!important}
    floor every other control on a touch screen meets. The hex field also takes
    the 16px floor, below which iOS zooms the page on focus. */
 @media(pointer:coarse){
-  .cpk-tools{gap:var(--s-2)}
   .cpk-dropper{width:44px;height:44px}
   .cpk-hex{height:44px;font-size:16px}
   .cpk-format{height:44px;padding:0 8px;font-size:var(--fs-caption)}
-  .cpk-copy{height:44px;padding:0 var(--s-3)}
   /* Swatches (presets and Recent alike) are tap targets too. Five 44px columns
      and four 4px gaps are 236px, and the longest OKLCH value at the 16px field
      size is about 248px, so the panel widens from 244px to 280px (256px inside
