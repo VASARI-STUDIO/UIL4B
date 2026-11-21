@@ -238,12 +238,12 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
+  border: 2px solid var(--tl-line-2);
   background: var(--cc-sw, transparent);
 }
 /* The chosen swatch: the ink border, and a ring outside it with a 2px gap in the
    page's own ground, so a chip as dark as the ink still shows which is on. */
-.cc .cc-swatch.is-on .cc-swatch-chip { border-color: var(--t0); box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--t0); }
+.cc .cc-swatch.is-on .cc-swatch-chip { border-color: var(--tl-ink); box-shadow: 0 0 0 2px var(--tl-page), 0 0 0 4px var(--tl-ink); }
 .cc .cc-swatch.is-on { color: var(--tl-ink); }
 .cc .cc-swatch-name { max-width: 9em; font-size: 12px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
 .cc .cc-pairs { display: grid; gap: var(--s-3); min-width: 0; }
