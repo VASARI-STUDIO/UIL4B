@@ -105,7 +105,8 @@ for (const width of [390, 768, 1440]) {
       const label = await style('label.alt-brief-label')
       const guide = await style('.alt-guide summary')
       expect(label.size, 'label size').toBe('14px')
-      expect(label.weight, 'label weight').toBe('540')
+      // V3 weight step: labels are 500 (the retoken moved this off 540).
+      expect(label.weight, 'label weight').toBe('500')
       expect(label.color, 'the label is ink, as the guide summary is').toBe(guide.color)
       expect((await style('#alt-tone-label')).size, 'both labels are the same size').toBe('14px')
 
