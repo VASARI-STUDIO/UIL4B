@@ -286,13 +286,14 @@ for (const theme of THEMES) {
         badgeRight: b.right,
         rowRight: r.right,
         nameHeight: n.height,
+        nameLine: parseFloat(getComputedStyle(nm).lineHeight),
       }
     })
     expect(m.text).toBe('3D Model Converter')
     expect(m.scrollWidth, 'the name is not clipped (no ellipsis)').toBeLessThanOrEqual(m.clientWidth)
     expect(m.textRight, 'the name ends before the badge begins').toBeLessThanOrEqual(m.badgeLeft)
     expect(m.badgeRight, 'the badge stays inside its row').toBeLessThanOrEqual(m.rowRight)
-    expect(m.nameHeight, 'the name stays on one 18px line').toBe(18)
+    expect(m.nameHeight, 'the name stays on one line').toBe(m.nameLine)
     await shot(page, `create-3d-converter-768-${theme}`)
     await ctx.close()
   })
@@ -301,7 +302,7 @@ for (const theme of THEMES) {
 // ── Create on a tablet spans the screen less a 10px margin each side ─────────
 // MUTATION: delete the `@media(min-width:768px) and (max-width:979px){.pnav-menu{width:calc(100vw - 20px)}}`
 // rule in v3-shell.css and the 768 menu is 720px wide, not 748.
-test('the Create menu at 768 is the screen less 10px each side; at 1024 it keeps its 960', async ({ browser }) => {
+test('the Create menu at 768 is the screen less 10px each side; at 1024 it is the screen less 24px each side', async ({ browser }) => {
   const tablet = await openPage(browser, TABLET, 'light', '/discover')
   await openMenu(tablet.page, TABLET, 'Create')
   const a = await tablet.page.locator('#pnav-mega').boundingBox()
@@ -312,7 +313,7 @@ test('the Create menu at 768 is the screen less 10px each side; at 1024 it keeps
   const laptop = await openPage(browser, LAPTOP, 'light', '/discover')
   await openMenu(laptop.page, LAPTOP, 'Create')
   const b = await laptop.page.locator('#pnav-mega').boundingBox()
-  expect(Math.round(b.width), 'at 1024 the menu keeps its own width').toBe(960)
+  expect(Math.round(b.width), 'at 1024 the menu is the viewport less 48px').toBe(LAPTOP.width - 48)
   await laptop.ctx.close()
 })
 

@@ -135,6 +135,12 @@ test('listMySubmissions has an index with and without the kind filter', () => {
   for (const s of shapes) assert.ok(hasIndex(s), `missing index: ${JSON.stringify(s)} on ${collectionName}`)
 })
 
+test('listApproved has an index with and without the kind filter', () => {
+  const shapes = requiredShapes(functionBody(queueApi, 'listApproved'))
+  assert.equal(shapes.length, 2)
+  for (const s of shapes) assert.ok(hasIndex(s), `missing index: ${JSON.stringify(s)} on ${collectionName}`)
+})
+
 test('every declared index is well formed and is not a redundant single-field entry', () => {
   for (const ix of indexes) {
     assert.ok(ix.collectionGroup, 'collectionGroup required')

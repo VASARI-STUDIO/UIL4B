@@ -292,19 +292,32 @@ body:has(.toast.show) .global-feedback-btn { transform: translateY(-52px); }
    and are left to it. ─────────────────────────────────────────────────────── */
 :root .pop.cpk-pop { border-radius: var(--ov-r-pop); }
 @media (min-width: 768px) { :root .pop.cpk-pop { width: 264px; } }
+/* A touch screen at tablet width keeps the wider panel the 16px OKLCH field needs. */
+@media (min-width: 768px) and (pointer: coarse) { :root .pop.cpk-pop { width: 280px; } }
 :root .cpk-trigger { border: 0; background: var(--ov-tone); border-radius: var(--ov-r-row); }
 :root .cpk-trigger:hover,
 :root .cpk-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--t0) 12%, transparent); box-shadow: none; }
 :root .cpk-trigger:focus-visible,
 :root .cpk-dropper:focus-visible,
+:root .cpk-copy:focus-visible,
 :root .cpk-format:focus-visible,
 :root .cpk-hex:focus-visible,
 :root .cpk-swatch:focus-visible,
 :root .cpk-preset:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
 :root .cpk-dropper,
 :root .cpk-hex,
+:root .cpk-copy,
 :root .cpk-format { border: 0; border-radius: var(--ov-r-row); background: var(--ov-tone); }
 :root .cpk-hex:focus-visible { box-shadow: none; border-color: currentColor; }
+/* The borderless tools still answer the pointer: the trigger's 12% tint on hover, 16% when pressed. */
+@media (hover: hover) {
+  :root .cpk-dropper:hover,
+  :root .cpk-copy:hover,
+  :root .cpk-format:hover { background: color-mix(in srgb, var(--t0) 12%, transparent); color: var(--t0); }
+}
+:root .cpk-dropper:active,
+:root .cpk-copy:active,
+:root .cpk-format:active { background: color-mix(in srgb, var(--t0) 16%, transparent); }
 @media (max-width: 767px) {
   :root .pop.cpk-pop[data-pop-fixed="true"],
   :root .pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"] { border-radius: var(--ov-r-modal) var(--ov-r-modal) 0 0; }

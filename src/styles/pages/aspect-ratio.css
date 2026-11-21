@@ -10,9 +10,10 @@
  * Every selector is scoped under `.arc-page`, the ToolLayout root, so the page
  * wins over shared sheets whatever order Vite gives the chunk CSS.
  *
- * The accent is spent on the shape preview (it IS the answer), the "Nearest
- * standard" snap (the one cell that changes the numbers) and the toolbar's
- * Copy size. Selection elsewhere is ink. */
+ * Ink throughout, on the V3 roles through tool-layout's --tl-* map: the shape
+ * preview (it IS the answer) is an ink hairline on a 6% wash, the "Nearest
+ * standard" snap (the one cell that changes the numbers) is the 9% selected
+ * wash, and the toolbar's Copy size is the one ink pill. */
 
 /* ── The answer column ──────────────────────────────────────────────────── */
 .arc-page .arc-main { gap: var(--tl-gap); }
@@ -65,10 +66,10 @@
   transform-origin: 50% 50%;
   transition: transform var(--dur-3) var(--ease-entrance);
 }
-.arc-page .rc-vis-frame rect { fill: var(--accent-wash); stroke: var(--accent); stroke-width: 1.5; }
-.arc-page .rc-vis-frame line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; opacity: .45; }
-.arc-page .rc-vis-ratio { position: relative; font-family: var(--font); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--accent-text); }
-.arc-page .rc-vis-dims { position: relative; font-family: var(--font); font-size: 10.5px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--accent-text); }
+.arc-page .rc-vis-frame rect { fill: var(--tl-wash); stroke: var(--tl-ink); stroke-width: 1.5; }
+.arc-page .rc-vis-frame line { stroke: var(--tl-ink); stroke-width: 1; stroke-dasharray: 4 4; opacity: .45; }
+.arc-page .rc-vis-ratio { position: relative; font-family: var(--font); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); }
+.arc-page .rc-vis-dims { position: relative; font-family: var(--font); font-size: 10.5px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-dim); }
 .arc-page .rc-vis-empty { font-size: 13px; color: var(--tl-dim); }
 
 /* The result: two copyable dimensions, then one hairline table of values. */
@@ -124,17 +125,17 @@
 .arc-page .arc-stat-k { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
 .arc-page .arc-stat-v { font-family: var(--font); font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); }
 .arc-page .arc-stat--snap {
-  background: color-mix(in srgb, var(--accent) 6%, var(--tl-card));
-  box-shadow: 1px 0 0 var(--tl-hair), 0 1px 0 var(--tl-hair), inset 0 0 0 1px var(--accent-border);
+  background: color-mix(in srgb, var(--tl-ink) 9%, var(--tl-card));
+  box-shadow: 1px 0 0 var(--tl-hair), 0 1px 0 var(--tl-hair), inset 0 0 0 1px var(--tl-line-on);
 }
-.arc-page .arc-stat--snap .arc-stat-v,
-.arc-page .arc-stat-sub { color: var(--accent-text); }
+.arc-page .arc-stat--snap .arc-stat-v { color: var(--tl-ink); }
+.arc-page .arc-stat-sub { color: var(--tl-dim); }
 .arc-page .arc-stat-sub { font-family: var(--font); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; }
 
 @media (hover: hover) and (pointer: fine) {
   .arc-page .rc-dim:hover { color: var(--tl-link); }
-  .arc-page .arc-stat:hover { background: color-mix(in srgb, var(--t0) 4%, var(--tl-card)); }
-  .arc-page .arc-stat--snap:hover { background: color-mix(in srgb, var(--accent) 11%, var(--tl-card)); }
+  .arc-page .arc-stat:hover { background: color-mix(in srgb, var(--tl-ink) 6%, var(--tl-card)); }
+  .arc-page .arc-stat--snap:hover { background: color-mix(in srgb, var(--tl-ink) 12%, var(--tl-card)); }
 }
 
 /* ── Panel: preset tabs and the side toggles ───────────────────────────────
@@ -190,10 +191,10 @@
   overflow: auto;
   overscroll-behavior: contain;
   padding: 6px;
-  border: 1px solid var(--tl-line-2);
+  border: 0;
   border-radius: 16px;
   background: var(--tl-card);
-  box-shadow: 0 18px 48px -12px rgba(0, 0, 0, .45);
+  box-shadow: 0 0 0 1px var(--tl-hair), var(--v3-shadow);
 }
 /* Opened upward when the room below (above the phone tab bar) is short; the
    side and `--arc-pop-max` are measured in PresetSelect. */
@@ -214,7 +215,7 @@
   text-align: left;
   cursor: pointer;
 }
-.arc-page .arc-opt.on { background: var(--tl-row-on); box-shadow: inset 2px 0 0 var(--tl-ink); }
+.arc-page .arc-opt.on { background: var(--tl-row-on); }
 .arc-page .arc-opt-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .arc-page .arc-opt-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .arc-page .arc-opt-name { font-size: 13px; font-weight: 540; color: var(--tl-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -227,7 +228,7 @@
 /* The thumbnails draw a shape, not emphasis: an ink hairline on a faint wash. */
 .arc-page .arc-thumb { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 18px; flex-shrink: 0; }
 .arc-page .arc-thumb-big { width: 48px; height: 34px; }
-.arc-page .arc-thumb-box { border: 1.5px solid color-mix(in srgb, var(--t0) 55%, transparent); border-radius: 2px; background: var(--tl-wash); }
+.arc-page .arc-thumb-box { border: 1.5px solid var(--tl-dim); border-radius: 2px; background: var(--tl-wash); }
 
 /* ── Ratio cards ────────────────────────────────────────────────────────── */
 .arc-page .arc-ratio-grid {
@@ -265,8 +266,8 @@
   height: 36px;
   padding: 0 10px;
   border: 1px solid var(--tl-hair);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  border-radius: 12px;
+  background: var(--tl-wash);
   color: var(--tl-ink);
   font-family: var(--font);
   font-size: 13px;

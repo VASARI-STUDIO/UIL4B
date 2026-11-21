@@ -273,7 +273,7 @@ html[data-theme="light"] .pjv.pjv {
   .pjv-name { margin-top: 4px; font-size: 40px; line-height: 40px; }
   .pjv-status { order: 3; }
   .pjv-nav { order: 4; margin-top: 20px; max-width: 560px; }
-  .pjv-ix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pjv-ix { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .pjv-ixa { height: 44px; padding: 0 12px; border-radius: 12px; background: var(--pj-surface); }
   .pjv-ixa.on { background: var(--pj-raised); }
   .pjv-act2 { order: 5; margin-top: 12px; max-width: 560px; }
@@ -346,4 +346,12 @@ html[data-reduced-motion="true"] .pjv .pjv-back:hover svg { transform: none; }
   html:not([data-reduced-motion="false"]) .pjv :is(.pjv-go, .pjv-ghost, .pjv-ixa, .pjv-chip, .pjv-row, .pjv-xr, .pjv-tb):active,
   html:not([data-reduced-motion="false"]) .pjv .pjv-go:hover .pjv-goico svg,
   html:not([data-reduced-motion="false"]) .pjv .pjv-back:hover svg { transform: none; }
+}
+/* Small phones: two index cells at 160px each. Tighten the cell so the part
+   name and its value both fit on one line instead of running out of the box. */
+@media (max-width: 400px) {
+  .pjv-ix { gap: 6px; }
+  .pjv-ixa { gap: 6px; padding: 0 8px; }
+  .pjv-ixn { font-size: 14px; }
+  .pjv-ixm { font-size: 12px; }
 }

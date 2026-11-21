@@ -217,7 +217,11 @@ for (const theme of ['light', 'dark']) {
       })
       expect(layout.panelLeft).toBeGreaterThanOrEqual(layout.stripRight)
       expect(Math.abs(layout.panelTop - layout.stripTop)).toBeLessThan(8)
-      expect(layout.stripH).toBeLessThan(330)
+      // The swatches fill the left column's height down to the chart and notes, so
+      // they are neither a fixed 420px block nor a short strip over empty space.
+      // Measured at 768x1024: 396px. The band allows a few pixels of font drift.
+      expect(layout.stripH).toBeGreaterThan(372)
+      expect(layout.stripH).toBeLessThan(420)
       await page.screenshot({ path: `${SHOTS}/tint-768-${theme}.png` })
     })
   })

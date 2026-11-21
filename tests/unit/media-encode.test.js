@@ -18,7 +18,9 @@ import {
   REVERSE_MAX_PIXELS, animatedImageSeconds,
   scaleFilter, clampBox, freeCrop, padRect, cropPlan, resolveFill, padFilters, cutoutFilter,
   loopSeconds, previewSourceTime, spriteLayout, splitPngStream, findVideoFormat, TRANSPARENT,
-  dragBox, spriteFits,
+  dragBox, spriteFits, VIDEO_FORMATS, atempoFilter, soundState, soundInHeader,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, adjustFilters, adjustCss, adjustChanged, clampAdjust,
+  CENSOR_DEFAULTS, KEY_DEFAULTS, censorFilters, colourKeyFilters,
 } from '../../src/utils/mediaEncode.js'
 
 const after = (args, flag) => args[args.indexOf(flag) + 1]
@@ -498,4 +500,285 @@ test('sprite sheets over the size limit are refused before the engine is asked f
   assert.equal(spriteFits(spriteLayout(24, 480, 270)), true)
   assert.equal(spriteFits(spriteLayout(300, 1920, 1080)), false)
   assert.equal(spriteFits({ cols: 1, rows: 40, w: 100, h: 20000 }), false)
+})
+
+// ── Q046: sound, MOV, MKV and MP3 ────────────────────────────────────────────
+const clip = (format, more = {}) => videoToAnimationArgs({ format, input: 'in.mp4', fps: 10, width: 480, ...more })
+
+test('sound: off by default, so every existing video list still ends in -an', () => {
+  for (const id of ['mp4', 'webm', 'mov', 'mkv']) {
+    const a = clip(id)
+    assert.ok(a.includes('-an'), `${id} lost -an`)
+    assert.ok(!a.includes('-c:a'), `${id} carried an audio codec without being asked`)
+  }
+})
+
+test('sound: MP4, MOV and MKV keep it as AAC; WebM as Opus', () => {
+  for (const id of ['mp4', 'mov', 'mkv']) {
+    const a = clip(id, { sound: true })
+    assert.equal(after(a, '-c:a'), 'aac', id)
+    assert.equal(after(a, '-b:a'), '128k', id)
+    assert.ok(!a.includes('-an'), `${id} still said -an`)
+    assert.equal(a.at(-1), `output.${id}`)
+  }
+  const w = clip('webm', { sound: true })
+  assert.equal(after(w, '-c:a'), 'libopus')
+  assert.equal(after(w, '-b:a'), '96k')
+  assert.ok(!w.includes('-an'))
+})
+
+test('sound: the bit rate follows Quality', () => {
+  assert.equal(after(clip('mp4', { sound: true, quality: 'low' }), '-b:a'), '96k')
+  assert.equal(after(clip('mp4', { sound: true, quality: 'high' }), '-b:a'), '192k')
+  assert.equal(after(clip('webm', { sound: true, quality: 'low' }), '-b:a'), '64k')
+})
+
+test('MOV keeps +faststart, MKV has no such flag, and both are H.264 in yuv420p', () => {
+  const mov = clip('mov')
+  assert.equal(after(mov, '-c:v'), 'libx264')
+  assert.equal(after(mov, '-pix_fmt'), 'yuv420p')
+  assert.equal(after(mov, '-movflags'), '+faststart')
+  const mkv = clip('mkv')
+  assert.equal(after(mkv, '-c:v'), 'libx264')
+  assert.ok(!mkv.includes('-movflags'))
+})
+
+test('MOV and MKV cannot carry transparency, so the Outside colour is a solid', () => {
+  for (const id of ['mov', 'mkv']) {
+    assert.equal(resolveFill(findVideoFormat(id), TRANSPARENT).transparent, false, id)
+  }
+})
+
+test('sound: a speed change retimes it with atempo, in steps atempo can take', () => {
+  assert.equal(atempoFilter(1), '')
+  assert.equal(atempoFilter(2), 'atempo=2')
+  assert.equal(atempoFilter(1.5), 'atempo=1.5')
+  assert.equal(atempoFilter(0.5), 'atempo=0.5')
+  assert.equal(atempoFilter(0.25), 'atempo=0.5,atempo=0.5')
+  assert.equal(atempoFilter(4), 'atempo=2,atempo=2')
+  assert.equal(after(clip('mp4', { sound: true, speed: 2 }), '-af'), 'atempo=2')
+  assert.equal(after(clip('webm', { sound: true, speed: 0.25 }), '-af'), 'atempo=0.5,atempo=0.5')
+  assert.ok(!clip('mp4', { sound: true }).includes('-af'), 'normal speed needs no tempo filter')
+})
+
+test('sound: -af sits before the audio codec, and the video filters are untouched by it', () => {
+  const a = clip('mp4', { sound: true, speed: 2 })
+  assert.ok(a.indexOf('-af') < a.indexOf('-c:a'))
+  assert.equal(after(a, '-vf'), after(clip('mp4', { speed: 2 }), '-vf'))
+})
+
+test('sound: formats that cannot hold it never get an audio flag, even when asked', () => {
+  for (const id of ['gif', 'webp', 'apng', 'frames', 'sprite']) {
+    const a = clip(id, { sound: true })
+    assert.deepEqual(a, clip(id), id)
+    assert.ok(!a.includes('-c:a') && !a.includes('-af'), id)
+  }
+})
+
+test('sound: reverse and boomerang drop it', () => {
+  for (const direction of ['reverse', 'boomerang']) {
+    const a = clip('mp4', { sound: true, direction })
+    assert.ok(a.includes('-an'), direction)
+    assert.ok(!a.includes('-c:a'), direction)
+  }
+})
+
+test('MP3: sound only, no video filter, the trim before the input', () => {
+  const a = clip('mp3', { start: 1.5, length: 4, turn: 90 })
+  assert.deepEqual(a, ['-ss', '1.5', '-t', '4', '-i', 'in.mp4', '-vn', '-c:a', 'libmp3lame', '-q:a', '4', 'output.mp3'])
+  assert.equal(after(clip('mp3', { quality: 'high' }), '-q:a'), '2')
+  assert.equal(after(clip('mp3', { speed: 2 }), '-af'), 'atempo=2')
+  assert.ok(!clip('mp3').some((x) => x === '-vf' || x === '-filter_complex'))
+})
+
+test('the new formats are listed for the Video tab only', () => {
+  const ids = VIDEO_FORMATS.map((f) => f.id)
+  for (const id of ['mov', 'mkv', 'mp3']) {
+    assert.ok(ids.includes(id), id)
+    assert.ok(!ANIMATION_FORMATS.some((f) => f.id === id), `${id} leaked into the animation builder`)
+  }
+  assert.equal(findVideoFormat('mp3').kind, 'audio')
+  assert.equal(findVideoFormat('mkv').mime, 'video/x-matroska')
+})
+
+test('soundState: says why a format or a file cannot keep sound', () => {
+  assert.deepEqual(soundState(findVideoFormat('mp4'), { hasSound: true }), { ok: true, why: '' })
+  assert.deepEqual(soundState(findVideoFormat('mp4'), { hasSound: null }), { ok: true, why: '' })
+  assert.equal(soundState(findVideoFormat('mp4'), { hasSound: false }).why, 'This file has no sound')
+  assert.match(soundState(findVideoFormat('gif'), { hasSound: true }).why, /can’t hold sound/)
+  assert.match(soundState(findVideoFormat('webp'), {}).why, /can’t hold sound/)
+  assert.equal(soundState(findVideoFormat('mkv'), { direction: 'boomerang' }).ok, false)
+  assert.equal(soundState(findVideoFormat('mp3'), { direction: 'reverse' }).ok, true)
+})
+
+test('soundInHeader: reads the track list of an MP4, a WebM and an AVI', () => {
+  const bytes = (s) => Uint8Array.from(s, (c) => c.charCodeAt(0))
+  const mp4 = (kind) => bytes(`\0\0\0\x18ftypisom\0\0\0\0isomiso2moov....hdlr\0\0\0\0\0\0\0\0${kind}`)
+  assert.equal(soundInHeader(mp4('soun')), true)
+  assert.equal(soundInHeader(mp4('vide'), new Uint8Array(0), true), false)
+  // a clip whose moov box was not in the part that was read says nothing
+  assert.equal(soundInHeader(bytes('\0\0\0\x18ftypisom\0\0\0\0isomiso2free'), new Uint8Array(0), false), null)
+  // the moov box at the far end of a big file counts
+  assert.equal(soundInHeader(bytes('\0\0\0\x18ftypisom\0\0\0\0isomiso2free'), mp4('soun')), true)
+  assert.equal(soundInHeader(bytes('\x1a\x45\xdf\xa3....V_VP8....A_OPUS')), true)
+  assert.equal(soundInHeader(bytes('\x1a\x45\xdf\xa3....V_VP8')), false)
+  assert.equal(soundInHeader(bytes('RIFF\0\0\0\0AVI LIST....strh\0\0\0\0auds')), true)
+  assert.equal(soundInHeader(bytes('RIFF\0\0\0\0AVI LIST....strh\0\0\0\0vids')), false)
+  assert.equal(soundInHeader(bytes('GIF89a')), null)
+})
+
+// ── Q047: the Adjust group ───────────────────────────────────────────────────
+const adj = (o) => ({ ...ADJUST_DEFAULTS, ...o })
+
+test('adjust: untouched sliders build no filter and no CSS, however they are spelled', () => {
+  assert.deepEqual(adjustFilters(ADJUST_DEFAULTS, { seconds: 4 }), [])
+  assert.deepEqual(adjustFilters(null), [])
+  assert.deepEqual(adjustFilters(undefined, { seconds: 4 }), [])
+  assert.deepEqual(adjustFilters({}), [])
+  assert.equal(adjustCss(ADJUST_DEFAULTS), '')
+  assert.equal(adjustCss(null), '')
+  assert.equal(adjustChanged(ADJUST_DEFAULTS), false)
+  assert.equal(adjustChanged(null), false)
+})
+
+test('adjust: a clip with untouched sliders is argument for argument the clip it was before', () => {
+  const plain = { format: 'mp4', input: 'in.mp4', fps: 12, width: 480, quality: 'medium', speed: 2, sound: true }
+  assert.deepEqual(videoToAnimationArgs({ ...plain, adjust: ADJUST_DEFAULTS, seconds: 4 }), videoToAnimationArgs(plain))
+  assert.deepEqual(videoToAnimationArgs({ ...plain, adjust: null }), videoToAnimationArgs(plain))
+  assert.ok(!videoToAnimationArgs({ ...plain, adjust: ADJUST_DEFAULTS }).join(' ').match(/eq=|hue=|gblur|fade=/))
+})
+
+test('adjust: brightness, contrast and saturation are one eq with only the changed terms', () => {
+  assert.deepEqual(adjustFilters(adj({ brightness: 20 })), ['eq=brightness=0.1'])
+  assert.deepEqual(adjustFilters(adj({ contrast: 50 })), ['eq=contrast=1.5'])
+  assert.deepEqual(adjustFilters(adj({ saturation: -100 })), ['eq=saturation=0'])
+  assert.deepEqual(adjustFilters(adj({ brightness: -40, contrast: 25, saturation: 10 })), ['eq=brightness=-0.2:contrast=1.25:saturation=1.1'])
+})
+
+test('adjust: hue, blur and the two fades each build their own filter', () => {
+  assert.deepEqual(adjustFilters(adj({ hue: -30 })), ['hue=h=-30'])
+  assert.deepEqual(adjustFilters(adj({ blur: 4 })), ['gblur=sigma=4'])
+  assert.deepEqual(adjustFilters(adj({ fadeIn: 1.5 }), { seconds: 6 }), ['fade=t=in:st=0:d=1.5'])
+  assert.deepEqual(adjustFilters(adj({ fadeOut: 2 }), { seconds: 6 }), ['fade=t=out:st=4:d=2'])
+  // the colour filters come first, then the fades, in the order they were applied
+  assert.deepEqual(
+    adjustFilters(adj({ brightness: 10, hue: 5, blur: 2, fadeIn: 1, fadeOut: 1 }), { seconds: 5 }),
+    ['eq=brightness=0.05', 'hue=h=5', 'gblur=sigma=2', 'fade=t=in:st=0:d=1', 'fade=t=out:st=4:d=1'],
+  )
+})
+
+test('adjust: a fade is held to the clip, and a fade out needs the length', () => {
+  assert.deepEqual(adjustFilters(adj({ fadeOut: 10 }), { seconds: 3 }), ['fade=t=out:st=0:d=3'])
+  assert.deepEqual(adjustFilters(adj({ fadeIn: 10 }), { seconds: 3 }), ['fade=t=in:st=0:d=3'])
+  assert.deepEqual(adjustFilters(adj({ fadeOut: 2 }), { seconds: 0 }), [])
+  assert.deepEqual(adjustFilters(adj({ fadeIn: 2 }), { seconds: 0 }), ['fade=t=in:st=0:d=2'])
+})
+
+test('adjust: values are held to their range, and junk is the default', () => {
+  assert.equal(clampAdjust({ brightness: 900 }).brightness, 100)
+  assert.equal(clampAdjust({ hue: -999 }).hue, -180)
+  assert.equal(clampAdjust({ blur: -3 }).blur, 0)
+  assert.equal(clampAdjust({ fadeIn: 'soon' }).fadeIn, 0)
+  assert.equal(clampAdjust({ contrast: NaN }).contrast, 0)
+  assert.deepEqual(Object.keys(clampAdjust(null)), ADJUST_FIELDS.map(f => f.id))
+  assert.deepEqual(adjustFilters({ brightness: 900 }), ['eq=brightness=0.5'])
+})
+
+test('adjust: in a clip the colour comes after the scale, and the fades after a reverse', () => {
+  const base = { format: 'gif', input: 'in.mp4', fps: 10, width: 320, quality: 'medium' }
+  const vf = (args) => args[args.indexOf('-vf') + 1]
+  const flat = vf(videoToAnimationArgs({ ...base, adjust: adj({ hue: 10, fadeIn: 1, fadeOut: 1 }), seconds: 5 }))
+  assert.ok(flat.indexOf('scale=') < flat.indexOf('hue=h=10'))
+  assert.ok(flat.indexOf('hue=h=10') < flat.indexOf('fade=t=in'))
+  const rev = vf(videoToAnimationArgs({ ...base, direction: 'reverse', adjust: adj({ hue: 10, fadeIn: 1 }), seconds: 5 }))
+  assert.ok(rev.indexOf('hue=h=10') < rev.indexOf('reverse'))
+  assert.ok(rev.indexOf('reverse') < rev.indexOf('fade=t=in'), 'the fade must run on the clip as it plays, after the reverse')
+})
+
+test('adjust: a sprite sheet gets the colour but no fade; MP3 gets neither', () => {
+  const sheet = { cols: 2, rows: 2 }
+  const sprite = videoToAnimationArgs({ format: 'sprite', input: 'in.mp4', fps: 8, width: 200, sheet, adjust: adj({ hue: 10, fadeIn: 1 }), seconds: 2 }).join(' ')
+  assert.match(sprite, /hue=h=10/)
+  assert.doesNotMatch(sprite, /fade=/)
+  const mp3 = videoToAnimationArgs({ format: 'mp3', input: 'in.mp4', fps: 8, width: 200, adjust: adj({ hue: 10, fadeIn: 1 }), seconds: 2 })
+  assert.doesNotMatch(mp3.join(' '), /hue=|fade=|-vf/)
+})
+
+test('adjust: the preview CSS carries colour, hue and blur but never the fades', () => {
+  assert.equal(adjustCss(adj({ brightness: 20 })), 'brightness(1.1)')
+  assert.equal(adjustCss(adj({ contrast: -50, saturation: 50 })), 'contrast(0.5) saturate(1.5)')
+  assert.equal(adjustCss(adj({ hue: 90 })), 'hue-rotate(90deg)')
+  assert.equal(adjustCss(adj({ blur: 10 }), { scale: 0.5 }), 'blur(5px)')
+  assert.equal(adjustCss(adj({ fadeIn: 2, fadeOut: 2 })), '')
+})
+
+// ── Censor and colour key (the Add group) ────────────────────────────────────
+const cen = (o) => ({ ...CENSOR_DEFAULTS, on: true, box: { x: 20, y: 10, w: 80, h: 60 }, ...o })
+const key = (o) => ({ ...KEY_DEFAULTS, on: true, ...o })
+const argsWith = (o) => videoToAnimationArgs({ format: 'gif', input: 'in.mp4', fps: 10, width: 200, ...o })
+const vf = (a) => a[a.indexOf('-vf') + 1]
+
+test('censor: off, boxless or null builds nothing, and the args stay byte-identical', () => {
+  assert.deepEqual(censorFilters(null), [])
+  assert.deepEqual(censorFilters(CENSOR_DEFAULTS), [])
+  assert.deepEqual(censorFilters({ ...CENSOR_DEFAULTS, on: true }), [])
+  assert.deepEqual(argsWith({ censor: CENSOR_DEFAULTS, key: KEY_DEFAULTS }), argsWith({}))
+})
+
+test('censor: pixelate crops the box, shrinks it by the strength and scales it back with square blocks', () => {
+  const [g] = censorFilters(cen({ strength: 5 }))
+  assert.equal(g, 'split[ca][cb];[ca]crop=80:60:20:10,scale=4:3:flags=neighbor,scale=80:60:flags=neighbor[cc];[cb][cc]overlay=20:10')
+  // A stronger setting makes bigger blocks, so fewer of them, and never fewer than one.
+  assert.match(censorFilters(cen({ strength: 10 }))[0], /scale=2:1:flags=neighbor/)
+  assert.match(censorFilters(cen({ box: { x: 0, y: 0, w: 4, h: 4 }, strength: 10 }))[0], /scale=1:1:flags=neighbor/)
+})
+
+test('censor: blur gives the box a gaussian blur, and a wild strength is held to 1 to 10', () => {
+  assert.match(censorFilters(cen({ mode: 'blur', strength: 4 }))[0], /\[ca\]crop=80:60:20:10,gblur=sigma=12\[cc\]/)
+  assert.match(censorFilters(cen({ mode: 'blur', strength: 99 }))[0], /gblur=sigma=30/)
+  assert.match(censorFilters(cen({ mode: 'blur', strength: -5 }))[0], /gblur=sigma=3\[/)
+})
+
+test('censor: it runs after fps and before the crop, in source pixels', () => {
+  const f = vf(argsWith({ censor: cen(), crop: { x: 5, y: 5, w: 100, h: 90 } })).split(',')
+  const at = (s) => f.findIndex(p => p.startsWith(s))
+  assert.ok(at('fps=') < at('split[ca][cb]'))
+  assert.ok(at('split[ca][cb]') < f.findIndex(p => p.startsWith('crop=100:90')))
+})
+
+test('censor: the graph keeps its own labels, clear of the GIF palette ones', () => {
+  const v = vf(argsWith({ censor: cen() }))
+  assert.match(v, /split\[s0\]\[s1\];\[s0\]palettegen/)
+  assert.doesNotMatch(censorFilters(cen())[0], /s0|s1|\[p\]/)
+})
+
+test('colour key: tolerance 0 to 100 maps to a similarity of 0.01 to 0.5', () => {
+  assert.deepEqual(colourKeyFilters(null), [])
+  assert.deepEqual(colourKeyFilters(KEY_DEFAULTS), [])
+  assert.deepEqual(colourKeyFilters(key({ colour: 'green' })), [])
+  assert.deepEqual(colourKeyFilters(key({ colour: '#00FF00', tolerance: 20 })), ['format=rgba,colorkey=0x00ff00:0.1:0.1'])
+  assert.deepEqual(colourKeyFilters(key({ tolerance: 0 })), ['format=rgba,colorkey=0x00ff00:0.01:0.1'])
+  assert.deepEqual(colourKeyFilters(key({ tolerance: 500 })), ['format=rgba,colorkey=0x00ff00:0.5:0.1'])
+})
+
+test('colour key: where the format has no alpha the Outside colour is laid under the keyed picture', () => {
+  const [g] = colourKeyFilters(key(), { transparent: false, colour: '#ff0000' })
+  assert.match(g, /^format=rgba,colorkey=0x00ff00:0\.1:0\.1,split\[ka\]\[kb\];\[kb\]drawbox=x=0:y=0:w=iw:h=ih:c=0xff0000:t=fill\[kc\];\[kc\]\[ka\]overlay$/)
+  const mp4 = vf(videoToAnimationArgs({ format: 'mp4', input: 'in.mp4', fps: 10, width: 200, key: key(), fill: '#ff0000' }))
+  assert.match(mp4, /drawbox=.*c=0xff0000/)
+  const webm = vf(videoToAnimationArgs({ format: 'webm', input: 'in.mp4', fps: 10, width: 200, key: key() }))
+  assert.match(webm, /colorkey=/)
+  assert.doesNotMatch(webm, /drawbox/)
+})
+
+test('colour key: it runs after the colour adjustments and before the cut-out, and a keyed GIF reserves a transparent slot', () => {
+  const a = argsWith({ key: key(), adjust: { ...ADJUST_DEFAULTS, hue: 30 }, cut: 'circle' })
+  const v = vf(a)
+  assert.ok(v.indexOf('hue=h=30') < v.indexOf('colorkey='))
+  assert.ok(v.indexOf('colorkey=') < v.indexOf('geq='))
+  const gifKeyed = argsWith({ key: key() }).join(' ')
+  const gifPlain = argsWith({}).join(' ')
+  assert.notEqual(gifKeyed, gifPlain)
+  assert.match(gifKeyed, /reserve_transparent=1|transparency_index|alpha_threshold/)
+  assert.doesNotMatch(gifPlain, /reserve_transparent=1|alpha_threshold/)
 })

@@ -307,7 +307,7 @@
 .ied-pri:focus-visible .ied-gochip>.b{transform:none;transition:transform 240ms var(--ied-out) 60ms}
 
 /* the colour picker and format menu, restyled to sit in the dialog */
-.pop.cpk-pop.ied-cpop{--ied-cp-ink:#EFEEEA;padding:12px;gap:8px;border:0;border-radius:12px;background:#0F1012;color:#EFEEEA;box-shadow:0 0 0 1px oklch(1 0 0 / .1),0 8px 24px rgba(0,0,0,.4);width:244px}
+.pop.cpk-pop.ied-cpop{--ied-cp-ink:#EFEEEA;padding:12px;gap:8px;border:0;border-radius:12px;background:#0F1012;color:#EFEEEA;box-shadow:0 0 0 1px oklch(1 0 0 / .1),0 8px 24px rgba(0,0,0,.4)}
 [data-theme="light"] .pop.cpk-pop.ied-cpop{--ied-cp-ink:#18181B;background:#FFFFFF;color:#18181B;box-shadow:0 0 0 1px oklch(0 0 0 / .1),0 8px 24px rgba(24,24,27,.14)}
 .ied-cpop .cpk-head{height:20px;color:inherit}
 .ied-cpop .cpk-head-name{font-size:13px;line-height:20px;font-weight:500;color:color-mix(in srgb,var(--ied-cp-ink) 62%,transparent)}
@@ -322,7 +322,7 @@
   .ied-cpop .cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:44px}
   .ied-cpop .cpk-instrument .cpk-hue::-moz-range-track{height:44px}
 }
-.ied-cpop .cpk-dropper,.ied-cpop .cpk-hex,.ied-cpop .cpk-format{border:0;border-radius:8px;background:color-mix(in srgb,var(--ied-cp-ink) 10%,transparent);color:var(--ied-cp-ink)}
+.ied-cpop .cpk-dropper,.ied-cpop .cpk-hex,.ied-cpop .cpk-copy,.ied-cpop .cpk-format{border:0;border-radius:8px;background:color-mix(in srgb,var(--ied-cp-ink) 10%,transparent);color:var(--ied-cp-ink)}
 .ied-cpop .cpk-hex{font-family:var(--mono)}
 .ied-cpop .cpk-section-label{font-size:13px;line-height:16px;font-weight:500;color:color-mix(in srgb,var(--ied-cp-ink) 62%,transparent)}
 .ied-cpop .cpk-hint{font-size:13px;line-height:20px;color:var(--ied-cp-ink)}
