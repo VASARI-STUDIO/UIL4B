@@ -3,13 +3,13 @@
 // layouts and the style guide in HTML, Markdown and PNG. The phrases are in
 // tests/helpers/banned-copy.js. To see a check fail: put "rather than" back into a note in
 // src/utils/exportTemplates/guidelines/notes.js, restore "How this book was made" in
-// src/utils/bookRaster.js, or print a ratio with toFixed(1) in src/utils/brandGuidelines.js.
+// api/_lib/bookPages.js, or print a ratio with toFixed(1) in src/utils/brandGuidelines.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { buildBrandGuidelines } from '../../src/utils/brandGuidelines.js'
 import { GUIDELINES_TEMPLATES } from '../../src/utils/exportTemplates/guidelines/index.js'
-import { buildBookPages } from '../../src/utils/bookRaster.js'
+import { buildBookPages } from '../../api/_lib/bookPages.js'
 import { renderUiKit } from '../../src/utils/uiKitExport.js'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../../src/utils/styleGuideExport.js'
 import { buildStyleGuideLayout } from '../../src/utils/styleGuideRaster.js'

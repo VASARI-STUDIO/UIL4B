@@ -42,12 +42,14 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // is asserted instead, and more strictly than before: EVERY navigate() in this file must be
   // accounted for — the constant, a resume target the user themselves chose, the Palette Builder,
   // a first-win route, or a stashed checkout in place of either (someone who signed up from a Pro
-  // button). Anything else is a new exit that has not been thought about.
+  // button). The kit builder's Save goes back first to the tool the sign-up began in, when one was
+  // stashed, and only then to the Palette Builder. Anything else is a new exit that has not been
+  // thought about.
   // One level of nesting, so `navigate(takeResumeTarget() || X)` is captured
   // whole rather than truncated at the inner bracket.
   const navigations = src.match(/navigate\((?:[^()]|\([^()]*\))*\)/g) || []
   assert.ok(navigations.length > 0, 'onboarding must still leave somewhere')
-  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(isCheckoutTarget\(resume\) \? resume : (?:win\.route|'\/create\/palette')\)$/
+  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?(?:FIRST_RUN_DESTINATION|'\/create\/palette')\)$|^navigate\(isCheckoutTarget\(resume\) \? resume : (?:win\.route|'\/create\/palette')\)$/
   for (const nav of navigations) {
     assert.match(nav, allowed,
       `${nav} is an onboarding exit that does not go to the first-run destination or a chosen first win`)
@@ -58,8 +60,9 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // liveToolRoutes(); this asserts the page still takes them from there rather
   // than spelling a path of its own.
   assert.match(src, /navigate\(isCheckoutTarget\(resume\) \? resume : win\.route\)/)
-  // Save lands in the Palette Builder; a stashed page other than checkout is never the target.
-  assert.match(src, /navigate\(isCheckoutTarget\(resume\) \? resume : '\/create\/palette'\)/)
+  // Save goes back to the page the sign-up began on when one was stashed (a tool or a checkout),
+  // and otherwise lands in the Palette Builder.
+  assert.match(src, /navigate\(takeResumeTarget\(\) \|\| '\/create\/palette'\)/)
   assert.match(src, /FIRST_WINS\.filter\(/)
 
   assert.ok(!/navigate\('\/home'\)/.test(src),
