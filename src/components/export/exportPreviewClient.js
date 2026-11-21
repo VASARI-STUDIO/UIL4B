@@ -9,6 +9,7 @@
 // `loadAuth` and `fetchImpl` are injected so a test runs this without Firebase or a network.
 
 import { documentDesign } from '../../utils/exportDocument.js'
+import { onSignOut } from '../../utils/signOutHooks.js'
 
 export const EXPORT_PREVIEW_URL = '/api/ai?export=preview'
 const CACHE_LIMIT = 40
@@ -45,6 +46,9 @@ export function clearPreviewCache() {
   missing = false
   epoch += 1
 }
+
+// Signing out clears the cache at once (AuthContext runs the sign-out hooks), so the next account never sees these pages.
+onSignOut(clearPreviewCache)
 
 /**
  * Tells the cache who is signed in and on which plan, and clears it when either changes (a sign-out, another account, an upgrade
