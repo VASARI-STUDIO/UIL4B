@@ -150,6 +150,10 @@ const ICON_GROUPS = {
 // The category control's labels, and the packs each narrower category can hold (All holds every pack).
 const CATEGORY_LABELS = { all: 'All', coloured: 'Coloured', animated: 'Animated', editable: 'Editable' }
 const categoryPacks = (category) => (category === 'all' ? null : ICON_GROUPS[category]?.packs || null)
+// The packs bundled with the app, which the outage fallback draws from. A category with none of them shows nothing
+// while the icon service is out, and the notice says so rather than promising built-in icons.
+const BUILTIN_PACKS = ['tabler', 'lucide', 'iconoir', 'heroicons', 'simple-icons']
+const hasBuiltins = (category) => { const scope = categoryPacks(category); return !scope || scope.some((p) => BUILTIN_PACKS.includes(p)) }
 // What the style bar offers outside All. Coloured's segments are group keys; the other two are packs.
 const STYLE_OPTIONS = {
   coloured: [{ id: 'brands', label: 'Brands' }, { id: 'flags', label: 'Flags' }, { id: 'flat', label: 'Flat' }],
@@ -3744,6 +3748,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // The category control: all | coloured | animated | editable. 'all' whenever `group` is null; outside All the style
   // choice is derived from `group` (Coloured types) or `pack` (Animated sets, Editable packs), never stored twice.
   const [category, setCategory] = useState(urlStart.category)
+  // The built-in fallback reads the category through a ref: a handler sets it and browses in the same tick, before
+  // the state has rendered. Every category change goes through chooseCategory so the two never disagree.
+  const categoryRef = useRef(urlStart.category)
+  const chooseCategory = (next) => { categoryRef.current = next; setCategory(next) }
   const facet = category === 'coloured'
     ? (STYLE_OPTIONS.coloured.some((o) => o.id === group) ? group : '')
     : category === 'all' ? '' : (categoryPacks(category).includes(pack) ? pack : '')
@@ -3835,10 +3843,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // browse Simple Icons online must not find it here when the service blinks.
     const prefixOf = { T: 'tabler', L: 'lucide', I: 'iconoir', H: 'heroicons', S: 'simple-icons' }
     const pc = pm[packFilter] || ''
+    // Inside a category the fallback keeps to that category's packs. Animated and Coloured hold no built-in pack, so
+    // the grid goes empty under the outage notice rather than showing static icons the category does not hold.
+    const scope = categoryPacks(categoryRef.current)
     q = (q || '').toLowerCase()
     const filtered = capList(localIcons.filter(i =>
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
+      (!scope || scope.includes(prefixOf[i.p] || i.p)) &&
       (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
     ))
     setIcons(filtered.map(i => ({
@@ -3894,7 +3906,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const browseAll = useCallback(function browseAll(manualRetry = false) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
-    setSource('all'); setGroup(null); setCategory('all'); setPack(''); setGated(null)
+    setSource('all'); setGroup(null); chooseCategory('all'); setPack(''); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setVisible(PAGE_SIZE)
     // ALLOWED, NOT ALL. This is the line that decides how many packs a visit
@@ -4028,7 +4040,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const browseLogos = useCallback(function browseLogos() {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
-    setSource('pack'); setGroup(null); setCategory('all'); setPack('logodev'); setGated(null)
+    setSource('pack'); setGroup(null); chooseCategory('all'); setPack('logodev'); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
@@ -4040,7 +4052,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // (deduped), meaning even brands not in the curated list still resolve.
   const searchLogos = useCallback((q) => {
     reqId.current++
-    setSource('pack'); setGroup(null); setCategory('all'); setPack('logodev'); setGated(null)
+    setSource('pack'); setGroup(null); chooseCategory('all'); setPack('logodev'); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     const term = (q || '').trim()
     if (term.length < 2) { browseLogos(); return }
@@ -4169,7 +4181,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const browseCustom = useCallback(function browseCustom() {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
-    setSource('custom'); setGroup(null); setCategory('all'); setPack(''); setGated(null)
+    setSource('custom'); setGroup(null); chooseCategory('all'); setPack(''); setGated(null)
     setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     // Cleaned on the way in: whatever is in storage is not trusted. The symbols go in
     // before the list is set, so the first render of a cell already finds its `#id`.
@@ -4576,7 +4588,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     let nextGroup = leaves ? null : group
     // A Coloured type that does not hold the pack gives way to Coloured as a whole.
     if (nextCategory === 'coloured' && nextPack && !ICON_GROUPS[nextGroup]?.packs.includes(nextPack)) nextGroup = 'coloured'
-    setCategory(nextCategory); setGroup(nextGroup); setPack(nextPack)
+    chooseCategory(nextCategory); setGroup(nextGroup); setPack(nextPack)
     // A pack that does not draw the chosen weight puts it back to Regular, so
     // the grid shows the pack rather than an empty answer to a question the
     // visitor asked of a different pack. Outside All the weight is only remembered, so it is left alone.
@@ -4643,7 +4655,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // Back in All, a pack that does not draw the remembered weight would answer a different question than the bar asks.
     if (next === 'all' && nextPack && weightRef.current !== 'regular' && !weightPacks(weightRef.current).includes(nextPack)) nextPack = ''
     const nextGroup = next === 'all' ? null : next
-    setCategory(next); setGroup(nextGroup); setPack(nextPack)
+    chooseCategory(next); setGroup(nextGroup); setPack(nextPack)
     runScope(nextPack, nextGroup)
   }
 
@@ -5711,7 +5723,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
               // same class of error as a masthead pill saying "Live library
               // connected" directly above this notice.
               <div className="ig-notice" role="status">
-                <span>Couldn’t reach the icon service — showing built-in icons.</span>
+                <span>{hasBuiltins(category) ? 'Couldn’t reach the icon service — showing built-in icons.' : 'Couldn’t reach the icon service — no built-in icons in this category.'}</span>
                 <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
               </div>
             )}

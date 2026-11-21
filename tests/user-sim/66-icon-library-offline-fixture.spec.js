@@ -209,6 +209,30 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await ctx.close()
 })
 
+// The fallback keeps to the category in view. Animated holds no built-in pack, so it is empty under the notice and
+// the notice does not promise built-in icons; Editable holds four, so it draws them.
+test('during an outage the fallback keeps to the chosen category', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, REFUSED)
+  await signIn(page, { plan: 'pro' })
+  await refuseIconify(page)
+  const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
+
+  await go(page, '/create/icons?category=animated')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  await expect(notice).toContainText('no built-in icons in this category')
+  await expect(page.getByText('No icons to show — try another pack or search.')).toBeVisible()
+  expect(await page.locator('.ig .ic:not(.ig-skel)').count(), 'no static icon stands in for an animated one').toBe(0)
+
+  await go(page, '/create/icons?category=editable')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  await expect(notice).toContainText('showing built-in icons')
+  await expect.poll(() => page.locator('.ig .ic:not(.ig-skel)').count(), { timeout: 15000 }).toBeGreaterThan(20)
+  await ctx.close()
+})
+
 // NARROWING TO A PACK THE FALLBACK DOES NOT COVER USED TO SAY NOTHING AT ALL.
 //
 // When the catalogue is unreachable the surface falls back to its built-in set
