@@ -1170,30 +1170,42 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 /* The slab's light is the footer's horizon (pages/home-footer.css,
    .sp-footer--home .sp-footer-horizon), so the gallery headers and the footer
    read as one brand: the same six hues in one oklch gradient, faded by the
-   same eased mask (--horizon-fade, global.css). The stops sit further right
-   than the footer's so the warm orange is the centre of the light, and the
-   light rises from the slab's bottom edge right of the title, so the h1 and
-   blurb sit on the dark ground. The footer's warm core is left out: on a slab
-   this short it washed over the title. Nothing is blurred and nothing moves;
-   inset:0 keeps the light inside the slab's own box. */
+   same eased mask (--horizon-fade, global.css). The stops start at 34% and
+   the mask is centred right of the title, so the light rises from the slab's
+   bottom edge and the h1 sits on the dark ground. Nothing is blurred and
+   nothing moves; inset:0 keeps the light inside the slab's own box.
+   The blurb is lifted from .68 to .8 white (global.css, .dgh-hero p) because
+   at 901-1100px its last line runs over the amber stop: measured 3.96:1 at
+   .68, 4.5:1 is needed. */
 .dgh-hero{isolation:isolate}
 .dgh-hero::before{
   content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
-  opacity:.6;
-  background:linear-gradient(90deg,#EC6A51 40%,#F0B94D 72%,#A2BC81 82%,#59B193 88%,#6CA0C6 94%,#9B84C2 100%);
-  background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 40%,oklch(.817 .138 82) 72%,oklch(.76 .085 128) 82%,oklch(.696 .097 169) 88%,oklch(.685 .079 240) 94%,oklch(.658 .094 301) 100%);
+  opacity:.5;
+  background:linear-gradient(90deg,#EC6A51 34%,#F0B94D 58%,#A2BC81 68%,#59B193 77%,#6CA0C6 87%,#9B84C2 100%);
+  background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 34%,oklch(.817 .138 82) 58%,oklch(.76 .085 128) 68%,oklch(.696 .097 169) 77%,oklch(.685 .079 240) 87%,oklch(.658 .094 301) 100%);
   -webkit-mask-image:radial-gradient(60% 150% at 64% 100%,var(--horizon-fade));
   mask-image:radial-gradient(60% 150% at 64% 100%,var(--horizon-fade));
 }
-/* A phone slab is tall and narrow: the footer's own phone mask (wider, set
-   right) and its phone stops keep the light under the blurb's last line
-   rather than behind it. */
+/* 641-900px: the slab is shorter relative to its width and the library
+   controls sit over the light's right half, so the light is lower and fainter. */
+@media(min-width:641px) and (max-width:900px){
+  .dgh-hero::before{
+    opacity:.42;
+    -webkit-mask-image:radial-gradient(70% 120% at 66% 100%,var(--horizon-fade));
+    mask-image:radial-gradient(70% 120% at 66% 100%,var(--horizon-fade));
+  }
+}
+/* A phone slab is tall and narrow: the footer's phone opacity (.54) and a
+   mask that climbs higher, so the light reads as the horizon rather than a
+   strip along the bottom edge. The blue and violet stops sit 8 points left of
+   the footer's so they land under the copy, not in the slab's corner. */
 @media(max-width:640px){
   .dgh-hero::before{
-    background:linear-gradient(90deg,#EC6A51 10%,#F0B94D 28%,#A2BC81 42%,#59B193 54%,#6CA0C6 70%,#9B84C2 80%);
-    background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 10%,oklch(.817 .138 82) 28%,oklch(.76 .085 128) 42%,oklch(.696 .097 169) 54%,oklch(.685 .079 240) 70%,oklch(.658 .094 301) 80%);
-    -webkit-mask-image:radial-gradient(90% 70% at 72% 100%,var(--horizon-fade));
-    mask-image:radial-gradient(90% 70% at 72% 100%,var(--horizon-fade));
+    opacity:.54;
+    background:linear-gradient(90deg,#EC6A51 10%,#F0B94D 28%,#A2BC81 42%,#59B193 54%,#6CA0C6 62%,#9B84C2 72%);
+    background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 10%,oklch(.817 .138 82) 28%,oklch(.76 .085 128) 42%,oklch(.696 .097 169) 54%,oklch(.685 .079 240) 62%,oklch(.658 .094 301) 72%);
+    -webkit-mask-image:radial-gradient(100% 90% at 72% 100%,var(--horizon-fade));
+    mask-image:radial-gradient(100% 90% at 72% 100%,var(--horizon-fade));
   }
 }
 .dgh-copy{position:relative;z-index:1;min-width:0}
@@ -1240,13 +1252,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
      hole; the dark slab, the radius and the padding are what carry it, and they
      are the same at every width. Measured after: /discover/palettes is 92px at
      320 and 227px at 1440 - the box now
-     varies because its contents do.
-     NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
-     reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling
-     with the viewport. That is ::before, whose `inset:auto -10% -65% 42%` puts
-     the glow 10% past the right edge ON PURPOSE, where `overflow:hidden` on the
-     same element clips it. Suppress ::before and the figure is exactly 0 at
-     every width; the document itself never scrolls horizontally. */
+     varies because its contents do. */
   .dgh-hero{grid-template-columns:1fr;border-radius:20px}
 }
 @media(max-width:480px){

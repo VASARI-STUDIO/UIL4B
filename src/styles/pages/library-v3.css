@@ -27,7 +27,7 @@
   max-width:30ch;font-size:clamp(32px,4.3vw,52px);font-weight:600;line-height:1;letter-spacing:-.03em;color:#EFEEEA;
 }
 .lib-surface.lib-v3[class] .dgh-hero p{
-  max-width:58ch;margin:12px 0 0;font-size:16px;line-height:1.55;color:rgba(239,238,234,.68);
+  max-width:58ch;margin:12px 0 0;font-size:16px;line-height:1.55;color:rgba(239,238,234,.8);
 }
 /* The library leads are short, so the phone shows the whole sentence (the
    shared masthead clamps its paragraph to two lines below 641px). */
@@ -39,12 +39,16 @@
 @media(min-width:1200px){.lib-surface.lib-v3[class] .dgh-hero h1{font-size:52px}}
 .lib-surface.lib-v3[class] .dgh-action{margin-top:20px}
 
-/* The hero's one action (gradients): the ink pill, 36px. */
+/* The hero's one action (gradients): the ink pill, 36px with a pointer, 44px
+   on touch and at tablet width and below (see the media rule after this). */
 .lib-surface.lib-v3[class] .dgh-action .btn{
   display:inline-flex;align-items:center;gap:10px;height:36px;min-height:36px;padding:0 16px 0 12px;
   border:0;border-radius:999px;background:#EFEEEA;color:#060607;
   font-size:14px;font-weight:500;line-height:1;white-space:nowrap;
   transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+@media(max-width:900px),(pointer:coarse){
+  .lib-surface.lib-v3[class] .dgh-action .btn{height:44px;min-height:44px}
 }
 .lib-surface.lib-v3[class] .dgh-action .btn:hover{background:#F7F6F2;color:#060607}
 .lib-surface.lib-v3[class] .dgh-action .btn:active{transform:scale(.97)}
