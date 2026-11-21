@@ -2870,7 +2870,7 @@ html.lenis{scroll-behavior:auto!important}
 /* The menu triggers (App line 113): 14px / 400, ink-dim, 9px 13px, 12px
    radius, a caret at .65. Open is an ink .08 wash with full ink. */
 .pnav-items{display:flex;align-items:center;gap:2px;flex:0 0 auto}
-.pnav-trigger{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:0;border-radius:var(--btn-radius);background:transparent;color:rgba(var(--ink-rgb),var(--ink-dim));font-family:var(--font);font-size:14px;font-weight:400;line-height:1.2;white-space:nowrap;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pnav-trigger{display:inline-flex;align-items:center;border:0;background:transparent;font-family:var(--font);font-size:14px;line-height:1.2;white-space:nowrap;cursor:pointer}
 .pnav-trigger[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08);color:rgb(var(--ink-rgb))}
 .pnav-chev{width:11px;height:11px;opacity:.65;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
@@ -3006,7 +3006,7 @@ html.lenis{scroll-behavior:auto!important}
    7px under the header to the header's own gutters, 26px radius, the page at
    .98 under a 30px blur, an ink .13 rim and the file's long soft shadow. It
    never outgrows the screen: the body scrolls, the foot stays. */
-.pnav-menu{position:fixed;top:calc(var(--chrome-h) + 7px);left:max(clamp(14px,2vw,22px),env(safe-area-inset-left,0px));right:max(clamp(14px,2vw,22px),env(safe-area-inset-right,0px));z-index:119;display:flex;flex-direction:column;max-height:calc(100dvh - var(--chrome-h) - 28px - env(safe-area-inset-bottom,0px));overflow:hidden;border-radius:var(--radius-3xl);border:1px solid rgba(var(--ink-rgb),.13);background:rgba(var(--page-rgb),.98);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:0 50px 100px -46px rgba(var(--shade-rgb),var(--shade-a)),inset 0 1px 0 rgba(var(--ink-rgb),.07);animation:pnav-menu-in var(--dur-3) var(--ease-entrance)}
+.pnav-menu{position:fixed;z-index:119;display:flex;flex-direction:column;max-height:calc(100dvh - var(--chrome-h) - 28px - env(safe-area-inset-bottom,0px));overflow:hidden}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .pnav-menu{background:rgb(var(--page-rgb))}
 }
@@ -3029,8 +3029,8 @@ html.lenis{scroll-behavior:auto!important}
 /* A row: ONE line. A bare glyph in a 32px slot (no tile behind it), the label,
    a badge on the right. No description. Hover and focus: an ink .07 row, and a
    glyph without a category turns accent. */
-.pnav-tool{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 10px;border-radius:12px;color:rgba(var(--ink-rgb),.86);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pnav-tool-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;color:rgba(var(--ink-rgb),var(--ink-dim));transition:color var(--dur-1) var(--ease-standard)}
+.pnav-tool{display:flex;align-items:center;text-decoration:none}
+.pnav-tool-ico{display:grid;place-items:center;flex:0 0 auto}
 .pnav-tool-ico svg{width:18px;height:18px}
 .pnav-tool-label{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-tool:hover,.pnav-tool:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
@@ -3114,9 +3114,8 @@ html.lenis{scroll-behavior:auto!important}
    separated from the columns by one hairline and sits on the tray itself. */
 /* v3-shell.css sets its size, gap, padding and edge. */
 .pnav-editorial{display:flex;flex-direction:column}
-.pnav-editorial-title{margin:0;font-size:16.5px;font-weight:560;line-height:1.22;letter-spacing:-.02em;color:rgb(var(--ink-rgb))}
-.pnav-editorial-blurb{margin:9px 0 0;font-size:12.5px;line-height:1.55;color:rgba(var(--ink-rgb),var(--ink-dim))}
-.pnav-editorial-cta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding:10px 14px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.pnav-editorial-title{margin:0}
+.pnav-editorial-cta{display:flex;align-items:center;font-family:var(--font);text-decoration:none;cursor:pointer}
 .pnav-editorial-cta:hover{background:var(--accent-fill-hover);color:var(--accent-ink);text-decoration:none}
 .pnav-editorial-cta:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 /* Create: the export-page preview — a picture of a white page,
@@ -3146,11 +3145,10 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-dside{display:flex;flex-direction:column;gap:14px;min-width:0}
 .pnav-reco{display:grid;gap:2px;min-width:0;padding-top:10px;border-top:1px solid rgba(var(--ink-rgb),.08)}
 .pnav-reco--wait{min-height:76px}
-.pnav-reco-eyebrow{margin:0;font-size:11.5px;line-height:1.3;color:rgba(var(--ink-rgb),var(--ink-dim))}
-.pnav-reco-link{display:flex;align-items:center;gap:10px;min-height:48px;margin-inline:-8px;padding:6px 8px;border-radius:12px;color:rgb(var(--ink-rgb));text-decoration:none;transition:background var(--dur-1) var(--ease-standard)}
+.pnav-reco-link{display:flex;align-items:center;gap:10px;text-decoration:none}
 .pnav-reco-link:hover,.pnav-reco-link:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-reco-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
-.pnav-reco-prev{display:flex;flex:0 0 auto;width:48px;height:32px;box-sizing:border-box;border:1px solid rgba(var(--ink-rgb),.1);border-radius:var(--radius-xs);overflow:hidden}
+.pnav-reco-prev{display:flex;flex:0 0 auto;box-sizing:border-box;overflow:hidden}
 .pnav-reco-prev--strip > span{flex:1}
 .pnav-reco-prev--type{align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:600;line-height:1}
 .pnav-reco-prev--glyph{align-items:center;justify-content:center;color:rgba(var(--ink-rgb),var(--ink-dim))}
