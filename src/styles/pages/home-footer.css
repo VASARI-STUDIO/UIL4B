@@ -284,6 +284,10 @@
   }
   .sp-footer.sp-footer--home .sp-footer-col { padding-bottom: 0; }
   .sp-footer.sp-footer--home .sp-footer-col--legal { display: block; }
+  /* /tools and /mobile have three columns: Tools over Legal on the left, the
+     longer Explore beside them, so Legal does not wait for Explore to end. */
+  .mkt .sp-footer--no-page .sp-footer-links > .sp-footer-col:nth-of-type(2) { grid-column: 2; grid-row: 1 / span 2; }
+  .mkt .sp-footer--no-page .sp-footer-col--legal { grid-column: 1; grid-row: 2; }
   .sp-footer--home .sp-footer-col-h { display: block; min-height: 0; padding-bottom: 0; font-size: 13px; }
   .sp-footer--home .sp-footer-col ul { margin-top: 8px; gap: 0; }
   .sp-footer.sp-footer--home .sp-footer-col a { display: flex; min-height: 44px; }
@@ -331,3 +335,59 @@ html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost):active { tr
     grid-template-columns: repeat(3, minmax(max-content, 1fr));
   }
 }
+
+/* ── Light theme: /tools and /mobile ────────────────────────────────────────────
+   The homepage's closing block stays dark in every theme (see the top of this
+   file). The sales pages keep the theme: the final call and the footer take the
+   page's ground and ink, the wash drops to .3 and its band halves, and the
+   screen-blend core is hidden (it vanishes on a light ground). Scoped to .mkt, so
+   the homepage and /plans are untouched. */
+[data-theme="light"] .mkt .hm-close,
+[data-theme="light"] .mkt .sp-footer.sp-footer--home {
+  background: var(--v3-ground);
+  color: var(--v3-ink);
+}
+[data-theme="light"] .mkt .hm-close p { color: var(--v3-sec); }
+[data-theme="light"] .mkt .hm-close-cta { background: var(--v3-ink); color: var(--v3-on-ink); }
+[data-theme="light"] .mkt .hm-close-icon { background: rgba(245, 245, 242, .1); }
+@media (hover: hover) {
+  [data-theme="light"] .mkt .hm-close-cta:hover { background: var(--v3-ink-hover); }
+  [data-theme="light"] .mkt .hm-close-cta:hover .hm-close-icon { background: rgba(245, 245, 242, .16); }
+}
+[data-theme="light"] .mkt .hm-close-ghost,
+[data-theme="light"] .mkt .hm-close-btns > .hm-close-ghost.ui-pill-out {
+  background: transparent;
+  color: var(--v3-ink);
+  border-color: var(--v3-hl20);
+}
+@media (hover: hover) {
+  [data-theme="light"] .mkt .hm-close-ghost:hover,
+  [data-theme="light"] .mkt .hm-close-btns > .hm-close-ghost.ui-pill-out:hover {
+    background: var(--v3-wash);
+    border-color: var(--v3-hl20);
+  }
+}
+[data-theme="light"] .mkt .hm-close-cta:focus-visible,
+[data-theme="light"] .mkt .hm-close-ghost:focus-visible,
+[data-theme="light"] .mkt .sp-footer--home a:focus-visible,
+[data-theme="light"] .mkt .sp-footer--home .app-footer-note:focus-visible { outline-color: var(--v3-ink); }
+
+[data-theme="light"] .mkt .sp-footer--home .sp-footer-grid { border-top-color: var(--v3-hair); }
+[data-theme="light"] .mkt .sp-footer--home .sp-footer-col-h { color: var(--v3-ink); }
+[data-theme="light"] .mkt .sp-footer.sp-footer--home .sp-footer-col a,
+[data-theme="light"] .mkt .sp-footer.sp-footer--home .sp-footer-legal a,
+[data-theme="light"] .mkt .sp-footer.sp-footer--home .app-footer-note { color: var(--v3-sec); }
+[data-theme="light"] .mkt .sp-footer.sp-footer--home .sp-footer-legal { color: var(--v3-sec); }
+@media (hover: hover) {
+  [data-theme="light"] .mkt .sp-footer.sp-footer--home .sp-footer-col a:hover,
+  [data-theme="light"] .mkt .sp-footer.sp-footer--home .sp-footer-legal a:hover,
+  [data-theme="light"] .mkt .sp-footer.sp-footer--home .app-footer-note:hover { color: var(--v3-ink); }
+}
+[data-theme="light"] .mkt .sp-footer.sp-footer--home .sp-footer-legal a.sp-footer-attrib,
+[data-theme="light"] .mkt .sp-footer--home .sp-footer-mark .brand-logo { color: var(--v3-ink); }
+[data-theme="light"] .mkt .sp-footer--home .sp-footer-horizon { height: 340px; opacity: .3; }
+[data-theme="light"] .mkt .sp-footer--home .sp-footer-core { display: none; }
+@media (max-width: 767px) {
+  [data-theme="light"] .mkt .sp-footer--home .sp-footer-horizon { height: 190px; }
+}
+

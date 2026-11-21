@@ -21,7 +21,7 @@ test('a Google category maps to a kind, and anything unknown reads as sans', () 
 test('the strip is picked by the sum of the name\'s character codes', () => {
   assert.equal(nameSum('Inter'), 73 + 110 + 116 + 101 + 114)
   // Inter: 514 mod 4 is 2, so the third dark sans strip; mod 2 is 0, the first light one.
-  assert.equal(backdropFor('Inter', 'sans-serif', 'dark'), `${BACKDROP_BASE}dark-script-4.webp`)
+  assert.equal(backdropFor('Inter', 'sans-serif', 'dark'), `${BACKDROP_BASE}dark-sans-3.webp`)
   assert.equal(backdropFor('Inter', 'sans-serif', 'light'), `${BACKDROP_BASE}light-sans-1.webp`)
 })
 
@@ -50,14 +50,24 @@ test('one kind\'s list is four strips on dark and two on light', () => {
   assert.equal(backdropUrls('light', 'serif').length, 2)
 })
 
+test('each kind draws only on its own strips, on both grounds', () => {
+  for (const ground of ['dark', 'light']) {
+    for (const kind of ['sans', 'serif', 'display', 'script', 'mono']) {
+      for (const url of backdropUrls(ground, kind)) {
+        assert.ok(url.includes(`/${ground}-${kind}-`), `${url} is in the ${ground} ${kind} list`)
+      }
+    }
+  }
+})
+
 // ── The files each strip ships ───────────────────────────────────────────────
 // Four files per strip: AVIF and WebP at the full size, and at the small size
-// the phone layout switches to. The full size is the widest the source images
-// go (they were generated 1536 px wide), so it is also a floor: a re-encode at a
-// smaller size, or a missing file, must fail here instead of going soft quietly.
+// the phone layout switches to. The full size is 2048 px wide (the 2K set) and
+// the small one 1024 px, so this is also a floor: a re-encode at a smaller size,
+// or a missing file, must fail here instead of going soft quietly.
 
-const FULL = { width: 1536, height: 460 }
-const SMALL = { width: 768, height: 230 }
+const FULL = { width: 2048, height: 613 }
+const SMALL = { width: 1024, height: 307 }
 
 // The pixel size of a WebP, from its first chunk (lossy, lossless or extended).
 function webpSize(buf) {
@@ -123,8 +133,9 @@ test('all four files of every strip, AVIF and the phone sizes too, stay under 20
 })
 
 test('the strips keep the higher-quality encode: the 120 files together are far above the old soft ones', () => {
-  // The 30 strips were re-encoded at about 45 dB PSNR. The soft encodes they
-  // replaced came to 1.95 MB in all; the re-encode is 8.2 MB. A floor of 6 MB
+  // The 30 strips are the 2K set, each WebP at the highest quality that stays
+  // under the cap. The soft encodes they replaced came to 1.95 MB in all; the
+  // 2K set is 7.8 MB. A floor of 6 MB
   // fails if a later pass squeezes them back down, which no size cap or
   // dimension check would notice.
   let total = 0
