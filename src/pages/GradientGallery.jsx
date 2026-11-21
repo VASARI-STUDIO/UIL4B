@@ -88,9 +88,9 @@ export default function GradientGallery({ toast }) {
   const ready = pro.status === 'ready'
   const proPending = pro.active && !ready
   const rows = pro.items ?? LIBRARY_GRADIENT_ROWS
-  // Gradients the community made and a reviewer approved: read for a signed-in
-  // viewer only (the rules allow nothing else), added after the library's own
-  // rows and always open. An id the library already has is not added twice.
+  // Gradients the community made and a reviewer approved: read signed in or out
+  // (a refused read is an empty list), added after the library's own
+  // rows and always open. A gradient the library already holds is not added twice.
   const approved = useApprovedSubmissions('gradient')
   const communityRows = useMemo(() => newCommunityRows(rows, communityGradientRows(approved)), [rows, approved])
   // Anonymous → free account → Pro, exactly as on the Palette Library. Both

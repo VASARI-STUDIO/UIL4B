@@ -106,26 +106,29 @@ export async function listMySubmissions(uid, kind = null, max = 100) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
-/** How many of the newest approved documents one read looks at; `kind` is filtered from these. */
+/** How many of the newest approved documents one read looks at, per kind asked for. */
 export const APPROVED_WINDOW = 200
 
 /**
- * Approved submissions, newest first, for the galleries. Reads by status and
- * createdAt (the existing index) and filters `kind` here, so no new index is
- * needed. firestore.rules lets only a signed-in visitor read an approved
- * document, so call this signed in; a refusal reads as an empty list rather
- * than an error. Anything else (offline, say) still throws, for the caller to
- * decide. Plain objects: `{ id, ...document }`.
+ * Approved submissions, newest first, for the galleries. Each kind asked for
+ * (`kind`, or each of `kinds`) is its own query by status, kind and createdAt
+ * (the (status, kind, createdAt) index in firestore.indexes.json), so every kind
+ * gets its own APPROVED_WINDOW and a busy kind cannot push another's older
+ * documents out. With neither, one read takes the newest of every kind. A
+ * refusal (firestore.rules decides who may read an approved document) reads as
+ * an empty list rather than an error. Anything else (offline, say) still
+ * throws, for the caller to decide. Plain objects: `{ id, ...document }`.
  */
-export async function listApproved({ kind = null, max = 60 } = {}) {
+export async function listApproved({ kind = null, kinds = null, max = 60 } = {}) {
+  const asked = kind ? [kind] : (Array.isArray(kinds) && kinds.length ? kinds : [null])
   try {
-    const snap = await getDocs(query(
-      collection(db, QUEUE_COLLECTION),
-      where('status', '==', 'approved'),
-      orderBy('createdAt', 'desc'),
-      limit(APPROVED_WINDOW),
-    ))
-    return filterApproved(snap.docs.map(d => ({ id: d.id, ...d.data() })), { kind, max })
+    const snaps = await Promise.all(asked.map((k) => {
+      const parts = [collection(db, QUEUE_COLLECTION), where('status', '==', 'approved')]
+      if (k) parts.push(where('kind', '==', k))
+      return getDocs(query(...parts, orderBy('createdAt', 'desc'), limit(APPROVED_WINDOW)))
+    }))
+    const docs = snaps.flatMap((snap) => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    return filterApproved(docs, { kind, max })
   } catch (err) {
     if (err?.code === 'permission-denied') return []
     throw err

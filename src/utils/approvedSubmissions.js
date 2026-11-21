@@ -93,13 +93,73 @@ export function communityPaletteRows(docs) {
   return rows
 }
 
+// A row's content key: its name (case and spacing ignored) plus its colours
+// (palette) or stops (gradient). A name alone is not a match and a row with no
+// colours has none, so a name-only stub never swallows a community row.
+function contentKey(row) {
+  const name = typeof row?.name === 'string' ? row.name.replace(/\s+/g, ' ').trim().toLowerCase() : ''
+  if (!name) return null
+  if (Array.isArray(row.colors) && row.colors.length) {
+    return `${name}|p|${row.colors.map((c) => String(c).toUpperCase()).join(',')}`
+  }
+  if (Array.isArray(row.stops) && row.stops.length) {
+    return `${name}|g|${row.stops.map((s) => `${String(s?.color).toUpperCase()}@${s?.position}`).join(',')}`
+  }
+  return null
+}
+
 /**
- * The community rows that may be added to a library: those whose id is not already
- * a library row's (de-duplicated by id). Pure; the library rows are never changed.
+ * The community rows that may be added to a library: those the library does not
+ * already hold. A community id is `c-<docId>` and never matches a static row, so
+ * the match is on content (name plus colours or stops), which catches a
+ * submission later promoted into the static data; an equal id also counts.
+ * Pure; the library rows are never changed.
  */
 export function newCommunityRows(libraryRows, communityRows) {
-  const have = new Set((Array.isArray(libraryRows) ? libraryRows : []).map((r) => r?.id))
-  return (Array.isArray(communityRows) ? communityRows : []).filter((r) => r && !have.has(r.id))
+  const library = Array.isArray(libraryRows) ? libraryRows : []
+  const haveId = new Set(library.map((r) => r?.id))
+  const haveContent = new Set(library.map(contentKey).filter(Boolean))
+  return (Array.isArray(communityRows) ? communityRows : []).filter((r) => {
+    if (!r || haveId.has(r.id)) return false
+    const key = contentKey(r)
+    return !(key && haveContent.has(key))
+  })
+}
+
+/**
+ * The loader behind useApprovedSubmissions, kept pure so it runs under
+ * `node --test`. `list()` reads the approved documents; the answer is kept for
+ * `keepMs` per account key (`uid`, or null when signed out), so a sign-in or
+ * sign-out re-reads and the same account does not. A failed read is an empty
+ * list and is not kept. `now` is injectable for the clock.
+ */
+export function createApprovedLoader({ list, keepMs = 5 * 60 * 1000, now = Date.now }) {
+  let cached = null // { key, at, promise }
+  return function load(uid) {
+    const key = uid || null
+    if (cached && cached.key === key && now() - cached.at < keepMs) return cached.promise
+    const promise = Promise.resolve().then(list).catch(() => {
+      if (cached && cached.promise === promise) cached = null // a failure is not kept
+      return []
+    })
+    cached = { key, at: now(), promise }
+    return promise
+  }
+}
+
+/**
+ * The hub's waiting list: what is not hidden and not yet approved (an approved
+ * piece has joined the gallery). Pending and rejected ones stay.
+ */
+export function waitingRows(rows, hiddenIds) {
+  const hidden = hiddenIds instanceof Set ? hiddenIds : new Set()
+  return (Array.isArray(rows) ? rows : []).filter((s) => s && !hidden.has(s.id) && s.status !== 'approved')
+}
+
+/** The hub's approved list, for the profile's Made tab. */
+export function approvedRows(rows, hiddenIds) {
+  const hidden = hiddenIds instanceof Set ? hiddenIds : new Set()
+  return (Array.isArray(rows) ? rows : []).filter((s) => s && !hidden.has(s.id) && s.status === 'approved')
 }
 
 /**

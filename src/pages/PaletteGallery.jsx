@@ -140,7 +140,7 @@ const SECTIONS = [
     blurb: 'Published identity colours from interfaces you already know.',
     match: (palette) => palette.kind === 'brand',
   },
-  // Only present when a signed-in viewer has approved community palettes to show.
+  // Only present when there are approved community palettes to show.
   {
     id: 'community',
     label: 'Community',
@@ -189,15 +189,18 @@ export default function PaletteGallery({ toast }) {
   const pro = useProLibrary('palettes')
   const ready = pro.status === 'ready'
   const rows = pro.items ?? LIBRARY_PALETTE_ROWS
-  // Palettes the community made and a reviewer approved: read for a signed-in
-  // viewer only (the rules allow nothing else), added after the library's own
-  // rows and always open. An id the library already has is not added twice.
+  // Palettes the community made and a reviewer approved: read signed in or out
+  // (a refused read is an empty list), added after the library's own
+  // rows and always open. A palette the library already holds is not added twice.
   const approved = useApprovedSubmissions('palette')
   const communityRows = useMemo(() => newCommunityRows(rows, communityPaletteRows(approved)), [rows, approved])
   const groupOptions = useMemo(
     () => (communityRows.length ? [...GROUP_FILTERS, { id: 'community', label: 'Community' }] : GROUP_FILTERS),
     [communityRows.length],
   )
+  // The Community option leaves the menu when its rows go (a sign-out, a refresh);
+  // a filter left on it would show an empty page, so it falls back to All.
+  if (group === 'community' && !communityRows.length) setGroup('all')
   // Three rungs: anonymous → free account → Pro (utils/lockedPreview.js). Both
   // inputs must be an exact `true` to climb, so an entitlement or an auth state
   // that is still resolving shows the tier BELOW rather than the one above.

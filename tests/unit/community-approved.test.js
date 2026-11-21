@@ -13,6 +13,7 @@ import path from 'node:path'
 import {
   filterApproved, communityGradientRows, communityPaletteRows,
   newCommunityRows, withCommunityOpen, COMMUNITY_ID_PREFIX,
+  createApprovedLoader, waitingRows, approvedRows,
 } from '../../src/utils/approvedSubmissions.js'
 import { filterNoun } from '../../src/utils/galleryFilterNoun.js'
 import { paletteHaystack } from '../../src/utils/paletteSearch.js'
@@ -96,12 +97,27 @@ test('palette rows skip pending documents, gradients and palettes with under two
   assert.deepEqual(rows.map((r) => r.id), ['c-ok', 'c-pair'])
 })
 
-test('a community row is not added when the library already has that id', () => {
-  const library = [{ id: 'c-g1' }, { id: 'static' }]
-  const community = communityGradientRows([doc({ id: 'g1' }), doc({ id: 'g2' })])
+test('a community row is not added when the library already holds that content', () => {
+  // Static rows have slug ids, never c-<docId>, so the match is on name plus stops.
+  const community = communityGradientRows([doc({ id: 'g1', name: 'Dusk' }), doc({ id: 'g2', name: 'Other' })])
+  const library = [
+    { id: 'dusk', name: '  dusk ', stops: [{ color: '#112233', position: 0 }, { color: '#ffeedd', position: 100 }] },
+    { id: 'static' },
+  ]
   assert.deepEqual(newCommunityRows(library, community).map((r) => r.id), ['c-g2'])
   assert.equal(library.length, 2, 'library rows are not changed')
   assert.deepEqual(newCommunityRows(library, []), [])
+})
+
+test('a community palette matches a library palette by name and colours, not by name alone', () => {
+  const community = communityPaletteRows([pal({ id: 'p1', name: 'Harbour' })])
+  const same = [{ id: 'harbour', name: 'harbour', colors: ['#102030', '#a0b0c0', '#ffffff'] }]
+  const otherColours = [{ id: 'harbour', name: 'Harbour', colors: ['#000000', '#a0b0c0', '#ffffff'] }]
+  const stub = [{ id: 'harbour', name: 'Harbour' }]
+  assert.deepEqual(newCommunityRows(same, community), [])
+  assert.equal(newCommunityRows(otherColours, community).length, 1)
+  assert.equal(newCommunityRows(stub, community).length, 1, 'a name-only stub is not a match')
+  assert.equal(newCommunityRows([{ id: 'c-p1' }], community).length, 0, 'an equal id still counts')
 })
 
 test('community rows join the open list after the cap and leave the library counts alone', () => {
@@ -131,14 +147,73 @@ test('listApproved reads approved documents newest first and keeps permission er
   assert.match(fn, /permission-denied/)
   assert.match(fn, /return \[\]/)
   assert.doesNotMatch(fn.slice(0, fn.indexOf('\n}\n')), /console\./, 'no console noise')
-  assert.doesNotMatch(fn.slice(0, fn.indexOf('\n}\n')), /where\('kind'/, 'kind is filtered client-side: no new index')
+  assert.match(fn.slice(0, fn.indexOf('\n}\n')), /if \(k\) parts\.push\(where\('kind', '==', k\)\)/, 'each kind is its own query, with its own limit')
 })
 
-test('the approved-submissions hook reads only for a signed-in viewer', () => {
+test('firestore.indexes.json has the (status, kind, createdAt) index the per-kind read needs', () => {
+  const { indexes } = JSON.parse(read('firestore.indexes.json'))
+  const want = ['status:ASCENDING', 'kind:ASCENDING', 'createdAt:DESCENDING']
+  assert.ok(indexes.some((i) => i.collectionGroup === 'community-submissions'
+    && i.fields.map((f) => `${f.fieldPath}:${f.order}`).join() === want.join()))
+})
+
+// The hook's loader is createApprovedLoader; the hook adds only React state around it.
+const clock = () => { const c = { t: 0, now: () => c.t }; return c }
+
+test('the loader reads for a signed-out visitor too', async () => {
+  let reads = 0
+  const load = createApprovedLoader({ list: async () => { reads += 1; return [doc({ id: 'a' })] } })
+  assert.deepEqual((await load(null)).map((d) => d.id), ['a'])
+  assert.equal(reads, 1)
+})
+
+test('a read the rules refuse arrives as [] and the loader passes it on', async () => {
+  // listApproved answers permission-denied with [] (see the source check above).
+  const load = createApprovedLoader({ list: async () => [] })
+  assert.deepEqual(await load(null), [])
+})
+
+test('the loader turns any failed read into [] and does not keep the failure', async () => {
+  let reads = 0
+  const load = createApprovedLoader({ list: async () => { reads += 1; if (reads === 1) throw new Error('offline'); return [doc({ id: 'a' })] } })
+  assert.deepEqual(await load('u1'), [])
+  assert.deepEqual((await load('u1')).map((d) => d.id), ['a'], 'the next call reads again')
+  assert.equal(reads, 2)
+})
+
+test('the loader serves the same account from its cache, then re-reads after the keep time', async () => {
+  const c = clock()
+  let reads = 0
+  const load = createApprovedLoader({ list: async () => { reads += 1; return [] }, keepMs: 1000, now: c.now })
+  await load('u1'); await load('u1')
+  assert.equal(reads, 1, 'second call is a cache hit')
+  c.t = 999
+  await load('u1')
+  assert.equal(reads, 1)
+  c.t = 1000
+  await load('u1')
+  assert.equal(reads, 2, 'kept only for keepMs')
+})
+
+test('the loader re-reads on a sign-in, a sign-out or an account switch', async () => {
+  let reads = 0
+  const load = createApprovedLoader({ list: async () => { reads += 1; return [] } })
+  await load(null)
+  await load('u1')
+  assert.equal(reads, 2, 'sign-in')
+  await load('u2')
+  assert.equal(reads, 3, 'switch account')
+  await load(null)
+  assert.equal(reads, 4, 'sign-out')
+  await load(null)
+  assert.equal(reads, 4, 'same key again is a hit')
+})
+
+test('the hook is wired to the loader and does not skip the read when signed out', () => {
   const src = read('src/hooks/useApprovedSubmissions.js')
-  assert.match(src, /useAuth/)
-  assert.match(src, /listApproved\(/)
-  assert.match(src, /if \(!uid\)/)
+  assert.match(src, /createApprovedLoader\(/)
+  assert.match(src, /kinds: \['gradient', 'palette'\]/)
+  assert.doesNotMatch(src, /if \(!uid\)/)
 })
 
 test('both galleries merge the approved rows, de-duplicated, outside the cap', () => {
@@ -158,7 +233,20 @@ test('Your submissions drops approved items and keeps pending and rejected ones'
   const grad = read('src/pages/GradientGallery.jsx')
   assert.match(grad, /s\.status !== 'withdrawn' && s\.status !== 'approved'/)
   const hub = read('src/components/community/useCommunityHub.js')
-  assert.match(hub, /s\.status !== 'approved'/)
+  assert.match(hub, /waitingRows\(\[/)
+  assert.match(hub, /approvedRows\(\[/)
+})
+
+test('the hub filters: waitingRows drops approved and hidden, approvedRows keeps only approved and not hidden', () => {
+  const rows = [
+    { id: 'a', status: 'approved' }, { id: 'b', status: 'pending' }, { id: 'c', status: 'rejected' },
+    { id: 'd', status: 'approved' }, null,
+  ]
+  const hidden = new Set(['d'])
+  assert.deepEqual(waitingRows(rows, hidden).map((r) => r.id), ['b', 'c'])
+  assert.deepEqual(approvedRows(rows, hidden).map((r) => r.id), ['a'])
+  assert.deepEqual(waitingRows(rows).map((r) => r.id), ['b', 'c'], 'no hidden set')
+  assert.deepEqual(approvedRows(undefined, hidden), [])
 })
 
 test('the hub lists palette submissions so a sent palette no longer reads Not sent', () => {

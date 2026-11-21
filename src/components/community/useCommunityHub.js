@@ -8,6 +8,7 @@ import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../..
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../../utils/communityQueueApi'
 import { isPostLimit } from '../../utils/communityLimits'
 import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
+import { approvedRows, waitingRows } from '../../utils/approvedSubmissions'
 import { handleProblem, readStoredHandle } from '../../utils/communityHandle'
 import { TOAST_ACTION_MIN_MS } from '../../utils/toastDuration'
 import { appendIconSubmission, buildIconPayload, readIconSubmissions, removeIconSubmission } from '../../utils/iconSubmission'
@@ -176,22 +177,23 @@ export default function useCommunityHub(toast) {
   const designsRead = !uid || (listsRead.design && listsRead.palette)
   const iconsRead = !uid || listsRead.icon
 
-  /** One list for Your submissions, newest first. */
-  const rows = useMemo(() => [
+  /**
+   * One list for Your submissions, newest first. An approved piece has joined the
+   * gallery, so it leaves this waiting list; pending and rejected ones stay, with Withdraw.
+   */
+  const rows = useMemo(() => waitingRows([
     ...icons.map((s) => ({ ...s, kind: 'icon' })),
     ...designs.map((s) => ({ ...s, kind: Array.isArray(s.colors) ? 'palette' : 'design' })),
     ...uploads.map((s) => ({ ...s, kind: 'image', synced: false })),
-  // An approved piece has joined the gallery, so it leaves this waiting list;
-  // pending and rejected ones stay, with Withdraw.
-  ].filter((s) => !hiddenIds.has(s.id) && s.status !== 'approved')
+  ], hiddenIds)
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [icons, designs, uploads, hiddenIds])
 
   /** What a reviewer approved: it has joined the gallery, so the profile's Made tab lists it. */
-  const live = useMemo(() => [
+  const live = useMemo(() => approvedRows([
     ...icons.map((s) => ({ ...s, kind: 'icon' })),
     ...designs.map((s) => ({ ...s, kind: Array.isArray(s.colors) ? 'palette' : 'design' })),
     ...gradientServer,
-  ].filter((s) => !hiddenIds.has(s.id) && s.status === 'approved')
+  ], hiddenIds)
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [icons, designs, gradientServer, hiddenIds])
 
   const statusOf = useCallback((row) => (
