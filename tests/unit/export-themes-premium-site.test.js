@@ -347,3 +347,14 @@ test('every class named in markup the kit shows or copies is defined in the ship
     assert.ok(seen > 40, 'the test found almost no classes to check: ' + seen)
   }
 })
+
+// A page whose notes throw is dropped by keep() without a word (contentOf catches), so a lost page has to be caught by name.
+//   Break: shadow an imported helper with a later local of the same name in layoutSlides (the layouts page silently drops).
+test('theme 21 builds every page it has content for: layouts and the logo pages are in the guide, its contents and its links', async () => {
+  const files = await exportZip('21-presentation', 'slides')
+  for (const page of ['layouts.html', 'clear-space.html', 'min-size.html', 'logo-versions.html', 'type-in-use.html', 'summary.html']) {
+    assert.ok(page in files, `${page} is built`)
+    assert.ok(files['index.html'].includes(`href="${page}"`), `${page} is in the contents`)
+  }
+  assert.match(files['layouts.html'], /class="ht-sls"/, 'the layouts page shows its slide specimens')
+})

@@ -222,10 +222,10 @@ const layoutSlides = (ctx) => {
   const S = screenContent(ctx), n = S.deliveries.length, late = tally(ctx).late.length;
   const money = (exampleDemo(ctx).stat || [])[0], dk = darkF(ctx), act = actF(ctx), pn = panelF(ctx);
   const sl = (hex, what, inner, t, d) => `<figure class="ht-slf"><div class="ht-sl" style="${fieldStyle(ctx, hex, `site layout ${what}`)}"><div class="ht-sl__in">${inner}</div></div><figcaption><b>${A(t)}.</b> ${A(d)}</figcaption></figure>`;
-  const tally = `${words(n)} orders${late ? `, ${words(late).toLowerCase()} late` : ''}.`;
-  const title = sl(dk, 'title', `<div class="ht-sl__lg">${logoOn(ctx, dk, { share: 0.34 })}</div><div><p class="ht-d ht-sl__d">Today's orders</p><p class="ht-sl__k">${A(tally)}</p></div>`, 'Title', 'The logo and the name of the page, on the dark field.');
+  const countLine = `${words(n)} orders${late ? `, ${words(late).toLowerCase()} late` : ''}.`;
+  const title = sl(dk, 'title', `<div class="ht-sl__lg">${logoOn(ctx, dk, { share: 0.34 })}</div><div><p class="ht-d ht-sl__d">Today's orders</p><p class="ht-sl__k">${A(countLine)}</p></div>`, 'Title', 'The logo and the name of the page, on the dark field.');
   const idea = sl(act, 'one idea', `<p class="ht-sl__k">${A(ORDER.screen)}</p><div><p class="ht-d ht-sl__d">${A(ORDER.id)} is packing.</p><p class="ht-sl__k">${A(ORDER.due)}.</p></div>`, 'One idea', 'One line at display size on the action colour.');
-  const num = sl(pn, 'number', `<p class="ht-sl__k">${A(money ? 'Taken today' : 'Orders today')}</p><div><p class="ht-d ht-sl__n">${A(money || words(n))}</p><p class="ht-sl__k">${A(tally)}</p></div>`, 'A number', 'One figure from the data, with a line to say what it counts.');
+  const num = sl(pn, 'number', `<p class="ht-sl__k">${A(money ? 'Taken today' : 'Orders today')}</p><div><p class="ht-d ht-sl__n">${A(money || words(n))}</p><p class="ht-sl__k">${A(countLine)}</p></div>`, 'A number', 'One figure from the data, with a line to say what it counts.');
   return `<div class="ht-sls">${title}${idea}${num}</div>`;
 };
 
