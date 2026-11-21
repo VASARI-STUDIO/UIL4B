@@ -1,16 +1,16 @@
-// The live page previews behind POST /api/ai?export=preview { theme, page, brand: { name, design } }.
+// The live page previews behind POST /api/ai?export=live-preview { theme, page, brand: { name, design } }.
 //
 // What is pinned here, and the change that makes each fail:
 //  1. NO SESSION, NO PAGE: no token or a refused token is a 401 and renders nothing.
-//     Break: drop the Bearer check in api/_lib/exportPreview.js.
+//     Break: drop the Bearer check in api/_lib/exportLivePreview.js.
 //  2. FREE ON A PRO TEMPLATE: 403 { error: 'pro_required' } and not a byte of the page; the engine is never asked.
-//     Break: skip the assertThemeAccess verdict (or return `plan.id` truthy) in serveExportPreview.
+//     Break: skip the assertThemeAccess verdict (or return `plan.id` truthy) in serveExportLivePreview.
 //  3. FAIL CLOSED: a plan lookup that throws is a 500 with no page, for a Pro-only template and a free one alike.
 //     Break: catch the planOf error and carry on with a default plan.
 //  4. FREE ON A FREE TEMPLATE: a page carrying the Free mark. Pro gets the same page without it.
 //     Break: return out.html unmarked for a Free account.
 //  5. NOTHING THE REQUEST CARRIES SAYS PRO: a plan, tier or header sent by the caller changes nothing.
-//     Break: read body.plan in serveExportPreview.
+//     Break: read body.plan in serveExportLivePreview.
 //  6. EVERY RESPONSE IS no-store, the refusals and the faults included.
 //     Break: set Cache-Control after the first return, or leave it out.
 //  7. THE DIALOG'S PAGES ARE ALL SERVED: every page src/config/exportPreviewData.js lists for every theme draws for a Pro account,
@@ -18,7 +18,7 @@
 //     Break: rename a key in PAGES.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { serveExportPreview, PREVIEW_LIMIT } from '../../api/_lib/exportPreview.js'
+import { serveExportLivePreview, PREVIEW_LIMIT } from '../../api/_lib/exportLivePreview.js'
 import { EXPORT_THEMES, isThemeExportPro } from '../../src/data/exportThemes.js'
 import { previewPages } from '../../src/config/exportPreviewData.js'
 
@@ -49,7 +49,7 @@ const deps = (extra = {}) => ({
 const ask = async (token, body, extra) => {
   const res = fakeRes()
   const headers = token === null ? {} : { authorization: `Bearer ${token}` }
-  await serveExportPreview({ headers, body }, res, deps(extra))
+  await serveExportLivePreview({ headers, body }, res, deps(extra))
   return res
 }
 const body = (over = {}) => ({ theme: '01-presentation', page: 'guideCover', brand: { name: 'Tide & Co.', design: DESIGN }, ...over })
@@ -130,7 +130,7 @@ test('4b. Pro gets a Pro template; a script, form or external address is never i
 test('5. nothing the request carries says Pro', async () => {
   const forged = body({ plan: 'pro', tier: 'pro', pro: true, brand: { name: 'x', design: DESIGN, plan: { id: 'pro' } } })
   const res = fakeRes()
-  await serveExportPreview(
+  await serveExportLivePreview(
     { headers: { authorization: 'Bearer tok-free', 'x-plan': 'pro', 'x-user-plan': 'pro' }, body: forged },
     res,
     deps({ engine: noEngine }),

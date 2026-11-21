@@ -1,4 +1,4 @@
-// The browser half of the live page previews: ask POST /api/ai?export=preview for one page of one theme drawn with the
+// The browser half of the live page previews: ask POST /api/ai?export=live-preview for one page of one theme drawn with the
 // person's brand, and hand back its HTML for a sandboxed frame. The page is made on the server; nothing here can draw a theme.
 //
 // fetchPagePreview never throws. It resolves one of:
@@ -11,7 +11,7 @@
 import { documentDesign } from '../../utils/exportDocument.js'
 import { onSignOut } from '../../utils/signOutHooks.js'
 
-export const EXPORT_PREVIEW_URL = '/api/ai?export=preview'
+export const EXPORT_PREVIEW_URL = '/api/ai?export=live-preview'
 const CACHE_LIMIT = 40
 
 /** A short stable hash of the brand sent (FNV-1a over its JSON), so a change of colour, type, logo or name is a new key. */

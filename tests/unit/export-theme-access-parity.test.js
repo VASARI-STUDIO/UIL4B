@@ -1,6 +1,6 @@
 // The preview route and the themed export route each decide Pro access, and must never disagree.
 //
-//   preview: serveExportPreview -> assertThemeAccess (api/_lib/themeAccess.js)
+//   preview: serveExportLivePreview -> assertThemeAccess (api/_lib/themeAccess.js)
 //   export:  serveExportDocument -> serveThemeExport, which has its own inline check (api/_lib/exportThemeRoute.js)
 //
 // Both are driven through their real handlers, with an engine stub whose projectToBrand throws. A 500 build_failed therefore means
@@ -18,7 +18,7 @@
 import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
-import { serveExportPreview } from '../../api/_lib/exportPreview.js'
+import { serveExportLivePreview } from '../../api/_lib/exportLivePreview.js'
 import { assertThemeAccess } from '../../api/_lib/themeAccess.js'
 import { EXPORT_THEMES, THEME_ROW_FORMATS } from '../../src/data/exportThemes.js'
 
@@ -81,7 +81,7 @@ function verdictOf(res) {
 
 async function previewVerdict(plan, theme, page) {
   const res = fakeRes()
-  await serveExportPreview({ headers: { authorization: `Bearer ${TOKENS[plan]}` }, body: { theme, page, brand: { name: 'Tide & Co.', design: DESIGN } } }, res, deps())
+  await serveExportLivePreview({ headers: { authorization: `Bearer ${TOKENS[plan]}` }, body: { theme, page, brand: { name: 'Tide & Co.', design: DESIGN } } }, res, deps())
   return verdictOf(res)
 }
 
