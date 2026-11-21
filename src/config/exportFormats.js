@@ -39,6 +39,8 @@
 //          entitlement meaning: a Pro user with no logo still gets the document,
 //          minus the logo section, and its closing page names what is missing.
 
+import { EXPORT_THEMES as ROUTE_THEMES, FREE_UI_KIT_THEMES } from '../data/exportThemes.js'
+
 export const EXPORT_FORMATS = Object.freeze([
   // The UI kit: the default export for every plan. Free carries the UIL4B
   // mark; Pro gets the same kit without it, plus the named identity section.
@@ -201,37 +203,45 @@ export const EXPORT_THEME_EXPORTS = Object.freeze([
   Object.freeze({ id: 'ui-kit', name: 'UI kit', short: 'UI kit', proOnly: false }),
 ])
 
+// The tier of a theme and the exports it gives away, read from the table the export route gates on.
+const withGate = (theme) => {
+  const free = ROUTE_THEMES.find((t) => t.id === theme.id)?.free === true
+  const gift = FREE_UI_KIT_THEMES.includes(theme.id) ? { freeExports: Object.freeze(['ui-kit']) } : {}
+  return Object.freeze({ ...theme, tier: free ? 'free' : 'pro', ...gift })
+}
+
 // ships with the export themes
 // `id` is the theme's folder name; `brand` is the sample brand its pages show;
 // `tier` is who may export its free exports ('free' or 'pro'); `makes` lists the exports a theme has, when it lacks some
 // (no list: all four); `showcase: false` keeps a theme out of the homepage showcase, which has pages for the ten only;
-// `freeExports` lists the exports a Pro theme still gives a free account. Interim: Standards' UI kit, until the Free pair has
-// UI kits (src/data/exportThemes.js FREE_UI_KIT_THEMES says the same for the route).
+// `freeExports` lists the exports a Pro theme still gives a free account. `tier` and `freeExports` are not written here: they are
+// read from src/data/exportThemes.js (the `free` flag, FREE_UI_KIT_THEMES), the one table the export route gates on, so the client
+// copy cannot say anything the server does not. Interim: Standards' UI kit, until the Free pair has UI kits.
 export const EXPORT_THEMES = Object.freeze([
-  Object.freeze({ id: '01-presentation', name: 'Presentation', brand: 'Kerbside', tier: 'pro', shape: '16:9' }),
-  Object.freeze({ id: '02-poster', name: 'Ticket', brand: 'Encore', tier: 'pro', shape: '16:9' }),
-  Object.freeze({ id: '03-broadsheet', name: 'Broadsheet', brand: 'Saltbush', tier: 'pro', shape: '16:9' }),
-  Object.freeze({ id: '04-standards', name: 'Standards', brand: 'Two Shores', tier: 'pro', shape: 'A4 landscape', freeExports: Object.freeze(['ui-kit']) }),
-  Object.freeze({ id: '05-specimen', name: 'Catalogue', brand: 'Margin', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '06-studio', name: 'Studio', brand: 'Offcut', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '07-spec', name: 'Specification', brand: 'Northern Current', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '08-monograph', name: 'Riso', brand: 'Long Room', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '09-blueprint', name: 'Blueprint', brand: 'Plumbline', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '10-inuse', name: 'In use', brand: 'Shallow End', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '21-presentation', name: 'Keynote', brand: 'Kerbside', tier: 'pro', shape: '16:9', showcase: false }),
-  Object.freeze({ id: '22-ticket', name: 'Stub', brand: 'Encore', tier: 'pro', shape: '16:9', showcase: false }),
-  Object.freeze({ id: '23-broadsheet', name: 'Front Page', brand: 'Saltbush', tier: 'pro', shape: 'A4', showcase: false }),
-  Object.freeze({ id: '24-standards', name: 'Standards Plate', brand: 'Two Shores', tier: 'pro', shape: 'A4 landscape', showcase: false }),
-  Object.freeze({ id: '26-notebook', name: 'Notebook', brand: 'Offcut', tier: 'pro', shape: 'A4 landscape', showcase: false }),
-  Object.freeze({ id: '28-riso', name: 'Print Shop', brand: 'Long Room', tier: 'pro', shape: 'A4', showcase: false }),
-  Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet', brand: 'Plumbline', tier: 'pro', shape: 'A4 landscape', showcase: false }),
-  Object.freeze({ id: '30-fluted', name: 'Fluted', brand: 'Northern Current', tier: 'pro', shape: '4:5', showcase: false }),
-  Object.freeze({ id: '31-contact', name: 'Contact', brand: 'Plumbline', tier: 'pro', shape: '3:2', showcase: false }),
-  Object.freeze({ id: '32-dieline', name: 'Dieline', brand: 'Kerbside', tier: 'pro', shape: '1:1', showcase: false }),
+  Object.freeze({ id: '01-presentation', name: 'Presentation', brand: 'Kerbside', shape: '16:9' }),
+  Object.freeze({ id: '02-poster', name: 'Ticket', brand: 'Encore', shape: '16:9' }),
+  Object.freeze({ id: '03-broadsheet', name: 'Broadsheet', brand: 'Saltbush', shape: '16:9' }),
+  Object.freeze({ id: '04-standards', name: 'Standards', brand: 'Two Shores', shape: 'A4 landscape' }),
+  Object.freeze({ id: '05-specimen', name: 'Catalogue', brand: 'Margin', shape: 'A4' }),
+  Object.freeze({ id: '06-studio', name: 'Studio', brand: 'Offcut', shape: 'A4' }),
+  Object.freeze({ id: '07-spec', name: 'Specification', brand: 'Northern Current', shape: 'A4' }),
+  Object.freeze({ id: '08-monograph', name: 'Riso', brand: 'Long Room', shape: 'A4' }),
+  Object.freeze({ id: '09-blueprint', name: 'Blueprint', brand: 'Plumbline', shape: 'A4' }),
+  Object.freeze({ id: '10-inuse', name: 'In use', brand: 'Shallow End', shape: 'A4' }),
+  Object.freeze({ id: '21-presentation', name: 'Keynote', brand: 'Kerbside', shape: '16:9', showcase: false }),
+  Object.freeze({ id: '22-ticket', name: 'Stub', brand: 'Encore', shape: '16:9', showcase: false }),
+  Object.freeze({ id: '23-broadsheet', name: 'Front Page', brand: 'Saltbush', shape: 'A4', showcase: false }),
+  Object.freeze({ id: '24-standards', name: 'Standards Plate', brand: 'Two Shores', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '26-notebook', name: 'Notebook', brand: 'Offcut', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '28-riso', name: 'Print Shop', brand: 'Long Room', shape: 'A4', showcase: false }),
+  Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet', brand: 'Plumbline', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '30-fluted', name: 'Fluted', brand: 'Northern Current', shape: '4:5', showcase: false }),
+  Object.freeze({ id: '31-contact', name: 'Contact', brand: 'Plumbline', shape: '3:2', showcase: false }),
+  Object.freeze({ id: '32-dieline', name: 'Dieline', brand: 'Kerbside', shape: '1:1', showcase: false }),
   // The Free pair: the brand guidelines, and nothing else.
-  Object.freeze({ id: '25-label', name: 'Label', brand: 'Margin', tier: 'free', shape: '5:4', makes: Object.freeze(['brand-guidelines']), showcase: false }),
-  Object.freeze({ id: '27-swissfield', name: 'Swiss Field', brand: 'Northern Current', tier: 'free', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
-])
+  Object.freeze({ id: '25-label', name: 'Label', brand: 'Margin', shape: '5:4', makes: Object.freeze(['brand-guidelines']), showcase: false }),
+  Object.freeze({ id: '27-swissfield', name: 'Swiss Field', brand: 'Northern Current', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
+].map(withGate))
 
 // ships with the export themes
 // The themes the homepage showcase and its viewer draw, in order.
