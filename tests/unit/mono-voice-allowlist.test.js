@@ -89,6 +89,7 @@ const ALLOWED = {
     '.adm-table .mono': 'code',
     '.code': 'code',
     '.cpk-hex': 'hex',
+    '.cpk-hint-value': 'hex',
     '.fnote-todo-where code': 'code',
     '.hcmd-kbd kbd': 'kbd',
     '.pgal-hex': 'hex',

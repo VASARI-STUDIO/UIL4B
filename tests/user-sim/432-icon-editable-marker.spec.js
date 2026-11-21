@@ -45,40 +45,29 @@ async function openPack(page, width, pack) {
   await expect(page.locator(`${REAL_CELL} :is(img, svg.ig-sym)`).first()).toBeVisible({ timeout: 20_000 })
 }
 
-// The grid keeps drawing more cells while a test is reading it, so a count taken in one call and
-// a mark count taken in the next can describe two different grids ("expected 120, received 214").
-// Read every real cell, its marks and its name in ONE pass inside the page, so the numbers all
-// describe the same moment and a cell added a moment later cannot make them disagree.
-async function snapshot(page) {
-  return page.locator(REAL_CELL).evaluateAll((els) => ({
-    total: els.length,
-    marks: els.reduce((n, el) => n + el.querySelectorAll('.ic-edit').length, 0),
-    unmarked: els.filter((el) => !el.querySelector('.ic-edit')).map((el) => el.getAttribute('aria-label') || '(no name)'),
-    labels: els.map((el) => el.getAttribute('aria-label') || ''),
-    firstMarkHidden: els[0]?.querySelector('.ic-edit')?.getAttribute('aria-hidden') ?? null,
-  }))
-}
-
 for (const width of [390, 1440]) {
   test.describe(`at ${width}px`, () => {
     test('a stroke icon cell has the mark, and its name says the line style is editable', async ({ page }) => {
       watch(page, `someone choosing a stroke icon at ${width}px`)
       await openPack(page, width, 'lucide')
-      const grid = await snapshot(page)
-      expect(grid.total, 'the pack drew cells').toBeGreaterThan(8)
-      expect(grid.unmarked, 'every Lucide cell has the mark').toEqual([])
-      expect(grid.marks, 'one mark on each Lucide cell').toBe(grid.total)
-      for (const label of grid.labels) expect(label.endsWith(SUFFIX), `${label} names the mark`).toBe(true)
-      expect(grid.firstMarkHidden, 'the mark is hidden from assistive tech').toBe('true')
+      const cells = page.locator(REAL_CELL)
+      const total = await cells.count()
+      expect(total, 'the pack drew cells').toBeGreaterThan(8)
+      // More cells can stream in after the count, so assert no cell lacks the mark rather than matching a fixed total.
+      await expect(cells.filter({ hasNot: page.locator('.ic-edit') }), 'every Lucide cell has the mark').toHaveCount(0)
+      const labels = await cells.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') || ''))
+      for (const label of labels) expect(label.endsWith(SUFFIX), `${label} names the mark`).toBe(true)
+      await expect(cells.first().locator('.ic-edit')).toHaveAttribute('aria-hidden', 'true')
     })
 
     test('a solid icon cell has no mark and no suffix', async ({ page }) => {
       watch(page, `someone choosing a solid icon at ${width}px`)
       await openPack(page, width, 'mdi')
-      const grid = await snapshot(page)
-      expect(grid.total, 'the pack drew cells').toBeGreaterThan(8)
-      expect(grid.marks, 'no mark on a solid icon').toBe(0)
-      for (const label of grid.labels) expect(label.includes('line style editable'), `${label} is not marked`).toBe(false)
+      const cells = page.locator(REAL_CELL)
+      expect(await cells.count(), 'the pack drew cells').toBeGreaterThan(8)
+      await expect(cells.locator('.ic-edit'), 'no mark on a solid icon').toHaveCount(0)
+      const labels = await cells.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') || ''))
+      for (const label of labels) expect(label.includes('line style editable'), `${label} is not marked`).toBe(false)
     })
 
     test('the mark sits inside the cell, clear of the glyph, and moves nothing', async ({ page }) => {

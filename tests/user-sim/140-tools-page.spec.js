@@ -2,7 +2,7 @@
 //
 // Covers the shell, the nav link, the derived counts, the six cards, the live
 // demos, the seed colour the hero and the Palette card share, the closing band's order
-// (Use for free, then See the plans) and the 44px hit areas of the demo controls on a phone.
+// (See the plans, then Use for free; stacked the other way round on a phone) and the 44px hit areas of the demo controls on a phone.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { createTools } from '../../src/data/toolTree.js'
@@ -106,27 +106,85 @@ test.describe('/tools content', () => {
     for (const hex of heroHexes) expect(cardHexes).toContain(hex)
   })
 
-  for (const [width, height] of [[1440, 900], [390, 844]]) {
-    test(`the closing band offers Use for free first and See the plans second at ${width}px`, async ({ page }) => {
+  // DOM and tab order are the same everywhere: See the plans, then Use for free. On a desktop that is
+  // also the drawn order (plans left, free right). On a phone the two stack with Use for free on top, so
+  // the filled pill is the first thing a thumb meets, and both run the full content width at 52px.
+  for (const [width, height] of [[1440, 900], [1200, 800], [390, 844], [320, 700]]) {
+    test(`the closing band is See the plans then Use for free in the DOM and drawn to suit ${width}px`, async ({ page }) => {
       watch(page, 'a visitor reaching the end of the tools page')
       await page.setViewportSize({ width, height })
       await go(page, '/tools')
       const band = page.locator('section.hm-close')
       await band.scrollIntoViewIfNeeded()
       const links = band.locator('a.hm-close-cta, a.hm-close-ghost')
-      // Mutation: swap the two Links in SpectrumTools.jsx -> the order, the tab order and the first link all change.
-      await expect(links).toHaveText(['Use for free', 'See the plans'])
+      // Mutation: swap the two Links in SpectrumTools.jsx -> the DOM order, the tab order and the drawn order all change.
+      await expect(links).toHaveText(['See the plans', 'Use for free'])
       await expect(band.locator('a.hm-close-cta')).toHaveAttribute('href', '/projects')
       await expect(band.locator('a.hm-close-ghost')).toHaveAttribute('href', '/plans')
-      // Drawn in that order too: the free link is above, or to the left of, the paid one.
-      const [first, second] = await links.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top } }))
-      expect(first.y < second.y || (first.y === second.y && first.x < second.x), 'the free link is drawn after the plans link').toBe(true)
-      // And Tab reaches it first.
+      const [plans, free] = await links.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } }))
+      const edge = await page.locator('.hm-close h2').evaluate((el) => el.getBoundingClientRect().left)
+      if (width >= 768) {
+        expect(plans.y, 'plans and free sit on one row').toBe(free.y)
+        expect(plans.x, 'the plans link is drawn on the left').toBeLessThan(free.x)
+      } else {
+        // Mutation: delete `.mkt .hm-close-btns { flex-direction: column-reverse }` in v3-marketing.css -> the plans link is drawn first.
+        expect(free.y, 'the free link is drawn above the plans link').toBeLessThan(plans.y)
+        expect(free.x).toBe(plans.x)
+        expect(free.w).toBe(plans.w)
+        expect(free.w, 'both buttons run the full content width').toBe(width - 2 * edge)
+        expect(free.h).toBe(52)
+        expect(plans.h).toBe(52)
+      }
+      // Tab runs in DOM order: from the plans link it reaches the free link.
       await links.first().focus()
       await page.keyboard.press('Tab')
       await expect(links.nth(1)).toBeFocused()
     })
   }
+
+  test('the Palette hero card is hidden on a phone and shown from tablet up', async ({ browser }) => {
+    for (const [width, shown] of [[320, false], [390, false], [767, false], [1200, true], [1440, true]]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await ctx.newPage()
+      await go(page, '/tools')
+      // Mutation: delete `.mkt .mk-pal { display: none }` in the phone block of v3-marketing.css -> a 220px preview card follows the intro.
+      expect(await page.locator('.mk-pal').isVisible(), `.mk-pal at ${width}px`).toBe(shown)
+      await ctx.close()
+    }
+  })
+
+  test('the hero pill runs the full content width on a phone', async ({ browser }) => {
+    for (const width of [320, 390]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await ctx.newPage()
+      await go(page, '/tools')
+      const box = await page.locator('.mk-intro-copy .mk-pill').evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.left, w: r.width } })
+      // Mutation: delete `.mkt .mk-intro-copy .mk-pill { display: flex }` in v3-marketing.css -> the pill shrinks to its label.
+      expect(box.x).toBe(16)
+      expect(box.w).toBe(width - 32)
+      await ctx.close()
+    }
+  })
+
+  test('phone cards take 16px padding, and 12px under 375', async ({ browser }) => {
+    for (const [width, pad] of [[390, '16px'], [374, '12px'], [320, '12px'], [1440, '24px']]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await ctx.newPage()
+      await go(page, '/tools')
+      // Mutation: delete the `.mkt .mk-card { padding }` rules in v3-marketing.css -> the cards fall back to 24px.
+      expect(await page.locator('.mk-card').first().evaluate((el) => getComputedStyle(el).paddingLeft), `card padding at ${width}px`).toBe(pad)
+      await ctx.close()
+    }
+  })
+
+  test('the Signal ramp is the board orange, not salmon', async ({ page }) => {
+    await go(page, '/tools')
+    const card = page.locator('.mk-card[data-tool="palette"]')
+    await expect(card.getByRole('button', { name: 'Signal seed' })).toHaveAttribute('aria-pressed', 'true')
+    // Mutation: put Signal back to its old salmon h / c in spectrumKit.js -> the 400 step is a paler salmon.
+    const hexes = await card.locator('.mk-ramp li span').allInnerTexts()
+    expect(hexes[4], 'the 400 step of the Signal ramp').toBe('#FE591E')
+  })
 
   test('no sideways scroll at 320, 390, 768 and 1440; no em dash', async ({ browser }) => {
     for (const width of [320, 390, 768, 1440]) {
@@ -148,7 +206,7 @@ test.describe('/tools content', () => {
 // with a mouse the controls keep their drawn size and nothing reaches further.
 test.describe('/tools demo controls: 44px hit areas', () => {
   const CONTROLS = [
-    ['a seed in the hero', '.mk-pal .mk-seed'],
+    ['a seed in the hero', '.mk-pal .mk-seed', 'desktop'],
     ['a seed on the Palette card', '.mk-card[data-tool="palette"] .mk-seed'],
     ['a ratio button', '.mk-seg button'],
     ['the sample-text field', '.mk-field input'],
@@ -170,8 +228,9 @@ test.describe('/tools demo controls: 44px hit areas', () => {
     return { w: Math.round(r.width), h: Math.round(r.height), centre: lands(cx, cy), misses }
   }, selector)
 
-  for (const [what, selector] of CONTROLS) {
-    test(`${what} is hit across 44px at 390 and is still drawn at 36`, async ({ page }) => {
+  for (const [what, selector, only] of CONTROLS) {
+    // The hero Palette card is hidden on a phone, so its seeds are only measured at 1440.
+    if (only !== 'desktop') test(`${what} is hit across 44px at 390 and is still drawn at 36`, async ({ page }) => {
       watch(page, 'someone on a phone trying the tools page demos')
       await page.setViewportSize({ width: 390, height: 844 })
       await go(page, '/tools')
