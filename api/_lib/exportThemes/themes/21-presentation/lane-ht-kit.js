@@ -121,7 +121,7 @@ const PAGES = {
   table: (ctx) => {
     const S = SC(ctx), u = ctx.ui, d = S.deliveries;
     const h = `<table class="ui-table"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td><strong>${A(x.to)}</strong><br>${A(x.when)}</td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
-    return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Table', 'hk-i--w')}</div>`, code: [['Table', h]] };
+    return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Orders table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="ui-empty"><h3 class="ui-empty__title">${A(E.title)}</h3><p class="ui-empty__text">${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
   // the light screen on its own page and the dark on its own: each is read whole, at the width it is used at

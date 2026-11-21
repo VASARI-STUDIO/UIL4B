@@ -7,7 +7,7 @@ import { A, L, lower, nameOfHex, fieldStyle, inkMark, darkF, actF, panelF, fitSi
 import { onceRe, sayOnce } from './lane-g3-kit.js';
 import { distinctColours, servedFamily, ratioText, clearTimes } from './helpers.js';
 import { screenContent, exampleDemo, tally } from './once.js';
-import { nameOf, PLACEHOLDER_NAME } from './lane-ht-clean.js';
+import { nameOf, nameFor, PLACEHOLDER_NAME } from './lane-ht-clean.js';
 
 // A brand that says one word once (Long Room: "Say free once") prints it on the slide and nowhere else: these notes leave it off, as the print pages do.
 const ok = (ctx, t) => { const re = onceRe(ctx); return !!t && !(re && re.test(t)); };
@@ -133,7 +133,7 @@ const specimen = (ctx, role) => {
 // 8.1: the applications as they would be made, drawn from the palette and the name: a 90 x 55 mm card, a sign panel, a phone screen.
 // The screens read the shared sample order (the same one the UI kit's lists, cards and dialog use), so the two sites tell one story.
 const ORDER = { screen: 'Orders', id: 'Order 1042', status: 'Packing', due: 'Due 11:40 am', total: 'Total $84.35', action: 'Track order' };
-const mockups = (ctx, { spread = false } = {}) => {
+const mockups = (ctx, { spread = false, extra = '' } = {}) => {
   const B = ctx.brand, A_ = B.applications, act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0];
   const ph = L(ctx).sunken;
   // the card's rule and the sign's base are the brand's accent token where it shows on their grounds (a drawn rule needs less contrast than text), else another accent
@@ -148,14 +148,14 @@ const mockups = (ctx, { spread = false } = {}) => {
   const cardHtml = `<div class="ht-mk__card" style="${fieldStyle(ctx, act, 'site mock-up card')}"><div class="ht-mk__logo">${wm(act, 150)}</div>${rule ? `<span class="ht-mk__rule" style="background:${rule}"></span>` : ''}<p class="ht-mk__p">${lines.map(A).join('<br>')}</p></div>`;
   const signHtml = `<div class="ht-mk__sign" style="${fieldStyle(ctx, dk, 'site mock-up sign')}"><div class="ht-mk__logo">${wm(dk, 170)}</div><p class="ht-d ht-mk__line">${A(sign)}</p>${base ? `<span class="ht-mk__bar" style="background:${base}"></span>` : ''}</div>`;
   const phoneHtml = `<div class="ht-mk__phone"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div><div class="ht-mk__scr"><p class="ht-d ht-mk__h">${ORDER.screen}</p><div class="ht-mk__panel" style="${fieldStyle(ctx, ph, 'site mock-up phone card')}"><p class="ht-k">${ORDER.id}</p><p class="ht-d ht-mk__v">${ORDER.status}</p><p class="ht-k">${ORDER.due}</p><p class="ht-mk__pr num">${ORDER.total}</p></div><p class="ht-mk__btn" style="${fieldStyle(ctx, act, 'site mock-up phone button')}">${ORDER.action}</p></div></div>`;
-  return `<div class="ht-mks${spread ? ' ht-mks--sp' : ''}">${fig('ht-mk--card', cardHtml, 'Business card', `90 × 55 mm. The logo reversed on the action colour${rule ? ', with a rule in the accent' : ''}.`)}${fig('ht-mk--sign', signHtml, 'Sign panel', `The logo reversed on the dark field${base ? ', with the accent as its base' : ''}.`)}${fig('ht-mk--phone', phoneHtml, 'Phone screen', '390 px wide. The action colour for the bar and the button, the page ground behind.')}</div>`;
+  return `<div class="ht-mks${spread ? ' ht-mks--sp' : ''}">${fig('ht-mk--card', cardHtml, 'Business card', `90 × 55 mm. The logo reversed on the action colour${rule ? ', with a rule in the accent' : ''}.`)}${fig('ht-mk--sign', signHtml, 'Sign panel', `The logo reversed on the dark field${base ? ', with the accent as its base' : ''}.`)}${fig('ht-mk--phone', phoneHtml, 'Phone screen', '390 px wide. The action colour for the bar and the button, the page ground behind.')}${extra}</div>`;
 };
 // 8.5: the website on a laptop and on a phone, drawn from the palette and the shared sample order
 const digitalFigs = (ctx) => {
   const act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0], ph = L(ctx).sunken;
   const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' }), TL = tally(ctx);
   const btn = (c) => `<p class="ht-dg__b" style="${fieldStyle(ctx, c, 'site mock-up website button')}">${ORDER.action}</p>`;
-  const hero = (cls) => `<div class="ht-dg__hero ${cls}" style="${fieldStyle(ctx, dk, 'site mock-up website hero')}"><p class="ht-d ht-dg__h">Where is my order?</p><p class="ht-dg__t">${ORDER.id} is packing. ${ORDER.due}.</p>${btn(act)}</div>`;
+  const hero = (cls) => `<div class="ht-dg__hero ${cls}" style="${fieldStyle(ctx, dk, 'site mock-up website hero')}"><p class="ht-d ht-dg__h">Where is my order?</p><p class="ht-dg__t">${ORDER.id} is packing. <span style="white-space:nowrap">${ORDER.due}.</span></p>${btn(act)}</div>`;
   const stat = (n, t) => `<div class="ht-dg__st" style="${fieldStyle(ctx, ph, 'site mock-up website stat')}"><p class="ht-d ht-dg__n">${n}</p><p class="ht-dg__t">${t}</p></div>`;
   const laptop = `<div class="ht-lt"><div class="ht-lt__s"><div class="ht-dg__nav" style="${fieldStyle(ctx, act, 'site mock-up website bar')}">${wm(act, 120)}<span class="ht-dg__lk">Orders</span><span class="ht-dg__lk">Help</span></div>${hero('')}<div class="ht-dg__row">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div><div class="ht-lt__base"></div></div>`;
   const phone = `<div class="ht-mk__phone ht-dg__ph"><div class="ht-mk__top" style="${fieldStyle(ctx, act, 'site mock-up phone bar')}">${wm(act, 110)}</div>${hero('ht-dg__hero--m')}<div class="ht-dg__col">${stat(String(TL.open.length), 'Open')}${stat(String(TL.late.length), 'Late')}${stat(String(TL.closed.length), 'Closed')}</div></div>`;
@@ -163,12 +163,12 @@ const digitalFigs = (ctx) => {
   return `<div class="ht-mks ht-mks--dg">${fig('ht-mk--lt', laptop, 'On a laptop', 'The action colour for the bar and the button, the dark field for the lead.')}${fig('ht-mk--phone', phone, 'On a phone', 'The same lead, then the three counts in one column.')}</div>`;
 };
 
-// 5.1 type in use: each step at the size it is specified at, set with the brand's own line, its name and a price
+// 5.1 type in use: every step of the scale at the size it is specified at, set with the sample order the screens and the kit use
 const PRICE = '$84.35';
 const typeInUse = (ctx) => {
-  const T = ctx.brand.type, B = ctx.brand, step = (t) => T.scale.find((x) => x.token === t), name = B.name || '';
-  const line = lead(ctx) || name || 'Headline', body = keep(ctx, B.product) || `${name ? `${name}: ` : ''}order 1042 is packing, due at 11:40 am.`, capt = `Total ${PRICE}`;
-  const rows = [['headline', line], ['body', body], ['caption', capt]].map(([t, text]) => [step(t), text]).filter(([x]) => x);
+  const T = ctx.brand.type, line = lead(ctx) || nameOf(ctx) || 'Headline';
+  const sample = { display: nameFor(ctx), headline: 'Where is my order?', title: 'Order 1042', body: `Order 1042 is packing. Due 11:40 am. Total ${PRICE}.`, label: 'Track order', caption: `Total ${PRICE}` };
+  const rows = T.scale.filter((x) => sample[x.token]).map((x) => [x, sample[x.token]]);
   return { big: line, html: `<ol class="ht-scale">${rows.map(([x, text]) => `<li><p class="ht-k">${A(x.token === 'body' ? 'Paragraph' : cap1(x.token))}<span class="num">${x.size} px, line ${x.line}, ${A(servedFamily(ctx.brand.fonts[x.face]))} ${x.weight}</span></p><p class="ht-scale__s ${x.face === 'display' ? 'ht-d' : ''}" style="font-size:${x.size}px;line-height:${x.line < 3 ? x.line : (x.line / x.size).toFixed(2)};font-weight:${x.weight};${x.face === 'mono' ? 'font-family:var(--mono)' : ''}">${A(text)}</p></li>`).join('')}</ol>` };
 };
 
@@ -291,7 +291,7 @@ export const NOTES = {
     const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page with ${G.columns} columns, ${G.margin} px margins and ${G.gutter} px gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns, ${nv(`${G.margin} px`)} margins, ${nv(`${G.gutter} px`)} gutters.</figcaption></figure>`;
     return { big: `${G.columns} columns`, html: fig + dl([['Page', 'A4 portrait'], ['Margin', nv(`${G.margin} px`)], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', nv(`${G.gutter} px`)], ['Base unit', nv(`${G.base} px`)]]) };
   },
-  layouts: (ctx) => ({ big: 'One idea a slide.', html: layoutSlides(ctx) + p(`Every slide carries one thing at display size, a line, a word or a photograph, set on a full field of ${ctx.brand.name ? `${A(ctx.brand.name)}'s` : 'the brand’s'} colours. Everything else is small.`, 'ht-lead') }),
+  layouts: (ctx) => ({ big: 'One idea a slide.', html: layoutSlides(ctx) + p(`Every slide carries one thing at display size, a line or a number, set on a full field of the brand’s colours. Everything else is small.`, 'ht-lead') }),
   // 8.1: the card, the sign and the phone screen are drawn here from the palette, so the page shows them, not a list of their words
   'business-card': (ctx) => ({ big: '', html: mockups(ctx) }),
   social: (ctx) => { const S = ctx.brand.applications.social.filter((t) => ok(ctx, t)); return S.length ? { big: S[0], html: list(S.map(A)) } : NONE; },
@@ -300,8 +300,13 @@ export const NOTES = {
   'email-signature': (ctx) => { const E = ctx.brand.applications.email; return { big: E.person || '', html: dl([['Role', A(E.role)], ['Web', m(ctx.brand.applications.site.url)]]) }; },
   // 8.5: the laptop and the phone are drawn here, so they show at every width
   digital: (ctx) => ({ big: ok(ctx, ctx.brand.product) ? ctx.brand.product : ctx.brand.applications.site.url || '', html: digitalFigs(ctx) + dl([['Web', m(ctx.brand.applications.site.url)]]) }),
-  // 9.1: the system at work as an applications spread (the colours and the type are on their own pages, so they are not repeated here)
-  summary: (ctx) => { const B = ctx.brand; return { big: lead(ctx), html: mockups(ctx, { spread: true }) + dl([['Display', A(faceName(B.fonts.display))], ['Body', A(faceName(B.fonts.body))]]) }; },
+  // 9.1: the system at work as an applications spread, with the palette (its values) and one line of the voice beside it
+  summary: (ctx) => {
+    const B = ctx.brand, P = B.voice.principles.find((x) => ok(ctx, x.title) && ok(ctx, x.example));
+    const sw = distinctColours(ctx).slice(0, 5).map((c) => `<li><span class="ht-sum__sw" style="${fieldStyle(ctx, c.hex, 'summary colour')}"></span><span>${A(tileName(ctx, c))}</span><span class="ht-m num">${A(c.hex.toUpperCase())}</span></li>`).join('');
+    const extra = `<div class="ht-mk--sum"><p class="ht-k">Colour</p><ul class="ht-sum__pal">${sw}</ul>${P ? `<p class="ht-k">Voice</p><p class="ht-sum__v">${A(P.example)}</p>` : ''}<p class="ht-k">Type</p><p class="ht-sum__ty">${A(faceName(B.fonts.display))} for headlines, ${A(faceName(B.fonts.body))} for text.</p></div>`;
+    return { big: lead(ctx), html: mockups(ctx, { spread: true, extra }) };
+  },
   // the version and date alone are not a page: it is built only when the project named who owns the guidelines or how to reach them
   'contact-scope': (ctx) => { const B = ctx.brand; if (!B.contact.owner && !B.contact.email) return NONE; return { big: B.contact.email || '', html: dl([['Owner', A(B.contact.owner)], ['Email', m(B.contact.email)], ['Version', `<span class="num">${A(B.version.number)}</span>`], ['Issued', A(ctx.versionLine)]]) }; },
 };

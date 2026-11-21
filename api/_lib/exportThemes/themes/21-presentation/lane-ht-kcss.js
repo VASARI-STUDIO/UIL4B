@@ -82,10 +82,9 @@ export function kitCss(ctx) {
 .hk-code ol:has(>li:only-child){grid-template-columns:minmax(0,1fr);max-width:720px}
 .hk-code li{display:flex;flex-direction:column;gap:12px;align-items:flex-start;min-width:0}
 .hk-code pre,.hk-tree{margin:0;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-color:var(--quiet) var(--sunken);padding:16px;background:var(--sunken);color:var(--text);font:400 ${cp}px/1.6 var(--mono);white-space:pre;overflow-wrap:normal;scrollbar-width:thin}
-@media (min-width:768px){.hk-code pre{padding-right:32px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}.hk-code pre:focus-visible{-webkit-mask-image:none;mask-image:none}}
-@media (max-width:767px){.hk-code pre,.hk-tree{white-space:pre-wrap;overflow-wrap:anywhere;overflow-x:visible}}
+@media (min-width:0px){.hk-code pre{padding-right:32px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}.hk-code pre:focus-visible{-webkit-mask-image:none;mask-image:none}}
 .hk-tree{width:auto;font-variant-numeric:tabular-nums}
-.hk-i .ui-card--raised{border-color:var(--divider)}
+.hk-i .ui-card--raised{border-color:var(--divider);box-shadow:var(--shadow-float)}
 .hk-steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:12px}
 .hk-steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:baseline;counter-increment:s}
 .hk-steps li::before{content:counter(s);font-weight:600;font-variant-numeric:tabular-nums;color:var(--quiet)}

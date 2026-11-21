@@ -115,7 +115,7 @@ export function htCss(ctx) {
 .ht-tile__no{position:absolute;top:10px;right:10px;z-index:2;line-height:0}
 .ht-tile__t{font-size:14px;line-height:1.4;font-weight:600;color:var(--t);margin-top:6px}
 .ht-tile__n{font-size:14px;line-height:1.5;color:var(--s)}
-.ht-scale>li{display:grid;grid-template-columns:120px minmax(0,1fr);gap:24px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--h)}
+.ht-scale>li{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:24px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--h)}
 .ht-scale>li:first-child{border-top:1px solid var(--h)}
 .ht-scale .ht-k{color:var(--t)}
 .ht-scale .ht-k span{display:block;font-weight:400;color:var(--q)}
@@ -290,8 +290,9 @@ export function htCss(ctx) {
 .ht-vals{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:baseline}
 .ht-dl .num{white-space:nowrap}
 .ht-field__c .num{display:block;margin-top:4px}
-.ht-scale .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}
-.ht-scale .ht-k span{display:inline;white-space:nowrap}
+.ht-scale .ht-k{display:block}
+.ht-scale .ht-k span{display:block;margin-top:4px}
+@media (max-width:1023px){.ht-scale .ht-k{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}.ht-scale .ht-k span{display:inline;margin:0;white-space:nowrap}}
 /* the grid as an A4 portrait page */
 .ht-gp{display:flex;flex-direction:column;gap:12px;max-width:360px}
 .ht-gp__pg{background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box;width:100%}
@@ -303,6 +304,14 @@ export function htCss(ctx) {
 .ht-mks--sp .ht-mk--sign{grid-column:1}
 .ht-mks--sp .ht-mk--phone{grid-column:2;grid-row:1/3}
 .ht-mks--sp :is(.ht-mk__card,.ht-mk__sign){max-width:none}
+.ht-mks--sp .ht-mk--phone{grid-row:1}
+.ht-mks--sp .ht-mk__sign{aspect-ratio:2/1}
+.ht-mk--sum{grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ht-sum__pal{display:grid;gap:8px}
+.ht-sum__pal li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;font-size:14px;line-height:1.3;color:var(--t)}
+.ht-sum__sw{width:28px;height:28px;border:1px solid var(--h);box-sizing:border-box}
+.ht-sum__v{font-size:17px;line-height:1.45;color:var(--t);margin:0}
+.ht-sum__ty{font-size:14px;line-height:1.5;color:var(--s);margin:0}
 /* the website drawn on a laptop and a phone */
 .ht-mks--dg{grid-template-columns:minmax(0,720px) minmax(0,300px);justify-content:start;gap:40px 64px;align-items:start}
 .ht-lt{container-type:inline-size;width:100%;max-width:720px}
@@ -336,7 +345,7 @@ export function htCss(ctx) {
 .ht-dev{margin:0 20px}
 .ht-dev--cv{margin:0;height:72px}
 .ht-mks--sp,.ht-mks--dg{grid-template-columns:minmax(0,1fr)}
-.ht-mks--sp .ht-mk--phone{grid-column:1;grid-row:auto}
+.ht-mks--sp .ht-mk--phone,.ht-mk--sum{grid-column:1;grid-row:auto}
 .ht-mks--dg .ht-lt{max-width:none}
 .ht-spec{grid-template-columns:minmax(0,1fr);gap:16px}
 .ht-spec__aa{font-size:96px}
@@ -364,7 +373,7 @@ export function htCss(ctx) {
 .ht-ms__w{display:flex;flex-direction:column;gap:8px}
 .ht-ms__w svg{display:block;max-width:none}
 .ht-ms__r{display:block;height:8px;border:1px solid currentColor;border-top:0;opacity:.7}
-.ht-sls{display:grid;grid-template-columns:minmax(0,1fr);gap:32px 24px;max-width:640px}
+.ht-sls{display:grid;grid-template-columns:minmax(0,1fr);gap:32px 24px}
 .ht-slf{margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
 .ht-sl{container-type:inline-size;position:relative;aspect-ratio:16/9;overflow:hidden}
 .ht-sl__in{position:absolute;inset:0;padding:7cqi;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:3cqi}
@@ -372,9 +381,9 @@ export function htCss(ctx) {
 .ht-sl .ht-wm{justify-content:flex-start}
 .ht-sl__d{font-size:max(26px,11cqi);line-height:.98;margin:0}
 .ht-sl__n{font-size:max(40px,24cqi);line-height:.9;margin:0}
-.ht-sl__k{font-size:max(12px,3.4cqi);line-height:1.3;margin:0}
+.ht-sl__k{font-size:max(13px,3.4cqi);line-height:1.3;margin:0}
 .ht-sl__d+.ht-sl__k,.ht-sl__n+.ht-sl__k{margin-top:2cqi}
 @media (min-width:600px){.ht-mss{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (min-width:1024px){.ht-sls{grid-template-columns:repeat(3,minmax(0,1fr));max-width:none}}
+@media (min-width:1024px){.ht-sls{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){.ht *{transition:none!important}}`;
 }
