@@ -10,7 +10,7 @@ import ExportPageGallery from './ExportPageGallery'
 import usePageCarousel from './usePageCarousel'
 import useLivePage from './useLivePage'
 import { pagesOf } from './exportPages'
-import { brandOf } from './exportPreviewClient'
+import { brandOf, syncPreviewOwner } from './exportPreviewClient'
 
 // The work area of the Export dialog: the main picture, the file switch and the "Show the default template" box under it, and the
 // gallery of pages beside it (under it on a phone).
@@ -41,6 +41,8 @@ function PlainPreview({ cat, file, name, fileProject, isPro, design, chosen }) {
 
 export default function ExportPreview({ cat, file, files, onFile, themeId, name, fileProject, isPro, checking, design, chosen }) {
   const { user } = useAuth()
+  // Before any page is read from memory: a sign-out, another account or a change of plan empties what the last one was shown.
+  syncPreviewOwner(user?.uid, isPro)
   const themed = Boolean(themedFile(file))
   const kind = cat.preview
   const shown = pickerTheme(themeId)
@@ -50,11 +52,14 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
 
   // Whether the viewer may export this template. The UI kit has no stand-in pictures, so it stays sharp; the other two are blurred.
   const proTemplate = themed && !isPro && themedFileIsPro(file, themeId)
-  const standin = proTemplate && kind !== 'kit'
   const [stock, setStock] = useState(false)
   const brand = useMemo(() => brandOf(design, name), [design, name])
   const live = useLivePage({ enabled: Boolean(user) && !proTemplate && !checking && themed && !stock, theme: themeId, page: page?.id, brand })
-  const noLive = !user || proTemplate || checking || live.status === 'unavailable' || live.status === 'upgrade'
+  // The server's 403 is the account's real plan. When it disagrees with the plan this screen holds, the page is treated as a Pro
+  // template: the stand-in (or the kit's own picture) with the Pro mark, and the default template one click away.
+  const refused = live.status === 'upgrade'
+  const standin = (proTemplate || refused) && kind !== 'kit'
+  const noLive = !user || proTemplate || checking || live.status === 'unavailable' || refused
   const showStock = stock || noLive
 
   const hold = (on) => dispatch({ type: 'hover', on })
@@ -68,7 +73,7 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
         onBlur={() => hold(false)}
       >
         {themed
-          ? <ExportStage page={page} theme={shown} standin={standin} locked={proTemplate && !checking} html={!showStock && live.status === 'ok' ? live.html : ''} />
+          ? <ExportStage page={page} theme={shown} standin={standin} locked={(proTemplate && !checking) || refused} html={!showStock && live.status === 'ok' ? live.html : ''} />
           : <ExportStage plain={<PlainPreview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} design={design} chosen={chosen} />} />}
         <div className="xd-under">
           {themed && (

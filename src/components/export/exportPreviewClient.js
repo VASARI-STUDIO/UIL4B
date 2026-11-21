@@ -33,12 +33,29 @@ const cache = new Map()
 const asking = new Map()
 // Set once the server answers that the endpoint does not exist (404, 405, 501): later pages are not asked for.
 let missing = false
+// Counts clears. A request that began before a clear belongs to the previous account and is not stored.
+let epoch = 0
+// Whose pages the cache holds: the signed-in uid (null when signed out) and whether the account is on Pro.
+let owner = { uid: null, pro: false }
 
 /** Forget every stored page and the memory of a missing endpoint (for a test, and for a sign-out). */
 export function clearPreviewCache() {
   cache.clear()
   asking.clear()
   missing = false
+  epoch += 1
+}
+
+/**
+ * Tells the cache who is signed in and on which plan, and clears it when either changes (a sign-out, another account, an upgrade
+ * or a lapse), so one account's pages, or a Free account's "upgrade" answers, are never shown to the next. `pro` left out keeps
+ * the plan already known. Cheap enough to call on every render.
+ */
+export function syncPreviewOwner(uid, pro) {
+  const next = { uid: uid || null, pro: pro === undefined ? owner.pro : Boolean(pro) }
+  if (next.uid === owner.uid && next.pro === owner.pro) return
+  owner = next
+  clearPreviewCache()
 }
 
 /** The stored answer for a request, or null. */
@@ -54,10 +71,14 @@ export async function fetchPagePreview({ theme, page, brand }, { loadAuth, fetch
   if (cache.has(key)) return cache.get(key)
   if (missing) return { status: 'unavailable' }
   if (asking.has(key)) return asking.get(key)
+  let began = epoch
   const run = (async () => {
     try {
       const sdk = await loadAuth?.()
       const user = sdk?.auth?.currentUser
+      // The account signed in now owns the cache; a different one from the last request clears it first.
+      syncPreviewOwner(user?.uid)
+      began = epoch
       const token = user ? await user.getIdToken() : null
       if (!token) return { status: 'unavailable' }
       const doFetch = fetchImpl || globalThis.fetch
@@ -67,9 +88,10 @@ export async function fetchPagePreview({ theme, page, brand }, { loadAuth, fetch
         body: JSON.stringify({ theme, page, brand }),
         signal,
       })
+      const current = began === epoch
       if (res.status === 403) {
         const answer = { status: 'upgrade' }
-        remember(key, answer)
+        if (current) remember(key, answer)
         return answer
       }
       if (res.status === 404 || res.status === 405 || res.status === 501) missing = true
@@ -78,12 +100,13 @@ export async function fetchPagePreview({ theme, page, brand }, { loadAuth, fetch
       const html = type.includes('json') ? (await res.json().catch(() => null))?.html : await res.text()
       if (typeof html !== 'string' || !html) return { status: 'unavailable' }
       const answer = { status: 'ok', html }
-      remember(key, answer)
+      if (current) remember(key, answer)
       return answer
     } catch {
       return { status: 'unavailable' }
     } finally {
-      asking.delete(key)
+      // A clear may have started the same request again for the next account; only this run's own entry goes.
+      if (asking.get(key) === run) asking.delete(key)
     }
   })()
   asking.set(key, run)
