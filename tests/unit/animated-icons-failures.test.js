@@ -198,7 +198,7 @@ test('an animated failure never sets the global cdnOk, and the session/plan noti
   assert.match(handler, /failAnimatedScope\(error\)/)
   assert.match(handler, /if \(!isAnimatedPack\(packFilter\)\) cdnOk\.current = false/)
 
-  const search = PAGE.match(/if \(isAnimatedPack\(packFilter\)\) \{\s*const rid[\s\S]*?\n {6}return\n {4}\}/)[0]
+  const search = PAGE.match(/if \(animatedPacks\) \{\s*const rid[\s\S]*?\n {6}return\n {4}\}/)[0]
   const searchCatch = search.slice(search.indexOf('.catch('))
   assert.ok(!/cdnOk\.current = false/.test(searchCatch), 'the animated search catch must not touch cdnOk')
   assert.match(searchCatch, /failAnimatedScope\(error\)/)

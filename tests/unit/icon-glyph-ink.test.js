@@ -87,11 +87,11 @@ test('a baked-in square reports its plate tone from the corners, transparent art
 
 test('flag packs and Twemoji never receive an edge in either theme', () => {
   const groupsStart = source.indexOf('const ICON_GROUPS =')
-  const groupsEnd = source.indexOf('\nconst GROUP_ORDER', groupsStart)
+  const groupsEnd = source.indexOf('\nconst CATEGORY_LABELS', groupsStart)
   const haloStart = source.indexOf('const FLAG_PACKS =')
   const haloEnd = source.indexOf('\n}', source.indexOf('const haloFor =', haloStart)) + 2
   assert.ok(groupsStart >= 0 && groupsEnd > groupsStart && haloStart >= 0 && haloEnd > haloStart)
-  const halo = vm.runInNewContext(`${source.slice(groupsStart, groupsEnd)}; ${source.slice(haloStart, haloEnd)}; haloFor`)
+  const halo = vm.runInNewContext(`const ANIMATED_PACKS = [], STROKE_PACKS = []; ${source.slice(groupsStart, groupsEnd)}; ${source.slice(haloStart, haloEnd)}; haloFor`)
   for (const pack of ['circle-flags', 'flag', 'flagpack', 'cif', 'twemoji']) {
     assert.equal(halo('dark', 'dark', pack), '', pack)
     assert.equal(halo('light', 'light', pack), '', pack)
