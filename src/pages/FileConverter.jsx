@@ -26,19 +26,25 @@ import {
   EXPORT_SCALES,
   SIZE_PRESETS,
   exceedsCanvasLimit,
-  outputDimensions,
 } from '../utils/imageResize'
+import {
+  RADIUS_MAX, STILL_DEFAULTS, STILL_FITS, STILL_SPEC, STILL_TURNS,
+  cleanSide, clampRadius, cropRect, drawStill, orientedSize, planStill, reorientBox, scalePlan,
+} from '../utils/stillEdit'
+import { COLOURS_MAX, COLOURS_MIN, encodeIndexedPng, quantise } from '../utils/pngQuantise'
+import { KB_MAX, KB_MIN, fitSummary, fitUnderBytes, targetBytes } from '../utils/fitUnderBytes'
 import Segmented from '../components/converter/Segmented'
 import ToolRail from '../components/converter/ToolRail'
 import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from '../components/converter/railGroups'
 import CropBox from '../components/converter/CropBox'
 import ResultPreview from '../components/converter/ResultPreview'
 import {
-  ANIMATION_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
+  ADJUST_DEFAULTS, ADJUST_FIELDS, ANIMATION_FORMATS, AUDIO_FORMATS, CENSOR_DEFAULTS, CENSOR_MODES, CENSOR_STRENGTH, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
   FPS_MAX, FPS_MIN, FRAME_EXPORTS, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
   MAX_ANIMATION_SIDE, MAX_FRAMES as ENGINE_MAX_FRAMES, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TRANSPARENT, TURNS,
-  animatedImageSeconds, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
-  outputFrames, outputSize, resolveFill, reverseFits, spriteFits, spriteLayout, splitPngStream, videoToAnimationArgs,
+  adjustChanged, adjustCss, animatedImageSeconds, clampAdjust, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
+  KEY_DEFAULTS, KEY_TOLERANCE, fileHasSound, isHexColour, outputFrames, outputSize, resolveFill, reverseFits, soundState, spriteFits, spriteLayout, splitPngStream,
+  VIDEO_FILE_FORMATS, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
 import {
@@ -326,6 +332,22 @@ function Delta({ orig, out }) {
   return d ? <span className={`fc-delta fc-delta--${d.dir}`}> · {d.label}</span> : null
 }
 
+const FIT_KB_DEFAULT = 100
+const STAGE_MAX_SIDE = 960 // longest side of the crop preview, in canvas pixels
+
+// canvas.toBlob yields null — or quietly a PNG — when the browser can't encode
+// the requested format, and a callback that never fires would wedge a batch.
+function canvasBlob(canvas, format, quality, label) {
+  return new Promise((resolve, reject) => {
+    const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
+    canvas.toBlob(b => {
+      clearTimeout(to)
+      if (blobMatches(b, format)) resolve(b)
+      else reject(new Error(`${label} export not supported by this browser`))
+    }, format, quality)
+  })
+}
+
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
 function ImageConvert({ toast, initialFiles, initialDraft }) {
   const gatedDownload = useGatedDownload()
@@ -338,7 +360,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // says yes, and quietly becomes WebP if it says no.
   const avifOk = useAvifEncode()
   const [chosenFormat, setFormat] = useState(() => seeded?.format ?? 'image/webp')
-  const format = usableFormat(chosenFormat, avifOk, 'image/webp')
+  const pickedFormat = usableFormat(chosenFormat, avifOk, 'image/webp')
   const outputFormats = withAvifIf(OUTPUT_FORMATS, avifOk)
   const [quality, setQuality] = useState(() => seeded?.quality ?? QUALITY_DEFAULT)
   const [maxDim, setMaxDim] = useState(() => seeded?.maxDim ?? 0) // 0 = keep original size
@@ -346,6 +368,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const [jpegBg, setJpegBg] = useState('#ffffff') // fill behind transparency (JPEG has no alpha)
   const [busy, setBusy] = useState(false)
   const [zipping, setZipping] = useState(false)
+  // The still editor's edits as one value, which Undo and Redo watch. The other
+  // output settings stay plain state.
+  const [edit, setEdit] = useState(STILL_DEFAULTS)
+  const patch = useCallback((p) => setEdit(e => ({ ...e, ...p })), [])
+  const [pngColours, setPngColours] = useState(0) // 0 = full colour
+  const [fitOn, setFitOn] = useState(false)
+  const [fitKb, setFitKb] = useState(FIT_KB_DEFAULT)
+  // Rounded corners need transparency, which JPEG lacks, so they save as PNG.
+  const roundedForcesPng = edit.radius > 0 && pickedFormat === 'image/jpeg'
+  const format = roundedForcesPng ? 'image/png' : pickedFormat
+  const history = useEditHistory(edit, setEdit, items.length > 0 && !busy, STILL_SPEC)
   // The region holding the uploaded items + their output settings — the thing a
   // hand-off visitor actually came to look at.
   const queueRef = useRef(null)
@@ -452,6 +485,65 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     setItems([])
   }, [items])
 
+  // The crop box lives in the first image's picture (turned and flipped), and
+  // every image in the batch is cut the same relative way (utils/stillEdit.js).
+  const first = items[0]
+  const firstId = first?.id
+  const firstUrl = first?.srcUrl
+  const firstW = first?.srcW || 0
+  const firstH = first?.srcH || 0
+  const ref = firstW > 0 && firstH > 0 ? orientedSize(firstW, firstH, edit.turn) : null
+  const refW = ref ? ref.w : 0
+  const refH = ref ? ref.h : 0
+  const cropOn = !!edit.box
+  const stageRef = useRef(null)
+  const lastFirst = useRef(null)
+  const exactSize = edit.outW > 0 || edit.outH > 0
+  const bothSides = edit.outW > 0 && edit.outH > 0
+
+  // A different first image (or none) means the box no longer describes it.
+  useEffect(() => {
+    if (lastFirst.current !== firstId && edit.box) patch({ box: null })
+    lastFirst.current = firstId
+  }, [firstId, edit.box, patch])
+
+  // Turning or flipping carries the box with the picture.
+  const setLook = (next) => {
+    setEdit(e => {
+      const to = { ...e, ...next }
+      if (!e.box || !firstW) return to
+      return { ...to, box: reorientBox(e.box, firstW, firstH, e, to) }
+    })
+  }
+  const setBoxField = (key, raw) => {
+    if (!ref || !edit.box) return
+    const room = { x: ref.w - edit.box.w, y: ref.h - edit.box.h, w: ref.w - edit.box.x, h: ref.h - edit.box.y }[key]
+    const next = commitNumber(raw, { min: key === 'x' || key === 'y' ? 0 : 2, max: Math.max(0, room), fallback: edit.box[key] })
+    patch({ box: clampBox({ ...edit.box, [key]: next }, ref.w, ref.h) })
+  }
+  const defaultBox = ref
+    ? clampBox({ x: ref.w * 0.1, y: ref.h * 0.1, w: ref.w * 0.8, h: ref.h * 0.8 }, ref.w, ref.h)
+    : null
+  const setOutSide = (key, raw) => patch({ [key]: String(raw).trim() === '' ? 0 : cleanSide(raw) })
+
+  // The crop stage: the first image, turned and flipped as set, drawn small.
+  useEffect(() => {
+    const canvas = stageRef.current
+    if (!cropOn || !canvas || !firstUrl || !refW || !refH) return undefined
+    let live = true
+    loadImage(firstUrl).then((img) => {
+      if (!live) return
+      const k = Math.min(1, STAGE_MAX_SIDE / Math.max(refW, refH))
+      const w = Math.max(1, Math.round(refW * k))
+      const h = Math.max(1, Math.round(refH * k))
+      canvas.width = w
+      canvas.height = h
+      const plan = { w, h, src: { x: 0, y: 0, w: refW, h: refH }, dest: { x: 0, y: 0, w, h } }
+      drawStill(canvas.getContext('2d'), img, firstW, firstH, plan, { turn: edit.turn, flipH: edit.flipH, flipV: edit.flipV })
+    }).catch(() => {})
+    return () => { live = false }
+  }, [cropOn, firstUrl, firstW, firstH, refW, refH, edit.turn, edit.flipH, edit.flipV])
+
   const convertOne = useCallback(async (item) => {
     const img = await loadImage(item.srcUrl)
     // SVGs without an intrinsic size can report 0×0 — rasterise those at 1024.
@@ -461,33 +553,81 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       const blob = await encodeIco(img, iw, ih)
       return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w: 48, h: 48, note: `favicon • ${ICO_SIZES.join(' + ')} px`, noPreview: true }
     }
-    const { w, h } = outputDimensions(iw, ih, { maxDim, renderScale })
-    if (exceedsCanvasLimit(w, h)) {
-      throw new Error(`Too large to export at @${renderScale}x — pick a smaller size`)
+    const turned = orientedSize(iw, ih, edit.turn)
+    const plan = planStill({
+      srcW: iw,
+      srcH: ih,
+      turn: edit.turn,
+      crop: cropRect(edit.box, refW, refH, turned.w, turned.h),
+      outW: edit.outW,
+      outH: edit.outH,
+      fit: edit.fit,
+      maxDim,
+      renderScale,
+    })
+    if (exceedsCanvasLimit(plan.w, plan.h)) {
+      throw new Error(plan.exact ? 'Too large to export — pick a smaller size' : `Too large to export at @${renderScale}x — pick a smaller size`)
     }
-    const canvas = document.createElement('canvas')
-    canvas.width = w
-    canvas.height = h
-    const ctx = canvas.getContext('2d')
-    if (format === 'image/jpeg') { ctx.fillStyle = jpegBg; ctx.fillRect(0, 0, w, h) }
-    ctx.drawImage(img, 0, 0, w, h)
-    const q = format === 'image/png' ? undefined : quality / 100
     // canvas.toBlob yields null — or quietly a PNG — when the browser can't
     // encode the requested format (notably AVIF in some browsers), and a
     // callback that never fires would wedge the whole batch in its busy state.
-    // Guard all three so each item records a clear error and the batch keeps
-    // going, and nothing is saved under a name that isn't its real format.
+    // canvasBlob guards all three so each item records a clear error and the
+    // batch keeps going, and nothing is saved under a name that isn't its real format.
     const label = OUTPUT_FORMATS.find(f => f.id === format)?.label || format
-    const blob = await new Promise((resolve, reject) => {
-      const to = setTimeout(() => reject(new Error(`${label} export timed out`)), ENCODE_TIMEOUT_MS)
-      canvas.toBlob(b => {
-        clearTimeout(to)
-        if (blobMatches(b, format)) resolve(b)
-        else reject(new Error(`${label} export not supported by this browser`))
-      }, format, q)
-    })
-    return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w, h }
-  }, [format, quality, maxDim, renderScale, jpegBg])
+    const paint = (p, factor = 1) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = p.w
+      canvas.height = p.h
+      drawStill(canvas.getContext('2d', { willReadFrequently: true }), img, iw, ih, p, {
+        turn: edit.turn,
+        flipH: edit.flipH,
+        flipV: edit.flipV,
+        radius: edit.radius * factor,
+        background: format === 'image/jpeg' ? jpegBg : null,
+      })
+      return canvas
+    }
+    const lossy = async (q) => {
+      const blob = await canvasBlob(paint(plan), format, q / 100, label)
+      return { blob, bytes: blob.size, w: plan.w, h: plan.h }
+    }
+    // colours 0 is full colour (the browser's own PNG); anything else is the
+    // median-cut palette written as an indexed PNG.
+    const png = async (colours, scale = 100) => {
+      const p = scalePlan(plan, scale / 100)
+      const canvas = paint(p, scale / 100)
+      let blob
+      if (colours) {
+        const { data } = canvas.getContext('2d').getImageData(0, 0, p.w, p.h)
+        const q = quantise(data, colours)
+        blob = new Blob([await encodeIndexedPng(p.w, p.h, q.indices, q.palette)], { type: 'image/png' })
+      } else {
+        blob = await canvasBlob(canvas, format, undefined, label)
+      }
+      return { blob, bytes: blob.size, w: p.w, h: p.h }
+    }
+    const isPng = format === 'image/png'
+    const target = fitOn ? targetBytes(fitKb) : 0
+    let made
+    let detail = ''
+    let missed = false
+    if (target) {
+      const found = await fitUnderBytes({
+        target,
+        kind: isPng ? 'png' : 'lossy',
+        encode: isPng ? ({ colours, scale }) => png(colours, scale) : ({ quality: q }) => lossy(q),
+      })
+      made = found.result
+      missed = !found.ok
+      detail = fitSummary({ ok: found.ok, bytes: made.bytes, params: found.params }, target)
+    } else if (isPng) {
+      made = await png(pngColours)
+      if (pngColours) detail = `Reduced to ${pngColours} colours`
+    } else {
+      made = await lossy(quality)
+    }
+    return { blob: made.blob, url: URL.createObjectURL(made.blob), bytes: made.bytes, w: made.w, h: made.h, detail, missed }
+  }, [format, quality, maxDim, renderScale, jpegBg, edit, refW, refH, pngColours, fitOn, fitKb])
 
   const [convertProgress, setConvertProgress] = useState({ done: 0, total: 0 })
 
@@ -496,12 +636,14 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     setBusy(true)
     setConvertProgress({ done: 0, total: items.length })
     let ok = 0
+    let missed = 0
     for (let i = 0; i < items.length; i++) {
       const item = items[i]
       try {
         if (item.out?.url) URL.revokeObjectURL(item.out.url)
         const out = await convertOne(item)
         ok++
+        if (out.missed) missed++
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, out, error: null } : it))
       } catch (err) {
         setItems(prev => prev.map(it => it.id === item.id ? { ...it, out: null, error: err.message } : it))
@@ -509,11 +651,12 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       setConvertProgress({ done: i + 1, total: items.length })
     }
     setBusy(false)
-    toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}` : 'Conversion failed', ok ? 'success' : 'error')
+    const note = missed ? `. ${missed} couldn’t get under ${formatBytes(targetBytes(fitKb))}` : ''
+    toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}${note}` : 'Conversion failed', ok ? (missed ? 'info' : 'success') : 'error')
     // The converted files are the cards above the settings; on a one-column
     // bench the press happened below them.
     requestAnimationFrame(() => revealResult(gridRef.current))
-  }, [items, busy, convertOne, toast])
+  }, [items, busy, convertOne, toast, fitKb])
 
   const fmt = OUTPUT_FORMATS.find(f => f.id === format)
 
@@ -523,7 +666,22 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   // is a second answer waiting to disagree with the encoder.
   const sized = items
     .filter(it => it.srcW > 0 && it.srcH > 0)
-    .map(it => ({ ...it, out: outputDimensions(it.srcW, it.srcH, { maxDim, renderScale }) }))
+    .map(it => {
+      const turned = orientedSize(it.srcW, it.srcH, edit.turn)
+      const out = planStill({
+        srcW: it.srcW,
+        srcH: it.srcH,
+        turn: edit.turn,
+        crop: cropRect(edit.box, refW, refH, turned.w, turned.h),
+        outW: edit.outW,
+        outH: edit.outH,
+        fit: edit.fit,
+        maxDim,
+        renderScale,
+      })
+      return { ...it, out }
+    })
+  const roundedHeld = sized.length && edit.radius > 0 ? clampRadius(edit.radius, sized[0].out.w, sized[0].out.h) : 0
   const widestOut = sized.length ? Math.max(...sized.map(it => Math.max(it.out.w, it.out.h))) : 0
   const anyCapped = sized.some(it => it.out.capped)
 
@@ -627,6 +785,14 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               under 900px. The empty-state drop zone gives way to a slim "Add
               more" strip once the visitor's own files are on screen. */}
           <div className="fc-bench-main">
+            {cropOn && ref && !fmt.ico && (
+              <div className="fc-crop-stage">
+                <div className="fc-vstage" style={{ '--src-w': ref.w, '--src-h': ref.h }}>
+                  <canvas ref={stageRef} role="img" aria-label={`Crop preview of ${first.name}`} />
+                  <CropBox box={edit.box} size={ref} onChange={box => patch({ box })} disabled={busy} />
+                </div>
+              </div>
+            )}
             <ul className="fc-grid" aria-label="Queued images" ref={gridRef}>
               {items.map(it => (
                 <li key={it.id} className="fc-card">
@@ -646,6 +812,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                         {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
                         <Delta orig={it.file.size} out={it.out.bytes} />
                       </div>
+                      {it.out.detail && <div className={`fc-meta${it.out.missed ? ' fc-meta--warn' : ''}`}>{it.out.detail}</div>}
                       <button type="button" className="fc-btn fc-btn--primary fc-dl" onClick={() => downloadOne(it)}>
                         Download {fmt.label}
                       </button>
@@ -665,10 +832,12 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
           <aside className="fc-inspector" aria-label="Output settings">
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
-              <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
+              <MenuSelect label="Output format" id="fc-img-format" className="fc-field" value={pickedFormat} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
                 {outputFormats.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </MenuSelect>
               {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
+              {fmt.ico && history.edits.length > 0 && <p className="fc-note">Crop, turn, size and corners don’t apply to a favicon.</p>}
+              {roundedForcesPng && <p className="fc-note fc-note--warn">Rounded corners need transparency, so this saves as PNG.</p>}
               {format === 'image/jpeg' && (
                 <div className="fc-row">
                   {/* The shared picker. Note that this control exists PRECISELY
@@ -692,10 +861,11 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
                 snaps={QUALITY_SNAPS} unit="%"
                 onChange={setQuality}
-                disabled={busy || !fmt.lossy}
+                disabled={busy || !fmt.lossy || fitOn}
                 ariaLabel="Output quality"
               />
               {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+              {fmt.lossy && fitOn && <p className="fc-note">Fit under a size picks the quality.</p>}
             </div>
 
             {!fmt.ico && (
@@ -703,13 +873,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 <div className="fc-pair fc-pair--size">
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
-                    <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy} aria-label="Output size limit">
+                    <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy || exactSize} aria-label="Output size limit">
                       {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                     </MenuSelect>
                   </div>
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-scale">Export scale</label>
-                    <MenuSelect label="Export render scale" id="fc-img-scale" className="fc-field" value={renderScale} onChange={nextValue => setRenderScale(+nextValue)} disabled={busy} aria-label="Export render scale">
+                    <MenuSelect label="Export render scale" id="fc-img-scale" className="fc-field" value={renderScale} onChange={nextValue => setRenderScale(+nextValue)} disabled={busy || exactSize} aria-label="Export render scale">
                       {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                     </MenuSelect>
                   </div>
@@ -741,10 +911,140 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     </div>
                     {/* Always one line tall, so the note arriving does not push
                         the Convert button down. */}
-                    <span className="fc-note fc-outsize-cap">{anyCapped ? 'held to the size limit' : ''}</span>
+                    <span className="fc-note fc-outsize-cap">{exactSize ? 'set by the exact size below' : anyCapped ? 'held to the size limit' : ''}</span>
                   </div>
                 )}
               </div>
+            )}
+
+            {!fmt.ico && (
+              <>
+                <div className="fc-insp-sec">
+                  <EditBar history={history} disabled={busy} />
+                  <span className="fc-eyebrow">Crop</span>
+                  <button
+                    type="button" id="fc-img-crop" className="fc-btn fc-toggle" aria-pressed={cropOn}
+                    disabled={busy || !ref} onClick={() => patch({ box: cropOn ? null : defaultBox })}
+                  >
+                    Crop the picture
+                  </button>
+                  {!ref && <p className="fc-note">Crop is ready once the first image has been read.</p>}
+                  {cropOn && ref && (
+                    <>
+                      <div className="fc-box-grid">
+                        {[['x', 'Left'], ['y', 'Top'], ['w', 'Width'], ['h', 'Height']].map(([key, label]) => (
+                          <div key={key}>
+                            <label className="fc-eyebrow" htmlFor={`fc-img-box-${key}`}>{label} (px)</label>
+                            <DraftNumber
+                              id={`fc-img-box-${key}`} className="fc-field fc-field--num" disabled={busy}
+                              shown={edit.box[key]} onCommit={raw => setBoxField(key, raw)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="fc-note">Drag the box on the preview, or type its numbers. They are pixels of {first.name}, {ref.w} × {ref.h}. Every image is cut the same way.</p>
+                      <button type="button" className="fc-btn fc-btn--quiet" onClick={() => patch({ box: defaultBox })} disabled={busy}>Reset box</button>
+                    </>
+                  )}
+                </div>
+
+                <div className="fc-insp-sec">
+                  <Segmented id="fc-img-turn" label="Turn" options={STILL_TURNS} value={edit.turn} onChange={turn => setLook({ turn })} disabled={busy} />
+                  <div className="fc-flip-pair">
+                    <button
+                      type="button" id="fc-img-flip-h" className="fc-btn fc-toggle" aria-pressed={edit.flipH}
+                      disabled={busy} onClick={() => setLook({ flipH: !edit.flipH })}
+                    >
+                      Flip horizontal
+                    </button>
+                    <button
+                      type="button" id="fc-img-flip-v" className="fc-btn fc-toggle" aria-pressed={edit.flipV}
+                      disabled={busy} onClick={() => setLook({ flipV: !edit.flipV })}
+                    >
+                      Flip vertical
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fc-insp-sec">
+                  <span className="fc-eyebrow" id="fc-img-exact">Exact size</span>
+                  <div className="fc-box-grid" role="group" aria-labelledby="fc-img-exact">
+                    <div>
+                      <label className="fc-eyebrow" htmlFor="fc-img-out-w">Width (px)</label>
+                      <DraftNumber
+                        id="fc-img-out-w" className="fc-field fc-field--num" disabled={busy}
+                        shown={edit.outW || ''} onCommit={raw => setOutSide('outW', raw)}
+                      />
+                    </div>
+                    <div>
+                      <label className="fc-eyebrow" htmlFor="fc-img-out-h">Height (px)</label>
+                      <DraftNumber
+                        id="fc-img-out-h" className="fc-field fc-field--num" disabled={busy}
+                        shown={edit.outH || ''} onCommit={raw => setOutSide('outH', raw)}
+                      />
+                    </div>
+                  </div>
+                  <p className="fc-note">Leave a side blank to keep the proportions. A size here replaces the size limit and scale.</p>
+                  <Segmented id="fc-img-fit" label="Fit to size" options={STILL_FITS} value={edit.fit} onChange={fit => patch({ fit })} disabled={busy || !bothSides} />
+                  <p className="fc-note">
+                    {!bothSides
+                      ? 'Fit, Fill and Stretch apply once both sides are set.'
+                      : edit.fit === 'fit'
+                        ? 'Fit keeps the whole picture and leaves empty space to reach the size.'
+                        : edit.fit === 'fill'
+                          ? 'Fill covers the whole size and trims what overflows.'
+                          : 'Stretch reaches the size by squashing the picture.'}
+                  </p>
+                </div>
+
+                <div className="fc-insp-sec">
+                  <label className="fc-eyebrow" htmlFor="fc-img-radius">Corner radius (px)</label>
+                  <DraftNumber
+                    id="fc-img-radius" className="fc-field fc-field--num" disabled={busy}
+                    shown={edit.radius} onCommit={raw => patch({ radius: commitNumber(raw, { min: 0, max: RADIUS_MAX, fallback: edit.radius }) })}
+                  />
+                  <p className="fc-note">
+                    {edit.radius > 0
+                      ? `The corners come out transparent.${roundedHeld && roundedHeld < edit.radius ? ` Held to ${roundedHeld} px, half the shorter side.` : ''}`
+                      : '0 keeps square corners.'}
+                  </p>
+                </div>
+
+                <div className="fc-insp-sec">
+                  {format === 'image/png' && (
+                    <>
+                      <label className="fc-eyebrow" htmlFor="fc-img-colours">PNG colours ({COLOURS_MIN} to {COLOURS_MAX})</label>
+                      <DraftNumber
+                        id="fc-img-colours" className="fc-field fc-field--num" disabled={busy || fitOn}
+                        shown={pngColours || ''}
+                        onCommit={raw => setPngColours(String(raw).trim() === '' ? 0 : commitNumber(raw, { min: COLOURS_MIN, max: COLOURS_MAX, fallback: pngColours || COLOURS_MAX }))}
+                      />
+                      <p className="fc-note">{fitOn ? 'Fit under a size picks the colours.' : 'Blank keeps every colour. Fewer colours make a smaller file.'}</p>
+                    </>
+                  )}
+                  <span className="fc-eyebrow">File size</span>
+                  <button
+                    type="button" id="fc-img-fit-on" className="fc-btn fc-toggle" aria-pressed={fitOn}
+                    disabled={busy} onClick={() => setFitOn(on => !on)}
+                  >
+                    Fit under a size
+                  </button>
+                  {fitOn && (
+                    <>
+                      <label className="fc-eyebrow" htmlFor="fc-img-fit-kb">Largest size (KB)</label>
+                      <DraftNumber
+                        id="fc-img-fit-kb" className="fc-field fc-field--num" disabled={busy}
+                        shown={fitKb} onCommit={raw => setFitKb(commitNumber(raw, { min: KB_MIN, max: KB_MAX, fallback: fitKb }))}
+                      />
+                      <p className="fc-note">
+                        {format === 'image/png'
+                          ? 'Tries full colour, then fewer colours, then a smaller picture, and keeps the largest result under the limit.'
+                          : 'Finds the highest quality that stays under the limit.'}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </>
             )}
 
           </aside>
@@ -807,7 +1107,13 @@ function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, fact
           ) : (
             <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} onError={onError} />
           )}
-          {editor.box && size ? (
+          {editor.censor && size && (
+            <CropBox
+              box={editor.censor.box} size={size} onChange={editor.censor.onBox} disabled={editor.disabled}
+              ariaLabel="Censor box. Arrow keys move it, Alt with the arrow keys resizes it." tone="censor"
+            />
+          )}
+          {!editor.censor && editor.box && size ? (
             <CropBox box={editor.box} size={size} onChange={editor.onBox} disabled={editor.disabled} />
           ) : crop && size && (
             <div
@@ -921,11 +1227,11 @@ const READ_TIMEOUT_MS = 5000
 // ── Mode 3: Video → an animated file ─────────────────────────────────────────
 // This was "Video → GIF". The engine it already loaded writes four more
 // formats for the cost of a different argument list (utils/mediaEncode.js), so
-// the same panel now offers GIF, animated WebP, APNG, MP4 and WebM. GIF stays
-// the default and its command is unchanged for the default settings, which
-// tests/unit/media-encode.test.js pins. Sound is dropped in every format:
-// these are loops for a page, and saying so is better than a silent track
-// that sometimes survives.
+// the same panel now offers GIF, animated WebP, APNG, MP4, WebM, MOV and MKV,
+// plus the sound alone as MP3. GIF stays the default and its command is
+// unchanged for the default settings, which tests/unit/media-encode.test.js
+// pins. Sound is kept in the video files when "Keep sound" is on (AAC in MP4,
+// MOV and MKV, Opus in WebM); GIF, WebP and APNG cannot hold it, and say so.
 //
 // It is also a small editor: crop to a shape, turn and flip, change speed, play
 // forward, backward or as a boomerang, and (for GIF) choose colours and
@@ -962,6 +1268,11 @@ function VideoConvert({ toast }) {
   const [flipV, setFlipV] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [direction, setDirection] = useState('forward')
+  const [adjust, setAdjust] = useState(ADJUST_DEFAULTS) // the Look group: colour, hue, blur, fades
+  const [censor, setCensor] = useState(CENSOR_DEFAULTS) // the Add group: one region pixelated or blurred
+  const [colourKey, setColourKey] = useState(KEY_DEFAULTS) // the Add group: one colour made clear
+  const [sound, setSound] = useState(true) // keep the clip's sound where the format can hold it
+  const [soundProbe, setSoundProbe] = useState({ file: null, has: null }) // what the file's header says about sound
   const [colours, setColours] = useState(SIZE_DEFAULTS.colours)
   const [dither, setDither] = useState(SIZE_DEFAULTS.dither)
   // The tool rail: which group of controls is open, and where the rail sits.
@@ -978,8 +1289,8 @@ function VideoConvert({ toast }) {
   // The edits as one value, for Undo and Redo. The controls above stay plain
   // state; stepping back writes an earlier recipe into them all at once.
   const recipe = useMemo(
-    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction }),
-    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction],
+    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust, censor, colourKey }),
+    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction, adjust, censor, colourKey],
   )
   const history = useEditHistory(recipe, (r) => {
     setTrimStart(r.trimStart)
@@ -997,6 +1308,9 @@ function VideoConvert({ toast }) {
     setFlipV(r.flipV)
     setSpeed(r.speed)
     setDirection(r.direction)
+    setAdjust(r.adjust)
+    setCensor(r.censor)
+    setColourKey(r.colourKey)
   }, !!srcUrl && !job)
   const resetEdits = history.reset
   const videoRef = useRef(null)
@@ -1055,6 +1369,15 @@ function VideoConvert({ toast }) {
     return () => { live = false }
   }, [file, isImage])
 
+  // Whether the file has a sound track: read from the container's header, as a
+  // browser will not say. null (could not tell) leaves the toggle on.
+  useEffect(() => {
+    if (!file || isImage) return undefined
+    let live = true
+    fileHasSound(file).catch(() => null).then(has => { if (live) setSoundProbe({ file, has }) })
+    return () => { live = false }
+  }, [file, isImage])
+
   const onFiles = useCallback((files) => {
     const f = Array.from(files)[0]
     if (!f) return
@@ -1080,7 +1403,9 @@ function VideoConvert({ toast }) {
     setFit('crop')
     setView('before')
     // The edits above are the new file's starting point, not steps to undo.
-    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop' })
+    // The censor box is in this file's pixels, so it does not carry over.
+    setCensor(CENSOR_DEFAULTS)
+    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop', censor: CENSOR_DEFAULTS })
   }, [srcUrl, result, toast, resetEdits])
 
   // Picking Custom starts a box a tenth in from every edge, so there is
@@ -1107,7 +1432,19 @@ function VideoConvert({ toast }) {
   const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop: plan.frame, turn, width }) : null
   // Transparent only where the format can hold it; MP4 gets the colour.
   const outside = resolveFill(fmt, fill === TRANSPARENT && fmt.alpha ? TRANSPARENT : fillColour)
-  const outsideShown = !!pad || cut !== 'none'
+  // Censor and colour key apply to the picture, so a sound-only output has neither. The censor
+  // box is held to the picture here, so a stale box can never reach the encoder.
+  const censorOn = censor.on
+  const censorMode = censor.mode
+  const censorStrength = censor.strength
+  const censorBox = censor.box
+  const soundOnlyOut = fmt.kind === 'audio'
+  const cen = useMemo(() => {
+    const held = !soundOnlyOut && censorOn && censorBox && srcSize ? clampBox(censorBox, srcSize.w, srcSize.h) : null
+    return held ? { on: true, mode: censorMode, strength: censorStrength, box: held } : null
+  }, [soundOnlyOut, censorOn, censorMode, censorStrength, censorBox, srcSize])
+  const keyOn = !soundOnlyOut && colourKey.on && isHexColour(colourKey.colour) ? colourKey : null
+  const outsideShown = !!pad || cut !== 'none' || !!keyOn
   const unreadable = srcFailed && !srcSize
   // The length Reverse is measured against: the clip for a video, the header's
   // sum of frame delays for a GIF or WebP. 0 means it is not known.
@@ -1122,7 +1459,8 @@ function VideoConvert({ toast }) {
       : secs <= 0 || !outSize ? 'unknown'
         : reverseFits(forwardFrames, outSize.w, outSize.h) ? null : 'long'
   const reverseOk = reverseWhy === null
-  const dir = reverseOk ? direction : 'forward'
+  const isAudio = fmt.kind === 'audio'
+  const dir = reverseOk && !isAudio ? direction : 'forward'
   // A direction that no longer fits falls back to Forward (adjusted during
   // render, the supported way to derive state from a change in other state).
   if (!reverseOk && direction !== 'forward') setDirection('forward')
@@ -1132,6 +1470,21 @@ function VideoConvert({ toast }) {
   const isFramesOut = fmt.id === 'frames'
   const isSprite = fmt.id === 'sprite'
   const isFrameExport = isFramesOut || isSprite
+  // Sound: true or false when the file's header said, null when it did not. A GIF
+  // or WebP has none to keep.
+  const hasSound = isImage ? false : soundProbe.file === file ? soundProbe.has : null
+  const snd = soundState(fmt, { hasSound, direction: dir })
+  const soundOn = isAudio || (sound && snd.ok)
+  // The Look group's values, or null while they are all untouched (then no filter is built).
+  const adj = !isAudio && adjustChanged(adjust) ? clampAdjust(adjust) : null
+  const setAdj = (id, value) => setAdjust(a => ({ ...a, [id]: value }))
+  // Turning Censor on gives it a box to drag, a third of the picture in the middle.
+  const toggleCensor = () => setCensor(c => {
+    if (c.on) return { ...c, on: false }
+    const s = srcSize
+    const box = c.box || (s ? clampBox({ x: s.w / 3, y: s.h / 3, w: s.w / 3, h: s.h / 3 }, s.w, s.h) : null)
+    return { ...c, on: true, box }
+  })
   // The sheet's grid, from how many frames the edits make (the engine writes at
   // most ENGINE_MAX_FRAMES). Not known while the clip's length is not.
   const sheet = isSprite && frames > 0 && outSize ? spriteLayout(Math.min(frames, ENGINE_MAX_FRAMES), outSize.w, outSize.h) : null
@@ -1142,6 +1495,7 @@ function VideoConvert({ toast }) {
   const sig = JSON.stringify([
     format, fps, width, isGif || isFrameExport ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir,
     isGif ? colours : 0, isGif ? dither : 0, shape === 'custom' ? box : 0, shape === 'original' ? 0 : fit, cut, cut === 'rounded' ? radius : 0, outsideShown ? outside : 0,
+    soundOn, adj, cen, keyOn,
   ])
 
   const convert = useCallback(async () => {
@@ -1193,7 +1547,7 @@ function VideoConvert({ toast }) {
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
-          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither,
+          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither, sound: soundOn, adjust: adj, seconds: outSeconds, censor: cen, key: keyOn,
           fill: outside.transparent ? TRANSPARENT : outside.colour, cut, radius, sheet, maxFrames: ENGINE_MAX_FRAMES,
         }),
         output: `output.${target.engineExt || target.ext}`,
@@ -1217,7 +1571,7 @@ function VideoConvert({ toast }) {
         blob = new Blob([bytes], { type: target.mime })
       }
       revealNext.current = true
-      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sound: soundOn && !isAudio, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
       setJob(null)
       toast(`${target.label} ready`)
     } catch (err) {
@@ -1229,7 +1583,7 @@ function VideoConvert({ toast }) {
           ? UNREADABLE_VIDEO_NOTE
           : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, soundOn, isAudio, adj, outSeconds, cen, keyOn, toast])
 
   const cancel = () => {
     runRef.current++
@@ -1277,7 +1631,7 @@ function VideoConvert({ toast }) {
     setView(v)
     if (v === 'after') videoRef.current?.pause()
   }
-  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable
+  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable && !isAudio
   const speedOptions = SPEEDS.map(s => ({ id: s.id, label: s.label, name: s.name }))
   const flipBtn = (axis, on, set) => (
     <button
@@ -1294,12 +1648,14 @@ function VideoConvert({ toast }) {
 
   const consequence = !srcSize
     ? (unreadable ? NO_PREVIEW_NOTE : 'Reading the file…')
-    : isSprite && sheet
+    : isAudio
+      ? (hasSound === false ? 'This file has no sound to save' : `MP3 · sound only${frames > 0 ? ` · ${outSeconds.toFixed(1)} s` : ''}`)
+      : isSprite && sheet
       ? `${sheet.cols} × ${sheet.rows} sheet · ${sheet.w} × ${sheet.h} px`
       : isFramesOut && frames > 0
         ? `${Math.min(frames, ENGINE_MAX_FRAMES)} PNG${frames === 1 ? '' : 's'} · ${outSize.w} × ${outSize.h} px each`
-        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
-  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : `Convert to ${fmt.label}`
+        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '') + (soundOn ? ' · with sound' : '')
+  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : isAudio ? 'Save sound as MP3' : `Convert to ${fmt.label}`
   const resultName = result?.format === 'frames' ? `${base}-frames.zip` : result?.format === 'sprite' ? `${base}-sprite.png` : `${base}.${resultFmt?.ext}`
   const resultNoun = FRAME_NOUN[result?.format] || resultFmt?.label
 
@@ -1307,10 +1663,10 @@ function VideoConvert({ toast }) {
   // fields and their state), so nothing is lost by closing a group; the open
   // one is the only one shown. A group with no controls is left out: the Clip
   // group only exists once the length is known.
-  const groups = presentGroups({ hasDuration: duration > 0 })
+  const groups = presentGroups({ hasDuration: duration > 0, audioOnly: isAudio })
   const openGroup = activeOf(groups, group)?.id
   const marks = groupMarks({
-    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction,
+    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction, adjust, censor, colourKey,
     fps, width, quality, plays, colours, dither,
   })
   const panel = (id, body) => (
@@ -1359,7 +1715,7 @@ function VideoConvert({ toast }) {
           accept={ACCEPT_VIDEO}
           onFiles={onFiles}
           hint="Drop a video or GIF to edit and convert"
-          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4 or WebM."
+          sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4, WebM, MOV or MKV, or keep just the sound as MP3."
         />
       ) : (
         <div className="fc-bench fc-bench--rail">
@@ -1369,7 +1725,7 @@ function VideoConvert({ toast }) {
               srcUrl={srcUrl}
               videoRef={videoRef}
               imgRef={imgRef}
-              toggle={srcSize && !unreadable ? (
+              toggle={srcSize && !unreadable && !isAudio ? (
                 <Segmented id="fc-vid-view" label="Preview" options={VIEW_MODES} value={view} onChange={switchView} className="fc-seg--view" />
               ) : null}
               after={previewReady ? (
@@ -1377,6 +1733,7 @@ function VideoConvert({ toast }) {
                   mediaRef={isImage ? imgRef : videoRef} isImage={isImage} srcSize={srcSize} plan={plan}
                   turn={turn} flipH={flipH} flipV={flipV} cut={cut} radius={radius} outside={outside}
                   outSize={outSize} dir={dir} speed={speed} fps={fps} start={start} len={secs} facts={consequence}
+                  filter={adj && outSize ? adjustCss(adj, { scale: Math.min(1, 560 / outSize.w) }) : ''}
                 />
               ) : null}
               edits={<EditBar history={history} disabled={working} />}
@@ -1393,8 +1750,12 @@ function VideoConvert({ toast }) {
                 isImage,
                 size: srcSize,
                 crop,
-                box: shape === 'custom' ? box : null,
+                box: shape === 'custom' && !isAudio ? box : null,
                 onBox: setBox,
+                // The censor box is drawn only while the Add group is open, in place of the crop box.
+                censor: openGroup === 'add' && !isAudio && !isImage && censor.on && censor.box
+                  ? { box: censor.box, onBox: b => setCensor(c => ({ ...c, box: b })) }
+                  : null,
                 disabled: working,
                 hidden: previewReady,
                 onImageLoad: (w, h) => { if (w > 0 && h > 0) setSrcSize({ w, h }) },
@@ -1412,7 +1773,9 @@ function VideoConvert({ toast }) {
               <section className="fc-result" aria-label="Result" ref={resultRef}>
                 <h2 className="fc-eyebrow">Result</h2>
                 {resultFmt.kind === 'video' ? (
-                  <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
+                  <video className="fc-result-media" src={result.url} controls loop muted={!result.sound} playsInline aria-label={`${resultFmt.label} result`} />
+                ) : resultFmt.kind === 'audio' ? (
+                  <audio className="fc-result-media" src={result.url} controls aria-label={`${resultFmt.label} result`} />
                 ) : resultFmt.kind === 'frames' ? null : (
                   <img className="fc-result-media" src={result.url} alt={`${resultFmt.label} result`} />
                 )}
@@ -1420,6 +1783,9 @@ function VideoConvert({ toast }) {
                   {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
                   {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
                 </p>
+                {(result.format === 'mov' || result.format === 'mkv') && (
+                  <p className="fc-note">Some browsers can’t play {resultFmt.label.slice(0, 3)} here. The file is fine; open it in a video player.</p>
+                )}
                 {result.format === 'frames' && result.size && (
                   <p className="fc-note">{result.count} numbered PNG file{result.count === 1 ? '' : 's'}, {result.size.w} × {result.size.h} px each.</p>
                 )}
@@ -1447,6 +1813,12 @@ function VideoConvert({ toast }) {
                 <optgroup label="Animation">
                   {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </optgroup>
+                <optgroup label="Video file">
+                  {VIDEO_FILE_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
+                <optgroup label="Sound">
+                  {AUDIO_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
                 <optgroup label="Frames">
                   {FRAME_EXPORTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </optgroup>
@@ -1460,7 +1832,21 @@ function VideoConvert({ toast }) {
                         : 'Every frame the edits make, tiled in one PNG.'}
                 </p>
               )}
-              {!isFrameExport && <p className="fc-note">Sound is removed</p>}
+              {isAudio ? (
+                <p className="fc-note">{hasSound === false ? 'This file has no sound, so there is nothing to save as MP3.' : 'Saves the sound only, with no picture.'}</p>
+              ) : !isFrameExport && (
+                <>
+                  <button
+                    type="button" id="fc-vid-sound" className="fc-btn fc-toggle" aria-pressed={soundOn}
+                    disabled={working || !snd.ok} onClick={() => setSound(!sound)}
+                  >
+                    Keep sound
+                  </button>
+                  <p className="fc-note">
+                    {!snd.ok ? `${snd.why}.` : sound ? `Sound is kept as ${fmt.sound}.` : 'Sound is removed.'}
+                  </p>
+                </>
+              )}
             </div>
             {duration > 0 && panel('clip', (
               <div className="fc-insp-sec">
@@ -1553,7 +1939,7 @@ function VideoConvert({ toast }) {
                         value={fillColour} onChange={setFillColour} disabled={working}
                         ariaLabel="Outside colour" triggerClassName="fc-bg-pick"
                       />
-                      <p className="fc-note">{pad ? 'Colour of the bars' : 'Colour outside the cut-out'}</p>
+                      <p className="fc-note">{pad ? 'Colour of the bars' : cut !== 'none' ? 'Colour outside the cut-out' : 'Colour shown where the removed colour was'}</p>
                     </div>
                   )}
                   {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency, so the outside is filled with a colour.</p>}
@@ -1572,20 +1958,111 @@ function VideoConvert({ toast }) {
               {(turn !== 0 || flipH || flipV) && <p className="fc-note">Turn and flip show in the result, not the preview.</p>}
             </div>
             ))}
+            {panel('look', (
+            <div className="fc-insp-sec">
+              {ADJUST_FIELDS.map(f => {
+                const v = clampAdjust(adjust)[f.id]
+                return (
+                  <div className="fc-adj" key={f.id}>
+                    <div className="fc-adj-head">
+                      <label className="fc-eyebrow" htmlFor={`fc-vid-adj-${f.id}`}>{f.label}</label>
+                      <output className="fc-adj-val" htmlFor={`fc-vid-adj-${f.id}`}>{f.signed && v > 0 ? '+' : ''}{v}{f.unit}</output>
+                    </div>
+                    <input
+                      id={`fc-vid-adj-${f.id}`} type="range" className="fc-scrub fc-adj-range"
+                      min={f.min} max={f.max} step={f.step} value={v} disabled={working}
+                      onChange={e => setAdj(f.id, Number(e.target.value))}
+                    />
+                  </div>
+                )
+              })}
+              <button type="button" className="fc-btn fc-btn--quiet" onClick={() => setAdjust(ADJUST_DEFAULTS)} disabled={working || !adjustChanged(adjust)}>
+                Reset adjustments
+              </button>
+              <p className="fc-note">
+                {adjustChanged(adjust) ? 'Colour, hue and blur show in the After preview (blur is approximate). ' : ''}
+                Fades show in the saved file only.
+                {clampAdjust(adjust).fadeOut > 0 && !(outSeconds > 0) ? ' Fade out needs this file’s length, which it does not give, so it is left out.' : ''}
+              </p>
+            </div>
+            ))}
+            {panel('add', (
+            <>
+            <div className="fc-insp-sec">
+              <button
+                type="button" id="fc-vid-censor" className="fc-btn fc-toggle" aria-pressed={censor.on}
+                disabled={working || !srcSize || isImage} onClick={toggleCensor}
+              >
+                Censor a region
+              </button>
+              {censor.on && (
+                <>
+                  <Segmented id="fc-vid-censor-mode" label="Style" options={CENSOR_MODES} value={censor.mode} onChange={id => setCensor(c => ({ ...c, mode: id }))} disabled={working} />
+                  <label className="fc-eyebrow" htmlFor="fc-vid-censor-strength">Strength</label>
+                  <input
+                    id="fc-vid-censor-strength" type="range" className="fc-scrub fc-adj-range"
+                    min={CENSOR_STRENGTH.min} max={CENSOR_STRENGTH.max} step={1} value={censor.strength} disabled={working}
+                    onChange={e => setCensor(c => ({ ...c, strength: Number(e.target.value) }))}
+                  />
+                </>
+              )}
+              <p className="fc-note">
+                {isImage ? 'Censor works on video files, not on an animated image.'
+                  : censor.on ? 'Drag the box on the preview, or move it with the arrow keys. It shows in the saved file, not the preview.'
+                    : 'Pixelate or blur one rectangle of every frame, such as a face or a plate.'}
+              </p>
+            </div>
+            <div className="fc-insp-sec">
+              <button
+                type="button" id="fc-vid-key" className="fc-btn fc-toggle" aria-pressed={colourKey.on}
+                disabled={working || isAudio} onClick={() => setColourKey(k => ({ ...k, on: !k.on }))}
+              >
+                Remove a colour
+              </button>
+              {colourKey.on && (
+                <>
+                  <div className="fc-row">
+                    <ColorPickerPop
+                      value={colourKey.colour} onChange={c => setColourKey(k => ({ ...k, colour: c }))} disabled={working}
+                      ariaLabel="Colour to remove" triggerClassName="fc-bg-pick"
+                    />
+                    <p className="fc-note">The colour made clear, such as a green screen</p>
+                  </div>
+                  <div className="fc-adj-head">
+                    <label className="fc-eyebrow" htmlFor="fc-vid-key-tol">Tolerance</label>
+                    <output className="fc-adj-val" htmlFor="fc-vid-key-tol">{colourKey.tolerance}%</output>
+                  </div>
+                  <input
+                    id="fc-vid-key-tol" type="range" className="fc-scrub fc-adj-range"
+                    min={KEY_TOLERANCE.min} max={KEY_TOLERANCE.max} step={1} value={colourKey.tolerance} disabled={working}
+                    onChange={e => setColourKey(k => ({ ...k, tolerance: Number(e.target.value) }))}
+                  />
+                </>
+              )}
+              <p className="fc-note">
+                {colourKey.on
+                  ? (outside.transparent ? 'The colour becomes clear in the saved file.' : `${fmt.label} has no transparency, so the colour is replaced by the Outside colour (set it in Crop).`)
+                  : 'Make one colour see-through, or replace it with the Outside colour where the format cannot be clear.'}
+              </p>
+            </div>
+            </>
+            ))}
             {panel('time', (
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-speed" label="Speed" options={speedOptions} value={speed} onChange={setSpeed} disabled={working} className="fc-seg--speed" />
               <p className="fc-note">{isImage ? 'Speed shows in the result.' : 'The preview plays at this speed.'}</p>
+              {!isAudio && (
               <Segmented
                 id="fc-vid-direction" label="Direction" options={DIRECTIONS} value={dir} onChange={setDirection} disabled={working}
                 isOptionDisabled={o => o.id !== 'forward' && !reverseOk}
               />
-              {reverseWhy === 'long' ? (
+              )}
+              {isAudio ? null : reverseWhy === 'long' ? (
                 <p className="fc-note">{REVERSE_OFF_NOTE}</p>
               ) : reverseWhy === 'unknown' ? (
                 <p className="fc-note">{REVERSE_UNKNOWN_NOTE}</p>
               ) : dir !== 'forward' ? (
-                <p className="fc-note">Shows in the result, not the preview.</p>
+                <p className="fc-note">Shows in the result, not the preview. The sound is removed.</p>
               ) : null}
             </div>
             ))}
@@ -1658,7 +2135,7 @@ function VideoConvert({ toast }) {
           {railLayout === 'bar' && rail}
           <div className="fc-actionbar fc-actions">
             <p className="fc-note fc-consequence" aria-live="polite">{consequence}</p>
-            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy))}>
+            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy)) || (isAudio && hasSound === false)}>
               {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : actionLabel}
             </button>
             <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />

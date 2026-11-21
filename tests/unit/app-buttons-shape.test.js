@@ -117,7 +117,10 @@ const KEEP = {
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
     'plb-imgmoodbtn',
     // the preview dialog's phone dock: select-style triggers (the current scene, Colours) that open a sheet, 12px as the board
-    'pvd-dock-btn'],
+    'pvd-dock-btn',
+    // the colour picker's Copy: it sits in the tools row with the value field, the notation select and
+    // the eyedropper, and takes their field corner so the row reads as one instrument
+    'cpk-copy'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
   // a segment inside a tray of segments: the tray carries the outer shape, each segment its own inner radius

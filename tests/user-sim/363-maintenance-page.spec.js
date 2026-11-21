@@ -1,7 +1,7 @@
 // THE MAINTENANCE PAGE: what a visitor sees while UIL4B is switched to
 // maintenance, and the one thing they can do about it.
 //
-// The page replaces every route inside the full shell (nav and footer stay),
+// The page replaces every route and stands alone (the logo, no nav or footer),
 // says nothing about time or about anyone's work, keeps itself out of search
 // results, and offers "Check again": a GET of the site's own root whose entry
 // script is compared with this page's. A different entry script is a new deploy:
@@ -80,7 +80,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
   test.describe(`the maintenance page at ${label}`, () => {
     test.use({ viewport: size })
 
-    test('lands on the heading, reads plainly, keeps the nav and footer, and sets its own title', async ({ page }) => {
+    test('lands on the heading, reads plainly, stands alone with the logo, and sets its own title', async ({ page }) => {
       watch(page, 'a visitor arriving while UIL4B is in maintenance')
       await setUp(page)
       await go(page, '/plans')
@@ -97,9 +97,13 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await expect(page.locator('.ed-status'), 'the status line is empty until a check has run').toHaveText('')
       await expect(page.locator('.ed-status'), 'the live region is in the page before it has anything to say').toHaveAttribute('role', 'status')
 
-      // Not a replacement for the whole page: the shell is still there.
+      // The page stands alone: the logo, one main, no nav or footer whose links
+      // would lead nowhere.
       await expect(page.getByRole('main')).toHaveCount(1)
-      await expect(page.getByRole('contentinfo')).toBeVisible()
+      await expect(page.getByRole('img', { name: 'UI L4B' }), 'the logo is still there').toBeVisible()
+      await expect(page.getByRole('contentinfo')).toHaveCount(0)
+      await expect(page.getByRole('navigation')).toHaveCount(0)
+      await expect(page.locator('.pnav, .app-footer')).toHaveCount(0)
 
       // Nothing on the page promises a time or speaks for anyone's work.
       const text = await page.getByRole('main').innerText()
