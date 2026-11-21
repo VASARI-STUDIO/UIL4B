@@ -1543,3 +1543,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 
 /* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */
 [data-theme="dark"] :is(.lib-surface,.fbd-overlay) .lbry-search{background:var(--bg-3)}
+
+/* D33: the category tray slides its indicator; reduced motion stops it (both forms of the house guard). */
+html[data-reduced-motion="true"] .lbry-filter-ind,html[data-reduced-motion="true"] .lbry-filters .lbry-filter{transition:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .lbry-filter-ind,html:not([data-reduced-motion="false"]) .lbry-filters .lbry-filter{transition:none}}

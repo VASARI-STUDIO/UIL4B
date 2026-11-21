@@ -1,7 +1,7 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
 import { flushSync } from 'react-dom'
-import { Link, useNavigate, useNavigationType } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -30,7 +30,7 @@ import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
-import { COLORED_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
+import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
@@ -131,15 +131,47 @@ const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 // "Coloured" shows colour icons from ALL colour packs, not just one — same for
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
-  coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
-  // Logo.dev stays out of this chip: it is not an Iconify set (no prefix to list or search, and the group browse path only speaks Iconify), its logos are hotlinked per query at our cost, and it carries a required credit. It is reached from the pack menu.
-  brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
+  // Coloured is the union of its three types (Brands, Flags, Flat), so the category with no type chosen lists all of them.
+  coloured: { label: 'Coloured', packs: ['logos', 'devicon', 'skill-icons', 'token-branded', 'circle-flags', 'flag', 'flagpack', 'cif', 'flat-color-icons', 'vscode-icons'] },
+  // Logo.dev stays out of Brands: it is not an Iconify set (no prefix to list or search, and the group browse path only speaks Iconify), its logos are hotlinked per query at our cost, and it carries a required credit. It is reached from the pack menu.
+  // Simple Icons is monochrome, so it is not a coloured logo set: it stays in All and the pack menu.
+  brands: { label: 'Brands', packs: ['logos', 'devicon', 'skill-icons', 'token-branded'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
+  flat: { label: 'Flat', packs: ['flat-color-icons', 'vscode-icons'] },
+  // The animated sets (all Pro) and the stroke packs whose line style the customiser edits. Each is a category of its
+  // own; the group key is how the browse paths scope to it.
+  animated: { label: 'Animated', packs: [...ANIMATED_PACKS] },
+  editable: { label: 'Editable', packs: [...STROKE_PACKS] },
 }
-const GROUP_ORDER = ['coloured', 'brands', 'flags']
-// The chip row's reset: pressed when no group is chosen, and pressing it clears the group (see handleGroupToggle). 'all' is not a key of ICON_GROUPS, so it can never be mistaken for a group.
-const ALL_ICONS_ID = 'all'
-const ALL_ICONS_OPTION = { id: ALL_ICONS_ID, label: 'All icons' }
+// The category control's labels, and the packs each narrower category can hold (All holds every pack).
+const CATEGORY_LABELS = { all: 'All', coloured: 'Coloured', animated: 'Animated', editable: 'Editable' }
+const categoryPacks = (category) => (category === 'all' ? null : ICON_GROUPS[category]?.packs || null)
+// What the style bar offers outside All. Coloured's segments are group keys; the other two are packs.
+const STYLE_OPTIONS = {
+  coloured: [{ id: 'brands', label: 'Brands' }, { id: 'flags', label: 'Flags' }, { id: 'flat', label: 'Flat' }],
+  animated: [{ id: 'line-md', label: 'Line MD' }, { id: 'svg-spinners', label: 'Spinners' }, { id: 'meteocons', label: 'Meteocons' }],
+  editable: [{ id: 'lucide', label: 'Lucide' }, { id: 'tabler', label: 'Tabler' }, { id: 'iconoir', label: 'Iconoir' }, { id: 'heroicons', label: 'Heroicons' }],
+}
+const STYLE_BAR_LABELS = { coloured: 'Coloured icon type', animated: 'Animated icon set', editable: 'Editable icon pack' }
+// A search that matches nothing inside a category: names the category and the next step.
+const CATEGORY_EMPTY = {
+  coloured: (q) => `No coloured icons match “${q}”. Try All, or search the pack menu's Real brand logos (Logo.dev) for brand names.`,
+  animated: (q) => `No animated icons match “${q}”. Clear the search to browse all three sets, or try All.`,
+  editable: (q) => `No editable icons match “${q}”. Editable icons are the line icons in Lucide, Tabler, Iconoir and Heroicons. Try All to search every pack.`,
+}
+// ?category= and ?style= (read once, on mount). An unknown value, or a style that does not belong to the category,
+// falls back to the default without a word. In All the style is a weight; elsewhere it is the segment's id.
+function iconStateFromParams(params) {
+  const asked = params.get('category')
+  const category = asked === 'coloured' || asked === 'animated' || asked === 'editable' ? asked : 'all'
+  const style = params.get('style') || ''
+  if (category === 'all') {
+    return { category, weight: style === 'bold' || style === 'fill' || style === 'duo' ? style : 'regular', pack: '', group: null }
+  }
+  const known = STYLE_OPTIONS[category].some((o) => o.id === style)
+  if (category === 'coloured') return { category, weight: 'regular', pack: '', group: known ? style : 'coloured' }
+  return { category, weight: 'regular', pack: known ? style : '', group: category }
+}
 // Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
 // ride in the default "All packs" listing and stay in the pack menu.
 const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
@@ -149,7 +181,7 @@ const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
 const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
-const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, 'simple-icons', ...ICON_GROUPS.coloured.packs, ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -1110,7 +1142,7 @@ const findIconCell = (icon) => (icon
   ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
   : null)
 
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, hideEdit = false, onPick, onWarm, onGlyphError }) {
   const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
   // with it (see `.ic-pack`), so the accessible name carries it for everyone who
@@ -1135,7 +1167,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       onFocus={() => onWarm(icon, true)}
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
-      {!ghost && editable && <EditMark key="e" />}
+      {!ghost && editable && !hideEdit && <EditMark key="e" />}
       <span key="n" className="ic-name">{icon.name}</span>
       {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
@@ -3381,8 +3413,16 @@ function packsOnScreen(...lists) {
 // its tooltip) instead of meeting a gap in the tab order. When no weight can
 // act, the track drops its ground and states the single-style reason as plain
 // text in the first segment's place, so it does not read as a control.
-function IconWeightSeg({ value, stateOf, onChange }) {
-  const states = ICON_WEIGHTS.map((w) => ({ ...w, ...stateOf(w.id) }))
+//
+// It is also the style bar for the other three categories (Coloured types, Animated sets, Editable packs): the same
+// track and classes with that category's segments, none pressed until one is chosen, and a pressed one clears when
+// pressed again (the handler decides; every segment there is always ok). The track is sized to the widest of all its
+// variants (hidden `ig-weight-measure` rows stacked in one grid cell), so changing category never moves the control
+// beside it.
+const STYLE_RESERVE = [ICON_WEIGHTS, ...Object.values(STYLE_OPTIONS)]
+const styleOk = () => ({ ok: true })
+function IconStyleSeg({ label, options, value, onChange, stateOf }) {
+  const states = options.map((w) => ({ ...w, ...stateOf(w.id) }))
   const singleStyle = states.every((w) => !w.ok)
   const reason = states[0].why
   // The chip whose reason is on show: set by a tap or by focus on a chip the scope
@@ -3402,7 +3442,7 @@ function IconWeightSeg({ value, stateOf, onChange }) {
     <div
       className={singleStyle || hinted ? 'ig-weight ig-weight--single' : 'ig-weight'}
       role="group"
-      aria-label="Icon weight"
+      aria-label={label}
       onKeyDown={(e) => { if (e.key === 'Escape' && hinted) hideHint() }}
     >
       {/* Always mounted, so a screen reader hears the reason when a group change
@@ -3410,32 +3450,35 @@ function IconWeightSeg({ value, stateOf, onChange }) {
           The line is laid over the whole track, so while it carries a hint the
           chips give up their labels and ground to it. */}
       <span className="ig-weight-status" role="status" title={singleStyle ? reason : undefined}>{status}</span>
-      {singleStyle ? (
-        // Noninteractive labels preserve the four-button track's intrinsic width.
-        <span className="ig-weight-measure" aria-hidden="true">
-          {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
+      {/* Noninteractive labels of every variant hold the track at its widest width. */}
+      {STYLE_RESERVE.map((set, i) => (
+        <span key={i} className="ig-weight-measure" aria-hidden="true">
+          {set.map((w) => <span key={w.id}>{w.label}</span>)}
         </span>
-      ) : states.map((w) => (
-        <button
-          key={w.id}
-          type="button"
-          className="ig-weight-btn"
-          aria-pressed={w.ok && value === w.id}
-          aria-disabled={!w.ok || undefined}
-          aria-label={w.ok ? w.label : `${w.label} — ${w.why}`}
-          title={w.why || undefined}
-          style={hinted ? { color: 'transparent', background: 'transparent', boxShadow: 'none' } : undefined}
-          onFocus={() => { if (w.ok) hideHint(); else showHint(w.id, { timed: false }) }}
-          onBlur={hideHint}
-          onClick={() => {
-            if (!w.ok) { showHint(w.id, { timed: true }); return }
-            if (hinted) { hideHint(); return }
-            onChange(w.id)
-          }}
-        >
-          {w.label}
-        </button>
       ))}
+      <span className="ig-weight-row">
+        {singleStyle ? null : states.map((w) => (
+          <button
+            key={w.id}
+            type="button"
+            className="ig-weight-btn"
+            aria-pressed={w.ok && value === w.id}
+            aria-disabled={!w.ok || undefined}
+            aria-label={w.ok ? w.label : `${w.label} — ${w.why}`}
+            title={w.why || undefined}
+            style={hinted ? { color: 'transparent', background: 'transparent', boxShadow: 'none' } : undefined}
+            onFocus={() => { if (w.ok) hideHint(); else showHint(w.id, { timed: false }) }}
+            onBlur={hideHint}
+            onClick={() => {
+              if (!w.ok) { showHint(w.id, { timed: true }); return }
+              if (hinted) { hideHint(); return }
+              onChange(w.id)
+            }}
+          >
+            {w.label}
+          </button>
+        ))}
+      </span>
     </div>
   )
 }
@@ -3651,12 +3694,23 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      it never touches `loadError` or `cdnOk`, so the other packs and the next
      search carry on as normal. Cleared wherever a new listing starts. */
   const [animatedNotice, setAnimatedNotice] = useState(null)
-  const [pack, setPack] = useState('')
+  /* The category and the style choice inside it come from the URL once, on mount (?category=, ?style=; see
+     iconStateFromParams). They are read here, ahead of the state below, so the first browse already has them. */
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const [urlStart] = useState(() => iconStateFromParams(searchParams))
+  const [pack, setPack] = useState(urlStart.pack)
   // The weight is read through a ref by the browse functions, so choosing one
   // can re-run the current scope in the same tick (see handleWeight).
-  const [weight, setWeight] = useState('regular')
-  const weightRef = useRef('regular')
-  const [group, setGroup] = useState(null)   // active cross-pack collection, or null
+  const [weight, setWeight] = useState(urlStart.weight)
+  const weightRef = useRef(urlStart.weight)
+  const [group, setGroup] = useState(urlStart.group)   // active cross-pack collection, or null
+  // The category control: all | coloured | animated | editable. 'all' whenever `group` is null; outside All the style
+  // choice is derived from `group` (Coloured types) or `pack` (Animated sets, Editable packs), never stored twice.
+  const [category, setCategory] = useState(urlStart.category)
+  const facet = category === 'coloured'
+    ? (STYLE_OPTIONS.coloured.some((o) => o.id === group) ? group : '')
+    : category === 'all' ? '' : (categoryPacks(category).includes(pack) ? pack : '')
   const [source, setSource] = useState('all')  // all | group | pack | custom | search
   /* The pack or group the viewer chose and may not have: `{ kind, label, need }`
      where `need` is 'free' (an account opens it) or 'paid' (Pro does). Set by
@@ -3804,7 +3858,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const browseAll = useCallback(function browseAll(manualRetry = false) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
-    setSource('all'); setGroup(null); setPack(''); setGated(null)
+    setSource('all'); setGroup(null); setCategory('all'); setPack(''); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setVisible(PAGE_SIZE)
     // ALLOWED, NOT ALL. This is the line that decides how many packs a visit
@@ -3938,7 +3992,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const browseLogos = useCallback(function browseLogos() {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
-    setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
+    setSource('pack'); setGroup(null); setCategory('all'); setPack('logodev'); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
@@ -3950,7 +4004,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // (deduped), meaning even brands not in the curated list still resolve.
   const searchLogos = useCallback((q) => {
     reqId.current++
-    setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
+    setSource('pack'); setGroup(null); setCategory('all'); setPack('logodev'); setGated(null)
     setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     const term = (q || '').trim()
     if (term.length < 2) { browseLogos(); return }
@@ -4036,13 +4090,17 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     retryRef.current = () => browseGroup(groupKey, true)
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
     setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
+    // The first failure is kept: when the animated sets all refuse, the cause (session or plan) decides the notice.
+    let firstError = null
     Promise.all(packs.map(p =>
       getCollectionNames(p, retryOptions(manualRetry))
         .then(({ names }) => ({ names: keepWeight(p, names, 'regular', null, tier).sort().slice(0, PER_PACK_CAP), pack: p, ok: !getCollectionNames.failed(p) }))
-        .catch(() => ({ names: [], pack: p, ok: false }))
+        .catch((error) => { firstError = firstError || error; return { names: [], pack: p, ok: false } })
     ))
       .then(results => {
         if (rid !== reqId.current) return
+        // The animated sets failing for the session or the plan is the animated notice, not the icon service being down.
+        if (groupKey === 'animated' && !results.some(r => r.ok || r.names.length) && failAnimatedScope(firstError)) return
         // The built-in set replaces the grid only when no pack gave anything to show.
         if (!results.some(r => r.ok || r.names.length)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
@@ -4062,7 +4120,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll, tier])
+  }, [renderLocal, canSee, capped, needFor, refuseScope, failAnimatedScope, browseAll, tier])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -4075,7 +4133,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const browseCustom = useCallback(function browseCustom() {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
-    setSource('custom'); setGroup(null); setPack(''); setGated(null)
+    setSource('custom'); setGroup(null); setCategory('all'); setPack(''); setGated(null)
     setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     // Cleaned on the way in: whatever is in storage is not trusted. The symbols go in
     // before the list is set, so the first render of a cell already finds its `#id`.
@@ -4155,23 +4213,36 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       else browseAll()
       return
     }
+    // A search inside a category with nothing in it is an empty answer, not a reason to fall back to the built-in
+    // set: that set is monochrome and would put icons in Coloured and Animated that the category does not hold.
+    const noMatch = () => {
+      if (!groupKey) { renderLocal(q, packFilter); return }
+      setIcons([]); setVisible(PAGE_SIZE); setLoading(false)
+    }
     // An animated set is searched in the names the server listed for it, never by
     // asking the Iconify /search endpoint, which would put its prefix in a browser request.
-    if (isAnimatedPack(packFilter)) {
+    // The Animated category with no set chosen searches all three of its sets the same way.
+    const animatedPacks = isAnimatedPack(packFilter)
+      ? [packFilter]
+      : (!packFilter && groupKey === 'animated' ? ICON_GROUPS.animated.packs.filter(canSee) : null)
+    if (animatedPacks) {
       const rid = ++reqId.current
       retryRef.current = () => doSearch(q, scope)
       setSource('search')
       setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
       // The names are hyphenated, so "arrow up" has to match arrow-up.
       const needle = q.toLowerCase().replace(/\s+/g, '-')
-      getCollectionNames(packFilter)
-        .then(({ names }) => {
+      // Inside a category the artwork is Regular, as in every group scope.
+      const searchWeight = groupKey ? 'regular' : weightRef.current
+      Promise.all(animatedPacks.map(p => getCollectionNames(p).then(({ names }) => ({ pack: p, names }))))
+        .then((results) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
-          const items = capList(names
-            .filter(n => n.includes(needle) && matchesWeight(packFilter, n, weightRef.current))
-            .map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
-          if (!items.length) { renderLocal(q, packFilter); return }
+          const lists = results.map(({ pack: p, names }) => names
+            .filter(n => n.includes(needle) && matchesWeight(p, n, searchWeight))
+            .map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true })))
+          const items = capList(lists.length > 1 ? concatenatePackLists(lists, PER_PACK_CAP) : lists[0])
+          if (!items.length) { noMatch(); return }
           setIcons(items)
           setVisible(PAGE_SIZE)
           setLoading(false)
@@ -4217,7 +4288,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         cdnOk.current = true
         probeLockedMatches(q, packFilter, groupKey, d.icons, rid)
         if (!d.icons || !d.icons.length) {
-          renderLocal(q, packFilter)
+          noMatch()
           return
         }
         // THE SECOND CHECK, on the way back. `prefixes` above is a request the
@@ -4239,7 +4310,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         const items = groupKey
           ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
           : capList(matches)
-        if (!items.length) { renderLocal(q, packFilter); return }
+        if (!items.length) { noMatch(); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
         setLoading(false)
@@ -4303,8 +4374,11 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // cancelled by this effect's StrictMode cleanup before it can fire, and the
     // didInit guard then blocks the remount from rescheduling, so the initial
     // browse never runs (grid stuck on skeletons). browseAll dedupes via reqId.
-    browseAll()
-  }, [browseAll, authLoading, tier])
+    // A category or style in the URL opens that scope (a signed-out viewer meets its wall, as a locked pack does).
+    if (urlStart.pack) browsePack(urlStart.pack, urlStart.group)
+    else if (urlStart.group) browseGroup(urlStart.group)
+    else browseAll()
+  }, [browseAll, browsePack, browseGroup, urlStart, authLoading, tier])
 
   /* ── WHEN ENTITLEMENT CHANGES UNDER A LIVE PAGE ──────────────────────────
      Signing in, signing out and the billing snapshot landing all move the tier
@@ -4458,18 +4532,23 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const handlePackChange = (p) => {
     clearTimeout(timer.current)
     const nextPack = p === 'all' ? '' : p
-    setPack(nextPack)
+    // A pack the category cannot hold (Logo.dev is in none) returns the control to All, so the grid never answers
+    // a different question from the one on screen.
+    const allowed = categoryPacks(category)
+    const leaves = !!(nextPack && allowed && !allowed.includes(nextPack))
+    const nextCategory = leaves ? 'all' : category
+    let nextGroup = leaves ? null : group
+    // A Coloured type that does not hold the pack gives way to Coloured as a whole.
+    if (nextCategory === 'coloured' && nextPack && !ICON_GROUPS[nextGroup]?.packs.includes(nextPack)) nextGroup = 'coloured'
+    setCategory(nextCategory); setGroup(nextGroup); setPack(nextPack)
     // A pack that does not draw the chosen weight puts it back to Regular, so
     // the grid shows the pack rather than an empty answer to a question the
-    // visitor asked of a different pack.
-    if (weightRef.current !== 'regular' && nextPack && !weightPacks(weightRef.current).includes(nextPack)) {
+    // visitor asked of a different pack. Outside All the weight is only remembered, so it is left alone.
+    if (nextCategory === 'all' && weightRef.current !== 'regular' && nextPack && !weightPacks(weightRef.current).includes(nextPack)) {
       weightRef.current = 'regular'
       setWeight('regular')
     }
-    if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group })
-    else if (nextPack) browsePack(nextPack, group, 'chip')
-    else if (group) browseGroup(group, 'chip')
-    else browseAll('chip')
+    runScope(nextPack, nextGroup)
   }
 
   // Which weights the current scope can honour, and why not when it cannot.
@@ -4508,27 +4587,45 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     else browseAll()
   }
 
-  // Toggle a cross-pack collection chip. Keeps the active search text AND the
-  // selected pack — the chip narrows style within whatever scope is set.
-  // "All icons" means what it says: it clears the group and the pack, keeping the search.
-  const handleGroupToggle = (key) => {
-    clearTimeout(timer.current)
-    const q = query.trim()
-    const allIcons = key === ALL_ICONS_ID
-    // "All icons" with no group or pack chosen is already the view on screen: no refetch, no flicker.
-    if (allIcons && !group && (!pack || pack === 'custom')) return
-    const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
-    setGroup(nextGroup)
-    // Logo.dev is not an Iconify set and belongs to no collection, so with it
-    // picked a chip would light and change nothing. Choosing a collection leaves
-    // the pack for "All packs", whose scope the chip then narrows.
-    const scopePack = allIcons ? '' : nextGroup && pack === 'logodev' ? '' : pack
-    if (scopePack !== pack) setPack(scopePack)
-    // Collections browse original artwork without replacing the stored weight.
-    if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
-    else if (scopePack) browsePack(scopePack, nextGroup, 'chip')
+  // Run the scope the filter state now describes: a search when there is a query, else the pack, the group or All.
+  // Collections browse original artwork without replacing the stored weight.
+  const runScope = (nextPack, nextGroup) => {
+    if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group: nextGroup })
+    else if (nextPack) browsePack(nextPack, nextGroup, 'chip')
     else if (nextGroup) browseGroup(nextGroup, 'chip')
     else browseAll('chip')
+  }
+
+  // The category control (All, Coloured, Animated, Editable). The search text is kept; the weight chosen in All is
+  // remembered (weightRef is left alone) and comes back with All; the style choice inside the category starts empty.
+  // The current pack stays when the new category can hold it, otherwise the scope goes to "All packs".
+  const handleCategory = (next) => {
+    if (next === category) return
+    clearTimeout(timer.current)
+    const allowed = categoryPacks(next)
+    let nextPack = pack && pack !== 'custom' && (!allowed || allowed.includes(pack)) ? pack : ''
+    // Back in All, a pack that does not draw the remembered weight would answer a different question than the bar asks.
+    if (next === 'all' && nextPack && weightRef.current !== 'regular' && !weightPacks(weightRef.current).includes(nextPack)) nextPack = ''
+    const nextGroup = next === 'all' ? null : next
+    setCategory(next); setGroup(nextGroup); setPack(nextPack)
+    runScope(nextPack, nextGroup)
+  }
+
+  // A segment of the style bar outside All: a Coloured type (a group) or an Animated or Editable set (a pack).
+  // Pressing the pressed one clears it, which is the category's own scope again.
+  const handleFacet = (id) => {
+    if (category === 'all') return
+    clearTimeout(timer.current)
+    if (category === 'coloured') {
+      const nextGroup = facet === id ? 'coloured' : id
+      const nextPack = pack && ICON_GROUPS[nextGroup].packs.includes(pack) ? pack : ''
+      setGroup(nextGroup); setPack(nextPack)
+      runScope(nextPack, nextGroup)
+      return
+    }
+    const nextPack = pack === id ? '' : id
+    setPack(nextPack)
+    runScope(nextPack, category)
   }
 
   const handleIconClick = (icon) => {
@@ -4661,12 +4758,15 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      rule is the pack menu's: a group is marked only when EVERY pack in it is
      out of reach, and the word is the cheapest tier that opens one of them —
      the same answer `needFor` gives the wall. */
-  const groupOptions = useMemo(() => [ALL_ICONS_OPTION, ...GROUP_ORDER.map((key) => {
-    const { label, packs } = ICON_GROUPS[key]
-    const locked = packs.every((p) => !canSeePack(p, tier))
-    if (!locked) return { id: key, label }
+  /* D33: the tray is now the four categories. A category is marked only when
+     EVERY pack in it is out of reach (Animated is Pro-only, so a free or
+     signed-out viewer sees "Pro" there); All is never marked. */
+  const categoryOptions = useMemo(() => Object.keys(CATEGORY_LABELS).map((key) => {
+    const label = CATEGORY_LABELS[key]
+    const packs = categoryPacks(key)
+    if (!packs || packs.some((p) => canSeePack(p, tier))) return { id: key, label }
     return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
-  })], [tier])
+  }), [tier])
 
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
@@ -5078,6 +5178,17 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const lastCountRef = useRef(undefined)
   if (!loading) lastCountRef.current = shownCount
   const toolbarCount = loading ? lastCountRef.current : shownCount
+  // ?category= and ?style= follow the controls on the Icons tab only (replace, so Back skips them).
+  // q and pack are not stored. Moving to Emoji or Groups navigates without a query, which clears them.
+  const styleParam = category === 'all' ? (weight !== 'regular' ? weight : '') : facet
+  const onIconsRoute = location.pathname.toLowerCase().replace(/\/+$/, '') === '/create/icons'
+  useEffect(() => {
+    if (!onIconsRoute) return
+    const next = new URLSearchParams(searchParams)
+    if (category === 'all') next.delete('category'); else next.set('category', category)
+    if (styleParam) next.set('style', styleParam); else next.delete('style')
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true })
+  }, [category, styleParam, onIconsRoute, searchParams, setSearchParams])
   const bandRef = useRef(null)
   const bandSentinelRef = useRef(null)
   useEffect(() => {
@@ -5330,6 +5441,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       packInName={groupHeads}
       picked={isPicked(icon)}
       ghost={ghost}
+      hideEdit={category === 'editable'}
       onPick={onPick}
       onWarm={onWarm}
       onGlyphError={noteGlyphFailure}
@@ -5386,8 +5498,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         <div className="ig-band" ref={bandRef}>
         <LibraryToolbar
           className="ig-toolbar"
-          quick={0}
-          activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' && weightState(weight).ok ? 1 : 0)}
+          quick={[1, 0]}
+          activeFilters={(selectValue !== 'all' ? 1 : 0) + (category !== 'all' ? 1 : 0) + (category === 'all' ? (weight !== 'regular' && weightState(weight).ok ? 1 : 0) : (facet ? 1 : 0))}
           search={{
             value: query,
             onChange: handleQueryChange,
@@ -5423,17 +5535,21 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           {/* FIRST, so a phone keeps it on screen under the search (the
               toolbar's quick row) exactly where the design's phone mock draws it; the
               collection chips go to the Filters sheet. */}
-          <IconWeightSeg value={weight} stateOf={weightState} onChange={handleWeight} />
+          {category === 'all' ? (
+            <IconStyleSeg label="Icon weight" options={ICON_WEIGHTS} value={weight} stateOf={weightState} onChange={handleWeight} />
+          ) : (
+            <IconStyleSeg label={STYLE_BAR_LABELS[category]} options={STYLE_OPTIONS[category]} value={facet} stateOf={styleOk} onChange={handleFacet} />
+          )}
           <LibraryFilterGroup
-            label="Filter by icon group"
-            triggerLabel="Group"
-            value={group || ALL_ICONS_ID}
-            onChange={handleGroupToggle}
-            options={groupOptions}
+            label="Icon category"
+            triggerLabel="Category"
+            value={category}
+            onChange={handleCategory}
+            options={categoryOptions}
           />
         </LibraryToolbar>
         {/* The result count is announced, not drawn: the row has no room for it. */}
-        <p id="ig-result-count" className="sr-only" role="status">{toolbarCount || ''}</p>
+        <p id="ig-result-count" className="sr-only" role="status">{toolbarCount ? (category === 'all' ? toolbarCount : `${CATEGORY_LABELS[category]}, ${toolbarCount}`) : ''}</p>
         </div>
 
         {visibleRecents.length > 0 && !isMyIcons && (
@@ -5578,7 +5694,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 from the one above: the icon service is fine, so nothing here
                 claims otherwise, shows the built-in set, or affects other packs.
                 Only while that pack is the one on screen. */}
-            {animatedNotice && isAnimatedPack(pack) && !gated && (
+            {animatedNotice && (isAnimatedPack(pack) || group === 'animated') && !gated && (
               <div className="ig-notice" role="status">
                 <span>{animatedNotice === 'forbidden'
                   ? 'Animated icons need an active Pro plan.'
@@ -5685,7 +5801,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                   </>
                 ) : (
                   <p>{query.trim()
-                    ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                    ? (CATEGORY_EMPTY[category]?.(query.trim()) || `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`)
                     : 'No icons to show — try another pack or search.'}</p>
                 )}
               </div>

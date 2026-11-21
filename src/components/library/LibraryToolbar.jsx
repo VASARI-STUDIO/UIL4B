@@ -103,9 +103,11 @@ function LibraryToolbar({
 }) {
   const phone = useMediaQuery(PHONE_QUERY)
   const groups = Children.toArray(children).filter(Boolean)
-  const quickIndex = phone && Number.isInteger(quick) && groups[quick] ? quick : -1
-  const quickGroup = quickIndex >= 0 ? groups[quickIndex] : null
-  const panelGroups = quickIndex >= 0 ? groups.filter((_, i) => i !== quickIndex) : groups
+  // `quick` is one child's index, or an array of indexes drawn in that order (the Icon library draws
+  // its category control and style bar both). The integer form is unchanged for every other toolbar.
+  const quickIndexes = phone ? (Array.isArray(quick) ? quick : [quick]).filter((i) => Number.isInteger(i) && groups[i]) : []
+  const quickGroup = quickIndexes.length ? quickIndexes.map((i) => groups[i]) : null
+  const panelGroups = quickIndexes.length ? groups.filter((_, i) => !quickIndexes.includes(i)) : groups
 
   const minStage = phone ? (pinned && action ? 3 : 2) : 0
   const [stage, setStage] = useState(minStage)
