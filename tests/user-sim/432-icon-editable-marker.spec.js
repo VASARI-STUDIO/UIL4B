@@ -41,6 +41,9 @@ async function openPack(page, width, pack) {
   await go(page, '/create/icons')
   await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20_000 })
   await choosePack(page, pack)
+  // The mixed-pack grid on screen before the pack lands names each cell's pack (`has-pack`); the chosen
+  // pack's own grid names none, so wait for that, or a cell from the old grid is read and then replaced.
+  await expect(page.locator(`${REAL_CELL}.has-pack`)).toHaveCount(0, { timeout: 20_000 })
   await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20_000 })
   await expect(page.locator(`${REAL_CELL} :is(img, svg.ig-sym)`).first()).toBeVisible({ timeout: 20_000 })
 }
@@ -79,7 +82,7 @@ for (const width of [390, 1440]) {
         return { cell: box(el), mark: box(el.querySelector('.ic-edit')), glyph: box(el.querySelector('img, svg.ig-sym')), name: box(el.querySelector('.ic-name')) }
       })
       const m = await read()
-      expect(m.mark.w, 'the mark is 12px wide').toBeCloseTo(12, 0)
+      expect(m.mark.w, `the mark is 12px wide (${m.mark.w})`).toBeCloseTo(12, 0)
       expect(m.mark.h, 'the mark is 12px tall').toBeCloseTo(12, 0)
       expect(m.mark.l, 'inside the cell on the left').toBeGreaterThanOrEqual(m.cell.l)
       expect(m.mark.t, 'inside the cell at the top').toBeGreaterThanOrEqual(m.cell.t)
@@ -96,6 +99,28 @@ for (const width of [390, 1440]) {
       expect(bare.glyph, 'the glyph does not move').toEqual(m.glyph)
       expect(bare.name, 'the name does not move').toEqual(m.name)
       expect(bare.cell, 'the cell does not resize').toEqual(m.cell)
+    })
+
+    // MUTATION: drop `hideEdit={category === 'editable'}` from the IconCell props in IconLibrary.jsx -> the pen is back on every Editable cell.
+    test('the mark shows in All and is absent in the Editable category, where every cell is editable and the name still says so', async ({ page }) => {
+      watch(page, `someone moving from All to Editable icons at ${width}px`)
+      await openPack(page, width, 'lucide')
+      const cells = page.locator(REAL_CELL)
+      await expect(cells.locator('.ic-edit').first(), 'POSITIVE CONTROL: All draws the mark on a Lucide cell').toBeAttached()
+      // On a phone the category control is in the quick row, wider it is on the row or behind the Category trigger.
+      const group = page.getByRole('group', { name: 'Icon category' }).first()
+      if (!await group.isVisible()) {
+        const filters = page.getByRole('button', { name: /^Filters\b/ })
+        if (await filters.isVisible() && await filters.getAttribute('aria-expanded') !== 'true') await filters.click()
+      }
+      if (!await group.isVisible()) await page.locator('.lbry-filtertrig', { hasText: 'Category' }).first().click()
+      await group.getByRole('button', { name: /^Editable/ }).click()
+      await expect(page.getByRole('group', { name: 'Editable icon pack' })).toBeVisible({ timeout: 20_000 })
+      await expect(cells.first()).toBeVisible({ timeout: 20_000 })
+      await expect(cells.locator('.ic-edit'), 'no mark on any Editable cell').toHaveCount(0)
+      await expect.poll(() => cells.evaluateAll((els, suffix) => els.length > 0 && els.every((el) => (el.getAttribute('aria-label') || '').endsWith(suffix)), SUFFIX), {
+        message: 'every Editable cell still says its line style is editable', timeout: 20_000,
+      }).toBe(true)
     })
   })
 }

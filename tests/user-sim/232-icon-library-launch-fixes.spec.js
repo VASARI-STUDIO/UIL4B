@@ -5,14 +5,14 @@
 //      answers from the built-in set without asking, but Try again is the visitor asking on purpose.
 //   3. A saved custom icon is cleaned with the allow-list sanitiser when it opens, so a saved
 //      <animate> or <foreignObject> never reaches the customiser's stage.
-//   4. The Filters badge counts a weight only when the current scope can draw it: Bold stored
-//      and Flags chosen reads 1 (Flags), not 2.
+//   4. The Filters badge counts a weight only in All, where the weight bar is shown: Bold stored
+//      and Coloured -> Flags chosen reads 2 (Coloured, Flags), never 3 (the Bold is not counted).
 //
 // MUTATIONS (each turns its test red):
 //   - put `emoji: { label: 'Emoji', packs: [...] }` back in ICON_GROUPS / GROUP_ORDER -> test 1.
 //   - drop `&& !manualRetry` from the cdnOk check in doSearch -> test 2 (no request goes out).
 //   - build localBase for a saved icon from the raw svg again -> test 3.
-//   - drop `&& weightState(weight).ok` from activeFilters -> test 4 (the badge reads 2).
+//   - count the weight outside All in activeFilters -> test 4 (the badge reads 3).
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify } from './iconify-stub.js'
@@ -20,19 +20,19 @@ import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify } from
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
 const REFUSED = 'visitor whose icon catalogue is refused'
 
-test('the group chips are All icons, Coloured, Brand logos and Flags, with no Emoji chip, and the emoji sets stay in the pack menu', async ({ page }) => {
-  watch(page, 'a designer looking for the icon group chips')
+test('the category options are All, Coloured, Animated and Editable, with no Emoji option, and the emoji sets stay in the pack menu', async ({ page }) => {
+  watch(page, 'a designer looking for the icon category options')
   await page.setViewportSize({ width: 1440, height: 900 })
   await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await expect(page.locator('.ig-toolbar')).toBeVisible({ timeout: 20_000 })
-  const trigger = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
+  const trigger = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Category' })
   if (await trigger.count()) await trigger.click()
-  const tray = page.getByRole('group', { name: 'Filter by icon group' }).first()
+  const tray = page.getByRole('group', { name: 'Icon category' }).first()
   await expect(tray).toBeVisible({ timeout: 20_000 })
   const names = await tray.locator('.lbry-filter').allTextContents()
-  expect(names.map((n) => n.replace(/\s+/g, ' ').trim()), 'PRESENCE: All icons first, then the three group chips').toEqual([
-    expect.stringMatching(/^All icons/), expect.stringMatching(/^Coloured/), expect.stringMatching(/^Brand logos/), expect.stringMatching(/^Flags/),
+  expect(names.map((n) => n.replace(/\s+/g, ' ').trim()), 'PRESENCE: All first, then Coloured, Animated and Editable').toEqual([
+    expect.stringMatching(/^All/), expect.stringMatching(/^Coloured/), expect.stringMatching(/^Animated/), expect.stringMatching(/^Editable/),
   ])
   await expect(tray.getByRole('button', { name: /^Emoji/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
@@ -110,7 +110,7 @@ test('a saved custom icon with <animate> and <foreignObject> opens in the custom
   expect(markup).not.toMatch(/foreignObject/i)
 })
 
-test('the Filters badge reads 1 with Bold stored and Flags chosen, because Flags cannot draw Bold', async ({ page }) => {
+test('the Filters badge reads 2 with Bold stored and Coloured, Flags chosen, because the weight counts only in All', async ({ page }) => {
   watch(page, 'someone who chose Bold and then Flags')
   await page.setViewportSize({ width: 390, height: 844 })
   await signIn(page, { plan: 'pro' })
@@ -121,10 +121,12 @@ test('the Filters badge reads 1 with Bold stored and Flags chosen, because Flags
   await page.locator('.lbry-toolbar-quick .ig-weight').getByRole('button', { name: /^Bold/ }).click()
   await expect(count, 'POSITIVE CONTROL: Bold alone counts').toHaveText('1')
 
-  await filters.click()
-  const sheet = page.getByRole('dialog', { name: 'Filters' })
-  await sheet.getByRole('button', { name: 'Flags', exact: true }).click()
-  await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+  // On a phone the category control and the style bar both sit in the quick row under the search; only
+  // the pack menu is in the Filters sheet.
+  const quick = page.locator('.lbry-toolbar-quick')
+  await quick.getByRole('group', { name: 'Icon category' }).getByRole('button', { name: /^Coloured/ }).click()
+  await expect(count, 'POSITIVE CONTROL: Coloured replaces the stored Bold in the count').toHaveText('1')
+  await quick.getByRole('group', { name: 'Coloured icon type' }).getByRole('button', { name: 'Flags', exact: true }).click()
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
-  await expect(count, 'Flags counts, the Bold it cannot draw does not').toHaveText('1')
+  await expect(count, 'Coloured and Flags count, the stored Bold does not').toHaveText('2')
 })

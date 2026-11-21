@@ -198,21 +198,24 @@ test.describe('the colour help line', () => {
 // the paint checks below look at slots whose glyph has loaded: that is the
 // resting state a reader sees.
 
-// On a phone the pack control lives in the toolbar's Filters sheet; wider, it is
-// on the row. Either way, close the sheet with Done, as a reader does, so the grid
-// is what is on screen.
+// On a phone the pack control lives in the toolbar's Filters sheet (a dialog); on a narrow
+// desktop it can be in the Filters popover (a group named "Filters"); wider, it is on the row.
+// Close the sheet with Done, or the popover with its button, as a reader does, so the grid is
+// what is on screen.
 const choosePack = async (page, pack) => {
-  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  const filters = page.getByRole('button', { name: /^Filters\b/ })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const inSheet = await filters.isVisible()
-  if (inSheet) {
+  const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
+  const inPanel = await filters.isVisible()
+  if (inPanel) {
     await filters.click()
-    await expect(sheet).toBeVisible()
+    await expect(panel).toBeVisible()
   }
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), pack)
-  if (inSheet) {
-    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
-    await expect(sheet).toBeHidden()
+  if (inPanel) {
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    else await filters.click()
+    await expect(panel).toBeHidden()
   }
 }
 
@@ -797,7 +800,8 @@ const measureToolbar = (page) => page.evaluate(() => {
     .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
     .map((e) => {
       const r = e.getBoundingClientRect()
-      return { name: e.getAttribute('aria-label') || e.textContent.trim() || e.className, w: r.width, h: r.height, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+      // `quick`: on a phone the category control and the style bar sit in their own rail under the row.
+      return { name: e.getAttribute('aria-label') || e.textContent.trim() || e.className, quick: !!e.closest('.lbry-toolbar-quick'), w: r.width, h: r.height, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
     })
   const mine = tb.querySelector('button.ig-mine')
   const slot = tb.querySelector('.lbry-toolbar-action')
@@ -832,12 +836,14 @@ test.describe('the icon toolbar', () => {
         await expect(page.locator('.ig-toolbar').getByRole('button', { name: /^Solid/ })).toHaveCount(0)
         const m = await measureToolbar(page)
 
-        // One row: no control starts below another's bottom edge on the row.
-        const rowControls = m.controls.filter((c) => !/Regular|Bold|Fill|Duo/.test(c.name))
+        // One row: no control starts below another's bottom edge on the row. The phone's category and style
+        // rail (`.lbry-toolbar-quick`) is its own band under the row, not part of it.
+        const rowControls = m.controls.filter((c) => !c.quick && !/Regular|Bold|Fill|Duo/.test(c.name))
         const tops = rowControls.map((c) => c.top)
         expect(Math.max(...tops) - Math.min(...tops), 'a control sits on a second row').toBeLessThan(12)
-        // Nothing runs past the row or the screen.
-        for (const c of m.controls) {
+        // Nothing runs past the row or the screen. The phone's category and style rail scrolls along its own
+        // axis (a long bar is meant to run past its edge there), so it is held to the page-overflow check below.
+        for (const c of m.controls.filter((x) => !x.quick)) {
           expect(c.right, `${c.name} runs past the toolbar`).toBeLessThanOrEqual(m.rowRight + 1)
           expect(c.left, `${c.name} starts before the toolbar`).toBeGreaterThanOrEqual(m.rowLeft - 1)
         }
@@ -854,7 +860,7 @@ test.describe('the icon toolbar', () => {
           expect(m.coarse).toBe(true)
           for (const c of m.controls) {
             expect(c.h, `${c.name} is under 44px tall`).toBeGreaterThanOrEqual(43.5)
-            expect(c.w, `${c.name} is under 44px wide`).toBeGreaterThanOrEqual(43.5)
+            expect(c.w, `${c.name} is under 44px wide (${c.w}px)`).toBeGreaterThanOrEqual(43.5)
           }
         }
         await ctx.close()
@@ -889,16 +895,20 @@ const openAdobeGrid = async (page) => {
   await signIn(page, { plan: 'pro' })
   await adobeCatalogue(page)
   await go(page, '/create/icons')
-  // On a phone the pack menu sits inside the toolbar's Filters sheet.
+  // On a phone the pack menu sits inside the toolbar's Filters sheet (a dialog); on a narrow
+  // desktop it can sit in the Filters popover (a group named "Filters").
   const pack = page.getByRole('button', { name: 'Icon pack' })
-  const filters = page.getByRole('button', { name: 'Filters', exact: true })
+  const filters = page.getByRole('button', { name: /^Filters\b/ })
   await expect(pack.or(filters).first()).toBeVisible({ timeout: 20000 })
   if (await filters.isVisible()) {
     await filters.click()
     const sheet = page.getByRole('dialog', { name: 'Filters' })
-    await chooseMenuOption(page, sheet.getByRole('button', { name: 'Icon pack' }), 'logos')
-    await sheet.getByRole('button', { name: 'Done', exact: true }).click()
-    await expect(sheet).toHaveCount(0)
+    const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
+    await expect(panel).toBeVisible()
+    await chooseMenuOption(page, panel.getByRole('button', { name: 'Icon pack' }), 'logos')
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+    else await filters.click()
+    await expect(panel).toHaveCount(0)
   } else {
     await chooseMenuOption(page, pack, 'logos')
   }
@@ -1132,19 +1142,30 @@ for (const width of [1440, 390]) {
     await go(page, '/create/icons')
     const filters = page.getByRole('button', { name: /^Filters\b/ })
     const sheet = page.getByRole('dialog', { name: 'Filters' })
-    const flags = page.getByRole('button', { name: 'Flags', exact: true })
-    const groupMenu = page.getByRole('button', { name: /^Group\b/ })
+    const panel = sheet.or(page.getByRole('group', { name: 'Filters', exact: true }))
+    const category = page.getByRole('group', { name: 'Icon category' }).first()
+    const coloured = category.getByRole('button', { name: /^Coloured/ })
+    const flags = page.getByRole('group', { name: 'Coloured icon type' }).getByRole('button', { name: 'Flags', exact: true })
+    const categoryMenu = page.getByRole('button', { name: /^Category\b/ })
     // The toolbar mounts after the first paint and steps through its layout stages, so wait
-    // until it shows some way in to the groups before reading which one it chose. A bare
+    // until it shows some way in to the category control before reading which one it chose. A bare
     // isVisible() answers for the instant it is asked: on a slow runner that was before the
-    // toolbar existed, and the test then waited 30 s for a Group menu this layout never draws.
-    await expect(filters.or(groupMenu).or(flags).first()).toBeVisible()
-    const inPanel = await filters.isVisible()
-    if (inPanel) await filters.click()
-    if (!await flags.isVisible()) await groupMenu.click()
+    // toolbar existed, and the test then waited 30 s for a Category menu this layout never draws.
+    await expect(filters.or(categoryMenu).or(category).first()).toBeVisible()
+    // Reveal a control wherever the toolbar keeps it: on the row, behind the Category trigger, or in
+    // the Filters sheet or popover. The panel is opened once and left open for the next control.
+    const reveal = async (control) => {
+      if (await control.isVisible()) return
+      if (await filters.isVisible() && await filters.getAttribute('aria-expanded') !== 'true') await filters.click()
+      if (!await control.isVisible() && await categoryMenu.isVisible()) await categoryMenu.click()
+      await expect(control).toBeVisible()
+    }
+    await reveal(coloured)
+    await coloured.click()
+    await reveal(flags)
     await flags.click()
     if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
-    else if (inPanel) await filters.click()
+    else if (await panel.isVisible()) await filters.click()
 
     const expected = packs.flatMap(pack => {
       const data = collections.get(pack)
