@@ -13,6 +13,7 @@ import {
   resolveOffers, subscriptionCadence, CADENCE_LABEL,
 } from '../../src/config/planFacts.js'
 import { PLAN_LADDER, formatMoney } from '../../src/config/planLadder.js'
+import { PROMPT_LIBRARY_OPEN } from '../../src/data/toolTree.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { TOOL_COUNT as LANDING_TOOL_COUNT } from '../../src/components/spectrum/spectrumFacts.js'
 
@@ -67,7 +68,8 @@ test('Pro has six ticks, in the order the card prints them, and the checkout rea
   assert.equal(PRO_POINTS.length, 6)
   assert.match(PRO_POINTS[0], new RegExp(`^${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month$`))
   assert.match(PRO_POINTS[1], /^All \d+ colour systems, plus HCT editing$/)
-  assert.equal(PRO_POINTS[2], 'Every palette, gradient, prompt and brand palette')
+  // Prompts are only promised while the Prompt Library is open to everyone.
+  assert.equal(PRO_POINTS[2], PROMPT_LIBRARY_OPEN ? 'Every palette, gradient, prompt and brand palette' : 'Every palette, gradient and brand palette')
   assert.match(PRO_POINTS[3], /icons, in any size and line style$/)
   assert.equal(PRO_POINTS[4], 'Unlimited saved projects and custom icons')
   assert.match(PRO_POINTS[5], /, and no “Made with UI L4B” line on anything$/)
@@ -217,28 +219,29 @@ test('the long lists have the rows the plan section prints, in order', () => {
   assert.equal(FREE_LINES[5], 'Auto and monochromatic colour systems')
   assert.equal(FREE_LINES[6], `The first ${GALLERY_CAP} of each library`)
   assert.match(FREE_LINES[7], /^Outline and solid icon packs, at five set sizes$/)
-  assert.equal(PRO_ROWS.length, 10)
-  assert.deepEqual(PRO_ROWS.map((r) => r.id), [
+  const rowIds = [
     'white-label', 'export-themes', 'export-documents', 'icon-packs', 'icon-tools',
     'ai', 'colour-systems', 'library', 'prompts', 'saves',
-  ])
+  ].filter((id) => PROMPT_LIBRARY_OPEN || id !== 'prompts')
+  assert.deepEqual(PRO_ROWS.map((r) => r.id), rowIds)
   const by = Object.fromEntries(PRO_ROWS.map((r) => [r.id, r]))
   assert.equal(by.ai.title, `${numberWord(AI_LIMITS.pro.daily / AI_LIMITS.free.daily).replace(/^./, (c) => c.toUpperCase())} times the AI`)
   assert.equal(by.ai.sub, `${AI_LIMITS.pro.daily} generations a day and ${AI_LIMITS.pro.monthly} a month, up from ${AI_LIMITS.free.daily} and ${AI_LIMITS.free.monthly}.`)
   assert.equal(by.library.sub, `All ${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.brandPalettes} brand palettes.`)
-  assert.equal(by.prompts.sub, `All ${LIBRARY_TOTALS.prompts} starting directions in the Prompt Library, up from ${GALLERY_CAP}.`)
+  if (PROMPT_LIBRARY_OPEN) assert.equal(by.prompts.sub, `All ${LIBRARY_TOTALS.prompts} starting directions in the Prompt Library, up from ${GALLERY_CAP}.`)
+  else assert.equal(by.prompts, undefined, 'the prompts row shows while the Prompt Library is admin-only')
   assert.ok(by['colour-systems'].sub.startsWith(`All ${COLOUR_SYSTEMS.length}, adding `))
   for (const s of COLOUR_SYSTEMS.filter((x) => !x.free)) assert.ok(by['colour-systems'].sub.includes(s.label.toLowerCase()), `${s.id} is not named as a Pro colour system`)
-  assert.equal(new Set(PRO_ROWS.map((r) => r.icon)).size, 10, 'two rows share an icon key')
+  assert.equal(new Set(PRO_ROWS.map((r) => r.icon)).size, PRO_ROWS.length, 'two rows share an icon key')
   assert.ok(PRO_ROWS.every((r) => r.title && r.sub && r.phoneSub))
 })
 
-test('the phone order is the same ten rows, with the AI row among the rows shown first', () => {
+test('the phone order is the same rows, with the AI row among the rows shown first', () => {
   assert.deepEqual([...PRO_ROWS_PHONE.map((r) => r.id)].sort(), [...PRO_ROWS.map((r) => r.id)].sort())
   assert.equal(PRO_PHONE_COLLAPSED_ROWS, 4)
   assert.ok(PRO_ROWS_PHONE.slice(0, PRO_PHONE_COLLAPSED_ROWS).some((r) => r.id === 'ai'))
   assert.ok(PRO_ROWS_PHONE.slice(0, PRO_PHONE_COLLAPSED_ROWS).some((r) => r.id === 'export-themes'))
-  assert.equal(proRows(false, { phone: true }).length, 10)
+  assert.equal(proRows(false, { phone: true }).length, PRO_ROWS.length)
 })
 
 test('THEME_FACTS is worked out from the theme list', () => {

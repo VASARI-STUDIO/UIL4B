@@ -30,7 +30,7 @@ import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
 import useOnboardingHold from './hooks/useOnboardingHold'
-import { chromelessRoutes } from './data/toolTree'
+import { chromelessRoutes, PROMPT_LIBRARY_OPEN } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { maintenanceOn } from './config/maintenance'
@@ -614,7 +614,7 @@ function AppInner({ toast }) {
                   you came to copy. Same helper /seo is given below. */}
               {/* Parked: admins only until the library is opened up. Everyone
                   else sees the not-found page, at this same address. */}
-              <Route path="/discover/prompts" element={<RequireAdmin notFound><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
+              <Route path="/discover/prompts" element={PROMPT_LIBRARY_OPEN ? <PromptLibrary onCopy={copy} toast={toast} /> : <RequireAdmin notFound><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
               {/* Copy-ready button designs. `onCopy` is required: every copy
                   button on the page calls it. */}
               <Route path="/discover/buttons" element={<ButtonLibrary onCopy={copy} />} />

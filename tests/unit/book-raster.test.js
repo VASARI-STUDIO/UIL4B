@@ -3,16 +3,24 @@
 // The page plan and the layout are pure functions of the design and a measuring
 // function, so what matters about the book (every section is there, nothing runs
 // off a page, the count is stable) is arithmetic and is checked here without a
-// canvas. Only renderBookPng touches one. The seam is planBookPages /
-// buildBookPages in src/utils/bookRaster.js.
+// canvas. The layout lives on the server (api/_lib/bookPages.js); the browser half
+// (src/utils/bookPainter.js) measures fonts, paints the server's draw operations
+// and zips them. The seams are planBookPages / buildBookPages / bookPagesResponse
+// on the server; what the two halves must agree on (font strings, the metrics key,
+// file names, the metrics table the server accepts) is held equal below.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
   PAGE, PIXELS, SCALE, planBookPages, buildBookPages, balancedChunk, paginate,
-  wrapText, fitLine, pageFileName, gradientLine, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio, ensureBookFonts, uniqueColourNames,
-} from '../../src/utils/bookRaster.js'
+  wrapText, fitLine, pageFileName, matrixClass, FOOT_Y, estimateWidth, darkestColour, CREDIT_LINE, balanceLines, formatRatio, uniqueColourNames,
+  face as serverFace, metricsKey as serverMetricsKey, readBookMetrics, measureFromMetrics, bookPagesResponse, METRICS_LIMITS,
+} from '../../api/_lib/bookPages.js'
+import {
+  gradientLine, ensureBookFonts, drawBookOps, buildBookMetrics, METRICS_CHARSET, checkBookResponse,
+  face as painterFace, metricsKey as painterMetricsKey, pageFileName as painterPageFileName,
+} from '../../src/utils/bookPainter.js'
 import { contrast, inkFor } from '../../src/utils/styleGuideExport.js'
 import { bookTokens } from '../../src/utils/bookTokens.js'
 import { colorName } from '../../src/utils/paletteNames.js'
@@ -477,17 +485,22 @@ test('the PNG is another file of the book, so the plan lines still count one boo
   assert.throws(() => assertFormatsCoherent([{ id: 'a', live: true, group: 'g', variantOf: 'missing' }]), /variantOf/)
 })
 
-test('the export engine loads bookRaster only on demand, behind the same Pro check, and names the file', () => {
+test('the export engine loads the painter only on demand, asks the server for the layout, and names the file', () => {
   const runner = read('src/hooks/useExportRunner.js')
-  assert.match(runner, /await import\('\.\.\/utils\/bookRaster'\)/, 'the book raster must be code-split')
-  assert.ok(!/^import .*bookRaster/m.test(runner), 'bookRaster is imported statically, so every visitor downloads it')
+  assert.match(runner, /await import\('\.\.\/utils\/bookPainter'\)/, 'the painter must be code-split')
+  assert.ok(!/^import .*bookPainter/m.test(runner), 'bookPainter is imported statically, so every visitor downloads it')
+  assert.ok(!/bookRaster/.test(runner), 'the runner still names the old in-browser layout')
   // Nothing the dialog is built from may pull it in either.
   for (const f of ['ExportDialog', 'ExportNav', 'ExportSteps', 'ExportFreePreview']) {
-    assert.ok(!/^import .*bookRaster/m.test(read(`src/components/export/${f}.jsx`)), `${f} imports bookRaster statically`)
+    assert.ok(!/^import .*(bookPainter|bookPages|bookRaster)/m.test(read(`src/components/export/${f}.jsx`)), `${f} imports the book layout statically`)
   }
   assert.match(runner, /formatFileName\(fileProject, 'book-png'\)/)
+  // The server is asked for the pages; the browser only measures and paints.
+  assert.match(runner, /requestExportFile\(\{\s*format: 'book-png'/)
+  assert.match(runner, /metrics, missingFonts/)
+  assert.match(runner, /watermark: !proNow/, 'the credit line still follows the plan the page read')
   // The PNG branch sits after the plan gate and the account gate in runExport.
-  const raster = runner.indexOf("await import('../utils/bookRaster')")
+  const raster = runner.indexOf("await import('../utils/bookPainter')")
   const proCheck = runner.indexOf('if (needsPro && !isPro)')
   const account = runner.indexOf('requireExportAccount(reason)')
   assert.ok(raster > 0 && runner.indexOf("format === 'book-png'") > 0)
@@ -496,14 +509,42 @@ test('the export engine loads bookRaster only on demand, behind the same Pro che
   assert.match(runner, /if \(paidFile && !proNow\)/, 'a Pro account that signs in at the gate is re-read before the PNG is drawn')
 })
 
-test('bookRaster never imports the Pro HTML generator or its templates', () => {
-  const src = read('src/utils/bookRaster.js')
-  assert.ok(!/^import .*designSystemBook/m.test(src))
-  assert.ok(!/^import .*exportTemplates\/book\//m.test(src))
-  assert.ok(!/^import .*brandGuidelines/m.test(src))
+test('the layout stays on the server and the painter stays in the browser', () => {
+  const pages = read('api/_lib/bookPages.js')
+  assert.ok(!/^import .*designSystemBook/m.test(pages))
+  assert.ok(!/^import .*exportTemplates\/book\//m.test(pages))
+  assert.ok(!/^import .*brandGuidelines/m.test(pages))
+  // The server draws nothing: no canvas, no zip writer.
+  assert.ok(!/jszip|createElement\('canvas'\)|getContext\(/.test(pages), 'the server layout reaches for a canvas or the zip writer')
+  const painter = read('src/utils/bookPainter.js')
+  // The painter never plans a page and never imports from api/ (the Pro layout would ship to every visitor).
+  assert.ok(!/^import .*api\//m.test(painter), 'the painter imports from api/')
+  for (const name of ['planBookPages', 'buildBookPages', 'paginate', 'wrapText']) {
+    assert.ok(!new RegExp(`\b${name}\b`).test(painter), `the painter mentions ${name}, so it lays pages out`)
+  }
   // jszip is loaded on demand with the rest of the render path.
-  assert.match(src, /await import\('jszip'\)/)
-  assert.ok(!/^import .*jszip/m.test(src))
+  assert.match(painter, /await import\('jszip'\)/)
+  assert.ok(!/^import .*jszip/m.test(painter))
+  // Nothing in src/ still imports the old in-browser layout or the in-browser bundle builder.
+  const stale = []
+  const OLD = /from ['"][^'"]*\/(bookRaster|appBundle)(\.js)?['"]|import\(['"][^'"]*\/(bookRaster|appBundle)(\.js)?['"]\)/
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(process.cwd(), dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`
+      if (e.isDirectory()) walk(rel)
+      else if (/\.(js|jsx)$/.test(e.name) && OLD.test(read(rel))) stale.push(rel)
+    }
+  }
+  walk('src')
+  assert.deepEqual(stale, [], 'these still import the layout or the bundle builder into the browser')
+})
+
+test('the painter and the server agree on font strings, the metrics key and file names', () => {
+  for (const [w, px, fam] of [[400, 10, 'Inter'], [700, 76, 'Outfit'], [600, 24, 'Space Grotesk']]) {
+    assert.equal(painterFace(w, px, fam), serverFace(w, px, fam))
+  }
+  for (const [w, fam] of [[400, 'Inter'], [700, 'Space Grotesk'], [500, null]]) assert.equal(painterMetricsKey(w, fam), serverMetricsKey(w, fam))
+  for (const [i, n] of [[0, 12], [11, 12], [0, 120], [119, 120]]) assert.equal(painterPageFileName(i, n), pageFileName(i, n))
 })
 
 // ── The type scale page ─────────────────────────────────────────────────────
@@ -628,7 +669,7 @@ test('the credit line is one constant, with a middle dot and no em dash anywhere
     const drawn = texts(page).filter((t) => !t.includes('“'))
     assert.ok(!drawn.some((t) => t.includes('—')), `${page.id} draws an em dash`)
   }
-  const src = read('src/utils/bookRaster.js')
+  const src = read('api/_lib/bookPages.js')
   assert.equal((src.match(/Made with UI L4B/g) || []).length, 1, 'the credit text is copied rather than shared')
 })
 
@@ -774,4 +815,108 @@ test('the colophon columns end 48 above the sign-off rule, measured from their h
     assert.ok(body.length > 4)
     assert.equal(Math.max(...body.map((o) => o.y)), sign.y1 - 48, `${name.slice(0, 10)}: the last line is not 48 above the rule`)
   }
+})
+
+// ── The measuring table and the draw operations, between the two halves ─────
+
+// A canvas context that measures like a font with a 0.5em advance (0.6em for a capital), so the table is predictable.
+const fakeMeasuringCtx = () => ({
+  font: '',
+  measureText(ch) {
+    const wide = /[A-Z]/.test(ch) ? 0.6 : 0.5
+    return { width: wide * 100, actualBoundingBoxDescent: /\d/.test(ch) ? 3 : 0 }
+  },
+})
+
+test('the table the painter measures is one the server accepts, with every face the layout asks for', () => {
+  const d = readBook(DESIGN)
+  const sent = JSON.parse(JSON.stringify(buildBookMetrics(d, fakeMeasuringCtx())))
+  const read1 = readBookMetrics(sent)
+  assert.equal(read1.ok, true, 'the server refused the painter\'s own table')
+  assert.ok(read1.metrics.size > 0)
+  assert.ok(read1.metrics.size <= METRICS_LIMITS.fonts)
+  assert.ok(JSON.stringify(sent).length < METRICS_LIMITS.bytes, 'the table is over the byte limit')
+  for (const key of [serverMetricsKey(700, 'Outfit'), serverMetricsKey(400, 'Inter'), serverMetricsKey(400, null), serverMetricsKey(700, null)]) {
+    assert.ok(read1.metrics.has(key), `no face for ${key}`)
+  }
+  assert.ok(METRICS_CHARSET.length <= METRICS_LIMITS.chars)
+  assert.equal(new Set(METRICS_CHARSET).size, METRICS_CHARSET.length, 'a character is listed twice')
+  assert.ok([...METRICS_CHARSET].length === METRICS_CHARSET.length && METRICS_CHARSET.every((ch) => [...ch].length === 1))
+})
+
+test('measured widths change the layout: a wider face wraps the same text onto more lines than the fallback', () => {
+  const d = readBook(DESIGN)
+  const table = (em) => {
+    const t = JSON.parse(JSON.stringify(buildBookMetrics(d, fakeMeasuringCtx())))
+    for (const f of Object.values(t.fonts)) for (const ch of Object.keys(f.w)) f.w[ch] = em
+    return t
+  }
+  const lines = (metrics) => {
+    const m = measureFromMetrics(readBookMetrics(metrics).metrics)
+    return wrapText('The quick brown fox jumps over the lazy dog and keeps going for a while', 200, '400 14px "Inter", system-ui', m).length
+  }
+  assert.ok(lines(table(1.2)) > lines(table(0.2)), 'wider glyphs did not wrap onto more lines')
+  // A table that is not sent, or is empty, is the estimate.
+  assert.equal(measureFromMetrics(null), estimateWidth)
+  assert.equal(measureFromMetrics(new Map()), estimateWidth)
+})
+
+test('a character the table lacks, or a family it lacks, is estimated and never throws', () => {
+  const m = measureFromMetrics(readBookMetrics({ fonts: { '400|Inter': { w: { a: 0.5 }, d: 0.2 } } }).metrics)
+  assert.equal(m('a', '400 10px "Inter", system-ui'), 5)
+  assert.ok(Math.abs(m('b', '400 10px "Inter", system-ui') - 5.5) < 1e-9, 'a missing character costs 0.55em')
+  assert.equal(m('abc', '400 10px ui-monospace, monospace'), estimateWidth('abc', '400 10px ui-monospace, monospace'), 'a monospace face the table lacks is estimated')
+  assert.ok(m('abc', '700 10px "Other", system-ui') > 0, 'an unknown family is estimated')
+  assert.ok(m.descent('1', '400 10px "Inter", system-ui') > 0)
+})
+
+test('readBookMetrics takes no table, and refuses a malformed or oversized one', () => {
+  assert.deepEqual(readBookMetrics(undefined), { ok: true, metrics: null })
+  assert.deepEqual(readBookMetrics(null), { ok: true, metrics: null })
+  const good = { w: { a: 0.5 }, d: 0.2 }
+  const bad = [
+    'x', 7, [], {}, { fonts: [] }, { fonts: 'x' },
+    { fonts: { 'Inter': good } }, { fonts: { '400|Inter"x': good } }, { fonts: { '1000|Inter': good } }, { fonts: { '400|': good } },
+    { fonts: { '400|Inter': null } }, { fonts: { '400|Inter': { w: [] } } }, { fonts: { '400|Inter': { d: 0.2 } } },
+    { fonts: { '400|Inter': { w: { ab: 0.5 } } } }, { fonts: { '400|Inter': { w: { a: 'x' } } } }, { fonts: { '400|Inter': { w: { a: -1 } } } },
+    { fonts: { '400|Inter': { w: { a: 5 } } } }, { fonts: { '400|Inter': { w: { a: Infinity } } } }, { fonts: { '400|Inter': { w: { a: null } } } },
+    { fonts: { '400|Inter': { w: { a: 0.5 }, d: 2 } } }, { fonts: { '400|Inter': { w: { a: 0.5 }, d: 'x' } } },
+  ]
+  for (const raw of bad) assert.equal(readBookMetrics(raw).ok, false, JSON.stringify(raw))
+  const many = {}
+  for (let i = 0; i < METRICS_LIMITS.fonts + 1; i += 1) many[`400|F${i}`] = good
+  assert.equal(readBookMetrics({ fonts: many }).ok, false, 'too many faces')
+  const chars = {}
+  for (let i = 0; i < METRICS_LIMITS.chars + 1; i += 1) chars[String.fromCodePoint(0x4e00 + i)] = 0.5
+  assert.equal(readBookMetrics({ fonts: { '400|Inter': { w: chars } } }).ok, false, 'too many characters')
+  assert.equal(readBookMetrics({ fonts: { '400|Inter': good, '500|:mono': good } }).ok, true)
+  // A prototype key is a key like any other, never a way in.
+  assert.equal(readBookMetrics(JSON.parse('{"fonts":{"__proto__":{"w":{"a":1}}}}')).ok, false)
+})
+
+test('the route answer is plain JSON the painter accepts, with the page size and scale it needs', () => {
+  const book = JSON.parse(JSON.stringify(bookPagesResponse(DESIGN, { ...opts, watermark: false })))
+  assert.deepEqual(book.page, { width: PAGE.width, height: PAGE.height })
+  assert.equal(book.scale, SCALE)
+  assert.doesNotThrow(() => checkBookResponse(book))
+  assert.deepEqual(book.pages.map((p) => p.id), build().pages.map((p) => p.id), 'the route plans the same pages as the layout')
+  for (const bad of [null, {}, { ...book, pages: [] }, { ...book, scale: 9 }, { ...book, page: { width: 0, height: 10 } }, { ...book, paper: 7 }, { ...book, pages: [{}] }]) {
+    assert.throws(() => checkBookResponse(bad), /could not draw/)
+  }
+})
+
+test('the painter draws every operation the server can send, and a bad operation is skipped rather than thrown on', () => {
+  const book = bookPagesResponse(DESIGN, { ...opts, watermark: true })
+  const kinds = new Set(book.pages.flatMap((p) => p.ops.map((o) => o.op)))
+  for (const k of kinds) assert.ok(['gradient', 'line', 'rect', 'strokeRect', 'text'].includes(k), `the server sent an operation the painter has no case for: ${k}`)
+  const calls = []
+  const ctx = new Proxy({ measureText: () => ({ width: 6 }), createLinearGradient: () => ({ addColorStop: () => {} }) }, {
+    get: (t, k) => (k in t ? t[k] : (...a) => { calls.push(k); return a }),
+    set: (t, k, v) => { t[k] = v; return true },
+    has: () => false,
+  })
+  for (const page of book.pages) drawBookOps(ctx, page.ops)
+  const text = book.pages.flatMap((p) => p.ops).filter((o) => o.op === 'text').length
+  assert.ok(calls.filter((c) => c === 'fillText').length >= text, 'a text operation was not drawn')
+  assert.doesNotThrow(() => drawBookOps(ctx, [{ op: 'nonsense' }]))
 })

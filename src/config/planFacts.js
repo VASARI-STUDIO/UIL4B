@@ -30,7 +30,7 @@ import { ICON_PACK_TIERS } from '../data/iconPackTiers.js'
 import { CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, ICON_SIZE_PRESETS } from '../utils/iconSize.js'
 import { LINE_STYLES } from '../utils/iconLineStyle.js'
 import { PLAN_LADDER, formatMoney, livePriceOf } from './planLadder.js'
-import { createTools } from '../data/toolTree.js'
+import { createTools, PROMPT_LIBRARY_OPEN } from '../data/toolTree.js'
 import { BILLED_EVERY } from '../utils/billingCadence.js'
 
 const AI = AI_LIMITS
@@ -173,9 +173,11 @@ export const proValue = (live = EXPORT_THEMES_LIVE) => Object.freeze([
   { group: 'Libraries', rows: [
     { label: 'Brand palettes', free: `${LIBRARY_TOTALS.freeBrandPalettes} of ${LIBRARY_TOTALS.brandPalettes}`, pro: `All ${LIBRARY_TOTALS.brandPalettes}` },
     {
-      label: 'Palette, gradient and prompt libraries',
+      label: PROMPT_LIBRARY_OPEN ? 'Palette, gradient and prompt libraries' : 'Palette and gradient libraries',
       free: `First ${LIBRARY_CAP} of each, ${LIBRARY_CAP_SIGNED_OUT} when signed out`,
-      pro: `All ${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`,
+      pro: PROMPT_LIBRARY_OPEN
+        ? `All ${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`
+        : `All ${LIBRARY_TOTALS.palettes} palettes and ${LIBRARY_TOTALS.gradients} gradients`,
     },
   ] },
   { group: 'Icons', rows: [
@@ -224,7 +226,7 @@ export const proDocumentsLine = (live = EXPORT_THEMES_LIVE) => (live
 export const PRO_POINTS = Object.freeze([
   `${AI.pro.daily} AI generations a day, ${AI.pro.monthly} a month`,
   `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
-  'Every palette, gradient, prompt and brand palette',
+  PROMPT_LIBRARY_OPEN ? 'Every palette, gradient, prompt and brand palette' : 'Every palette, gradient and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
   `${proDocumentsLine()}, and no ${MADE_WITH_LINE} on anything`,
@@ -312,7 +314,9 @@ const PRO_ROW_ORDER_PHONE = Object.freeze([
  */
 export const proRows = (live = EXPORT_THEMES_LIVE, { phone = false } = {}) => {
   const byId = proRowsById(live)
-  return Object.freeze((phone ? PRO_ROW_ORDER_PHONE : PRO_ROW_ORDER).map((id) => byId[id]))
+  // The prompts row only shows while the Prompt Library is open to everyone.
+  const order = (phone ? PRO_ROW_ORDER_PHONE : PRO_ROW_ORDER).filter((id) => PROMPT_LIBRARY_OPEN || id !== 'prompts')
+  return Object.freeze(order.map((id) => byId[id]))
 }
 
 /** The rows in the order a full-width Pro card prints them. */
@@ -329,7 +333,7 @@ export const plansLead = (live = EXPORT_THEMES_LIVE) => `${
   live ? 'Every tool and the style guides stay free' : 'Every tool, the UI kit and the style guides stay free'
 }, with no time limit. Pro is the full studio: ${
   live ? `all ${numberWord(THEME_COUNT)} export themes, the ${joinAnd(PRO_THEME_DOCS.map((e) => e.short))}` : 'client-ready books and decks'
-}, white-label exports, ${Number.isInteger(AI_MULTIPLE) ? `${numberWord(AI_MULTIPLE)} times the` : 'more'} AI and the whole library.`
+}, white-label exports, ${Number.isInteger(AI_MULTIPLE) ? `${numberWord(AI_MULTIPLE)} times the` : 'more'} AI and ${PROMPT_LIBRARY_OPEN ? 'the whole library' : 'every palette and gradient'}.`
 export const PLANS_LEAD = plansLead()
 
 // ships with the export themes

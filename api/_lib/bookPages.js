@@ -1,29 +1,26 @@
-// The design system book as images: one 2K PNG per A4 page, in a zip.
+// The design system book as pages: the layout of the PNG book, built on the server.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS IS DRAWN, AND WHY IT IS NOT THE PDF BOOK'S RASTER
+// WHY THIS LIVES IN api/_lib
 // ─────────────────────────────────────────────────────────────────────────────
-// The PDF book (utils/designSystemBook.js) is HTML for the browser's print
-// engine, and it is built on the server so the Pro generator never reaches the
-// client bundle. A PNG cannot come from that HTML without rasterising it, and
-// utils/styleGuideRaster.js explains why that route is wrong (a foreignObject
-// drops webfonts, html2canvas reimplements layout badly). So this follows the
-// same answer: the pages are known structures over known data, drawn directly.
+// This is the Pro layout of the book as page images: which pages exist, where
+// every rule, swatch and line of type sits. It used to ship in the browser with
+// the painter, which left the Pro check in the panel as a courtesy: anyone who
+// read the bundle could call the planner and skip it. Now the server plans and
+// the browser only paints. `serveExportDocument` (api/_lib/exportDocument.js,
+// format `book-png`) checks the plan, then answers with the draw operations; the
+// painter (src/utils/bookPainter.js) turns them into PNGs. tests/unit/export-document.test.js
+// walks the client import graph and fails if this file is reachable from the app.
 //
-// It covers the same sections as the PDF book — cover, contents, colour (with
-// the specification bands and the contrast matrix), the gradient, typography
-// (families and scale), every token, and the colophon — and lays them out for a
+// The PDF book (utils/designSystemBook.js) is HTML for the browser's print engine
+// and is built on the server too. A PNG cannot come from that HTML without
+// rasterising it, and utils/styleGuideRaster.js explains why that route is wrong,
+// so the pages are known structures over known data, drawn directly.
+//
+// It covers the same sections as the PDF book: cover, contents, colour (with the
+// specification bands and the contrast matrix), the gradient, typography
+// (families and scale), every token, and the colophon. It lays them out for a
 // 1448 x 2048 px page (A4 at 2K), not for a printer's margins.
-//
-// IMPORT RULE. This file must never import designSystemBook.js or the templates
-// under exportTemplates/book/: tests/unit/export-document.test.js walks the
-// client import graph and fails if the Pro HTML generator is reachable. The
-// shared pieces (the design reader, the token list, the colour maths) live in
-// modules that have no such constraint.
-//
-// THE HONEST LIMIT. Like the Pro previews, this runs in the browser, so the Pro
-// check in ExportPanel.runExport is a courtesy and not protection. The server
-// cannot draw a canvas without a dependency the project does not carry.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // SHAPE
@@ -31,22 +28,28 @@
 // Everything that decides what goes where is a pure function of the design and
 // a `measure(text, font)` function, and returns plain data:
 //
-//   planBookPages(design, opts)  → which pages exist, in order, with their contents
-//   buildBookPages(design, opts) → the same pages with their draw operations
+//   planBookPages(design, opts)   which pages exist, in order, with their contents
+//   buildBookPages(design, opts)  the same pages with their draw operations
+//   bookPagesResponse(...)        the JSON the route sends: those pages plus the page size
 //
-// `measure` is injected because wrapping needs real glyph widths. The browser
-// passes a canvas measurer once the fonts have loaded; a test passes nothing and
-// gets estimateWidth(). Only renderBookPages / renderBookPng touch a canvas.
+// TEXT MEASURING. Wrapping needs real glyph widths, and the server has no fonts
+// and no canvas. The browser measures the faces it is about to draw with and sends
+// a table (see readBookMetrics: em advances per character, per weight and
+// family). measureFromMetrics turns it into `measure`; a face or character the
+// table does not cover is estimated by estimateWidth's rule. A request with no
+// table is laid out entirely with estimates. Deterministic: the same design and
+// table always give the same pages. No kerning, so a line can differ from the
+// canvas's by a pixel or two; the layout's room allows for it.
 //
 // Authored in a 724 x 1024 sheet and drawn at exactly 2x, so every measurement
 // reads in familiar CSS pixels and a 1px rule lands on two whole device pixels.
-import { contrast, grade, inkFor, typeLadder } from './styleGuideExport.js'
-import { readBook } from './bookModel.js'
-import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
-import { colorName } from './paletteNames.js'
-import { deriveRoles, hexToOklch, mixHex, softInk } from './exportTemplates/roles.js'
-import { bookTokens } from './bookTokens.js'
-import { pairTally, plural, matrixBlocks, systemSentence, GLYPH_STRIP, GLYPH_STRIP_PT } from './exportTemplates/shared.js'
+import { contrast, grade, inkFor, typeLadder } from '../../src/utils/styleGuideExport.js'
+import { readBook } from '../../src/utils/bookModel.js'
+import { roleLabel, slotLandsBook, slotPlaced } from '../../src/utils/paletteRoles.js'
+import { colorName } from '../../src/utils/paletteNames.js'
+import { deriveRoles, hexToOklch, mixHex, softInk } from '../../src/utils/exportTemplates/roles.js'
+import { bookTokens } from '../../src/utils/bookTokens.js'
+import { pairTally, plural, matrixBlocks, systemSentence, GLYPH_STRIP, GLYPH_STRIP_PT } from '../../src/utils/exportTemplates/shared.js'
 
 // ── Geometry ────────────────────────────────────────────────────────────────
 
@@ -1093,191 +1096,119 @@ export function buildBookPages(design, opts = {}) {
   }
 }
 
-// ── Drawing ─────────────────────────────────────────────────────────────────
-
-function roundedPath(ctx, x, y, w, h, r) {
-  const radius = Math.min(r, w / 2, h / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + radius, y)
-  ctx.arcTo(x + w, y, x + w, y + h, radius)
-  ctx.arcTo(x + w, y + h, x, y + h, radius)
-  ctx.arcTo(x, y + h, x, y, radius)
-  ctx.arcTo(x, y, x + w, y, radius)
-  ctx.closePath()
-}
-
-/** The start and end of a CSS-angle gradient across a box (0deg points up, clockwise). */
-export function gradientLine({ x, y, w, h, angle }) {
-  const rad = (angle * Math.PI) / 180
-  const dx = Math.sin(rad)
-  const dy = -Math.cos(rad)
-  const length = Math.abs(w * dx) + Math.abs(h * dy)
-  const cx = x + w / 2
-  const cy = y + h / 2
-  return { x0: cx - (dx * length) / 2, y0: cy - (dy * length) / 2, x1: cx + (dx * length) / 2, y1: cy + (dy * length) / 2 }
-}
-
-export function drawBookOps(ctx, ops) {
-  for (const o of ops) {
-    if (o.op === 'rect') {
-      ctx.fillStyle = o.fill
-      if (o.radius) { roundedPath(ctx, o.x, o.y, o.w, o.h, o.radius); ctx.fill() } else ctx.fillRect(o.x, o.y, o.w, o.h)
-    } else if (o.op === 'strokeRect') {
-      ctx.strokeStyle = o.stroke
-      ctx.lineWidth = 1
-      if (o.radius) { roundedPath(ctx, o.x + 0.5, o.y + 0.5, o.w - 1, o.h - 1, o.radius); ctx.stroke() } else ctx.strokeRect(o.x + 0.5, o.y + 0.5, o.w - 1, o.h - 1)
-    } else if (o.op === 'line') {
-      // A rule sits on a whole authored pixel, which is two whole device pixels at 2x.
-      ctx.strokeStyle = o.stroke
-      ctx.lineWidth = 1
-      ctx.setLineDash(o.dash || [])
-      ctx.beginPath()
-      ctx.moveTo(o.x1, o.y1 + 0.5)
-      ctx.lineTo(o.x2, o.y2 + 0.5)
-      ctx.stroke()
-      ctx.setLineDash([])
-    } else if (o.op === 'gradient') {
-      const { x0, y0, x1, y1 } = gradientLine(o)
-      const fill = ctx.createLinearGradient(x0, y0, x1, y1)
-      for (const s of o.stops) fill.addColorStop(Math.min(1, Math.max(0, s.position / 100)), s.color)
-      ctx.fillStyle = fill
-      if (o.radius) { roundedPath(ctx, o.x, o.y, o.w, o.h, o.radius); ctx.fill() } else ctx.fillRect(o.x, o.y, o.w, o.h)
-    } else if (o.op === 'text') {
-      ctx.fillStyle = o.fill
-      ctx.font = o.font
-      ctx.textAlign = o.align || 'left'
-      ctx.textBaseline = 'alphabetic'
-      const spaced = o.letterSpacing && 'letterSpacing' in ctx
-      if (spaced) ctx.letterSpacing = `${o.letterSpacing}px`
-      if (o.tabular) {
-        // Canvas has no font-variant-numeric, so figures that must line up (a swatch's
-        // index) are set one to a cell, each as wide as the face's zero.
-        const pitch = ctx.measureText('0').width
-        ctx.textAlign = 'center'
-        ;[...o.text].forEach((ch, i) => ctx.fillText(ch, o.x + pitch * (i + 0.5), o.y))
-      } else ctx.fillText(o.text, o.x, o.y)
-      if (spaced) ctx.letterSpacing = '0px'
-    }
-  }
-}
-
-// How long a render waits for one family's stylesheet before it draws in the fallback.
-const FONT_WAIT_MS = 6000
-// The one deadline over the whole font step. A .woff2 that never arrives (so
-// document.fonts.load never settles) must not hold the export, and the panel
-// with it, for ever.
-export const BOOK_FONT_DEADLINE_MS = 8000
+// ── Text measuring from the browser's table ─────────────────────────────────
 
 /**
- * Load the kit's faces and wait for them, for at most `deadlineMs` in all.
- * Resolves the families that did NOT arrive (empty when all did), so the
- * colophon can say so instead of claiming a face the pages are not set in. A
- * family still loading at the deadline counts as missing. Never rejects: a font
- * that cannot load is a fallback, not a failed export. `fontApi`
- * ({ loadFont, verifyFontLoaded }) can be injected; it defaults to the Google
- * Fonts helpers.
+ * The most the route will read of a measuring table. A real one is a dozen faces
+ * of about a hundred and twenty characters each (some 20 KB of JSON); these leave
+ * room above that and stay far under Vercel's body limit.
  */
-export async function ensureBookFonts(d, { deadlineMs = BOOK_FONT_DEADLINE_MS, fontApi } = {}) {
-  if (typeof document === 'undefined' || !document.fonts?.load) return []
-  const families = [...new Set([d.heading, d.body])]
-  const weights = [...new Set([400, 500, 600, 700, d.headingWeight, d.bodyWeight])]
-  const finished = new Set()
-  const failed = new Set()
-  const timers = []
-  const after = (ms) => new Promise((resolve) => { timers.push(setTimeout(resolve, ms)) })
+export const METRICS_LIMITS = Object.freeze({ fonts: 32, chars: 400, bytes: 128 * 1024 })
 
-  const work = (async () => {
-    try {
-      const { loadFont, verifyFontLoaded } = fontApi || await import('./googleFonts')
-      await Promise.all(families.map(async (family) => {
-        try {
-          await Promise.race([Promise.resolve(loadFont(family, weights)).catch(() => null), after(FONT_WAIT_MS)])
-          await Promise.all(weights.map((w) => Promise.resolve().then(() => document.fonts.load(face(w, 24, family))).catch(() => null)))
-          const check = family === d.heading ? d.headingWeight : d.bodyWeight
-          if ((await verifyFontLoaded(family, check, { timeout: 1500 })) === 'failed') failed.add(family)
-        } catch { /* a family that errors is a fallback, not a failed export */ }
-        finished.add(family)
-      }))
-    } catch { families.forEach((family) => finished.add(family)) /* the helper module would not load: draw in the fallback */ }
-  })()
+// The key of one face in the table: its weight and family, or the monospace stack.
+// The browser builds the same keys (src/utils/bookPainter.js) and a test holds the two together.
+const MONO_KEY = ':mono'
+export const metricsKey = (weight, family) => `${weight}|${family ?? MONO_KEY}`
+const KEY_SHAPE = /^[1-9]00\|(?::mono|[A-Za-z0-9 _.-]{1,80})$/
 
-  await Promise.race([work, after(Math.max(0, deadlineMs))])
-  timers.forEach(clearTimeout)
-  return families.filter((family) => failed.has(family) || !finished.has(family))
+/**
+ * A measuring table, checked: { fonts: { '<weight>|<family>': { w: { '<char>': em }, d: em } } },
+ * where `w` gives each character's advance in em (a multiple of the font size),
+ * `d` is how far a digit hangs below the baseline, in em, and `:mono` stands for
+ * the monospace stack. Returns { ok: true, metrics } (metrics is null when none was
+ * sent) or { ok: false } for anything else: too many faces or characters, an odd
+ * key, a key that is not one character, a value that is not a finite number in
+ * range. Never throws.
+ */
+export function readBookMetrics(raw) {
+  if (raw === undefined || raw === null) return { ok: true, metrics: null }
+  const bad = { ok: false }
+  try {
+    if (typeof raw !== 'object' || Array.isArray(raw) || !raw.fonts || typeof raw.fonts !== 'object' || Array.isArray(raw.fonts)) return bad
+    if (JSON.stringify(raw).length > METRICS_LIMITS.bytes) return bad
+    const keys = Object.keys(raw.fonts)
+    if (keys.length > METRICS_LIMITS.fonts) return bad
+    const fonts = new Map()
+    for (const key of keys) {
+      const entry = raw.fonts[key]
+      if (!KEY_SHAPE.test(key) || !entry || typeof entry !== 'object' || !entry.w || typeof entry.w !== 'object' || Array.isArray(entry.w)) return bad
+      const chars = Object.keys(entry.w)
+      if (chars.length > METRICS_LIMITS.chars) return bad
+      const widths = new Map()
+      for (const ch of chars) {
+        const em = entry.w[ch]
+        if ([...ch].length !== 1 || typeof em !== 'number' || !Number.isFinite(em) || em < 0 || em > 4) return bad
+        widths.set(ch, em)
+      }
+      let descent = 0
+      if (entry.d !== undefined) {
+        if (typeof entry.d !== 'number' || !Number.isFinite(entry.d) || entry.d < 0 || entry.d > 1) return bad
+        descent = entry.d
+      }
+      fonts.set(key, { widths, descent })
+    }
+    return { ok: true, metrics: fonts }
+  } catch {
+    return bad
+  }
 }
 
-const canvasMeasurer = (ctx) => {
-  const measure = (str, font) => {
-    ctx.font = font
-    return ctx.measureText(str).width
+// The weight and family a font string asks for: `600 24px "Inter", system-ui…` or `400 10px ui-monospace…`.
+function fontKeyOf(font) {
+  const m = /^\s*(\d{3})\s+[\d.]+px\s+(?:"([^"]*)"|(.*))/.exec(String(font))
+  if (!m) return null
+  const weight = Number(m[1])
+  if (m[2] !== undefined) return { weight, family: m[2] }
+  return /monospace/.test(m[3]) ? { weight, family: null } : null
+}
+
+/**
+ * `measure(text, font)` from a table readBookMetrics accepted. A character the table does not
+ * hold costs what estimateWidth charges. A weight the table lacks borrows the nearest one it has
+ * for that family (the lower of two equally near); a family it lacks is estimated whole.
+ */
+export function measureFromMetrics(metrics) {
+  if (!metrics || !metrics.size) return estimateWidth
+  const faces = new Map()
+  for (const key of metrics.keys()) {
+    const [w, family] = [Number(key.slice(0, 3)), key.slice(4)]
+    if (!faces.has(family)) faces.set(family, [])
+    faces.get(family).push(w)
   }
-  measure.descent = (str, font) => {
-    ctx.font = font
-    return ctx.measureText(str).actualBoundingBoxDescent || 0
+  const lookup = (font) => {
+    const k = fontKeyOf(font)
+    if (!k) return null
+    const weights = faces.get(k.family ?? MONO_KEY)
+    if (!weights) return null
+    const weight = weights.reduce((best, w) => {
+      const dw = Math.abs(w - k.weight)
+      const db = Math.abs(best - k.weight)
+      return dw < db || (dw === db && w < best) ? w : best
+    })
+    return { ...metrics.get(metricsKey(weight, k.family)), mono: k.family === null }
+  }
+  const measure = (text, font) => {
+    const face = lookup(font)
+    if (!face) return estimateWidth(text, font)
+    const px = Number(/(\d+(?:\.\d+)?)px/.exec(String(font))?.[1]) || 12
+    const fallback = face.mono ? 0.62 : 0.55
+    let em = 0
+    for (const ch of String(text ?? '')) em += face.widths.get(ch) ?? fallback
+    return em * px
+  }
+  measure.descent = (text, font) => {
+    const face = lookup(font)
+    const px = Number(/(\d+(?:\.\d+)?)px/.exec(String(font))?.[1]) || 12
+    return (face?.descent || 0.03) * px
   }
   return measure
 }
 
-function newCanvas() {
-  const canvas = document.createElement('canvas')
-  canvas.width = PIXELS.width
-  canvas.height = PIXELS.height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('This browser could not create a canvas to draw the book.')
-  return { canvas, ctx }
-}
-
 /**
- * Draw each page and hand its canvas to `visit(canvas, page, index, total)`. One
- * canvas is alive at a time when `visit` releases it, which is what keeps a long
- * book from holding tens of megabytes per page at once.
+ * What the route sends for `book-png`: the pages with their draw operations and the
+ * size they are authored in, which the painter scales by `scale`. Plain JSON.
  */
-export async function forEachBookPage(design, opts, visit) {
-  const { projectName = 'Design System', watermark = true, date = new Date() } = opts || {}
-  const d = readBook(design)
-  const missingFonts = await ensureBookFonts(d)
-  const scratch = newCanvas()
-  const measure = canvasMeasurer(scratch.ctx)
-  const book = buildBookPages(design, { projectName, watermark, date, measure, missingFonts })
-  scratch.canvas.width = 0
-
-  for (let i = 0; i < book.pages.length; i += 1) {
-    const { canvas, ctx } = newCanvas()
-    ctx.scale(SCALE, SCALE)
-    ctx.imageSmoothingQuality = 'high'
-    if ('fontKerning' in ctx) ctx.fontKerning = 'normal'
-    if ('textRendering' in ctx) ctx.textRendering = 'geometricPrecision'
-    // Paint the paper first so no page can come out transparent.
-    ctx.fillStyle = book.paper
-    ctx.fillRect(0, 0, PAGE.width, PAGE.height)
-    drawBookOps(ctx, book.pages[i].ops)
-    await visit(canvas, book.pages[i], i, book.pages.length)
-  }
-  return book.pages.length
-}
-
-/** Every page as a canvas, 1448 x 2048. The caller owns them. */
-export async function renderBookPages(design, opts = {}) {
-  const canvases = []
-  await forEachBookPage(design, opts, (canvas) => { canvases.push(canvas) })
-  return canvases
-}
-
-const toPng = (canvas) => new Promise((resolve, reject) => {
-  canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('A page of the book could not be encoded.'))), 'image/png')
-})
-
-/**
- * The book as one zip Blob of page-01.png, page-02.png and so on. PNGs are
- * already compressed, so the zip stores them as they are.
- */
-export async function renderBookPng(design, opts = {}) {
-  const { default: JSZip } = await import('jszip')
-  const zip = new JSZip()
-  await forEachBookPage(design, opts, async (canvas, page, index, total) => {
-    zip.file(pageFileName(index, total), await toPng(canvas))
-    canvas.width = 0
-    canvas.height = 0
-  })
-  return zip.generateAsync({ type: 'blob', compression: 'STORE' })
+export function bookPagesResponse(design, { metrics, ...opts } = {}) {
+  const book = buildBookPages(design, { ...opts, measure: measureFromMetrics(metrics) })
+  return { ...book, page: { width: PAGE.width, height: PAGE.height }, scale: SCALE }
 }

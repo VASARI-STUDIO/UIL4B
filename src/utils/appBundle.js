@@ -3,7 +3,12 @@
 //
 // appBundleEntries(design, opts) lists the files as [{ path, data }] and has no
 // zip dependency, so it can be read and tested on its own. buildAppBundle() puts
-// the same entries into a zip and returns a Blob.
+// the same entries into a zip and returns a Blob (or, with `type: 'base64'`, a base64 string,
+// which is how the server sends it).
+//
+// This is the Pro builder: the browser does not import it. The route (api/_lib/exportDocument.js,
+// format `app-bundle`) checks the plan and then runs it, and the free preview draws its tree from
+// appBundlePaths.js instead. tests/unit/export-document.test.js fails if the app can reach this file.
 //
 // Folder names are numbered and in sentence case for people. File names are
 // lowercase kebab-case with the project slug first (the token files keep the dot).
@@ -12,18 +17,19 @@
 // Pure functions, no React, no DOM.
 
 import { projectSlug } from './exportFileName.js'
+import { BUNDLE_FOLDERS, BUNDLE_HOW_TO, bundleDate, bundleRoot } from './appBundlePaths.js'
 import { buildTokensCss, buildTokensJson } from './designTokens.js'
 import { figmaTokenFiles } from './figmaTokens.js'
 import { swatchGroups, buildAse, buildAco } from './swatchFiles.js'
 import { readBook } from './bookModel.js'
 
-const START = '00 Start here'
-const FIGMA = '01 Figma'
-const ADOBE = '02 Adobe'
-const OTHER = '03 Other design apps'
-const CODE = '04 Code'
+const START = BUNDLE_FOLDERS.start
+const FIGMA = BUNDLE_FOLDERS.figma
+const ADOBE = BUNDLE_FOLDERS.adobe
+const OTHER = BUNDLE_FOLDERS.other
+const CODE = BUNDLE_FOLDERS.code
 
-const HOW_TO = 'How to import.md'
+const HOW_TO = BUNDLE_HOW_TO
 
 /** Families that are not on Google Fonts, so they get no link. */
 const NOT_GOOGLE = new Set([
@@ -31,14 +37,8 @@ const NOT_GOOGLE = new Set([
   'arial', 'helvetica', 'georgia', 'times new roman', 'courier new', 'verdana', 'tahoma', 'trebuchet ms',
 ])
 
-const pad = (n) => String(n).padStart(2, '0')
-
-/** `YYYY-MM-DD` from a Date (local time) or from a string already in that shape. */
-export function bundleDate(date = new Date()) {
-  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date
-  const d = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date()
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// Kept here for callers that already import it from this file (the builder owns the date rule in appBundlePaths.js).
+export { bundleDate }
 
 const rgbText = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')
 
@@ -206,7 +206,7 @@ Made with UI L4B. Exported ${date}.
 export function appBundleEntries(design, { date, name } = {}) {
   const day = bundleDate(date)
   const slug = projectSlug(name)
-  const root = `UIL4B-${slug}-${day}`
+  const root = bundleRoot(name, day)
   const groups = swatchGroups(design)
   const ase = buildAse(groups)
   const aco = buildAco(groups)
@@ -232,10 +232,10 @@ export function appBundleEntries(design, { date, name } = {}) {
   return files.map(([path, data]) => ({ path: `${root}/${path}`, data }))
 }
 
-/** The bundle as a zip Blob. */
+/** The bundle as a zip: a Blob by default, or `opts.type` (`base64`, `uint8array`) for the server. */
 export async function buildAppBundle(design, opts = {}) {
   const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
   for (const { path, data } of appBundleEntries(design, opts)) zip.file(path, data)
-  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+  return zip.generateAsync({ type: opts.type || 'blob', compression: 'DEFLATE' })
 }
