@@ -22,6 +22,7 @@
 //   IconCredits.jsx drops the links, or IconGroups stops reporting        -> "licence row" and "group"
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { iconCell } from './icon-grid-rows.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, isLiveIconify } from './iconify-stub.js'
 
 const SIGNED_OUT = 'a designer who has not signed up yet, reaching the end of the icon pages'
@@ -279,7 +280,7 @@ test.describe('Show N more icons', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'lucide')
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(iconCell(NAME(0)))).toBeVisible({ timeout: 20_000 })
 
     const cells = () => page.locator('.ig .ic').count()
     const more = page.locator('.ig-more').getByRole('button')
@@ -348,7 +349,7 @@ test.describe('Show N more icons', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
     await choosePack(page, 'lucide')
-    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator(iconCell(NAME(0)))).toBeVisible({ timeout: 20_000 })
     await expect.poll(async () => {
       await page.evaluate(() => document.querySelector('.ig-sentinel, .ig-more')?.scrollIntoView({ block: 'end' }))
       return page.locator('.ig .ic').count()

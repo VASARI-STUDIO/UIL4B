@@ -210,6 +210,11 @@ test.describe('nav popover keyboard movement', () => {
     // animation — a baseline caught mid-scroll would measure the arrow key
     // against the tail of THAT scroll rather than against a still page.
     const before = await restingScrollY(page, 'the page before the arrow key')
+    // Room below the baseline. Both presses below need somewhere to scroll to:
+    // on a page only a key-step taller than the viewport, the open press uses
+    // up the range and the control press then measures nothing.
+    const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY)
+    expect(room, 'the page has no room below it for two arrow-key scrolls').toBeGreaterThan(200)
 
     await page.evaluate(() => document.getElementById('main')?.focus())
     expect(await page.evaluate(() => document.activeElement?.id)).toBe('main')
@@ -280,7 +285,7 @@ test.describe('nav popover keyboard movement', () => {
       fb.note(
         'info',
         'The control press produced no page scroll with the panel CLOSED '
-        + `(${afterClose} -> ${closedY}), so this run cannot say anything about whether an open `
+        + `(${afterClose} -> ${closedY}, ${room}px of room at the start), so this run cannot say anything about whether an open `
         + 'popover suppresses keyboard scrolling. NOT a clean result for '
         + 'popover-open-scroll-suppression — an unmeasured one.',
       )
