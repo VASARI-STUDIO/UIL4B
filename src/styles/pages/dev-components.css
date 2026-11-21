@@ -64,4 +64,4 @@
 /* :focus-visible */
 .dcs-focus, input.dcs-field-focus, textarea.dcs-field-focus { outline: var(--focus-w) solid var(--focus-ink); outline-offset: var(--focus-offset); }
 /* .lib-surface .lbry-search:focus-within */
-.lib-surface .lbry-search.dcs-focus-within { border-color: var(--accent); }
+.lib-surface .lbry-search.dcs-focus-within { border-color: var(--v3-ink); }

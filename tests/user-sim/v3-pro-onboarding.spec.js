@@ -112,7 +112,8 @@ test.describe('onboarding kit, desktop 1440', () => {
     await expect(page.locator('.ob-col')).toHaveCount(5)
     await expect(hex(page)).toHaveValue(/0E5C4A/i)
     await expect(page.locator('.ob-cap')).toContainText('Shallow End, a sample brand')
-    expect(await isFocused(page, '[data-go]')).toBe(true)
+    // Focus moves in a setTimeout after the sample is chosen, so poll for it.
+    await expect.poll(() => isFocused(page, '[data-go]')).toBe(true)
     await toBeat(page, 2)
     const pairs = page.locator('[data-pair]')
     await expect(pairs).toHaveCount(4)

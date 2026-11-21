@@ -50,6 +50,7 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --pv-   the shared preview surfaces
 //   --tsc-  TypeScale specimen rows
 //   --tt-   Tint tool preview
+//   --tpv-  the Tint preview sample page (TintPreview.jsx sets them inline from the ramp)
 //   --fg-   Font Gallery specimen cards
 //   --fgd-  the Font Gallery detail pop-up (each family's face and weights)
 //   --fpr-  Font Pair preview
@@ -61,7 +62,7 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --ied-g-  the icon editor's Light and Dark ground plates (IconLibrary.jsx writes them on the overlay from groundVars(theme))
 //   --si-   the sliding pill: useSlideIndicator measures the selected pill (--si-x/-y/-w/-h/-r)
 const RUNTIME_FAMILIES = [
-  '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fgd-', '--fpr-',
+  '--uis-', '--pv-', '--tsc-', '--tt-', '--tpv-', '--fg-', '--fgd-', '--fpr-',
   '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-', '--si-', '--ied-g-',
 ]
 
