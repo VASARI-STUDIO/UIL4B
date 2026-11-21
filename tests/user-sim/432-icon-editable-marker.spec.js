@@ -53,7 +53,8 @@ for (const width of [390, 1440]) {
       const cells = page.locator(REAL_CELL)
       const total = await cells.count()
       expect(total, 'the pack drew cells').toBeGreaterThan(8)
-      await expect(cells.locator('.ic-edit'), 'every Lucide cell has the mark').toHaveCount(total)
+      // More cells can stream in after the count, so assert no cell lacks the mark rather than matching a fixed total.
+      await expect(cells.filter({ hasNot: page.locator('.ic-edit') }), 'every Lucide cell has the mark').toHaveCount(0)
       const labels = await cells.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') || ''))
       for (const label of labels) expect(label.endsWith(SUFFIX), `${label} names the mark`).toBe(true)
       await expect(cells.first().locator('.ic-edit')).toHaveAttribute('aria-hidden', 'true')

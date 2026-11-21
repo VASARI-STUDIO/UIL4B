@@ -24,7 +24,9 @@ import { go, watch } from './helpers.js'
 import { readSeed, seedChip } from './palette-helpers.js'
 
 const LOCKED_MSG = 'Every colour is locked. Unlock one to shuffle.'
-const HEX_HINT = 'Use a hex like #1A2B3C'
+const HEX_HINT = 'Couldn’t read that. Try #1A2B3C, rgb(), hsl() or oklch().'
+// The contrast checker has its own field and its own wording; D19 did not touch it.
+const CONTRAST_HINT = 'Use a hex like #1A2B3C'
 
 const phone = (width, height = 844) => ({ viewport: { width, height }, isMobile: true, hasTouch: true })
 
@@ -125,8 +127,8 @@ test.describe('Hex fields that refuse what was typed', () => {
     await expect(hint, 'three characters is not yet a finished attempt').toHaveText('')
     await input.press('Enter')
     await expect(input).toHaveValue(kept)
-    await expect(hint).toContainText(HEX_HINT)
-    await expect(input).toHaveAccessibleDescription(new RegExp(HEX_HINT))
+    await expect(hint).toContainText(CONTRAST_HINT)
+    await expect(input).toHaveAccessibleDescription(new RegExp(CONTRAST_HINT))
     await input.fill('#1F2937')
     await expect(hint).toHaveText('')
   })

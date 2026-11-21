@@ -259,7 +259,7 @@ function focusableAfter(trigger, panel) {
   return all.slice(at + 1).find(el => !panel.contains(el)) || null
 }
 
-export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false, portalled = false, closeWhenAnchorLeaves = false } = {}) {
+export default function usePopover(open, onClose, { initialFocus = null, autoFocus = true, arrowNav = false, portalled = false, closeWhenAnchorLeaves = false, rovingTab = false, openAtTop = false } = {}) {
   const triggerRef = useRef(null)
   const popRef = useRef(null)
   const closeRef = useRef(onClose)
@@ -349,7 +349,12 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       const target = initialFocus ? panel?.querySelector(initialFocus) : focusablesIn(panel)[0]
       // rAF so the panel has been laid out (and placed) before focus lands —
       // focusing a not-yet-positioned element makes the browser scroll to it.
-      requestAnimationFrame(() => (target || panel)?.focus?.())
+      // openAtTop: a panel that scrolls opens at its top, with focus placed
+      // without scrolling, so a sticky header never starts over the content.
+      requestAnimationFrame(() => {
+        ;(target || panel)?.focus?.(openAtTop ? { preventScroll: true } : undefined)
+        if (openAtTop && panel) panel.scrollTop = 0
+      })
     }
 
     const onDown = (e) => {
@@ -386,8 +391,22 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       const list = focusablesIn(panel)
       if (!list.length) return
       const active = document.activeElement
-      const leavingForward = !e.shiftKey && active === list[list.length - 1]
-      const leavingBack = e.shiftKey && (active === list[0] || active === panel)
+      let leavingForward = !e.shiftKey && active === list[list.length - 1]
+      let leavingBack = e.shiftKey && (active === list[0] || active === panel)
+      if (rovingTab) {
+        // A roving grid keeps one Tab stop and parks the rest at tabindex -1, so
+        // the first and last FOCUSABLE are often not Tab stops at all. Leaving is
+        // decided by the Tab stops instead: nothing tabbable after the focused
+        // control going forward, nothing before it going back. Focus sitting on a
+        // parked swatch (a click, a script) still resolves correctly this way.
+        // Focus outside the panel (the trigger, the page) is not leaving it.
+        if (!panel.contains(active)) return
+        const stops = list.filter(el => el.tabIndex >= 0)
+        const follows = el => !!(active.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+        const precedes = el => !!(active.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING)
+        leavingForward = !e.shiftKey && !stops.some(follows)
+        leavingBack = e.shiftKey && (active === panel || !stops.some(precedes))
+      }
       // Let the Tab through — the browser moves focus onward on its own. We just
       // close behind it, which is what "disclosure" means as opposed to "modal".
       if (!leavingForward && !leavingBack) return
@@ -412,7 +431,7 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       document.removeEventListener('keydown', onKey, true)
       unmark()
     }
-  }, [open, initialFocus, autoFocus, arrowNav, portalled, closeToTrigger])
+  }, [open, initialFocus, autoFocus, arrowNav, portalled, rovingTab, openAtTop, closeToTrigger])
 
   return { triggerRef, popRef, closeToTrigger }
 }
