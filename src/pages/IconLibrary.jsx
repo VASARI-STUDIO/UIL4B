@@ -17,6 +17,10 @@ import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import useMediaQuery from '../hooks/useMediaQuery'
+import useInViewPlayback, { allowsAnimatedPreview } from '../hooks/useInViewPlayback'
+import { useAppearance } from '../contexts/AppearanceContext'
+import { frameInfo } from '../utils/animatedFrame'
+import { subscribeLoopClock } from '../utils/loopClock'
 import SplitDownload from '../components/library/SplitDownload'
 import FooterGlyph from '../components/library/FooterGlyph'
 import {
@@ -183,19 +187,16 @@ const PER_PACK_CAP = 1500
 const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 const ALL_PACKS = [...new Set([...INTERFACE_PACKS, 'simple-icons', ...ICON_GROUPS.coloured.packs, ...EMOJI_PACKS])]
 
-// The group tray's options were built HERE, at module scope, so that
-// LibraryFilterGroup was not handed a new array identity on every keystroke —
-// it measures its sliding indicator off the active button, and a fresh options
-// array re-runs that measurement.
+// The category tray's options (All, Coloured, Animated, Editable) are built inside
+// the component (`categoryOptions`) because a locked option has to say which tier
+// opens it, and the tier is not a module-level fact. LibraryFilterGroup measures
+// its sliding indicator off the active button, so a fresh options array re-runs
+// that measurement: the array is memoised on the tier alone, a handful of changes
+// in a session rather than one per render. Do not turn it back into a plain
+// expression in the JSX.
 //
-// They are now built inside the component (`groupOptions`) because a locked
-// chip has to say which tier opens it, and the tier is not a module-level fact.
-// The identity guarantee is kept by memoising on the tier alone: a handful of
-// changes in a session rather than one per render. Do not move this back to a
-// plain expression in the JSX.
-//
-// "My Icons" leads because it is the user's own collection rather than one of
-// the catalogue's groups; `custom` is not a member of GROUP_ORDER and never was.
+// `custom` ("My Icons") is the user's own collection, not a member of ICON_GROUPS.
+
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
@@ -869,7 +870,9 @@ function BrandGlyph({ pack, name, src, gone = false }) {
 
 // Previously painted sources skip the loading fade on remount.
 const paintedSrc = new Set()
-function MonoGlyph({ src, className, alt, onError }) {
+// `twin` is the other form of the same icon (an animated glyph and its still): it
+// counts as painted once this one has, so swapping between them does not fade in again.
+function MonoGlyph({ src, twin, className, alt, onError }) {
   const [phase, setPhase] = useState(() => (paintedSrc.has(src) ? 'ready' : 'wait'))
   const [seen, setSeen] = useState(src)
   if (seen !== src) {
@@ -887,6 +890,7 @@ function MonoGlyph({ src, className, alt, onError }) {
       alt={alt}
       onLoad={() => {
         paintedSrc.add(src)
+        if (twin) paintedSrc.add(twin)
         setPhase((p) => (p === 'wait' ? 'in' : p))
       }}
       onError={(e) => {
@@ -895,6 +899,35 @@ function MonoGlyph({ src, className, alt, onError }) {
       }}
     />
   )
+}
+
+// An animated-pack glyph (an <img> of the full SMIL markup).
+//  - Only a cell in view animates: `cellRef` is the grid cell, watched by the shared
+//    in-view observer. Reduced motion and data saver register nothing.
+//  - A looping icon (repeats for ever) plays natively while in view and shows its
+//    still off screen, and always when motion is not allowed.
+//  - A play-once icon keeps its own markup (it plays on mount, as it always has) and,
+//    while in view, restarts on the shared clock, staggered by position so the grid
+//    does not blink as one. A restart is a re-mount of the <img>.
+function AnimatedGlyph({ src, cellRef, idx, className, alt, onError }) {
+  const { reducedMotion } = useAppearance() || {}
+  const info = frameInfo(src)
+  const canPlay = !!info?.animated && allowsAnimatedPreview(reducedMotion)
+  const inView = useInViewPlayback(cellRef, canPlay)
+  const [run, setRun] = useState(0)
+  const restarts = canPlay && inView && !info.looping
+  useEffect(() => {
+    if (!restarts) return undefined
+    let t = 0
+    const off = subscribeLoopClock(() => {
+      clearTimeout(t)
+      t = setTimeout(() => setRun((n) => n + 1), (idx % 6) * 150)
+    })
+    return () => { off(); clearTimeout(t) }
+  }, [restarts, idx])
+  const still = !!info?.animated && info.looping && !(canPlay && inView)
+  const shown = still ? info.still : src
+  return <MonoGlyph key={run} src={shown} twin={info?.animated && info.looping ? (still ? src : info.still) : undefined} className={className} alt={alt} onError={onError} />
 }
 
 // ── Grid cell ────────────────────────────────────────────────────────────────
@@ -1079,7 +1112,7 @@ function SpriteGlyph({ href, symKey, className }) {
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
-function cellGlyph(icon, src, onGlyphError, gone) {
+function cellGlyph(icon, src, onGlyphError, gone, cellRef, idx) {
   if (icon.custom) {
     // A saved icon is a symbol in the sprite like a pack glyph (customSymbolRef is
     // '' when it could not go in, or was let go: then it is drawn as an image).
@@ -1107,6 +1140,7 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     if (src.charCodeAt(0) === 35) {
       return <SpriteGlyph href={src} symKey={svgKey(icon.pack, icon.name)} className={`ig-sym ${invClass(icon.pack)}`.trim()} />
     }
+    if (isAnimatedPack(icon.pack)) return <AnimatedGlyph src={src} cellRef={cellRef} idx={idx} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
     return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
   return (
@@ -1142,7 +1176,8 @@ const findIconCell = (icon) => (icon
   ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
   : null)
 
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, hideEdit = false, onPick, onWarm, onGlyphError }) {
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, hideEdit = false, idx = 0, onPick, onWarm, onGlyphError }) {
+  const cellRef = useRef(null)
   const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
   // with it (see `.ic-pack`), so the accessible name carries it for everyone who
@@ -1154,6 +1189,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
   const editable = isGalleryEditable(icon)
   return (
     <div
+      ref={cellRef}
       className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
       data-ic={ghost ? undefined : iconCellKey(icon)}
       style={ghost ? { height: ghost } : undefined}
@@ -1166,7 +1202,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       onMouseLeave={warmCancel}
       onFocus={() => onWarm(icon, true)}
     >
-      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
+      {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone, cellRef, idx)}</Fragment>}
       {!ghost && editable && !hideEdit && <EditMark key="e" />}
       <span key="n" className="ic-name">{icon.name}</span>
       {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
@@ -5442,6 +5478,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       picked={isPicked(icon)}
       ghost={ghost}
       hideEdit={category === 'editable'}
+      idx={idx}
       onPick={onPick}
       onWarm={onWarm}
       onGlyphError={noteGlyphFailure}
