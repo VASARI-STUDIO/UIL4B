@@ -166,6 +166,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-session': { scope: 'device', why: 'Synchronous "was signed in" hint for first paint' },
   'vs-settings-section': { scope: 'device', why: 'Which Settings tab this browser last showed' },
   'vs-prompt-tab': { scope: 'device', why: 'Which Prompt Library tab this browser last showed' },
+  'vs-colour-notation': { scope: 'device', why: 'Colour picker notation (HEX, RGB, HSL, OKLCH), a reading preference on this browser' },
   'vs-palette-history': { scope: 'device', why: 'Undo log of the palette board, rewritten every edit; the design itself syncs' },
   'vs-pinned-v': { scope: 'device', why: 'Pinned-tools migration marker for this browser' },
   'vs-icon-copy-day': { scope: 'device', why: 'Client-side daily copy meter (the server is not involved)' },
