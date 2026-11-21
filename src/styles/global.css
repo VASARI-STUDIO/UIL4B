@@ -129,6 +129,10 @@
    block 78 -> 105px). The defect was the typeface; the sizes were set. */
 :where(button,input,select,textarea){font-family:inherit}
 :root{
+  /* The horizon's eased fall-off, shared by the home footer's light and the
+     gallery hero slab's, so the two always fade the same way. Used as the
+     stop list of a radial-gradient mask. */
+  --horizon-fade:#000 0%,rgba(0,0,0,.93) 10%,rgba(0,0,0,.8) 20%,rgba(0,0,0,.64) 30%,rgba(0,0,0,.48) 40%,rgba(0,0,0,.33) 50%,rgba(0,0,0,.2) 60%,rgba(0,0,0,.11) 70%,rgba(0,0,0,.05) 80%,rgba(0,0,0,.015) 90%,rgba(0,0,0,0) 100%;
   /* ── TYPE — two families (V2). Docs: docs/reference/design-language-v2.md#type ──
      TWO families ship and there is no serif role. --display is an alias of
      --font: the same UI face, named for the job it does (hero type,

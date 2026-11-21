@@ -10,7 +10,8 @@
    `.lib-surface .x .y` rules and the page sheets' `.lib-surface.<page> .x`
    rules whichever stylesheet loads last.
 
-   Rules of the surface: no blur, no glow, no gradient on a control, no blue,
+   Rules of the surface: no blur, no glow, no gradient on a control (the hero
+   slab's horizon light, tool-shell.css, is the one gradient), no blue,
    focus is a 2px ink outline, radii 16 / 12 / 8 / 999, controls 36px (44px on
    a phone), five type sizes 52 / 40 / 28 / 16 / 12. */
 

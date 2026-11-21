@@ -1167,7 +1167,35 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    itself. */
 .fdx-panel{border-radius:var(--radius-s)}
 .fdx-panel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
+/* The slab's light is the footer's horizon (pages/home-footer.css,
+   .sp-footer--home .sp-footer-horizon), so the gallery headers and the footer
+   read as one brand: the same six hues in one oklch gradient, faded by the
+   same eased mask (--horizon-fade, global.css). The stops sit further right
+   than the footer's so the warm orange is the centre of the light, and the
+   light rises from the slab's bottom edge right of the title, so the h1 and
+   blurb sit on the dark ground. The footer's warm core is left out: on a slab
+   this short it washed over the title. Nothing is blurred and nothing moves;
+   inset:0 keeps the light inside the slab's own box. */
+.dgh-hero{isolation:isolate}
+.dgh-hero::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  opacity:.6;
+  background:linear-gradient(90deg,#EC6A51 40%,#F0B94D 72%,#A2BC81 82%,#59B193 88%,#6CA0C6 94%,#9B84C2 100%);
+  background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 40%,oklch(.817 .138 82) 72%,oklch(.76 .085 128) 82%,oklch(.696 .097 169) 88%,oklch(.685 .079 240) 94%,oklch(.658 .094 301) 100%);
+  -webkit-mask-image:radial-gradient(60% 150% at 64% 100%,var(--horizon-fade));
+  mask-image:radial-gradient(60% 150% at 64% 100%,var(--horizon-fade));
+}
+/* A phone slab is tall and narrow: the footer's own phone mask (wider, set
+   right) and its phone stops keep the light under the blurb's last line
+   rather than behind it. */
+@media(max-width:640px){
+  .dgh-hero::before{
+    background:linear-gradient(90deg,#EC6A51 10%,#F0B94D 28%,#A2BC81 42%,#59B193 54%,#6CA0C6 70%,#9B84C2 80%);
+    background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 10%,oklch(.817 .138 82) 28%,oklch(.76 .085 128) 42%,oklch(.696 .097 169) 54%,oklch(.685 .079 240) 70%,oklch(.658 .094 301) 80%);
+    -webkit-mask-image:radial-gradient(90% 70% at 72% 100%,var(--horizon-fade));
+    mask-image:radial-gradient(90% 70% at 72% 100%,var(--horizon-fade));
+  }
+}
 .dgh-copy{position:relative;z-index:1;min-width:0}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
    Restated here because the hero is a fixed dark surface in BOTH themes, so the
