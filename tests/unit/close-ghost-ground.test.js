@@ -46,7 +46,7 @@ test('global .ui-pill-out still paints its own ground (the rule this guard answe
 
 test('the closing ghost outranks .ui-pill-out and stays a transparent dark ghost', () => {
   const ghost = rules(FOOTER).filter((r) =>
-    /\.hm-close-ghost\.ui-pill-out(?![\w-])/.test(r.sel) && !/:hover/.test(r.sel))
+    /\.hm-close-ghost\.ui-pill-out(?![\w-])/.test(r.sel) && !/:hover/.test(r.sel) && !/data-theme="light"/.test(r.sel))
   assert.ok(ghost.length, 'home-footer.css needs a .hm-close-ghost.ui-pill-out rule')
   for (const r of ghost) {
     assert.ok(classCount(r.sel) > classCount('.ui-pill-out'),
@@ -62,5 +62,17 @@ test('the fix is scoped to the closing call, so the docked /plans bar keeps its 
   for (const r of ghost) {
     assert.match(r.sel, /\.hm-close(-btns)?\b[^.]*\s*>?\s*\.hm-close-ghost/,
       `${r.sel} must be anchored inside the closing section`)
+  }
+})
+
+test('on /tools and /mobile in the light theme the ghost is restored to the light ground, still outranking .ui-pill-out', () => {
+  const ghost = rules(FOOTER).filter((r) =>
+    /data-theme="light"/.test(r.sel) && /\.hm-close-ghost\.ui-pill-out(?![\w-])/.test(r.sel) && !/:hover/.test(r.sel))
+  assert.ok(ghost.length, 'home-footer.css needs a light-theme .hm-close-ghost.ui-pill-out rule')
+  for (const r of ghost) {
+    assert.ok(classCount(r.sel) > classCount('.ui-pill-out'), `${r.sel} must outrank .ui-pill-out`)
+    assert.match(r.sel, /\.mkt\b/, `${r.sel} must stay scoped to the marketing pages, so the homepage keeps its dark ghost`)
+    assert.equal(decl(r.body, 'background'), 'transparent', `${r.sel} background`)
+    assert.equal(decl(r.body, 'color'), 'var(--v3-ink)', `${r.sel} color`)
   }
 })

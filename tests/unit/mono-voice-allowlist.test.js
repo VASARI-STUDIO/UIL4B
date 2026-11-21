@@ -69,6 +69,9 @@ const ALLOWED = {
     '.ig-attrib code': 'code',
     '.pl-modal-prompt pre': 'ask',
   },
+  'deferred/menu-moments.css': {
+    '.pnav-menu[data-faces~="mono"] .pnav-tool[data-moment="font-pair"][data-live] .w2': 'glyph',
+  },
   'deferred/overlay.css': {
     '.cp-kbd': 'kbd',
   },
@@ -89,6 +92,7 @@ const ALLOWED = {
     '.adm-table .mono': 'code',
     '.code': 'code',
     '.cpk-hex': 'hex',
+    '.cpk-hint-value': 'hex',
     '.fnote-todo-where code': 'code',
     '.hcmd-kbd kbd': 'kbd',
     '.pgal-hex': 'hex',
