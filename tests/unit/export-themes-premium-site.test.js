@@ -424,3 +424,118 @@ test('theme 21 logo grounds: a tile names its logo version plainly, and the phot
     assert.doesNotMatch(files['assets/guidelines.css'], /\.ht-pf\{[^}]*max-width/, 'the photo direction runs the full column width')
   }
 })
+
+// Design review round 11 (theme 21), the guide: each fix is pinned by what the built page says, with a design and without.
+//     Break (in order of the asserts): drop the stacked-centring replace in inkMark (lane-ht-lib.js); put px back on the grid's margin and gutter
+//     (mm() in the grid page, lane-ht-notes.js); give typeInUse a `big` line, or drop `ht-scale--use` from its list; say the width again in a
+//     min-size note (sizeFig); drop role="img" or the aria-label from the palette strip (device()); write the rgb value as `<span class="num">`
+//     again (colour-values); put `padding:96px 56px` back on .hk-code (lane-ht-kcss.js); drop aspect-ratio from .ht-dg__ph (lane-ht-css.js).
+test('theme 21 guide, round 11: stacked lockup centred, grid in mm, type in use without a repeat, min-size values once, strip labelled, values in mono, summary phone portrait', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('slides', body), css = files['assets/guidelines.css']
+    // the stacked lockup's symbol is centred over its name: where it is drawn as paths, its x offset is not 0 (flush left)
+    const sym = [...files['clear-space.html'].matchAll(/translate\(([\d.]+) 0\.00\) scale\(1\.6\)/g)].map((m) => Number(m[1]))
+    assert.ok(sym.some((x) => x > 0), 'the stacked lockup draws its symbol flush left, not centred over the name')
+    // a print page is measured in mm
+    const grid = files['grid.html']
+    assert.match(grid, /aria-label="A4 portrait page, 210 by 297 mm, with \d+ columns, [\d.]+ mm margins and [\d.]+ mm gutters"/, 'the grid drawing states its measures in mm')
+    assert.match(grid, /<dt[^>]*>Margin<\/dt><dd[^>]*><span class="num">[\d.]+ mm<\/span>/, 'the margin is in mm')
+    assert.match(grid, /<dt[^>]*>Gutter<\/dt><dd[^>]*><span class="num">[\d.]+ mm<\/span>/, 'the gutter is in mm')
+    // type in use: the Display sample is the largest line, so no headline over it repeats it
+    const tiu = files['type-in-use.html']
+    assert.match(tiu, /class="ht-scale ht-scale--use"/, 'the type-in-use list lost .ht-scale--use')
+    assert.doesNotMatch(tiu, /class="ht-big/, 'type in use has a headline over its Display sample')
+    assert.match(css, /\.ht-scale--use>li\{[^}]*flex-direction:column/, 'a sample is not set under its label, at the column width')
+    // min size: a panel says its width once (the big figure); its note gives the height, a different measure
+    const panels = files['min-size.html'].match(/<div class="ht-mss"[\s\S]*?(?=<p class="ht-lead">)/)
+    assert.ok(panels, 'the min-size figure is there')
+    const bigs = [...panels[0].matchAll(/ht-ms__big num">([^<]+)</g)].map((m) => m[1])
+    assert.ok(bigs.length >= 2, 'the min-size figure has its panels')
+    for (const big of bigs) assert.equal(panels[0].split(big).length - 1, 1, `${big} is said more than once in its panel`)
+    assert.match(panels[0], /\d+ (?:px|mm) high/, 'a min-size note does not give the height')
+    // the palette strip is one labelled picture
+    assert.match(files['palette.html'], /<div class="ht-dev" role="img" aria-label="The brand's colours in proportion[^"]*"/, 'the palette strip is not a labelled picture')
+    // hex and rgb are code values: the mono face, never the figures class
+    const vals = [...files['colour-values.html'].matchAll(/<span class="ht-vals">([\s\S]*?)<\/span><\/dd>/g)].map((m) => m[1])
+    assert.ok(vals.length >= 4, 'the values table has rows')
+    for (const v of vals) {
+      assert.match(v, /<span class="ht-m">#[0-9A-Fa-f]{6}<\/span><span class="ht-m">rgb\([^)]*\)$/, 'a hex or rgb value is not in the mono class')
+      assert.doesNotMatch(v, /class="num"/, 'a value is set in the figures face')
+    }
+    assert.match(css, /\.ht-m\{font-family:var\(--mono\)/, '.ht-m is not the mono face')
+    // the summary phone is portrait (taller than wide)
+    assert.match(files['summary.html'], /class="ht-mk__phone ht-dg__ph"/, 'the summary draws the portrait phone')
+    const ar = css.match(/\.ht-dg__ph\{[^}]*aspect-ratio:(\d+)\/(\d+)/)
+    assert.ok(ar && Number(ar[1]) < Number(ar[2]), 'the summary phone is not portrait')
+  }
+  // the markup panel sits close under the live specimen: top padding well under the bottom, on the desktop rule and the mobile one
+  const kit = await pagesFor('ui-kit', { projectName: 'Tide & Co.', design: DESIGN }), kcss = kit['assets/kit.css']
+  const pad = [...kcss.matchAll(/\.hk-code\{padding:(\d+)px (\d+)px (\d+)px[;}]/g)].map((m) => [Number(m[1]), Number(m[3])])
+  assert.ok(pad.length >= 2 && pad.every(([t, b]) => t < b), 'the .hk-code padding is symmetric again: a large gap sits between the specimen and its markup')
+})
+
+// Design review round 12 (theme 21): the orders table. Times never wrap (a nowrap tabular span, shipped in components.css), the rows run late
+// first, the open orders by due time and the closed last (the order the product screen tells), and a theme that does not set the flag is unchanged.
+//     Break: drop `timeNowrap` from meta.shipped (themes/21-presentation/index.js) or the `when()` wrap in the table page (lane-ht-kit.js);
+//     list S.deliveries in place of ordersByDue(ctx) (lane-ht-kit.js table page).
+test('theme 21 orders table: times held together, late first, open by due time, closed last; another theme has no .ui-time', async () => {
+  const minutes = (t) => { const m = /(\d{1,2}):(\d{2}) ([ap])m/i.exec(t); return (Number(m[1]) % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0)) * 60 + Number(m[2]) }
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('ui-kit', body)
+    assert.match(files['components.css'], /\.ui-time \{[^}]*white-space: nowrap[^}]*font-variant-numeric: tabular-nums/, 'components.css does not hold a time together')
+    const tbody = files['table.html'].match(/<tbody>[\s\S]*?<\/tbody>/)[0]
+    const rows = [...tbody.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((m) => m[1])
+    assert.ok(rows.length >= 5, 'the table has its orders')
+    const chips = rows.map((r) => (/ui-chip--[a-z]+">([^<]+)</.exec(r) || [])[1])
+    assert.equal(chips[0], 'Late', 'the late order is not first')
+    assert.equal(chips[chips.length - 1], 'Closed', 'the closed order is not last')
+    const open = rows.slice(1, -1)
+    for (const r of rows.slice(1)) assert.match(r, /<span class="ui-time">\d{1,2}:\d{2} [ap]m<\/span>/, 'a time can wrap: it is not in .ui-time')
+    const due = open.map((r) => minutes(/<span class="ui-time">([^<]+)</.exec(r)[1]))
+    assert.deepEqual(due, [...due].sort((a, b) => a - b), 'the open orders are not by due time')
+  }
+  const other = await exportZip('22-ticket', 'ui-kit')
+  assert.doesNotMatch(other['components.css'], /\.ui-time/, 'another theme gained the time class')
+})
+
+// Design review round 12 (theme 21): in the fixture the brand's action colour and the house success colour are both green, so "New order" takes
+// the house info blue (meta.statusTones), a different hue family from "Packing", and the words differ. A theme with no such hook keeps its chips.
+//     Break: drop `statusTones` from meta (themes/21-presentation/index.js), or drop the house-colour strip of `info` in makeCtx (engine/pages.js).
+test('theme 21 status chips: New order is not the colour of Packing; another theme keeps its New chip', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('ui-kit', body)
+    const tone = (word) => (new RegExp(`ui-chip--([a-z]+)">${word}<`).exec(files['status.html']) || [])[1]
+    assert.ok(tone('New order') && tone('Packing'), 'the status page names both chips')
+    assert.notEqual(tone('New order'), tone('Packing'), 'New order and Packing are one colour family')
+    assert.equal(tone('New order'), 'info', 'New order is the info blue')
+    // and the colours themselves are two hue families: the info colour is not another green beside the success one
+    const hue = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); return d === 0 ? 0 : 60 * ((mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4)) }
+    const tok = (n) => new RegExp('--' + n + ': (#[0-9A-Fa-f]{6});').exec(files['tokens.css'])[1]
+    assert.ok(Math.abs(hue(tok('info')) - hue(tok('success'))) > 60, 'the info and success colours are one hue family')
+  }
+  const other = await exportZip('22-ticket', 'ui-kit')
+  assert.match(other['status.html'], /ui-chip--action">New</, 'another theme lost its New chip tone')
+})
+
+// Design review round 12 (theme 21): the kit's index lists every page as a link, under its section, as the guide's index does.
+//     Break: pass { brief: true } to contentsGrid in kitContents (lane-ht-kit.js).
+test('theme 21 kit index lists every page as a link, with a design and without', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('ui-kit', body)
+    const lists = files['index.html'].match(/<ol class="ht-cx__p"[\s\S]*?<\/ol>/g) || []
+    assert.equal(lists.length, 4, 'each of the four sections lists its pages')
+    const links = lists.join('').match(/<a href="[a-z-]+\.html">/g) || []
+    assert.equal(links.length, 23, 'the index does not link every kit page')
+  }
+})
+
+// Design review round 12 (theme 21): the photography page's Subject / Light / Crop table runs the column, as the drawing above it does.
+//     Break: drop the page from the spread pages in lane-ht.js, or put a max-width back on `.ht-notes--spread .ht-nb` (lane-ht-css.js).
+test('theme 21 photography page: the measures table runs the full column under the drawing', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('slides', body), pd = files['photo-direction.html']
+    assert.match(pd, /<section class="ht-notes ht-notes--spread"/, 'the page is not a spread, so its notes column is the narrow one')
+    assert.match(pd, /<dl class="ht-dl"/, 'the measures table is there')
+    assert.match(files['assets/guidelines.css'], /\.ht-notes--spread \.ht-nb\{max-width:none/, 'a spread page keeps a text-width cap on its notes')
+  }
+})
