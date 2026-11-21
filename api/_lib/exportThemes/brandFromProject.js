@@ -265,7 +265,8 @@ function build({ design: rawDesign, projectName, date }) {
       },
       when: Object.fromEntries(['colour', 'mono-dark', 'mono-light', 'reversed', 'horizontal', 'stacked', 'symbol'].map((k) => [k, 'Say where this version goes.'])),
     },
-    ui: uiBlock(light, dark),
+    // infoOwn: the design picked its own information colour, so a theme's house info tone (meta.statusTones) must not replace it
+    ui: { ...uiBlock(light, dark), infoOwn: !!ownInfo(design) },
   };
   return brand;
 }

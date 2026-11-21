@@ -459,7 +459,7 @@ test('theme 21 guide, round 11: stacked lockup centred, grid in mm, type in use 
     const vals = [...files['colour-values.html'].matchAll(/<span class="ht-vals">([\s\S]*?)<\/span><\/dd>/g)].map((m) => m[1])
     assert.ok(vals.length >= 4, 'the values table has rows')
     for (const v of vals) {
-      assert.match(v, /<span class="ht-m">#[0-9A-Fa-f]{6}<\/span><span class="ht-m">rgb\([^)]*\)$/, 'a hex or rgb value is not in the mono class')
+      assert.match(v, /<span class="ht-m">#[0-9A-Fa-f]{6}<\/span><span class="ht-m">rgb\([^)]*\)<\/span>$/, 'a hex or rgb value is not in the mono class')
       assert.doesNotMatch(v, /class="num"/, 'a value is set in the figures face')
     }
     assert.match(css, /\.ht-m\{font-family:var\(--mono\)/, '.ht-m is not the mono face')
@@ -515,6 +515,17 @@ test('theme 21 status chips: New order is not the colour of Packing; another the
   }
   const other = await exportZip('22-ticket', 'ui-kit')
   assert.match(other['status.html'], /ui-chip--action">New</, 'another theme lost its New chip tone')
+})
+
+// A design that picks its own information colour keeps it under theme 21's house info tone: only a generated info colour is replaced.
+//     Break: drop the `infoOwn` guard from the house filter in makeCtx (engine/pages.js), or the `infoOwn` marker in brandFromProject.js.
+test("theme 21 keeps a design's own information colour; the generated one takes the house blue", async () => {
+  const hue = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); return d === 0 ? 0 : 60 * ((mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4)) }
+  const info = async (design) => new RegExp('--info: (#[0-9A-Fa-f]{6});').exec((await pagesFor('ui-kit', { projectName: 'Tide & Co.', design }))['tokens.css'])[1]
+  const own = await info({ ...DESIGN, states: { info: { custom: 330 } } }), house = await info(DESIGN)
+  const gap = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
+  assert.ok(gap(hue(own), 330) < 40, `the design's own pink info became ${own}`)
+  assert.ok(gap(hue(own), hue(house)) > 60, `own ${own} and house ${house} are one hue family`)
 })
 
 // Design review round 12 (theme 21): the kit's index lists every page as a link, under its section, as the guide's index does.
