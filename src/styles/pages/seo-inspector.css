@@ -87,7 +87,7 @@
 
 .seo-page .seo-tab:hover { color: var(--tl-ink); }
 
-.seo-page .seo-tab.is-active { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--sel-edge); }
+.seo-page .seo-tab.is-active { color: var(--sel-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); box-shadow: var(--sel-line); }
 
 .seo-page .seo-tab:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
@@ -217,7 +217,7 @@
 
 .seo-page .seo-seg button:hover { color: var(--tl-ink); }
 
-.seo-page .seo-seg button.is-active { color: var(--tl-ink); background: var(--tl-card); border-color: var(--sel-edge); }
+.seo-page .seo-seg button.is-active { color: var(--sel-on-solid); background: var(--sel-solid); border-color: var(--sel-solid); }
 
 .seo-page .seo-seg button:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; }
 
@@ -410,7 +410,7 @@
     white-space: normal;
     border-color: transparent;
   }
-  .seo-page .seo-tab.is-active { background: var(--tl-card); border-color: var(--sel-edge); }
+  .seo-page .seo-tab.is-active { background: var(--tl-card); border-color: var(--tl-line); }
   .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
   .seo-page .seo-ca-kw-grid { grid-template-columns: 1fr; }
 }

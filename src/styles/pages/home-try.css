@@ -164,7 +164,7 @@
   flex: 1 1 auto; height: 32px; padding: 0 14px; border: 0; border-radius: var(--btn-radius); background: transparent;
   font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; color: rgba(var(--ink), .78);
 }
-.ht-seg button[aria-checked="true"], .ht-tabs button[aria-selected="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px #EFEEEA; color: #EFEEEA; }
+.ht-seg button[aria-checked="true"], .ht-tabs button[aria-selected="true"] { background: #EFEEEA; box-shadow: none; color: #0F1012; }
 .ht-seg button:disabled { color: rgba(var(--ink), .34); cursor: not-allowed; }
 .ht-seg button:disabled[aria-checked="true"] { background: transparent; box-shadow: none; }
 .ht-btn, .ht-seg button, .ht-tabs button, .ht-go, .ht-pal-hex {

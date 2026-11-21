@@ -23,7 +23,7 @@
    The current tab is ink over an ink underline. Blue said "next action" about
    the tab the visitor is already standing in. */
 .plib-page .pl-tab{min-height:44px;border-radius:0}
-.plib-page .pl-tab.active{color:var(--t0);border-bottom-color:var(--t0);font-weight:600}
+.plib-page .pl-tab.active{color:var(--sel-ink);border-bottom-color:var(--sel-edge);font-weight:600}
 .plib-page .pl-tab-count{border-radius:var(--radius-xs)}
 .plib-page .pl-tab.active .pl-tab-count{background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
 .plib-page .pl-tab:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
