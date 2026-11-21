@@ -420,7 +420,7 @@ test('theme 21 logo grounds: a tile names its logo version plainly, and the phot
     for (const t of tiles.filter((x) => /logo/i.test(x) && !/picture|sky/i.test(x))) assert.match(t, /^(?:Full-colour logo|Reversed logo|One-colour logo, (?:dark|light))$/, 'a tile names a logo version plainly')
     assert.doesNotMatch(files['logo-grounds.html'], /On-[a-z]+ logo/, 'no theme vocabulary')
     const pd = files['photo-direction.html']
-    assert.match(pd, /<figure class="ht-pf"[^>]*>(?:<div class="ht-pf__pic"[^>]*>)?<svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two pairs of hands/, 'the photo direction is drawn as hands at the counter')
+    assert.match(pd, /<figure class="ht-pf"[^>]*>(?:<div class="ht-pf__pic"[^>]*>)?<svg[^>]*viewBox="0 0 400 300"[^>]*aria-label="Two people at a market counter/, 'the photo direction is drawn as two people at the counter')
     assert.doesNotMatch(files['assets/guidelines.css'], /\.ht-pf\{[^}]*max-width/, 'the photo direction runs the full column width')
   }
 })
@@ -549,4 +549,89 @@ test('theme 21 photography page: the measures table runs the full column under t
     assert.match(pd, /<dl class="ht-dl"/, 'the measures table is there')
     assert.match(files['assets/guidelines.css'], /\.ht-notes--spread \.ht-nb\{max-width:none/, 'a spread page keeps a text-width cap on its notes')
   }
+})
+
+// Design review round 13 (theme 21), N10: the logo-on-a-picture tile on 2.4 is cropped from the same drawing as 5.1 (same fills, drawn
+// with `slice` so it fills the tile and never letterboxes), and the drawing is two people, so its label may say so.
+//     Break: give sceneTile its own palette or `meet` in lane-ht-notes.js; or draw one hands group and keep "two people" in the aria-label.
+test('theme 21 brand photograph: the 2.4 tile and the 5.1 drawing share one source, and the words match the drawing', async () => {
+  const scene = (html) => /<svg class="ht-scene"[\s\S]*?<\/svg>/.exec(html)[0]
+  const fills = (svg) => [...new Set(svg.match(/fill="#[0-9A-Fa-f]{6}"/g))].sort().join(' ')
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('slides', body), tile = scene(files['logo-grounds.html']), pic = scene(files['photo-direction.html'])
+    assert.equal(fills(tile), fills(pic), 'the tile and the photograph are drawn in different fills')
+    assert.match(tile, /preserveAspectRatio="xMidYMin slice"/, 'the tile is not cropped to fill (slice)')
+    assert.doesNotMatch(tile, /preserveAspectRatio="[^"]*meet/, 'the tile letterboxes the drawing')
+    assert.equal((pic.match(/class="ht-hands"/g) || []).length, 2, 'two people are two hands groups')
+    assert.match(pic, /aria-label="Two people at a market counter/)
+    assert.doesNotMatch(pic, /two pairs of hands/i, 'the label names hands that are not drawn')
+    assert.match(files['assets/guidelines.css'], /\.ht-field--pic \.ht-field__imglogo\{inset:24px 0 26px/, 'the picture tile logo is off the centre line of the sky')
+  }
+})
+
+// Design review round 13 (theme 21), N11: the min-size page shows its heading and lead at 1440 (only the slide's duplicate is hidden),
+// both figures are labelled as the smallest width, and the print lockup is the same size at every width.
+//     Break: hide the whole `.ht-notes--fig` at 1024+ again, or drop the "Smallest width" label from sizeFig (lane-ht-notes.js) or the slide (lane-g2.js).
+test('theme 21 min-size page: the h2 and lead show at 1440, the figures say they are widths', async () => {
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const files = await pagesFor('slides', body), ms = files['min-size.html'], css = files['assets/guidelines.css']
+    assert.match(ms, /class="ht-notes ht-notes--fig"/)
+    assert.match(ms, /Never smaller than this\./, 'the heading is missing from the page markup')
+    assert.doesNotMatch(css, /\.ht-notes--fig\{[^}]*display:none/, 'the whole notes block is hidden at desktop')
+    assert.match(css, /\.ht-notes--fig \.ht-nf\{display:none/, 'only the narrow-width duplicate of the figures is hidden at desktop')
+    assert.equal((ms.match(/<p class="ht-ms__k">Smallest width/g) || []).length, 2, 'both figures are labelled as widths')
+    const widths = [...ms.matchAll(/class="ht-ms__w" style="width:([\d.]+)px"/g)].map((m) => m[1])
+    assert.equal(widths.length, 2)
+    assert.ok(!/@media[^{]*\{[^}]*\.ht-ms__w\{[^}]*width/.test(css), 'a media rule resizes the lockup at one width')
+  }
+})
+
+// Design review round 13 (theme 21), n39: the summary's phone column is the width of the phone; the last page's band reads "Back to the cover".
+//     Break: put the 5fr/4fr columns back on `.ht-mks--sp` (lane-ht-css.js), or drop the `cover` option from the nextField calls (lane-ht.js, lane-ht-kit.js).
+test('theme 21 summary phone column is the phone, and the last page ends on the cover', async () => {
+  const files = await pagesFor('slides', { projectName: 'Tide & Co.', design: DESIGN })
+  assert.match(files['assets/guidelines.css'], /\.ht-mks--sp\{grid-template-columns:minmax\(0,1fr\) 340px/)
+  assert.match(files['summary.html'], /<a class="ht-next__a" href="index\.html"><span class="ht-k">Start again<\/span>[\s\S]*?Back to the cover/)
+  assert.doesNotMatch(files['grid.html'], /Back to the cover/, 'a page with a next page links to it')
+})
+
+// Design review round 13 (theme 21), n40: swatches and stripes keep an edge on a dark ground.
+//     Break: drop the `[data-theme="dark"] .ht-dev>span` rule or the 60% border on `.ht-sum__sw` (lane-ht-css.js).
+test('theme 21 swatches and stripes have an edge in the dark theme', async () => {
+  const css = (await pagesFor('slides', { projectName: 'Tide & Co.', design: DESIGN }))['assets/guidelines.css']
+  assert.match(css, /\[data-theme="dark"\] \.ht-dev>span,\[data-theme="dark"\] \.ht-stripe>div\{box-shadow:inset 0 0 0 1px/)
+  assert.match(css, /\[data-theme="dark"\] \.ht-sum__sw\{border-color:color-mix\(in srgb,var\(--t\) 60%/)
+})
+
+// Design review round 13 (theme 21), n42 and n43: the kit's code blocks fade only where scroll-driven animation exists (no default mask),
+// and the empty-state specimen runs the column with no 720px cap on its code.
+//     Break: move the mask out of @supports (animation-timeline ...) in lane-ht-kcss.js; drop hk-i--full from the empty item (lane-ht-kit.js).
+test('theme 21 kit: the code fade is progressive, the empty specimen is full width', async () => {
+  const files = await pagesFor('ui-kit', { projectName: 'Tide & Co.', design: DESIGN }), css = files['assets/kit.css']
+  assert.match(css, /@supports \(animation-timeline:scroll\(self inline\)\)\{/)
+  const outside = css.replace(/@supports \(animation-timeline[\s\S]*$/, '')
+  assert.doesNotMatch(outside, /\.hk-code[^{]*\{[^}]*mask-image/, 'the code blocks are masked where the fade cannot be driven')
+  assert.match(files['empty.html'], /hk-i--w hk-i--full/)
+  assert.doesNotMatch(css, /\.hk-code ol:has\(>li:only-child\)\{[^}]*max-width:720px/, 'the lone code block is capped at 720px')
+})
+
+// Design review round 13 (theme 21), n44: the grid page draws the brand's own page on the grid: the name, a photograph on the columns, and a
+// millimetre caption. n45/n46/n48/n49: the summary's type line names the weights when one family does both jobs; the Number slide's caption does
+// not repeat the slide's own words; the example and the kit's Feedback page show a labelled loading row; every palette name is one size.
+//     Break: drop `lay` from the grid figure; give NAME_SIZE different steps; drop `loadingRow` from exampleDemo (once.js); restore "Six orders, one late." in countLine (lane-ht-notes.js).
+test('theme 21 round 13 minors: grid page layout, type line, number caption, loading row, one name size', async () => {
+  const files = await pagesFor('slides', { projectName: 'Tide & Co.', design: DESIGN })
+  const grid = files['grid.html']
+  assert.match(grid, /class="ht-d ht-gp__n"[^>]*>Tide &amp; Co\.</, 'the brand name is not set on the grid page')
+  assert.match(grid, /class="ht-gp__p"[^>]*><svg class="ht-scene"/, 'the photograph is not on the columns')
+  assert.match(grid, /14\.8 mm margins, 4\.2 mm/, 'the caption does not give the margins in millimetres')
+  assert.match(files['layouts.html'], /Across six orders\./)
+  assert.doesNotMatch(files['layouts.html'], /Six orders, one late\./)
+  assert.match(files['summary.html'], /ht-sum__ty">Barlow Condensed for headlines, Commissioner for text\./)
+  const names = [...files['palette.html'].matchAll(/ht-field__w" style="--ws:([^"]+)"/g)].map((m) => m[1])
+  assert.ok(names.length >= 3 && new Set(names).size === 1, `palette names are set at ${[...new Set(names)].join(' / ')}`)
+  const kit = await pagesFor('ui-kit', { projectName: 'Tide & Co.', design: DESIGN })
+  for (const f of ['example.html', 'feedback.html']) assert.match(kit[f], /Loading<\/(span|p)>[\s\S]*?ui-skeleton/, `${f} has no labelled loading row`)
+  const one = await pagesFor('slides', { design: {} })
+  assert.match(one['summary.html'], /ht-sum__ty">Commissioner: extra bold for headlines, regular for text\./, 'one family for both jobs does not name the weights')
 })
