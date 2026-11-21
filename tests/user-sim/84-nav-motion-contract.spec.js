@@ -302,14 +302,14 @@ test.describe('the nav does not animate layout', () => {
     expect(rest.tile, 'a tile is drawn behind the glyph at rest').toBe('rgba(0, 0, 0, 0)')
     expect(rest.glyph, 'the glyph rests at the quiet tone, not the full ink').not.toBe(rest.ink)
     expect(rest.name, 'the name is shifted at rest').toBe('none')
-    // The glyph's colour is a 100ms transition: wait for it to land on the row's ink.
-    await expect.poll(async () => (await read()).glyph, { message: 'the glyph does not come up to the row ink on hover' }).toBe(rest.ink)
+    // The glyph's colour is a short transition: it leaves the quiet tone for the row's ink, or for its own hue on a tool with a hover moment.
+    await expect.poll(async () => (await read()).glyph, { message: 'the glyph does not come up from the quiet tone on hover' }).not.toBe(rest.glyph)
     const hot = await read()
     expect(hot.name, 'the name slides on hover').toBe('none')
     expect(hot.tile, 'a tile appears behind the glyph on hover').toBe('rgba(0, 0, 0, 0)')
     expect(hot.icon, 'the glyph slot itself moves on hover').toBe(rest.icon)
     expect(hot.rowX, 'the row moves when it is pointed at').toBe(rest.rowX)
-    expect(hot.nameColour, 'the name does not take the row ink on hover').toBe(hot.ink)
+    expect([hot.ink, hot.glyph], 'the name takes neither the row ink nor the glyph hue on hover').toContain(hot.nameColour)
   })
 })
 

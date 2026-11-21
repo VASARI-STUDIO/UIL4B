@@ -7,6 +7,8 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../../utils/communityQueue'
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../../utils/communityQueueApi'
 import { isPostLimit } from '../../utils/communityLimits'
+import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
+import { approvedRows, visibleRows } from '../../utils/approvedSubmissions'
 import { handleProblem, readStoredHandle } from '../../utils/communityHandle'
 import { TOAST_ACTION_MIN_MS } from '../../utils/toastDuration'
 import { appendIconSubmission, buildIconPayload, readIconSubmissions, removeIconSubmission } from '../../utils/iconSubmission'
@@ -82,12 +84,14 @@ export default function useCommunityHub(toast) {
   const ownHandle = (ownerPublicHandle || readStoredHandle() || 'me').replace(/^@/, '')
   const [designLocal, setDesignLocal] = useState(readCommunitySubmissions)
   const [designServer, setDesignServer] = useState([])
+  const [paletteServer, setPaletteServer] = useState([])
+  const [gradientServer, setGradientServer] = useState([])
   const [iconLocal, setIconLocal] = useState(readIconSubmissions)
   const [iconServer, setIconServer] = useState([])
   const uploads = useSyncExternalStore(subscribeUploads, readUploads, readUploads)
   const [busyIds, setBusyIds] = useState(() => new Set())
   const [hiddenIds, setHiddenIds] = useState(() => new Set())
-  const [listsRead, setListsRead] = useState({ design: false, icon: false })
+  const [listsRead, setListsRead] = useState({ design: false, palette: false, icon: false })
   const pending = useRef(new Map())
 
   const setBusy = useCallback((id, on) => setBusyIds((prev) => {
@@ -122,6 +126,23 @@ export default function useCommunityHub(toast) {
       })
       .catch(() => { /* the local list still stands */ })
       .finally(() => { if (!cancelled) markRead('design') })
+    // A palette from the Palette Builder is kind 'palette'. Listing it gives its
+    // local copy (which has no docId) the account's document, so it reads its
+    // real status and Withdraw can delete the queued document too.
+    listMySubmissions(uid, 'palette')
+      .then((server) => {
+        if (cancelled) return
+        setPaletteServer(server.filter((s) => s.status !== 'withdrawn').map((s) => {
+          const colors = Array.isArray(s.payload?.colors) ? s.payload.colors : []
+          return sanitizeCommunitySubmission({
+            id: s.localId || s.id, name: s.name, status: s.status, createdAt: s.createdAt,
+            saves: 0, mine: true, c1: colors[0] || '#1A1A1A', c2: colors[1] || colors[0] || '#E6E4DE',
+            ...(s.payload || {}), docId: s.id,
+          })
+        }).filter(Boolean))
+      })
+      .catch(() => { /* the local list still stands */ })
+      .finally(() => { if (!cancelled) markRead('palette') })
     listMySubmissions(uid, 'icon')
       .then((server) => {
         if (cancelled) return
@@ -132,21 +153,48 @@ export default function useCommunityHub(toast) {
       })
       .catch(() => { /* the local list still stands */ })
       .finally(() => { if (!cancelled) markRead('icon') })
+    // A gradient from the Gradient Generator is kind 'gradient'. Only approved
+    // ones are shown here, on the Made tab; the generator keeps no local copy.
+    listMySubmissions(uid, 'gradient')
+      .then((server) => {
+        if (cancelled) return
+        setGradientServer(server.filter((s) => s.status === 'approved').map((s) => {
+          const g = sanitizeGradientSubmission({ id: s.id, name: s.name, type: s.payload?.type, angle: s.payload?.angle, stops: s.payload?.stops })
+          return g && { ...g, id: s.id, docId: s.id, status: s.status, createdAt: s.createdAt, kind: 'gradient' }
+        }).filter(Boolean))
+      })
+      .catch(() => { /* Made still lists the rest */ })
     return () => { cancelled = true }
   }, [uid, markRead])
 
-  const designs = useMemo(() => mergeSubmissions(designServer, designLocal), [designServer, designLocal])
+  // A palette's local copy shares the designs' browser store (it has `colors`),
+  // so the two server lists merge against it together.
+  const designs = useMemo(
+    () => mergeSubmissions([...designServer, ...paletteServer], designLocal),
+    [designServer, paletteServer, designLocal],
+  )
   const icons = useMemo(() => mergeSubmissions(iconServer, iconLocal), [iconServer, iconLocal])
-  const designsRead = !uid || listsRead.design
+  const designsRead = !uid || (listsRead.design && listsRead.palette)
   const iconsRead = !uid || listsRead.icon
 
-  /** One list for Your submissions, newest first. */
-  const rows = useMemo(() => [
+  /**
+   * One list for Your submissions, newest first, every status with its tag. An
+   * approved piece stays here as Approved and is listed under Made as well.
+   */
+  const rows = useMemo(() => visibleRows([
     ...icons.map((s) => ({ ...s, kind: 'icon' })),
-    ...designs.map((s) => ({ ...s, kind: 'design' })),
+    ...designs.map((s) => ({ ...s, kind: Array.isArray(s.colors) ? 'palette' : 'design' })),
     ...uploads.map((s) => ({ ...s, kind: 'image', synced: false })),
-  ].filter((s) => !hiddenIds.has(s.id))
+  ], hiddenIds)
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [icons, designs, uploads, hiddenIds])
+
+  /** What a reviewer approved: it has joined the gallery, so the profile's Made tab lists it. */
+  const live = useMemo(() => approvedRows([
+    ...icons.map((s) => ({ ...s, kind: 'icon' })),
+    ...designs.map((s) => ({ ...s, kind: Array.isArray(s.colors) ? 'palette' : 'design' })),
+    ...gradientServer,
+  ], hiddenIds)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [icons, designs, gradientServer, hiddenIds])
 
   const statusOf = useCallback((row) => (
     row.kind === 'image' ? 'Not sent' : submissionStatusLabel({ status: row.status, synced: row.synced, sending: busyIds.has(row.id) })
@@ -190,6 +238,25 @@ export default function useCommunityHub(toast) {
     }
   }, [publish, toast, setBusy])
 
+  // A palette kept in this browser that never reached the queue is sent as a
+  // palette (its own kind and payload), not as a design.
+  const sendPalette = useCallback(async (item) => {
+    setBusy(item.id, true)
+    try {
+      const docId = await publish('palette', item, {
+        colors: item.colors, category: item.category, url: item.url, author: item.author,
+      })
+      if (docId) {
+        const entry = sanitizeCommunitySubmission({ ...item, docId, status: 'pending' })
+        if (entry) setPaletteServer((prev) => [entry, ...prev.filter((s) => s.id !== item.id)])
+        toast?.('Sent for review')
+      }
+      return !!docId
+    } finally {
+      setBusy(item.id, false)
+    }
+  }, [publish, toast, setBusy])
+
   const sendIcon = useCallback(async (item) => {
     setBusy(item.id, true)
     try {
@@ -225,7 +292,10 @@ export default function useCommunityHub(toast) {
     return item
   }, [])
 
-  const retry = useCallback((row) => (row.kind === 'icon' ? sendIcon(row) : sendDesign(row)), [sendIcon, sendDesign])
+  const retry = useCallback((row) => {
+    if (row.kind === 'icon') return sendIcon(row)
+    return row.kind === 'palette' ? sendPalette(row) : sendDesign(row)
+  }, [sendIcon, sendPalette, sendDesign])
 
   // ── Withdrawing ──────────────────────────────────────────────────────────
   // The entry leaves the page at once and the toast offers Undo; the delete
@@ -246,6 +316,7 @@ export default function useCommunityHub(toast) {
         writeCommunitySubmissions(readCommunitySubmissions().filter((s) => s.id !== row.id))
         setDesignLocal((prev) => prev.filter((s) => s.id !== row.id))
         setDesignServer((prev) => prev.filter((s) => s.id !== row.id))
+        setPaletteServer((prev) => prev.filter((s) => s.id !== row.id))
       }
     } catch {
       // The local copy is left alone: removing it while the account still holds
@@ -309,7 +380,7 @@ export default function useCommunityHub(toast) {
   }, [authLoading, uid])
 
   return {
-    uid, authLoading, user, ownHandle, saves, toggleSave, rows, statusOf, busyIds, designsRead, iconsRead,
+    uid, authLoading, user, ownHandle, saves, toggleSave, rows, live, statusOf, busyIds, designsRead, iconsRead,
     submitDesign, submitIcon, addUpload, retry, withdraw, open, setOpen, ask, queueAuthorName,
   }
 }
