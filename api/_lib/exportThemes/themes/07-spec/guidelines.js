@@ -43,7 +43,7 @@ ${figure}
 <p class="g-line">${A(B.lines.primary)}</p>
 <h2 class="a-h2 g-dch">Document control</h2>
 <table class="st g-dc"><tbody>${rows.map(([k, v]) => `<tr><th scope="row">${k}</th><td>${v}</td></tr>`).join('')}</tbody></table>
-<div class="notes"><p>Example project. The brand is made up to show this document.</p><p>Brand guidelines for ${A(B.name)}, ${A(B.city)}.</p></div>
+<div class="notes"><p>Brand guidelines for ${A(B.name)}, ${A(B.city)}.</p></div>
 </section>`;
   },
 

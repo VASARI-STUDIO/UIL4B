@@ -56,7 +56,7 @@ ${perf(ctx.roles.light.surface, { ...hole, cls: 'tk-perf--edge-r' })}</div>`;
 ${perf(ctx.roles.light.surface, { ...hole, cls: 'tk-perf--edge-l' })}
 <span class="tk-sn">${serial(1, 4)}</span>
 <p class="tk-cv__stubname">${A(B.name)}</p>
-${fields([['Kept by', 'Example project'], ['Page', `<span class="num">${ctx.pageNo('cover')}</span>`]], 'tk-ff--stub')}</div>`;
+${fields([['Kept by', A(B.name)], ['Page', `<span class="num">${ctx.pageNo('cover')}</span>`]], 'tk-ff--stub')}</div>`;
     return `<section class="pg tk tk--cover" data-page="cover"><div class="tk-cv" style="height:${h}px">${body}${stub}</div></section>`;
   },
 
