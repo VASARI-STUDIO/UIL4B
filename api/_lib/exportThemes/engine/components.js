@@ -78,7 +78,9 @@ ${st('.ui-btn--danger', 'hover', 'is-hover', '--bg: var(--text);', ':not(:disabl
 .ui-choice input[type="radio"]:checked::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-round); background: var(--text); }
 .ui-choice input:focus-visible, .ui-choice input.is-focus { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus); }
 .ui-choice input:disabled { background: var(--disabled-bg); border-color: ${SH.disabledEdge ? "var(--divider)" : "transparent"}; }
-.ui-choice input:disabled ~ span { color: var(--disabled-text); }
+${SH.disabledEdge ? `[data-theme="dark"] .ui-choice input:disabled:not(.ui-switch) { border-color: var(--text-soft); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ui-choice input:disabled:not(.ui-switch) { border-color: var(--text-soft); } }
+` : ""}.ui-choice input:disabled ~ span { color: var(--disabled-text); }
 .ui-choice:has(input:disabled) { cursor: not-allowed; }
 .ui-choice input.ui-switch { position: relative; flex: none; width: 44px; height: 26px; margin: 0; appearance: none; border: var(--w-control) solid var(--edge); border-radius: var(--r-round); background: var(--surface); cursor: pointer; transition: background-color 120ms ease-out; }
 .ui-choice input.ui-switch::after { content: ""; border: 0; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: var(--r-round); background: var(--edge); transition: transform 120ms ease-out, background-color 120ms ease-out; }
@@ -293,7 +295,7 @@ ${sec('Status', row(...ctx.status.map((s) => ui.statusChip(s.id)), ...(DM.noBadg
 ${sec('Cards', rowOf('cards', ui.card({ title: S.eta, text: S.pickup, meta: DM.cardMeta || S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(DM.stat ? DM.stat[0] : S.paid, DM.stat ? DM.stat[1] : X.statLabel)))}
 ${sec('Navigation', ui.crumbs([...X.crumbs, S.deliverTo]) + '<div style="height:16px"></div>' + ui.tabs(X.tabs, 0) + '<div style="height:16px"></div><nav class="ui-topbar" aria-label="Main"><strong class="ui-display">' + esc(ctx.brand.logo.showcase.wordmark) + '</strong><div class="ui-topbar__links">' + ui.links(X.links, 0) + '</div></nav>')}
 ${sec('List', DM.list || ui.deliveryRows(5))}
-${sec('Feedback', ui.alert('warning', S.alert) + '<div style="height:12px"></div>' + ui.alert('success', S.toast) + '<div style="height:12px"></div>' + ui.toast(S.toast) + '<div style="height:12px"></div>' + row(ui.spinner(), ui.skeleton('160px')))}
+${sec('Feedback', ui.alert('warning', S.alert) + '<div style="height:12px"></div>' + ui.alert('success', S.toast) + '<div style="height:12px"></div>' + ui.toast(S.toast) + '<div style="height:12px"></div>' + (DM.loadingRow ? rowOf('btns', '<span class="exrow__l">Loading</span>', ui.spinner(), DM.loadingRow) : row(ui.spinner(), ui.skeleton('160px'))))}
 ${sec('Dialog', DM.behind ? '<div class="ex-dlg"><div class="ex-dlg__behind" aria-hidden="true">' + DM.behind + '</div><div class="ui-scrim">' + ui.dialog({ ...S.dialog, danger: true }) + '</div></div>' : '<div class="ui-scrim">' + ui.dialog({ ...S.dialog, danger: true }) + '</div>')}
 ${sec('Empty state', `<div class="ui-empty"><h3 class="ui-empty__title">${esc(S.empty.title)}</h3><p class="ui-empty__text">${esc(S.empty.body)}</p>${ui.btn(S.empty.cta)}</div>`)}
 </main>

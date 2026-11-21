@@ -19,23 +19,29 @@ const VOICE_PAIRS = [
   ['Order 1042 is packing. It will be ready by 11:40 am.', 'Your order has been processed and will be dispatched in due course.'],
   ['We could not take that card. Check the details and try again.', 'Error 402: payment declined.'],
 ];
-// A photograph the brand has still to choose is shown as one drawn scene in its own colours: two pairs of hands at a market counter, a
-// crate of fruit between them, and clear sky above (the top 40% holds no object, so type or the reversed logo has somewhere to go). The
-// photo direction (5.1) draws it whole at 3:2; the "On a picture" tile (2.4) is a crop of the same drawing, so there is one photograph
-// and not two. The sky, awning, counter and ground run past the frame on both sides, so any crop is complete and never cuts a figure.
+// A photograph the brand has still to choose is shown as one drawn scene in its own colours: two people at a market counter, one each
+// side of a crate of fruit, and clear sky above (the top 40% holds no object, so type or the logo has somewhere to go). The photo direction
+// (5.1) draws it whole at 3:2; the "On a picture" tile (2.4) is a crop of the same drawing with the same fills (sceneTile), so there is one
+// photograph and not two. The sky, awning, counter and ground run past the frame on both sides, so any crop is complete.
 const accentFor = (ctx, ...against) => [(byRole(ctx, 'accent') || {}).hex, L(ctx).accent, ...distinctColours(ctx).map((c) => c.hex)].find((h) => h && against.every((g) => ctx.ratio(h, g) >= 1.8)) || '';
 const sceneHands = (ctx, label, o = {}) => {
-  const act = actF(ctx), dk = darkF(ctx), hand = L(ctx).surface, sky = o.sky || L(ctx).sunken, acc = accentFor(ctx, act, sky) || dk;
-  const a = o.a || act, b = o.b || acc, sleeve = o.sleeve || act, bar = o.bar || act, fruit = o.fruit || [act, accentFor(ctx, hand, dk) || act];
-  // a hand: a palm and four fingers, each its own shape with air between, reaching over the crate's edge
-  const arm = `<path d="M30 300h86l38-56-46-20z" fill="${sleeve}"/><ellipse cx="140" cy="232" rx="21" ry="14" transform="rotate(-25 140 232)" fill="${hand}"/><path d="M155 214l22-8M158 223l25-3M158 232l24 4M154 241l20 10" stroke="${hand}" stroke-width="6" stroke-linecap="round" fill="none"/>`;
+  const act = actF(ctx), dk = darkF(ctx), pn = panelF(ctx), sky = L(ctx).sunken;
+  // the warm colour: the first of the brand's own that is neither the action nor the dark colour and shows on the dark counter (hands, awning, fruit)
+  const hand = distinctColours(ctx).map((c) => c.hex).find((h) => lower(h) !== lower(act) && lower(h) !== lower(dk) && lower(h) !== lower(sky) && ctx.ratio(h, dk) >= 4) || accentFor(ctx, dk) || L(ctx).surface, acc = hand;
+  // a limb is an outline stroke under a fill stroke, so a finger or a thumb reads as its own shape on the sky and on the counter
+  const limb = (d, w) => `<path d="${d}" stroke="${dk}" stroke-width="${w + 4}" stroke-linecap="round" fill="none"/><path d="${d}" stroke="${hand}" stroke-width="${w}" stroke-linecap="round" fill="none"/>`;
+  // the left person reaches in from the counter's left, palm to the crate's side, three fingers fanned and the thumb up
+  const left = `<path d="M18 300h96l42-56-48-28z" fill="${act}" stroke="${dk}" stroke-width="2"/><path d="M138 226c12-10 26-10 36-4l-2 26c-12 6-28 4-38-6z" fill="${hand}" stroke="${dk}" stroke-width="2"/>${limb('M170 224l16-2M172 234l18 0M170 244l16 4', 7)}${limb('M148 226l10-20', 8)}`;
+  // the right person comes in from the right and higher, a paper sleeve with an action cuff and a rounder hand, fingers curled over the crate's top corner, the thumb up
+  const right = `<path d="M394 300h-70l-36-60 26-24z" fill="${pn}" stroke="${dk}" stroke-width="2"/><path d="M287 241l28-26" stroke="${act}" stroke-width="9"/><ellipse cx="260" cy="218" rx="19" ry="13" transform="rotate(30 260 218)" fill="${hand}" stroke="${dk}" stroke-width="2"/>${limb('M247 210l-14-8M245 218l-16-2M246 226l-14 6', 7)}${limb('M266 207l-8-14', 8)}`;
   // the awning's stripes overlap by 1 px where the band meets the scallops, so no hairline shows between them
-  const awn = Array.from({ length: 29 }, (_, i) => `<rect x="${i * 40 - 380}" y="120" width="40" height="27" fill="${i % 2 ? b : a}"/><path d="M${i * 40 - 380} 146h40a20 12 0 0 1-40 0z" fill="${i % 2 ? b : a}"/>`).join('');
-  const crateTop = `<rect x="160" y="198" width="80" height="38" fill="${dk}"/><rect x="160" y="216" width="80" height="3" fill="${sky}"/>`;
-  return `<svg class="ht-scene" viewBox="${o.vb || '0 0 400 300'}" preserveAspectRatio="${o.par || 'xMidYMid slice'}" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-2000" y="-1000" width="4400" height="1300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect x="-2000" y="240" width="4400" height="800" fill="${dk}"/><rect x="-2000" y="234" width="4400" height="8" fill="${bar}"/>${crateTop}${[178, 200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${fruit[k % 2]}"/>`).join('')}${arm}<g transform="translate(400 0) scale(-1 1)">${arm}</g></svg>`;
+  const awn = Array.from({ length: 29 }, (_, i) => `<rect x="${i * 40 - 380}" y="120" width="40" height="27" fill="${i % 2 ? acc : act}"/><path d="M${i * 40 - 380} 146h40a20 12 0 0 1-40 0z" fill="${i % 2 ? acc : act}"/>`).join('');
+  const crate = `<rect x="160" y="198" width="80" height="38" fill="${dk}"/>`;
+  return `<svg class="ht-scene" viewBox="${o.vb || '0 0 400 300'}" preserveAspectRatio="${o.par || 'xMidYMid slice'}" xmlns="http://www.w3.org/2000/svg"${label ? ` role="img" aria-label="${A(label)}"` : ' aria-hidden="true"'}><rect x="-2000" y="-1000" width="4400" height="1300" fill="${sky}"/>${awn}<rect x="40" y="120" width="8" height="120" fill="${dk}"/><rect x="352" y="120" width="8" height="120" fill="${dk}"/><rect x="-2000" y="240" width="4400" height="800" fill="${dk}"/><rect x="-2000" y="234" width="4400" height="8" fill="${act}"/>${crate}${[178, 200, 222].map((x, k) => `<circle cx="${x}" cy="192" r="10" fill="${k % 2 ? hand : act}"/>`).join('')}<g class="ht-hands">${left}</g><g class="ht-hands">${right}</g></svg>`;
 };
-// the tile's crop of that drawing: the action colour is the sky (the reversed logo sits in it), the awning is light and accent
-const sceneTile = (ctx) => { const act = actF(ctx), dk = darkF(ctx), light = L(ctx).surface, acc = accentFor(ctx, act, dk) || dk; return sceneHands(ctx, '', { sky: act, a: light, b: acc, sleeve: acc, bar: light, fruit: [light, acc], vb: '0 40 400 260', par: 'xMidYMid meet' }); };
+// the tile's crop of that drawing, from the same source with the same fills: the sky above the awning's top, filling the tile (slice, anchored
+// to the top, so the sky is where the logo sits at any tile height)
+const sceneTile = (ctx) => sceneHands(ctx, '', { vb: '0 20 400 190', par: 'xMidYMin slice' });
 const PHOTO_BRIEF = [['Subject', 'People at work, caught mid-task, not posed.'], ['Light', 'Daylight from the side. No flash.'], ['Crop', 'Close in, with clear space round the subject for type.']];
 
 const dl = (rows) => { const r = rows.filter(([, v]) => v); return r.length ? `<dl class="ht-dl">${r.map(([k, v]) => `<dt>${A(k)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''; };
@@ -52,6 +58,14 @@ const pcts = (cs) => {
 };
 // a face by its brand name: which font file stands in for it is the maker's business, not the reader's
 const faceName = (F) => F.family;
+// the two faces as one line: where headline and text are the same face, the weights tell them apart ("Commissioner: bold for headlines, regular for text.")
+const WEIGHT_WORD = { 100: 'thin', 200: 'extra light', 300: 'light', 400: 'regular', 500: 'medium', 600: 'semibold', 700: 'bold', 800: 'extra bold', 900: 'black' };
+const typePair = (ctx) => {
+  const F = ctx.brand.fonts, d = faceName(F.display), b = faceName(F.body), W = ctx.weights;
+  if (lower(d) !== lower(b)) return `${d} for headlines, ${b} for text.`;
+  const hw = WEIGHT_WORD[W.heading], bw = WEIGHT_WORD[W.regular];
+  return hw && bw && hw !== bw ? `${d}: ${hw} for headlines, ${bw} for text.` : `${d} for headlines and text.`;
+};
 // a number with its unit, set in the body face with tabular figures and one plain space (the mono face is for hex and code only)
 const nv = (t) => (t ? `<span class="num">${A(t)}</span>` : '');
 // the brand's device: its colours as flat blocks, each as wide as its share of the colour proportion (the page ground is not a block: it
@@ -100,8 +114,8 @@ const misuseTiles = (ctx) => {
 const doDont = (rules) => pair(rules.map((r) => [A(r.do), A(r.dont)]), ['Do', 'Do not']);
 // a colour as a field: its name, what it is for in words, then its values. `full` adds the RGB and the role line the palette slide carries.
 // Every name is set at one size, so a row of colours reads as one list.
-// The names step down with the colour's rank (the first colour is the largest), so the palette reads in order.
-const NAME_SIZE = ['clamp(36px, 15cqw, 56px)', 'clamp(30px, 12cqw, 44px)', 'clamp(26px, 10cqw, 36px)'];
+// one step for every tile name, so the names read as equals and no size looks fitted to its tile
+const NAME_SIZE = ['clamp(30px, 12cqw, 44px)', 'clamp(30px, 12cqw, 44px)', 'clamp(30px, 12cqw, 44px)'];
 const colourField = (ctx, c, full = false, i = 9) => ({
   hex: c.hex, what: `site colour ${c.name}`, size: 24,
   html: `<p class="ht-d ht-field__w" style="--ws:${NAME_SIZE[Math.min(i, 2)]}">${A(c.name)}</p><p class="ht-field__c">${A(c.lands || '')}<span class="ht-m">${A(c.hex)}</span>${full ? `<span class="num">rgb(${ctx.C.hexToRgb(c.hex).join(', ')})</span><span class="ht-field__r">The ${A(c.roleText || c.role)} colour.</span>` : ''}</p>`,
@@ -126,9 +140,10 @@ const groundTiles = (ctx) => {
     const k = cwFor(ctx, c.hex), own = lower(c.hex) !== lower(dk) && cw[k] && lower(cw[k].ground) === lower(c.hex), ink = own ? cw[k].name : inkOn(ctx, c.hex);
     return { hex: c.hex, what: `site logo ground ${c.name}`, html: `<div class="ht-field__logo">${ctx.logo.html(geo, { width: 180, ...(own ? { colourway: k } : {}), color: ink, label: 'Logo' })}</div><p class="ht-field__c"><b>${A(tileName(ctx, c))}</b><br>${A(cwCaption(cw, k, ctx, c.hex, own))}</p>` };
   });
-  // the picture tile is a crop of the photo direction's drawing (sceneHands, fitted to the tile, never cutting a figure: the sky and the ground
-  // run out to its sides), with the caption set on the dark ground the counter stands on, as every other tile sets its caption on its own colour
-  tiles.push({ hex: act, what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneTile(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 130, colourway: 'reversed', color: inkOn(ctx, act), label: 'Logo' })}</div></div><p class="ht-field__c" style="${fieldStyle(ctx, dk, 'site logo ground photo caption')}"><b>On a picture</b><br>Reversed logo, on the calm sky.</p>` });
+  // the picture tile is a crop of the photo direction's drawing (sceneHands, the same fills), the logo set in its sky as the other tiles set theirs
+  // on their colour (one-colour, dark or light, whichever reads on the sky), with the caption on the dark ground the counter stands on
+  const sky = L(ctx).sunken, sk = cwFor(ctx, sky), sown = cw[sk] && lower(cw[sk].ground) === lower(sky), sink = sown ? cw[sk].name : inkOn(ctx, sky);
+  tiles.push({ hex: dk, what: 'site logo ground photo', style: ';padding:0;gap:0', cls: 'ht-field--pic', html: `<div class="ht-field__img">${sceneTile(ctx)}<div class="ht-field__imglogo">${ctx.logo.html(geo, { width: 130, ...(sown ? { colourway: sk } : {}), color: sink, label: 'Logo' })}</div></div><p class="ht-field__c" style="${fieldStyle(ctx, dk, 'site logo ground photo caption')}"><b>On a picture</b><br>${A(cwCaption(cw, sk, ctx, sky, sown))}, in the sky.</p>` });
   return fields(ctx, tiles, 3);
 };
 
@@ -234,7 +249,7 @@ const sizeFig = (ctx) => {
   const ms = ctx.logo.minSize, cw = ctx.brand.logo.colourways, mmPx = (mm) => (mm * 96) / 25.4;
   const side = (key, w, big, title, note, foot) => {
     const hex = cw[key].ground, px = +w.toFixed(1);
-    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-d ht-ms__big num">${A(big)}</p><p class="ht-ms__t"><b>${A(title)}</b><br>${A(note)}</p><span class="ht-ms__w" style="width:${px}px">${inkMark(ctx, hex).svg(px)}<span class="ht-ms__r"></span></span><p class="ht-ms__f">${A(foot)}</p></div>`;
+    return `<div class="ht-ms" style="${fieldStyle(ctx, hex, `site smallest size ${title}`)}"><p class="ht-ms__k">Smallest width</p><p class="ht-d ht-ms__big num">${A(big)}</p><p class="ht-ms__t"><b>${A(title)}</b><br>${A(note)}</p><span class="ht-ms__w" style="width:${px}px">${ctx.logo.svg('colour', { colourway: key, width: px })}<span class="ht-ms__r"></span></span><p class="ht-ms__f">${A(foot)}</p></div>`;
   };
   return `<div class="ht-mss">${side('reversed', ms.screenPx, `${ms.screenPx} px`, 'On screen', `${ms.screenH} px high: the smallest it appears on a page or a screen.`, 'Drawn at 1 px to the pixel.')}${side('colour', mmPx(ms.printMm), `${ms.printMm} mm`, 'In print', `${ms.printH} mm high: the smallest it prints, on any paper.`, 'Drawn at true size when this page prints at 100%.')}</div>`;
 };
@@ -244,7 +259,7 @@ const layoutSlides = (ctx) => {
   const S = screenContent(ctx), n = S.deliveries.length, late = tally(ctx).late.length;
   const money = (exampleDemo(ctx).stat || [])[0], dk = darkF(ctx), act = actF(ctx), pn = panelF(ctx);
   const sl = (hex, what, inner, t, d) => `<figure class="ht-slf"><div class="ht-sl" style="${fieldStyle(ctx, hex, `site layout ${what}`)}"><div class="ht-sl__in">${inner}</div></div><figcaption><b>${A(t)}.</b> ${A(d)}</figcaption></figure>`;
-  const countLine = `${words(n)} orders${late ? `, ${words(late).toLowerCase()} late` : ''}.`;
+  const countLine = money ? `Across ${words(n).toLowerCase()} orders.` : (late ? `${words(late)} of them late.` : 'All on time.');
   const title = sl(dk, 'title', `<div class="ht-sl__lg">${logoOn(ctx, dk, { share: 0.34 })}</div><div><p class="ht-d ht-sl__d">Today's orders</p><p class="ht-sl__k">Open, late and closed.</p></div>`, 'Title', 'The logo and the name of the page, on the dark field.');
   const idea = sl(act, 'one idea', `<p class="ht-sl__k">${A(ORDER.screen)}</p><div><p class="ht-d ht-sl__d">${A(ORDER.id)} is packing.</p><p class="ht-sl__k">${A(ORDER.due)}.</p></div>`, 'One idea', 'One line at display size on the action colour.');
   const num = sl(pn, 'number', `<p class="ht-sl__k">${A(money ? 'Taken today' : 'Orders today')}</p><div><p class="ht-d ht-sl__n">${A(money || words(n))}</p><p class="ht-sl__k">${A(countLine)}</p></div>`, 'A number', 'One figure from the data, with a line to say what it counts.');
@@ -302,8 +317,8 @@ export const NOTES = {
   'photo-direction': (ctx) => {
     const D = ctx.brand.imagery.direction, rows = Object.entries(D).filter(([k, v]) => k !== 'subject' && v).map(([k, v]) => [ctx.cap ? ctx.cap(k) : k, A(v)]);
     // a sample headline is set in the sky (the display face, at the title step), so "clear sky for type" is shown and not only claimed
-    const head = lead(ctx) || nameOf(ctx), sky = L(ctx).sunken;
-    const frame = `<figure class="ht-pf"><div class="ht-pf__pic">${sceneHands(ctx, 'Two pairs of hands at a market counter, a crate of fruit between them, a headline set in the clear sky above: the direction at 3:2')}${head ? `<p class="ht-d ht-pf__h" style="${fieldStyle(ctx, sky, 'photo direction headline', 40)};background:transparent">${A(head)}</p>` : ''}</div><figcaption>The direction at 3:2, close in on the hands at the counter, with clear sky above for a headline.</figcaption></figure>`;
+    const line = lead(ctx), head = line || nameOf(ctx), sky = L(ctx).sunken;
+    const frame = `<figure class="ht-pf"><div class="ht-pf__pic">${sceneHands(ctx, `Two people at a market counter, one each side of a crate of fruit${head ? `, ${line ? 'a headline' : 'the brand name'} set in the clear sky above` : ''}: the direction at 3:2`)}${head ? `<p class="ht-d ht-pf__h" style="${fieldStyle(ctx, sky, 'photo direction headline', 40)};background:transparent">${A(head)}</p>` : ''}</div><figcaption>The direction at 3:2: two people at the counter, close in on their hands, with clear sky above for a headline.</figcaption></figure>`;
     return D.subject || rows.length ? { big: D.subject || '', html: frame + dl(rows) } : { big: PHOTO_BRIEF[0][1], html: frame + dl(PHOTO_BRIEF.map(([k, v]) => [k, A(v)])) };
   },
   // with no shots written there is no list: a row of empty crop-mark frames is not a page
@@ -314,7 +329,10 @@ export const NOTES = {
     const G = ctx.brand.layout, W = 794, H = 1123, gt = ((G.gutter / (W - 2 * G.margin)) * 100).toFixed(2);
     // a page for print is measured in millimetres (the grid is stored at 96 dpi: 794 x 1123 px is 210 x 297 mm)
     const mm = (px) => `${+((px * 25.4) / 96).toFixed(1)} mm`;
-    const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page, 210 by 297 mm, with ${G.columns} columns, ${mm(G.margin)} margins and ${mm(G.gutter)} gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns across the page, inside the margins.</figcaption></figure>`;
+    // the brand's own page laid on the grid: its name on the margin at the top left over four columns, a headline across eight and a photograph across six
+    const span = (n) => Math.min(n, G.columns), line = lead(ctx), dsp = nameOf(ctx);
+    const lay = `<div class="ht-gp__c" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%"><p class="ht-d ht-gp__n" style="grid-column:1/span ${span(4)}">${A(dsp)}</p>${line && line !== dsp ? `<p class="ht-d ht-gp__h" style="grid-column:1/span ${span(8)}">${A(line)}</p>` : ''}<div class="ht-gp__p" style="grid-column:1/span ${span(6)}">${sceneHands(ctx, '', { vb: '0 20 400 280', par: 'xMidYMid slice' })}</div></div>`;
+    const fig = `<figure class="ht-gp"><div class="ht-gp__pg" style="aspect-ratio:${W}/${H};padding:${((G.margin / W) * 100).toFixed(2)}%" role="img" aria-label="A4 portrait page, 210 by 297 mm, with ${G.columns} columns, ${mm(G.margin)} margins and ${mm(G.gutter)} gutters"><div class="ht-gp__in" style="grid-template-columns:repeat(${G.columns},minmax(0,1fr));column-gap:${gt}%">${Array.from({ length: G.columns }, () => '<span></span>').join('')}${lay}</div></div><figcaption><b>A4 portrait.</b> ${G.columns} columns across the page, inside ${mm(G.margin)} margins, ${mm(G.gutter)} between columns.</figcaption></figure>`;
     // the diagram stands beside its measures, so the row runs the whole column
     return { big: `${G.columns} columns`, html: `<div class="ht-gg">${fig}${dl([['Page', nv('A4 portrait, 210 × 297 mm')], ['Margin', nv(mm(G.margin))], ['Columns', `<span class="num">${G.columns}</span>`], ['Gutter', nv(mm(G.gutter))], ['Base unit', nv(`${G.base} px`)]])}</div>` };
   },
@@ -332,7 +350,7 @@ export const NOTES = {
     const B = ctx.brand, P = B.voice.principles.find((x) => ok(ctx, x.title) && ok(ctx, x.example));
     const sw = distinctColours(ctx).slice(0, 5).map((c) => `<li><span class="ht-sum__sw" style="${fieldStyle(ctx, c.hex, 'summary colour')}"></span><span>${A(tileName(ctx, c))}</span><span class="ht-m num">${A(c.hex.toUpperCase())}</span></li>`).join('');
     // the voice is one line of the brand's own, else the sample the voice page shows (the shared orders story)
-    const extra = `<div class="ht-mk--sum"><p class="ht-k">Colour</p><ul class="ht-sum__pal">${sw}</ul><p class="ht-k">Voice</p><p class="ht-sum__v">${A(P ? P.example : VOICE_PAIRS[0][0])}</p><p class="ht-k">Type</p><p class="ht-sum__ty">${A(faceName(B.fonts.display))} for headlines, ${A(faceName(B.fonts.body))} for text.</p></div>`;
+    const extra = `<div class="ht-mk--sum"><p class="ht-k">Colour</p><ul class="ht-sum__pal">${sw}</ul><p class="ht-k">Voice</p><p class="ht-sum__v">${A(P ? P.example : VOICE_PAIRS[0][0])}</p><p class="ht-k">Type</p><p class="ht-sum__ty">${A(typePair(ctx))}</p></div>`;
     // a lead line that is only the brand's name repeats the logo drawn three times below it: the page is then the figures alone
     const line = lead(ctx);
     return { big: line && line !== B.name && line !== nameOf(ctx) ? line : '', html: mockups(ctx, { spread: true, extra }) };

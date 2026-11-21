@@ -70,11 +70,13 @@ export function orderTimeline(ctx) {
 // the day's takings (the order totals added up here, in cents) and the person signed in (a total that is not a plain price is left as the
 // engine prints it); the card's order line; the list of open orders by due time; no stray count badge in the status row (nothing it counts);
 // the open list under the dialog's scrim; and the page's layout rules (equal cards, buttons on one line).
+// the loading state is one list row that has not arrived: an avatar circle and two lines, as the row it stands in for
+export const skelRow = '<div style="display:flex;align-items:center;gap:12px"><span class="ui-skeleton" style="width:40px;height:40px;border-radius:var(--r-round);flex:none"></span><div style="display:grid;gap:8px"><span class="ui-skeleton" style="width:180px"></span><span class="ui-skeleton" style="width:120px"></span></div></div>';
 export function exampleDemo(ctx) {
   if (ctx.edition !== 'slot') return {};
   const S = screenContent(ctx), open = tally(ctx).open;
   const base = {
-    cardMeta: orderMeta(ctx), noBadge: true, sizesRow: true, list: deliveryRows(ctx, 5, open), behind: deliveryRows(ctx, 6, open),
+    cardMeta: orderMeta(ctx), noBadge: true, sizesRow: true, loadingRow: skelRow, list: deliveryRows(ctx, 5, open), behind: deliveryRows(ctx, 6, open),
     css: `.exrow--cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:720px){.exrow--cards{grid-template-columns:minmax(0,1fr)}}
 .exrow .ui-btn{white-space:nowrap}

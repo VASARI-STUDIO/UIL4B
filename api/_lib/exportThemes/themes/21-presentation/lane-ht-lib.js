@@ -103,9 +103,10 @@ export function tocPanel(ctx, { id, sections, href, current, front }) {
   return `<nav class="ht-toc" id="${id}" aria-label="Contents" data-open="false"><a class="ht-toc__f" href="index.html">${A(front)}</a><ol class="ht-toc__l">${rows}</ol></nav>`;
 }
 // the next slide as a field: the action colour, the next title at display size; the previous one small beside it
-export function nextField(ctx, { next, prev, nextLabel = 'Next', prevLabel = 'Previous' }) {
+export function nextField(ctx, { next, prev, nextLabel = 'Next', prevLabel = 'Previous', cover }) {
   const act = actF(ctx);
-  const n = next ? `<a class="ht-next__a" href="${next.href}" rel="next"><span class="ht-k">${nextLabel}${next.ref ? ` <b class="num">${A(next.ref)}</b>` : ''}</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, [next.title], 0.86, (ctx.brand.type.scale.find((x) => x.token === 'headline') || {}).size || 36, 32)}">${A(next.title)}</span></a>` : '';
+  // the last page has nothing after it: its band sends the reader back to the cover (cover = that page's href)
+  const n = !next && cover ? `<a class="ht-next__a" href="${cover}"><span class="ht-k">Start again</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, ['Back to the cover'], 0.86, (ctx.brand.type.scale.find((x) => x.token === 'headline') || {}).size || 36, 32)}">Back to the cover</span></a>` : next ? `<a class="ht-next__a" href="${next.href}" rel="next"><span class="ht-k">${nextLabel}${next.ref ? ` <b class="num">${A(next.ref)}</b>` : ''}</span><span class="ht-d ht-next__t" style="font-size:${fitSize(ctx, [next.title], 0.86, (ctx.brand.type.scale.find((x) => x.token === 'headline') || {}).size || 36, 32)}">${A(next.title)}</span></a>` : '';
   const p = prev ? `<a class="ht-prev" href="${prev.href}" rel="prev"><span class="ht-k">${prevLabel}</span> ${prev.ref ? `<b class="num">${A(prev.ref)}</b> ` : ''}${A(prev.title)}</a>` : '';
   return `<nav class="ht-next" aria-label="Previous and next" style="${fieldStyle(ctx, act, 'site next field', 32)}">${n}${p}</nav>`;
 }

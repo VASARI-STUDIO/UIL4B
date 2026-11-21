@@ -6,6 +6,7 @@ import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { cssIdent } from '../../engine/escape.js';
 import { A, darkF, actF, panelF, fieldStyle, fitSize, bar, tocPanel, nextField, skipLink, contentsGrid } from './lane-ht-lib.js';
 import { distinctColours } from './helpers.js';
+import { skelRow } from './once.js';
 import { htCss } from './lane-ht-css.js';
 import { kitCss } from './lane-ht-kcss.js';
 import { docOf, siteCtx, servedCtx } from './lane-ht-clean.js';
@@ -105,7 +106,7 @@ const PAGES = {
   status: (ctx) => { const all = ctx.status.map((s) => [TONE_SAYS[s.id === 'new' ? 'action' : s.tone] || s.tone, ctx.ui.statusChip(s.id)]); return { lede: 'Status is said in words, in one colour that reads on the ground.', live: `<div class="hk-row">${all.map(([l, h]) => item(h, l)).join('')}</div>`, code: all }; },
   feedback: (ctx) => {
     const S = SC(ctx), u = ctx.ui;
-    const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Error', u.alert('danger', "Payment didn't go through. Check the card details and try again.")], ['Toast', u.toast(S.toast)], ['Loading', `${u.spinner()}${u.skeleton('220px')}${u.skeleton('150px')}`]];
+    const all = [['Information', u.alert('info', S.pickup)], ['Success', u.alert('success', S.toast)], ['Warning', u.alert('warning', S.alert)], ['Error', u.alert('danger', "Payment didn't go through. Check the card details and try again.")], ['Toast', u.toast(S.toast)], ['Loading', `${u.spinner()}${skelRow}`]];
     return { lede: 'What happened, said where it happened.', live: `<div class="hk-col">${all.map(([l, h]) => item(h, l, l === 'Loading' ? 'hk-i--w hk-i--stack' : 'hk-i--w')).join('')}</div>`, code: all };
   },
   // a dialog's confirm is the primary button; the danger button is kept for the one that cannot be undone (cancelling the order)
@@ -123,7 +124,7 @@ const PAGES = {
     const h = `<table class="ui-table"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td><strong>${A(x.to)}</strong><br>${when(x.when)}</td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
     return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Orders table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
-  empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="ui-empty"><h3 class="ui-empty__title">${A(E.title)}</h3><p class="ui-empty__text">${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w')}</div>`, code: [['Empty state', h]] }; },
+  empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="ui-empty"><h3 class="ui-empty__title">${A(E.title)}</h3><p class="ui-empty__text">${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w hk-i--full')}</div>`, code: [['Empty state', h]] }; },
   // the light screen on its own page and the dark on its own: each is read whole, at the width it is used at
   'screen-light': (ctx) => screen(ctx, false, false),
   'screen-dark': (ctx) => ({ ...screen(ctx, true, false), dark: true }),
@@ -217,7 +218,7 @@ ${toc}
 <main id="ht-main" tabindex="-1"><article class="sx-art" data-rd-doc>
 ${tidy(inner)}
 </article></main>
-${nextField(ctx, { next: nx(next), prev: nx(K.prev) })}
+${nextField(ctx, { next: nx(next), prev: nx(K.prev), cover: 'index.html' })}
 <footer class="ht-foot"><span>${A(docName(ctx))}</span><span>${A(ctx.versionLine)}</span></footer>
 </div>`;
 }

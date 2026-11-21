@@ -241,9 +241,11 @@ export function htCss(ctx) {
 .ht-field__img{position:relative;flex:1;min-height:140px;overflow:hidden;margin:-24px -24px 0;aspect-ratio:4/3}
 .ht-scene{display:block;width:100%;height:100%}
 .ht-field__img .ht-scene{position:absolute;inset:0}
-.ht-field__imglogo{position:absolute;left:0;right:0;top:14px;display:flex;justify-content:center}
+.ht-field__imglogo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .ht-field--pic{min-height:0}
 .ht-field--pic .ht-field__img{flex:1 1 auto;margin:0;aspect-ratio:auto;min-height:170px}
+/* the logo sits where the other tiles' logos sit: their padding (24px) above, and their padding and gap (56px) below the caption, less this tile's own caption padding */
+.ht-field--pic .ht-field__imglogo{inset:24px 0 26px}
 .ht-field--pic .ht-field__c{padding:14px 24px 16px}
 /* the faces as specimens */
 .ht-specs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--h)}
@@ -305,10 +307,18 @@ export function htCss(ctx) {
 .ht-gg{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
 @media (min-width:1024px){.ht-gg{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:64px;align-items:start}}
 .ht-gp__pg{background:var(--g2);box-shadow:inset 0 0 0 1px var(--h);box-sizing:border-box;width:100%}
-.ht-gp__in{display:grid;height:100%}
+.ht-gp__pg{container-type:inline-size}
+.ht-gp__in{display:grid;height:100%;position:relative;outline:1px dashed color-mix(in srgb,var(--t) 40%,transparent);outline-offset:0}
+/* the brand's own page on the grid: name, headline and photograph on the columns, at the page's own scale */
+.ht-gp__c{position:absolute;inset:0;display:grid;align-content:start;row-gap:6cqw;min-width:0}
+.ht-gp__c>*{margin:0;min-width:0}
+.ht-gp__n{font-size:5cqw;line-height:1.1;color:var(--t)}
+.ht-gp__h{font-size:8cqw;line-height:1.05;color:var(--t);text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ht-gp__p{aspect-ratio:3/2;overflow:hidden}
+.ht-gp__p .ht-scene{height:100%}
 .ht-gp__in>span{display:block;background:color-mix(in srgb,var(--t) 14%,transparent)}
 /* the applications spread: a card, a sign and a phone on one sheet */
-.ht-mks--sp{grid-template-columns:minmax(0,5fr) minmax(0,4fr);gap:32px;align-items:start}
+.ht-mks--sp{grid-template-columns:minmax(0,1fr) 340px;gap:32px 48px;align-items:start}
 .ht-mks--sp .ht-mk--card{grid-column:1}
 .ht-mks--sp .ht-mk--sign{grid-column:1}
 .ht-mks--sp .ht-mk--phone{grid-column:2;grid-row:1/3}
@@ -322,7 +332,8 @@ export function htCss(ctx) {
 .ht-sum__pal li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;font-size:14px;line-height:1.3;color:var(--t)}
 .ht-sum__sw{width:28px;height:28px;border:1px solid var(--h);box-sizing:border-box}
 /* dark: a swatch as dark as the page keeps a visible edge (the divider token is too faint to hold a dark swatch), and the phone's panels take the dark tokens */
-[data-theme="dark"] .ht-sum__sw{border-color:color-mix(in srgb,var(--t) 45%,transparent)}
+[data-theme="dark"] .ht-sum__sw{border-color:color-mix(in srgb,var(--t) 60%,transparent)}
+[data-theme="dark"] .ht-dev>span,[data-theme="dark"] .ht-stripe>div{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t) 40%,transparent)}
 [data-theme="dark"] .ht-dg__st,[data-theme="dark"] .ht-mk__panel{background:var(--g2)!important;color:var(--t)!important}
 .ht-sum__v{font-size:17px;line-height:1.45;color:var(--t);margin:0}
 .ht-sum__ty{font-size:14px;line-height:1.5;color:var(--s);margin:0}
@@ -367,9 +378,10 @@ export function htCss(ctx) {
 }
 /* the slide's own running head repeats the bar and the page title above it: not drawn on the site */
 .ht-slides .r-hd{display:none}
-/* the clear space and the smallest size: below 1024 the slide gives way to a figure at the column's size (type 14 px and up) */
-.ht-notes--fig{display:none}
-@media (max-width:1023px){.ht-stage--fig{display:none}.ht-notes--fig{display:grid}}
+/* the clear space and the smallest size: below 1024 the slide gives way to a figure at the column's size (type 14 px and up); from 1024
+   the slide keeps the figure and the notes under it carry the page's line and its lead alone */
+.ht-notes--fig .ht-nf{display:none}
+@media (max-width:1023px){.ht-stage--fig{display:none}.ht-notes--fig .ht-nf{display:block}}
 .ht-css{display:flex;flex-direction:column;gap:24px}
 .ht-cs__h{margin:0;font-size:14px;line-height:1.5;color:var(--s)}
 .ht-csr{display:flex;flex-wrap:wrap;gap:24px 20px;align-items:flex-end}
@@ -384,7 +396,8 @@ export function htCss(ctx) {
 .ht-mss{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .ht-ms{box-shadow:inset 0 0 0 1px var(--h);container-type:inline-size;padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0}
 .ht-ms__big{margin:0;font-size:clamp(40px,14cqw,72px);line-height:1;letter-spacing:-.02em;white-space:nowrap}
-.ht-ms__t,.ht-ms__f{font-size:14px;line-height:1.5;margin:0}
+.ht-ms__t,.ht-ms__f,.ht-ms__k{font-size:14px;line-height:1.5;margin:0}
+.ht-ms__k{font-weight:600}
 .ht-ms__w{display:flex;flex-direction:column;gap:8px}
 .ht-ms__w svg{display:block;max-width:none}
 .ht-ms__r{display:block;height:8px;border:1px solid currentColor;border-top:0;opacity:.7}

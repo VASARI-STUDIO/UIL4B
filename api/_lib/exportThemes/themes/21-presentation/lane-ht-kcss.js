@@ -29,6 +29,7 @@ export function kitCss(ctx) {
 .hk-i--stack .hk-i__c{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .hk-i{display:flex;flex-direction:column;gap:12px;margin:0}
 .hk-i--w .hk-i__c{width:100%;max-width:960px}
+.hk-col>.hk-i--full,.hk-i--full .hk-i__c{max-width:none}
 .hk-i figcaption{font-size:${cp}px;line-height:1.4;color:var(--quiet)}
 .hk-frame{border:1px solid var(--divider)}
 .hk-sg+.hk-sg{margin-top:8px}
@@ -76,10 +77,11 @@ export function kitCss(ctx) {
 .hk-code{padding:40px 56px 96px;max-width:1440px;margin:0 auto}
 .hk-code__h{font-size:${hd}px;margin-bottom:40px}
 .hk-code ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 32px}
-.hk-code ol:has(>li:only-child){grid-template-columns:minmax(0,1fr);max-width:720px}
+.hk-code ol:has(>li:only-child){grid-template-columns:minmax(0,1fr)}
 .hk-code li{display:flex;flex-direction:column;gap:12px;align-items:flex-start;min-width:0}
 .hk-code pre,.hk-tree{margin:0;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-color:var(--quiet) var(--sunken);padding:16px;background:var(--sunken);color:var(--text);font:400 ${cp}px/1.6 var(--mono);white-space:pre;overflow-wrap:normal;scrollbar-width:thin}
-@media (min-width:0px){.hk-code pre{padding-right:32px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}.hk-code pre:focus-visible{-webkit-mask-image:none;mask-image:none}}
+/* a block fades at its right edge only while it has more to the right (its scroll timeline is live only when it overflows, and the fade ends at the last column); with no support, or no overflow, there is no fade */
+@supports (animation-timeline:scroll(self inline)){@keyframes hk-more{0%,99%{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}100%{-webkit-mask-image:none;mask-image:none}}.hk-code pre{animation:hk-more linear both;animation-timeline:scroll(self inline)}.hk-code pre:focus-visible{animation:none;-webkit-mask-image:none;mask-image:none}}
 .hk-tree{width:auto;font-variant-numeric:tabular-nums}
 .hk-steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:12px}
 .hk-steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:baseline;counter-increment:s}

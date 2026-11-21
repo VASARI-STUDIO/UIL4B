@@ -100,7 +100,7 @@ ${skipLink()}
 ${bar(ctx, { home: 'index.html', doc: docName(ctx), ref: u.ref, title: u.front ? 'Cover and contents' : u.title, no, toggle })}
 ${toc}
 <main id="ht-main" tabindex="-1" data-rd-doc>${S.body}</main>
-${nextField(ctx, { next: file(S.next), prev: file(S.prev) })}
+${nextField(ctx, { next: file(S.next), prev: file(S.prev), cover: 'index.html' })}
 <footer class="ht-foot"><span>${A(docName(ctx))}</span><span>${A(ctx.versionLine)}</span></footer>
 </div>`;
 }
