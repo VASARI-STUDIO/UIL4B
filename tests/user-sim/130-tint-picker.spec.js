@@ -85,9 +85,10 @@ test.describe('the Tint back arrow', () => {
 })
 
 test.describe('1440 · the picker follows its trigger', () => {
-  // 520px tall so the page genuinely scrolls: at 900 the tint page fits and
-  // there is nothing to scroll.
-  test.use({ viewport: { width: 1440, height: 520 } })
+  // 360px tall so the page genuinely scrolls: the tool fills the window down to a
+  // 420px working area, so at 480 and over there is too little left to scroll the
+  // trigger out of sight.
+  test.use({ viewport: { width: 1440, height: 360 } })
 
   test('a small scroll keeps it attached; scrolling the trigger away closes it', async ({ page }) => {
     watch(page, 'designer scrolling with the tint picker open')

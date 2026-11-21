@@ -99,6 +99,27 @@ export function stepLightness(t, curve, spacing = 'perceived', lightnessShift = 
   return L_TOP - u * drop
 }
 
+/**
+ * The SVG path of a curve's icon (viewBox 0 0 20 16), drawn from stepLightness
+ * at the defaults so it cannot drift from the ramp. One vertical scale is shared
+ * by all three curves (0.83 is the largest drop), so High contrast visibly ends
+ * lower than Even and Soft ends. Light is top-left, dark bottom-right.
+ * At 16px the real bends are under a pixel, so each curve's distance from its
+ * own straight line is scaled by ICON_BEND. Even has none and stays straight.
+ */
+const ICON_BEND = 2.5
+export function curveIconPath(curve, points = 11) {
+  const n = (v) => +v.toFixed(2)
+  const drop = (t) => (L_TOP - stepLightness(t, curve)) / 0.83
+  const end = drop(1)
+  return Array.from({ length: points }, (_, i) => {
+    const t = i / (points - 1)
+    const line = end * t
+    const d = Math.min(end, Math.max(0, line + ICON_BEND * (drop(t) - line)))
+    return `${i ? 'L' : 'M'}${n(2 + 16 * t)} ${n(2 + 12 * d)}`
+  }).join('')
+}
+
 // The design's lightness and chroma curves (App.dc.html D:1436-1442), with the
 // gamut fit above. `curve` is 0 Even, 1 Soft ends, 2 High contrast. `opts` is
 // { spacing, lightness, saturation }; left out, the ramp is the original one.
