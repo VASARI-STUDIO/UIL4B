@@ -149,7 +149,8 @@ test('strokeable is decided from the artwork', () => {
 
 test('the library does not list Phosphor as a stroke pack, and wires the new model', () => {
   const page = readFileSync(new URL('../../src/pages/IconLibrary.jsx', import.meta.url), 'utf8')
-  assert.doesNotMatch(page, /STROKE_PACKS = new Set\([^)]*'ph'/)
+  const packs = readFileSync(new URL('../../src/utils/iconEditable.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(packs, /STROKE_PACKS = new Set\([^)]*'ph'/)
   assert.match(page, /strokeUnit: STROKE_UNIT_REF/)
   assert.match(page, /markupHasStroke\(rawBaseSvgText\)/)
 })
