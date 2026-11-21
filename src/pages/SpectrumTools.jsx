@@ -12,6 +12,7 @@ import { createTools, NAV_SECTIONS } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { TOOL_VOTES_ON } from '../data/toolVotes'
 import WhatsNext from '../components/spectrum/WhatsNext'
+import CrawlLinks from '../components/CrawlLinks'
 import '../styles/pages/home-tokens.css'
 import '../styles/pages/spectrum-tools.css'
 
@@ -247,6 +248,8 @@ export default function SpectrumTools() {
             </>
           )}
         </section>
+
+        <CrawlLinks route="/tools" />
 
         {/* Tab order is See the plans, then Use for free; on a phone CSS stacks the filled one first. */}
         <HomeFinalCall

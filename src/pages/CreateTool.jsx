@@ -19,6 +19,7 @@ import { EVENTS, sendOnce } from '../utils/productEvents'
 // download waits for the recovery reload instead of crashing the route.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import RouteLoading from '../components/RouteLoading'
+import CrawlLinks from '../components/CrawlLinks'
 
 // The in-tool shell for every Create route. Navigation now lives entirely in the
 // top PillNav (the mega-menus own the tool tree), so this shell is a single,
@@ -286,6 +287,8 @@ export default function CreateTool({ toast }) {
           )}
         </main>
       </div>
+
+      {LiveTool && <CrawlLinks route={location.pathname} />}
 
       {wearsSpectrumFooter
         ? <SpectrumFooter notice={<IconCredits rows={credits.rows} scope={credits.scope} />} />

@@ -1,0 +1,55 @@
+/* The crawlable link blocks: the Tools block under the homepage hero and the
+   Related block under a tool. The served shells draw the same markup
+   (scripts/crawl-html.mjs), so these rules are in the entry sheet and the
+   shell paints with them. V3 tokens only: one ink for focus and links, hairline
+   underlines, no fills, no gradients, no glow. */
+.crawl {
+  box-sizing: border-box;
+  isolation: isolate;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px var(--gutter-x, 24px);
+  color: var(--v3-ink, inherit);
+  font-family: inherit;
+}
+.crawl-group + .crawl-group { margin-top: 32px; }
+.crawl-h {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: .02em;
+  color: var(--v3-sec, inherit);
+}
+.crawl-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crawl-link {
+  display: inline-block;
+  padding: 6px 0;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--v3-ink, inherit);
+  text-decoration: underline;
+  text-decoration-color: var(--v3-hl20, currentColor);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms ease, opacity 150ms ease;
+}
+@media (hover: hover) {
+  .crawl-link:hover { text-decoration-color: currentColor; }
+}
+.crawl-link:active { opacity: .7; }
+.crawl-link:focus-visible { outline: 2px solid var(--v3-ink, currentColor); outline-offset: 3px; }
+@media (pointer: coarse) {
+  .crawl-link { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (max-width: 767px) {
+  .crawl { padding-block: 40px; }
+}

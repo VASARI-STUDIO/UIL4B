@@ -39,6 +39,7 @@ import { LEARN_ARTICLES } from '../src/data/learnIndex.js'
 import { pageName } from '../src/data/routeMetaMap.js'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { logoSvg } from '../src/config/brandLogo.js'
+import { crawlHtml } from './crawl-html.mjs'
 import { HOME_SHELL_ROUTES, ROOT_OPEN, AFTER_ROOT } from './home-shell.mjs'
 
 const text = (s) => String(s)
@@ -71,7 +72,8 @@ export function stripForShell(html) {
 
 /**
  * What the shell for a route says.
- *   { h1, intro, prose }  prose is trusted HTML (rendered by React) or ''.
+ *   { h1, intro, prose, route }  prose is trusted HTML (rendered by React) or ''.
+ * `route` picks the Related block under a tool's shell (scripts/crawl-html.mjs).
  * `guideBodies` is `{ [slug]: html }` from scripts/guide-html.mjs.
  */
 export function shellContentFor(route, guideBodies = {}) {
@@ -86,17 +88,19 @@ export function shellContentFor(route, guideBodies = {}) {
       + `<p><a href="${attr(article.toolTo)}">Use it in the ${text(article.toolLabel)}</a></p>`
       + (sources ? `<h2>Sources</h2><ul>${sources}</ul>` : '')
       + '</article>'
-    return { h1: article.title, intro: article.dek, prose }
+    return { h1: article.title, intro: article.dek, prose, route: r }
   }
   return {
     h1: pageName(PAGE_TITLES[r]) || PAGE_TITLES[r],
     intro: PAGE_DESCRIPTIONS[r] || DEFAULT_DESCRIPTION,
     prose: '',
+    route: r,
   }
 }
 
 /** The `#root` contents for a route's shell. */
-export function pageShellRoot({ h1, intro, prose }) {
+export function pageShellRoot({ h1, intro, prose, route = '' }) {
+  const related = route ? crawlHtml(route) : ''
   return `${ROOT_OPEN}
   <div class="boot-shell boot-shell-page" id="boot-shell">
     <span class="boot-status" role="status" aria-live="polite">Loading UIL4B</span>
@@ -109,7 +113,8 @@ export function pageShellRoot({ h1, intro, prose }) {
     </div>
     <div class="boot-page">
       <h1 class="boot-h1">${text(h1)}</h1>
-      <p class="boot-intro">${text(intro)}</p>${prose ? `
+      <p class="boot-intro">${text(intro)}</p>${related ? `
+      ${related}` : ''}${prose ? `
       <div class="boot-prose" aria-hidden="true">${prose}</div>` : ''}
     </div>
   </div>
@@ -137,6 +142,7 @@ export function assertPageShellApplied(html, content, where) {
     ['the intro', `<p class="boot-intro">${text(content.intro)}</p>`],
   ]
   if (content.prose) wanted.push(['the guide text', '<div class="boot-prose"'])
+  if (content.route && crawlHtml(content.route)) wanted.push(['the Related links', '<nav class="crawl crawl--related" aria-label="Related">'])
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
   if (missing.length) {
     throw new Error(`page-shell: ${where} was written without ${missing.join(', ')}. A crawler would read only "Loading UIL4B".`)

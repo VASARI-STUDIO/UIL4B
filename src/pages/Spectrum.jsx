@@ -19,6 +19,7 @@ import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import '../styles/pages/spectrum.css'
 import '../styles/pages/home-tokens.css'
 import '../styles/pages/home-hero.css'
+import CrawlLinks from '../components/CrawlLinks'
 
 // The sales page: hero, bookmarks, try the tools, exports, examples, proof,
 // plans and the final call, then the footer. Every section is a landmark target
@@ -94,6 +95,9 @@ export default function Spectrum() {
 
         {/* ── Final call: last child of main. The light behind it is drawn on
             the footer's box, so this section paints nothing of its own. ───── */}
+        {/* The same Tools block the served shell carries, as real links. */}
+        <CrawlLinks route="/" />
+
         <HomeFinalCall toolkitTo="/projects" />
       </main>
       </AutoplayOwner>

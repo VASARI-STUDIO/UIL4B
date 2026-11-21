@@ -145,6 +145,12 @@ html:not([data-hero-prepainted]) #boot-shell .hh-hero{display:none}
 .boot-page{max-width:720px;margin:0 auto;padding:clamp(48px,10vh,96px) 0 48px}
 .boot-h1{margin:0 0 16px;font-size:clamp(28px,6vw,44px);font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
 .boot-intro{margin:0;max-width:62ch;font-size:clamp(16px,2.4vw,18px);line-height:1.55;opacity:.8}
+/* The Related block under a tool's shell (scripts/crawl-html.mjs): the same rules as src/styles/pages/crawl-links.css, which arrives with the entry chunk. */
+.crawl{box-sizing:border-box;max-width:720px;margin:0 auto;padding:0 0 48px;color:var(--v3-ink,inherit);font-family:inherit}
+.crawl-group+.crawl-group{margin-top:32px}
+.crawl-h{margin:0 0 12px;font-size:13px;font-weight:600;line-height:1.3;letter-spacing:.02em;color:var(--v3-sec,inherit)}
+.crawl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 24px;margin:0;padding:0;list-style:none}
+.crawl-link{display:inline-block;padding:6px 0;font-size:15px;line-height:1.4;color:var(--v3-ink,inherit);text-decoration:underline;text-underline-offset:3px}
 .boot-prose{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
 @media(prefers-reduced-motion:reduce){.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{animation:none}}

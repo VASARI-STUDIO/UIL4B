@@ -94,6 +94,7 @@
 // The hero's words: one module feeds both the hydrated hero and this shell.
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB, SPECTRUM_SEARCH_PHRASES } from '../src/components/spectrum/spectrumHero.js'
 import { logoSvg } from '../src/config/brandLogo.js'
+import { crawlHtml } from './crawl-html.mjs'
 
 /** Escape for text between tags. Same contract as prerender.mjs's `text()`. */
 const text = (s) => String(s)
@@ -272,6 +273,7 @@ export function homeShellRoot() {
             ${SHELL_SEARCH}
           </div>
         </section>
+        ${crawlHtml('/')}
       </main>
       <div class="boot-decoration" aria-hidden="true">
         <div class="boot-below">
@@ -393,6 +395,7 @@ export function assertHomeShellApplied(html, where) {
   const wanted = [
     ['the hero section', '<section id="top" class="hh-hero">'],
     ['the h1', '<h1 class="hh-h1">'],
+    ['the Tools links', '<nav class="crawl crawl--home" aria-label="Tools">'],
     ['the lead', `${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">`],
     ['the highlight', `<span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>`],
     [`${PREPAINTED_ATTR} on <html>`, PREPAINTED_ATTR],
