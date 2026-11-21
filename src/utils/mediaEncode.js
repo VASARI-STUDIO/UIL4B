@@ -40,8 +40,24 @@ export const ANIMATION_FORMATS = [
   { id: 'gif', label: 'GIF', ext: 'gif', mime: 'image/gif', kind: 'image', loops: true, alpha: true, alphaNote: '1-bit' },
   { id: 'webp', label: 'Animated WebP', ext: 'webp', mime: 'image/webp', kind: 'image', loops: true, alpha: true },
   { id: 'apng', label: 'APNG', ext: 'png', mime: 'image/apng', kind: 'image', loops: true, alpha: true },
-  { id: 'mp4', label: 'MP4 (H.264)', ext: 'mp4', mime: 'video/mp4', kind: 'video', loops: false, alpha: false, evenDims: true },
-  { id: 'webm', label: 'WebM (VP8)', ext: 'webm', mime: 'video/webm', kind: 'video', loops: false, alpha: true },
+  { id: 'mp4', label: 'MP4 (H.264)', ext: 'mp4', mime: 'video/mp4', kind: 'video', loops: false, alpha: false, evenDims: true, sound: 'AAC' },
+  { id: 'webm', label: 'WebM (VP8)', ext: 'webm', mime: 'video/webm', kind: 'video', loops: false, alpha: true, sound: 'Opus' },
+]
+
+/**
+ * Two more video containers and one sound-only file, for the Video tab only
+ * (the animation builder has no sound to keep, so it never lists them). Measured
+ * 2026-11-15 against the same pinned core: libx264 with the native AAC encoder
+ * writes MOV and MKV, libopus writes WebM audio, and libmp3lame writes MP3; all
+ * four ran. `sound` names the audio codec a format carries; a format without it
+ * (GIF, WebP, APNG, the frame exports) cannot hold sound at all.
+ */
+export const VIDEO_FILE_FORMATS = [
+  { id: 'mov', label: 'MOV (H.264)', ext: 'mov', mime: 'video/quicktime', kind: 'video', loops: false, alpha: false, evenDims: true, sound: 'AAC' },
+  { id: 'mkv', label: 'MKV (H.264)', ext: 'mkv', mime: 'video/x-matroska', kind: 'video', loops: false, alpha: false, evenDims: true, sound: 'AAC' },
+]
+export const AUDIO_FORMATS = [
+  { id: 'mp3', label: 'MP3 (sound only)', ext: 'mp3', mime: 'audio/mpeg', kind: 'audio', loops: false, alpha: false, sound: 'MP3' },
 ]
 
 export const findFormat = (id) => ANIMATION_FORMATS.find((f) => f.id === id) || ANIMATION_FORMATS[0]
@@ -57,7 +73,7 @@ export const FRAME_EXPORTS = [
   { id: 'frames', label: 'Frames (ZIP of PNGs)', ext: 'zip', engineExt: 'pngs', mime: 'application/zip', kind: 'frames', loops: false, alpha: true },
   { id: 'sprite', label: 'Sprite sheet (PNG)', ext: 'png', mime: 'image/png', kind: 'image', loops: false, alpha: true },
 ]
-export const VIDEO_FORMATS = [...ANIMATION_FORMATS, ...FRAME_EXPORTS]
+export const VIDEO_FORMATS = [...ANIMATION_FORMATS, ...VIDEO_FILE_FORMATS, ...AUDIO_FORMATS, ...FRAME_EXPORTS]
 export const findVideoFormat = (id) => VIDEO_FORMATS.find((f) => f.id === id) || ANIMATION_FORMATS[0]
 
 /** "How many times it plays", as the control offers it. 0 = forever. */
@@ -473,15 +489,97 @@ const GIF_DITHER = { low: 'none', medium: 'bayer:bayer_scale=2', high: 'sierra2_
 const WEBP_QUALITY = { low: 50, medium: 75, high: 90 }
 const X264_CRF = { low: 30, medium: 23, high: 18 }
 const VP8_CRF = { low: 40, medium: 24, high: 10 }
+// Sound bit rates by Quality: AAC (MP4, MOV, MKV), Opus (WebM), and MP3's VBR
+// quality scale, where a lower number is better.
+const AAC_RATE = { low: '96k', medium: '128k', high: '192k' }
+const OPUS_RATE = { low: '64k', medium: '96k', high: '128k' }
+const MP3_VBR = { low: '6', medium: '4', high: '2' }
+
+// ── Does the file have a sound track? ────────────────────────────────────────
+// A browser will not say: Chrome has no audio-track list on a <video> and only
+// counts decoded sound bytes once it has played. So the container's header is
+// read instead, for the three families the Video tab accepts. MP4 and MOV name
+// each track's kind in an `hdlr` box ('soun' for sound); Matroska and WebM name
+// each track's codec ('A_OPUS', 'A_AAC'...); AVI marks a sound stream 'auds'.
+// The answer is true, false, or null when the file is not one of those or its
+// header lies outside the part that was read; null means "do not say there is
+// none", and the encoder is happy with either (measured: sound flags on a
+// silent file are ignored).
+const SOUND_HEAD_BYTES = 2 * 1024 * 1024
+const SOUND_TAIL_BYTES = 8 * 1024 * 1024
+
+const latin1 = (bytes) => {
+  let out = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000))
+  return out
+}
+
+/** `head` and `tail` are the first and last bytes of a file; `whole` says they cover all of it. */
+export function soundInHeader(head, tail = new Uint8Array(0), whole = false) {
+  const h = latin1(head)
+  const t = tail.length ? latin1(tail) : ''
+  const both = (re) => re.test(h) || (t !== '' && re.test(t))
+  if (h.slice(4, 8) === 'ftyp') {
+    // The track list is in `moov`, at either end of the file. Not finding a
+    // sound track only means something once the moov box itself has been read.
+    if (both(/hdlr[\s\S]{8}soun/)) return true
+    return whole || both(/moov/) ? false : null
+  }
+  // Matroska and AVI list their tracks in the first few kilobytes.
+  if (h.startsWith('\x1a\x45\xdf\xa3')) return /A_(OPUS|VORBIS|AAC|MPEG|AC3|EAC3|FLAC|PCM|DTS|ALAC|TTA|WAVPACK)/.test(h)
+  if (h.startsWith('RIFF') && h.slice(8, 12) === 'AVI ') return /strh[\s\S]{4}auds/.test(h)
+  return null
+}
+
+/** Reads the ends of a File or Blob (the middle is media data) and asks soundInHeader. */
+export async function fileHasSound(blob) {
+  const size = blob.size || 0
+  if (!size) return null
+  const whole = size <= SOUND_HEAD_BYTES + SOUND_TAIL_BYTES
+  const head = new Uint8Array(await blob.slice(0, whole ? size : SOUND_HEAD_BYTES).arrayBuffer())
+  const tail = whole ? new Uint8Array(0) : new Uint8Array(await blob.slice(size - SOUND_TAIL_BYTES).arrayBuffer())
+  return soundInHeader(head, tail, whole)
+}
+
+/**
+ * The tempo filter for a speed change. atempo only takes 0.5 to 2 in one step,
+ * so a quarter speed is two halves and 4x is two doublings. '' at normal speed.
+ */
+export function atempoFilter(speed) {
+  let s = Number(speed)
+  if (!s || s === 1 || s < 0 || !Number.isFinite(s)) return ''
+  const steps = []
+  while (s < 0.5) { steps.push(0.5); s /= 0.5 }
+  while (s > 2) { steps.push(2); s /= 2 }
+  if (Math.abs(s - 1) > 1e-9) steps.push(+s.toFixed(4))
+  return steps.map((t) => `atempo=${t}`).join(',')
+}
+
+/**
+ * Whether a format can carry the clip's sound on this edit, and if not why in
+ * a few words. Reverse and boomerang drop it: a reversed or doubled-back
+ * soundtrack is not something anyone asked for, and the boomerang graph is
+ * video only. `hasSound` is true, false, or null when the file would not say.
+ */
+export function soundState(fmt, { hasSound = null, direction = 'forward' } = {}) {
+  if (!fmt?.sound) return { ok: false, why: `${fmt?.label || 'This format'} can’t hold sound` }
+  if (hasSound === false) return { ok: false, why: 'This file has no sound' }
+  if (direction !== 'forward' && fmt.kind !== 'audio') return { ok: false, why: 'Reverse and boomerang remove the sound' }
+  return { ok: true, why: '' }
+}
 
 /**
  * The encoder half of the argument list: codec, quality and container flags,
  * then the output name. `palette` is the GIF palette chain appended to any
  * filter that came before it.
  */
-function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transparentGif = false, gif = null, maxFrames = MAX_FRAMES }) {
+function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transparentGif = false, gif = null, maxFrames = MAX_FRAMES, audio = null }) {
   const q = QUALITY_LEVELS.some((l) => l.id === quality) ? quality : 'medium'
   const out = `output.${fmt.engineExt || fmt.ext}`
+  // `audio` is null (no sound) or { filter }: the tempo filter that matches the
+  // video's speed, '' at normal speed.
+  const af = audio?.filter ? ['-af', audio.filter] : []
+  if (fmt.id === 'mp3') return ['-vn', ...af, '-c:a', 'libmp3lame', '-q:a', MP3_VBR[q], out]
   if (fmt.id === 'frames') {
     const vf = filters.length ? ['-vf', filters.join(',')] : []
     return [...vf, '-frames:v', String(maxFrames), '-c:v', 'png', '-f', 'image2pipe', out]
@@ -514,14 +612,18 @@ function encoderArgs(fmt, { quality = 'medium', plays = 0, filters = [], transpa
   if (fmt.id === 'apng') {
     return [...vf, '-pix_fmt', 'rgba', ...loopArgs('apng', plays), '-f', 'apng', out]
   }
-  if (fmt.id === 'mp4') {
+  if (fmt.id === 'mp4' || fmt.id === 'mov' || fmt.id === 'mkv') {
     // yuv420p is what every player decodes; +faststart puts the index first so
-    // a browser can start playing before the whole file has arrived.
-    return [...vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(X264_CRF[q]), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', out]
+    // a browser can start playing before the whole file has arrived (MKV has
+    // no such flag).
+    const sound = audio ? [...af, '-c:a', 'aac', '-b:a', AAC_RATE[q]] : ['-an']
+    const fast = fmt.id === 'mkv' ? [] : ['-movflags', '+faststart']
+    return [...vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(X264_CRF[q]), '-pix_fmt', 'yuv420p', ...fast, ...sound, out]
   }
   // WebM / VP8. yuva420p carries the alpha channel; alt-ref frames must be off
   // for VP8 to encode alpha at all.
-  return [...vf, '-c:v', 'libvpx', '-b:v', '0', '-crf', String(VP8_CRF[q]), '-auto-alt-ref', '0', '-pix_fmt', 'yuva420p', '-an', out]
+  const sound = audio ? [...af, '-c:a', 'libopus', '-b:a', OPUS_RATE[q]] : ['-an']
+  return [...vf, '-c:v', 'libvpx', '-b:v', '0', '-crf', String(VP8_CRF[q]), '-auto-alt-ref', '0', '-pix_fmt', 'yuva420p', ...sound, out]
 }
 
 /**
@@ -532,6 +634,134 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
   const fmt = findFormat(format)
   return ['-framerate', String(clampFps(fps)), '-i', FRAME_PATTERN,
     ...encoderArgs(fmt, { quality, plays, transparentGif: true })]
+}
+
+// ── Adjust: brightness, contrast, saturation, hue, blur, fades ───────────────
+// One group of sliders. Each is 0 when untouched, and an untouched group adds
+// no filter at all, so every list built without it is the list it always was.
+// Brightness, contrast and saturation are one `eq`; hue is `hue`; blur is
+// `gblur` (a sigma in pixels of the saved picture); the fades are `fade`, in
+// seconds of the saved clip. Measured present in the pinned core 2026-11-15.
+export const ADJUST_DEFAULTS = Object.freeze({ brightness: 0, contrast: 0, saturation: 0, hue: 0, blur: 0, fadeIn: 0, fadeOut: 0 })
+export const ADJUST_FIELDS = [
+  { id: 'brightness', label: 'Brightness', min: -100, max: 100, step: 1, unit: '', signed: true },
+  { id: 'contrast', label: 'Contrast', min: -100, max: 100, step: 1, unit: '', signed: true },
+  { id: 'saturation', label: 'Saturation', min: -100, max: 100, step: 1, unit: '', signed: true },
+  { id: 'hue', label: 'Hue', min: -180, max: 180, step: 1, unit: '°', signed: true },
+  { id: 'blur', label: 'Blur', min: 0, max: 20, step: 1, unit: ' px', signed: false },
+  { id: 'fadeIn', label: 'Fade in', min: 0, max: 10, step: 0.5, unit: ' s', signed: false },
+  { id: 'fadeOut', label: 'Fade out', min: 0, max: 10, step: 0.5, unit: ' s', signed: false },
+]
+
+/** Every field a number inside its range; anything else is the default. */
+export function clampAdjust(a) {
+  const out = { ...ADJUST_DEFAULTS }
+  for (const f of ADJUST_FIELDS) {
+    const n = Number(a?.[f.id])
+    if (Number.isFinite(n)) out[f.id] = Math.min(f.max, Math.max(f.min, n))
+  }
+  return out
+}
+
+export const adjustChanged = (a) => ADJUST_FIELDS.some((f) => clampAdjust(a)[f.id] !== 0)
+
+const trim3 = (n) => +Number(n).toFixed(3)
+
+/**
+ * The filters for an adjust group, in the order they are applied: colour,
+ * hue, blur, then the two fades. `seconds` is the length of the saved clip; the
+ * fade out starts that long before its end, and is left out when the length is
+ * not known. Each fade is held to the clip's length. `part` is 'colour' or
+ * 'fades' for one half (the fades must run after a reverse, so they are split).
+ */
+export function adjustFilters(a, { seconds = 0, part = 'all' } = {}) {
+  const v = clampAdjust(a)
+  const out = []
+  const eq = []
+  const colour = part !== 'fades'
+  const fades = part !== 'colour'
+  // eq's brightness adds to every pixel (-1 to 1); a slider's full swing is half of that.
+  if (v.brightness) eq.push(`brightness=${trim3(v.brightness * 0.005)}`)
+  if (v.contrast) eq.push(`contrast=${trim3(1 + v.contrast / 100)}`)
+  if (v.saturation) eq.push(`saturation=${trim3(1 + v.saturation / 100)}`)
+  if (colour && eq.length) out.push(`eq=${eq.join(':')}`)
+  if (colour && v.hue) out.push(`hue=h=${trim3(v.hue)}`)
+  if (colour && v.blur) out.push(`gblur=sigma=${trim3(v.blur)}`)
+  const len = Number(seconds) > 0 ? Number(seconds) : 0
+  if (fades && v.fadeIn) out.push(`fade=t=in:st=0:d=${trim3(len ? Math.min(v.fadeIn, len) : v.fadeIn)}`)
+  if (fades && v.fadeOut && len) {
+    const d = Math.min(v.fadeOut, len)
+    out.push(`fade=t=out:st=${trim3(len - d)}:d=${trim3(d)}`)
+  }
+  return out
+}
+
+/**
+ * The same adjustments as a CSS filter for the preview. Close, not exact: CSS
+ * and ffmpeg scale brightness and hue a little differently, and `scale` turns
+ * the blur's pixels of the saved picture into pixels of the preview. The fades
+ * are not in it. '' when nothing here shows.
+ */
+export function adjustCss(a, { scale = 1 } = {}) {
+  const v = clampAdjust(a)
+  const out = []
+  if (v.brightness) out.push(`brightness(${trim3(1 + v.brightness / 200)})`)
+  if (v.contrast) out.push(`contrast(${trim3(1 + v.contrast / 100)})`)
+  if (v.saturation) out.push(`saturate(${trim3(1 + v.saturation / 100)})`)
+  if (v.hue) out.push(`hue-rotate(${trim3(v.hue)}deg)`)
+  if (v.blur) out.push(`blur(${trim3(Math.min(40, v.blur * scale))}px)`)
+  return out.join(' ')
+}
+
+/** Censor: a rectangle of the picture pixelated or blurred. The box is in pixels of the source. */
+export const CENSOR_MODES = [
+  { id: 'pixelate', label: 'Pixelate' },
+  { id: 'blur', label: 'Blur' },
+]
+export const CENSOR_STRENGTH = { min: 1, max: 10 }
+export const CENSOR_DEFAULTS = Object.freeze({ on: false, mode: 'pixelate', strength: 5, box: null })
+
+/**
+ * The filters that hide one rectangle. Each is a small graph: the frame is
+ * split, one copy is cropped to the box and pixelated (scaled down, then up
+ * with nearest-neighbour so the blocks stay square) or blurred, and the
+ * result is laid back at the same spot. Labels are ca/cb/cc, clear of the
+ * s0/s1/p the GIF palette uses. The box must already sit inside the picture
+ * (clampBox does that); a missing box or an off switch adds nothing. Strength
+ * 1 to 10 is a block of 4 to 40 pixels, or a blur of 3 to 30.
+ */
+export function censorFilters(c) {
+  if (!c || !c.on || !c.box) return []
+  const num = v => Math.max(0, Math.round(Number(v) || 0))
+  const w = Math.max(2, num(c.box.w))
+  const h = Math.max(2, num(c.box.h))
+  const x = num(c.box.x)
+  const y = num(c.box.y)
+  const s = Math.max(CENSOR_STRENGTH.min, Math.min(CENSOR_STRENGTH.max, Math.round(Number(c.strength) || CENSOR_DEFAULTS.strength)))
+  const hide = c.mode === 'blur'
+    ? `gblur=sigma=${s * 3}`
+    : `scale=${Math.max(1, Math.floor(w / (s * 4)))}:${Math.max(1, Math.floor(h / (s * 4)))}:flags=neighbor,scale=${w}:${h}:flags=neighbor`
+  return [`split[ca][cb];[ca]crop=${w}:${h}:${x}:${y},${hide}[cc];[cb][cc]overlay=${x}:${y}`]
+}
+
+/** Colour key: one colour made transparent, with how close a pixel has to be. */
+export const KEY_DEFAULTS = Object.freeze({ on: false, colour: '#00ff00', tolerance: 20 })
+export const KEY_TOLERANCE = { min: 0, max: 100 }
+
+/**
+ * Takes one colour out of the picture. Tolerance 0 to 100 maps to a colorkey
+ * similarity of 0.01 to 0.5, with a little edge blend. Where the format can
+ * be transparent the pixels simply become clear; otherwise they show the
+ * Outside colour, laid on with a filled box under the keyed picture (the
+ * encoder would otherwise turn the clear pixels black).
+ */
+export function colourKeyFilters(k, { transparent = true, colour = FILL_DEFAULT } = {}) {
+  if (!k || !k.on || !isHexColour(k.colour)) return []
+  const tol = Math.max(KEY_TOLERANCE.min, Math.min(KEY_TOLERANCE.max, Number(k.tolerance) || 0))
+  const similarity = Math.max(0.01, trim3(tol / 100 * 0.5))
+  const keyed = `format=rgba,colorkey=0x${k.colour.slice(1).toLowerCase()}:${similarity}:0.1`
+  if (transparent) return [keyed]
+  return [`${keyed},split[ka][kb];[kb]drawbox=x=0:y=0:w=iw:h=ih:c=0x${colour.slice(1)}:t=fill[kc];[kc][ka]overlay`]
 }
 
 /**
@@ -550,7 +780,8 @@ export function framesToAnimationArgs({ format, fps, plays = 0, quality = 'mediu
  * wrong the moment speed changes: at half speed a 3 s clip is 6 s long.
  *
  * Filter order (each step is left out when it does nothing): speed, fps, crop
- * or pad, turn, flips, scale, cut-out, direction, sheet. Speed and fps come first so every later filter
+ * or pad, turn, flips, scale, adjust (colour), colour key, cut-out, direction, fades, sheet. Censor sits right after fps (its box is in
+ * source pixels, so it runs before the crop). Speed and fps come first so every later filter
  * only touches the frames that end up in the file; crop precedes the turn (the
  * crop box is drawn on the unturned picture); scale follows the turn so Width is
  * the width of what comes out; reverse runs last, on the smallest frames,
@@ -561,6 +792,7 @@ export function videoToAnimationArgs({
   crop = null, pad = null, turn = 0, flipH = false, flipV = false, speed = 1, direction = 'forward',
   colours = GIF_COLOURS_MAX, dither = 'pattern',
   fill = TRANSPARENT, cut = 'none', radius = CORNER_DEFAULT, sheet = null, maxFrames = MAX_FRAMES,
+  sound = false, adjust = null, seconds = 0, censor = null, key = null,
 }) {
   const fmt = findVideoFormat(format)
   const w = Math.max(16, Math.min(MAX_ANIMATION_SIDE, Math.round(Number(width) || 480)))
@@ -568,25 +800,41 @@ export function videoToAnimationArgs({
   if (start > 0) args.push('-ss', String(start))
   if (length > 0) args.push('-t', String(length))
   args.push('-i', input)
+  // Sound is kept only on request, only where the format can hold it, and only
+  // on a forward run; a source with no sound track simply gives the encoder
+  // nothing to carry (measured: the audio flags are ignored then). MP3 is all
+  // sound, so it always has it.
+  const keep = fmt.kind === 'audio' || (!!sound && !!fmt.sound && direction === 'forward')
+  const audio = keep ? { filter: atempoFilter(speed) } : null
+  if (fmt.kind === 'audio') return [...args, ...encoderArgs(fmt, { quality, audio })]
   const filters = []
   if (speed && speed !== 1) filters.push(`setpts=PTS/${speed}`)
   filters.push(`fps=${clampFps(fps)}`)
   const outside = resolveFill(fmt, fill)
+  // The censor box is in source pixels, so it runs before the crop moves them.
+  filters.push(...censorFilters(censor))
   if (crop) filters.push(`crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}`)
   filters.push(...padFilters(pad, outside))
   filters.push(...turnFilters(turn))
   if (flipH) filters.push('hflip')
   if (flipV) filters.push('vflip')
   filters.push(scaleFilter(w))
+  filters.push(...adjustFilters(adjust, { seconds, part: 'colour' }))
+  // After the colour filters (eq drops the alpha a key makes), before the cut-out.
+  const keyed = colourKeyFilters(key, outside)
+  filters.push(...keyed)
   const cutout = cutoutFilter(cut, { radius, ...outside })
   if (cutout) filters.push(cutout)
   const dir = directionFilter(direction)
   if (dir) filters.push(dir)
+  // Fades belong to the clip as it plays, so they run after a reverse; a
+  // sprite sheet is one still, so it has none.
+  if (fmt.id !== 'sprite') filters.push(...adjustFilters(adjust, { seconds, part: 'fades' }))
   if (fmt.id === 'sprite' && sheet) filters.push('format=rgba', `tile=${sheet.cols}x${sheet.rows}:padding=0:margin=0:color=black@0`)
   // Transparency in a GIF is one palette slot, reserved only when something
   // in the picture is actually transparent.
-  const transparentGif = outside.transparent && (!!pad || cut !== 'none')
-  return [...args, ...encoderArgs(fmt, { quality, plays, filters, transparentGif, maxFrames, gif: fmt.id === 'gif' ? { colours, dither } : null })]
+  const transparentGif = outside.transparent && (!!pad || cut !== 'none' || keyed.length > 0)
+  return [...args, ...encoderArgs(fmt, { quality, plays, filters, transparentGif, maxFrames, audio, gif: fmt.id === 'gif' ? { colours, dither } : null })]
 }
 
 /**
