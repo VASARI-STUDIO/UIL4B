@@ -75,9 +75,9 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
           }))
         .catch(fail)
     } else if (kind === 'bundle') {
-      // The zip's folder tree, from the same entries the download is made from.
-      import('../../utils/appBundle')
-        .then(({ appBundleEntries }) => done({ lines: bundleTreeLines(appBundleEntries(design, { name: project }).map((e) => e.path)) }))
+      // The zip's folder tree, from the path list a test holds equal to what the download is made of.
+      import('../../utils/appBundlePaths')
+        .then(({ appBundlePaths }) => done({ lines: bundleTreeLines(appBundlePaths(project)) }))
         .catch(fail)
     } else {
       buildCodeFile(file, design, { projectName, watermark })

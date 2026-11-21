@@ -3,6 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import { appBundleEntries, buildAppBundle, bundleDate } from '../../src/utils/appBundle.js'
+import { appBundlePaths, bundleRoot, bundleDate as appBundleBundleDate } from '../../src/utils/appBundlePaths.js'
 import { swatchGroups } from '../../src/utils/swatchFiles.js'
 
 const DESIGN = {
@@ -139,5 +140,28 @@ test('buildAppBundle returns a zip whose entries match appBundleEntries', async 
   for (const { path, data } of entries) {
     if (typeof data === 'string') assert.equal(await zip.file(path).async('string'), data, path)
     else assert.deepEqual(Buffer.from(await zip.file(path).async('uint8array')), Buffer.from(data), path)
+  }
+})
+
+test('appBundlePaths, which the free preview draws from, lists exactly the paths the builder makes', () => {
+  assert.deepEqual(appBundlePaths(OPTS.name, { date: OPTS.date }), entries.map((e) => e.path))
+  assert.equal(bundleRoot(OPTS.name, OPTS.date), ROOT)
+  // The preview needs no design, and a date given as a Date names the same folder as the builder does.
+  const d = new Date(2026, 0, 5)
+  assert.deepEqual(appBundlePaths(undefined, { date: d }), appBundleEntries(DESIGN, { date: d }).map((e) => e.path))
+  // One date rule, shared by the builder and the preview.
+  assert.equal(appBundleBundleDate, bundleDate)
+})
+
+test('buildAppBundle can answer base64, which is what the route sends, and it unzips to the same entries', async () => {
+  const b64 = await buildAppBundle(DESIGN, { ...OPTS, type: 'base64' })
+  assert.equal(typeof b64, 'string')
+  assert.match(b64, /^[A-Za-z0-9+/]+=*$/)
+  const zip = await JSZip.loadAsync(b64, { base64: true })
+  const files = Object.values(zip.files).filter((f) => !f.dir)
+  assert.deepEqual(files.map((f) => f.name).sort(), entries.map((e) => e.path).sort())
+  // The binary swatch files survive the base64 trip byte for byte.
+  for (const { path, data } of entries) {
+    if (typeof data !== 'string') assert.deepEqual(Buffer.from(await zip.file(path).async('uint8array')), Buffer.from(data), path)
   }
 })
