@@ -6,6 +6,15 @@
 // never appear there. On the member's own profile, Your submissions lists what
 // is still waiting or was turned down, and drops what was approved; the Made tab lists that approved work instead.
 //
+// ── MUTATIONS ───────────────────────────────────────────────────────────────
+// 1. Let `waitingRows` keep approved rows (approvedSubmissions.js): the Your
+//    submissions test fails because the approved palette stays listed.
+// 2. Make `approvedRows` return nothing: the Your submissions test fails because
+//    Made no longer lists the approved palette.
+// 3. Drop the approved check from the Firestore query (listApproved), from
+//    `filterApproved` and from both row builders: the gradient and palette tests
+//    fail. Any one of those layers alone still keeps pending work out.
+//
 // The queue is seeded as 290-community-status-withdraw.spec.js seeds it.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
