@@ -35,7 +35,7 @@ test('a pulse that starts from nothing still draws a dot', () => {
   // The dot is authored at r="0" and grown by the animation, so removing the animation alone leaves a blank tile.
   const markup = svg('<circle cx="12" cy="12" r="0"><animate attributeName="r" values="0;8;0" dur="1s" repeatCount="indefinite"/></circle>')
   const still = staticFrame(markup)
-  assert.match(still, /<circle[^>]* r="8"/, 'the dot is written at its largest value')
+  assert.match(still, /<circle[^>]* r="4.8"/, "the dot is written at 60% of its largest value")
   assert.equal(/\sr="0"/.test(still), false, 'and is no longer the empty one')
   assert.equal(hasAnimation(still), false)
   // Control: the blank the fallback exists to avoid is what plain stripping gives.
@@ -89,7 +89,7 @@ test('frameInfo reads a data URI once and gives a still as a data URI', () => {
   assert.equal(info.animated, true)
   assert.equal(info.looping, true)
   assert.equal(frameInfo(src), info, 'the second read is the remembered object')
-  assert.match(decodeURIComponent(info.still.slice('data:image/svg+xml;utf8,'.length)), /r="8"/)
+  assert.match(decodeURIComponent(info.still.slice('data:image/svg+xml;utf8,'.length)), /r="4.8"/)
   // An icon that does not move says so.
   const flat = frameInfo(uri(svg('<circle r="3"/>')))
   assert.equal(flat.animated, false)

@@ -5924,7 +5924,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             {teasePending && source === 'search' && !loading && icons.length === 0 && (
               <p className="pl-empty" role="status">Checking the other sets…</p>
             )}
-            {searchEmpty && teaseBand !== 'empty' && (
+            {/* ONE OUTAGE MESSAGE. The notice above already says the service is down and
+                carries the only Try again; when it also says this category has no built-in
+                icons, an empty line under it would repeat the same failure. */}
+            {searchEmpty && teaseBand !== 'empty' && !(loadError && !query.trim() && !hasBuiltins(category)) && (
               <div className="pl-empty" role="status" aria-live="polite">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -5943,10 +5946,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                       : loadError
                         ? (category !== 'all' ? 'No built-in icons in this category right now.' : selectValue !== 'all' ? 'No icons to show — try another pack or search.' : 'No built-in icons to show right now.')
                         : 'No icons to show — try another pack or search.'}</p>
-                    {/* The outage's answer is trying again, not another pack (which asks the same service). */}
-                    {!query.trim() && loadError && (
-                      <button type="button" className="btn pl-empty-try" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
-                    )}
                     {/* "Try All" as a real control, not a word 250px from the category control. */}
                     {query.trim() && category !== 'all' && CATEGORY_EMPTY[category] && (
                       <button type="button" className="btn pl-empty-try" onClick={() => handleCategory('all')}>Search in All</button>

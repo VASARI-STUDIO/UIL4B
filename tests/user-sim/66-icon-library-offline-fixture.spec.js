@@ -223,8 +223,10 @@ test('during an outage the fallback keeps to the chosen category', async ({ brow
   await go(page, '/create/icons?category=animated')
   await expect(notice).toBeVisible({ timeout: 15000 })
   await expect(notice).toContainText('no built-in icons in this category')
-  await expect(page.getByText('No built-in icons in this category right now.')).toBeVisible()
-  await expect(page.locator('.pl-empty').getByRole('button', { name: 'Try again' })).toBeVisible()
+  // One message and one retry: the notice says it, the grid does not repeat it.
+  await expect(page.getByText('No built-in icons in this category right now.')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(1)
+  await expect(notice.getByRole('button', { name: 'Try again' })).toBeVisible()
   expect(await page.locator('.ig .ic:not(.ig-skel)').count(), 'no static icon stands in for an animated one').toBe(0)
 
   await go(page, '/create/icons?category=editable')

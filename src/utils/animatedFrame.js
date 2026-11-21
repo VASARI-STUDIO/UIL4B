@@ -43,6 +43,15 @@ function drawsSomething(markup) {
 // opacity) and the one it should show at its smallest (a stroke fully drawn: offset 0).
 const PEAK = new Set(['r', 'rx', 'ry', 'width', 'height', 'opacity', 'fill-opacity', 'stroke-opacity', 'stroke-width'])
 const DRAWN = 'stroke-dashoffset'
+// Sizes are stilled at 60% of their peak so a pulse reads as a dot, not a solid disc
+// filling the tile; opacities keep their peak.
+const SIZED = new Set(['r', 'rx', 'ry', 'width', 'height', 'stroke-width'])
+const midSize = (v) => {
+  const m = /^(-?[\d.]+)(.*)$/.exec(String(v).trim())
+  if (!m) return v
+  const n = Math.round(parseFloat(m[1]) * 0.6 * 100) / 100
+  return `${n}${m[2]}`
+}
 
 /**
  * A still for an icon whose animations START from nothing (a dot at r="0", a path at
@@ -92,7 +101,7 @@ function peakFrame(markup) {
     const edit = edits.get(i)
     if (!edit || t.closing) { out += markup.slice(t.at, t.end); return }
     let attrs = t.attrs
-    for (const [k, v] of Object.entries(edit)) if (k !== 'transform') attrs = withAttr(attrs, k, v)
+    for (const [k, v] of Object.entries(edit)) if (k !== 'transform') attrs = withAttr(attrs, k, SIZED.has(k) ? midSize(v) : v)
     if (edit.transform.length) attrs = withAttr(attrs, 'transform', edit.transform.join(' '))
     out += `<${t.name}${attrs}${t.self ? '/' : ''}>`
   })

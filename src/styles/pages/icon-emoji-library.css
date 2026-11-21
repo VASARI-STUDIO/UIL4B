@@ -418,5 +418,5 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 /* Forced colours: pressed category and style pills fill with Highlight so they differ from a focused one (outline only). */
 @media (forced-colors: active){
   .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"],.iel-page .ig-weight-btn[aria-pressed="true"]{forced-color-adjust:none;background:Highlight;color:HighlightText}
-  .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"]:focus-visible,.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline:2px solid CanvasText;outline-offset:-2px}
+  .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"]:focus-visible,.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline:2px solid HighlightText;outline-offset:-2px}
 }
