@@ -147,14 +147,15 @@ const PAGES = {
 // a product screen: the brand's own screen title and content, built from the components. A top bar with the main links, the title over
 // its tabs, the order that is being worked on (a card and its one action) beside the day's orders, all of them
 function screen(ctx, dark, mobile) {
-  const S = SC(ctx), u = ctx.ui, E = EX(ctx), title = ctx.brand.ui.screen.title, o = S.deliveries[0] || {};
-  const no = /Order \d+/.exec(o.when || '');
-  const card = no ? { meta: S.eta, title: `${no[0]} · ${S.status}` } : { meta: S.status, title: S.eta };
+  const S = SC(ctx), u = ctx.ui, E = EX(ctx), title = ctx.brand.ui.screen.title;
+  // the shop's two jobs on the order that is open (the card says what it is; the same card as the example page's)
+  const [done, second] = ctx.edition === 'slot' ? ['Mark packed', 'Print label'] : [S.form.book, cardAction(ctx)];
   const bar = E.links && E.links.length ? `<nav class="ui-topbar" aria-label="Main"><strong class="ui-display">${A(ctx.brand.logo.showcase.wordmark)}</strong><div class="ui-topbar__links">${u.links(E.links, 0)}</div></nav>` : '';
   const tabs = E.tabs && E.tabs.length ? u.tabs(E.tabs, 0) : '';
-  const scr = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}>${bar}<div class="hk-scr__body"><header class="hk-scr__h"><h2 class="hk-scr__t">${A(title)}</h2>${tabs}</header>
-<div class="hk-scr__a">${u.card({ ...card, text: S.pickup, action: `<div>${u.btn(cardAction(ctx), { variant: 'secondary', size: 'sm' })}</div>` })}<div>${u.btn(S.form.book, { iconRight: 'arrow-right', block: mobile })}</div></div>
-<div class="hk-scr__b">${deliveryRows(ctx, mobile ? 4 : 6, tally(ctx).open)}</div></div></div>`;
+  const act = `<div class="hk-scr__x">${u.btn(done, { iconLeft: ctx.edition === 'slot' ? 'check' : undefined, block: mobile })}${u.btn(second, { variant: 'secondary', iconLeft: ctx.edition === 'slot' ? 'printer' : undefined, block: mobile })}</div>`;
+  const scr = `<div class="ui hk-scr${mobile ? ' hk-scr--m' : ''}"${dark ? ' data-theme="dark"' : ''}>${bar}<div class="hk-scr__body"><h2 class="hk-scr__t">${A(title)}</h2>
+<div class="hk-scr__a">${u.card({ meta: S.status, title: S.eta, text: S.pickup })}${act}</div>
+<div class="hk-scr__b">${tabs}${deliveryRows(ctx, mobile ? 4 : 6, tally(ctx).open)}</div></div></div>`;
   const h = mobile ? `<div class="hk-phone">${scr}</div>` : scr;
   return { lede: mobile ? `${title}, at phone width.` : `${title}, built from the kit's components only.`, live: `<div class="hk-col">${h}</div>`, code: [] };
 }

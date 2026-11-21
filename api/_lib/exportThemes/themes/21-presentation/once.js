@@ -1,14 +1,20 @@
 // A brand that says one word once (Long Room: "Say free once") must not print it on every row of the product screens. These helpers give the pages the
 // brand's product-screen content with that word left off the repeated places. A brand without such a rule gets its content exactly as it is.
 import { onceRe, sayOnce } from './lane-g3-kit.js';
-import { ORDER_STATUS } from './real-copy.js';
+import { ORDER_STATUS, LINK_ICONS } from './real-copy.js';
 
 const cache = new WeakMap();
 const slotted = new WeakMap();
-// the slot edition's sample orders each carry the status real-copy.js gives them (the generic data cycles new, active, waiting, closed)
+// the slot edition's sample orders each carry the status real-copy.js gives them (the generic data cycles new, active, waiting, closed), and the
+// navigation links their own icons
+// (set in place, once: the placeholder swap also writes into these objects, and may run after the first call, so a copy would keep the generic words)
 function slotOrders(S) {
-  if (!slotted.has(S)) slotted.set(S, { ...S, deliveries: S.deliveries.map((d, i) => ({ ...d, status: ORDER_STATUS[i] || d.status })) });
-  return slotted.get(S);
+  if (!slotted.has(S)) {
+    slotted.set(S, true);
+    S.deliveries.forEach((d, i) => { d.status = ORDER_STATUS[i] || d.status; });
+    ((S.example || {}).links || []).forEach((l, k) => { l[1] = LINK_ICONS[k] || l[1]; });
+  }
+  return S;
 }
 // ctx.brand.ui.screen.content, but: the card text drops the sentence that carries the word, a row's price drops out where it is that word,
 // and the paid stat shows the booking's status in its place

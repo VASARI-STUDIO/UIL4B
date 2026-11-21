@@ -44,16 +44,19 @@ export function kitCss(ctx) {
 .hk-rd{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 16px}
 .hk-rd li{display:flex;flex-direction:column;gap:6px;font-size:14px}
 .hk-rd__b{display:block;height:72px;border:var(--w-control) solid var(--edge);background:var(--raised)}
-.hk-scr{background:var(--surface);color:var(--text);border:1px solid var(--divider);max-width:960px}
-.hk-scr__body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 32px;align-items:start;padding:24px}
+.hk-scr{background:var(--surface);color:var(--text);border:1px solid var(--divider)}
+.hk-scr__body{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px 48px;align-items:start;padding:32px}
 .hk-i .ui-empty{max-width:520px}
 .hk-scr .ui-topbar{border-bottom:1px solid var(--divider)}
-.hk-scr__h{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px}
+.hk-scr__t{grid-column:1/-1}
 .hk-scr__a{display:flex;flex-direction:column;gap:20px}
+.hk-scr__x{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.hk-scr .ui-card__title,.hk-scr .ui-card__meta{white-space:nowrap}
+.hk-scr .ui-card__text{text-wrap:pretty}
 .hk-scr .ui-row__end>span:first-child:not(.ui-chip){color:var(--text)}
-@media (max-width:700px){.hk-scr__body{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:700px){.hk-scr__body{grid-template-columns:minmax(0,1fr);padding:20px 16px}}
 .hk-scr__t{margin:0;font-size:20px;font-weight:600}
-.hk-phone{position:relative;box-sizing:border-box;width:min(100%,390px);aspect-ratio:9/19.5;border:10px solid var(--text);border-radius:44px;overflow:hidden;background:var(--surface);margin:0 auto}
+.hk-phone{position:relative;box-sizing:border-box;width:min(100%,390px);border:10px solid var(--text);border-radius:44px;overflow:hidden;background:var(--surface);margin:0 auto}
 .hk-phone::before{content:"";display:block;width:96px;height:6px;margin:8px auto 0;border-radius:3px;background:var(--divider)}
 .hk-phone .hk-scr{border:0;max-width:none}
 .hk-phone .ui-topbar{height:auto;flex-wrap:wrap;padding:8px 16px}

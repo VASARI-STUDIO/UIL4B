@@ -85,6 +85,8 @@ const UI_LIST = {
   'ui.screen.content.example.tabs': TABS,
 };
 const LINKS = ['Orders', 'Customers', 'Shop'];
+// the icon of each link: a list for the orders, people for customers, a storefront for the shop
+export const LINK_ICONS = ['clipboard-list', 'users', 'store'];
 const STATUS = ['New order', 'Packing', 'Late', 'Closed'];
 const ORDER_FIELD = { to: 0, when: 1, price: 2 };
 

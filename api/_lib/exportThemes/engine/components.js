@@ -254,6 +254,8 @@ export function exampleHtml(ctx) {
   const DM = (ctx.theme && typeof ctx.theme.exampleDemo === 'function' && ctx.theme.exampleDemo(ctx)) || {};
   const sec = (t, body) => `<section class="ex"><h2>${esc(t)}</h2>${body}</section>`;
   const row = (...x) => `<div class="exrow">${x.join('')}</div>`;
+  // a row of buttons lines them up on their middles (a small one beside a large one), a row of cards gives them one height
+  const rowOf = (kind, ...x) => `<div class="exrow exrow--${kind}">${x.join('')}</div>`;
   return `<!doctype html>
 <html lang="en-AU" data-theme="light">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -268,16 +270,18 @@ main{max-width:960px;margin:0 auto;padding:24px}
 .ex h2{margin:0 0 16px;font:500 13px/1.4 var(--ff-body);color:var(--quiet)}
 .exrow{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-bottom:16px}
 .exrow>.ui-field{flex:1 1 240px}
+.exrow--btns{align-items:center}
+.exrow--cards{align-items:stretch}
 code{font-family:var(--ff-mono);font-size:13px}
 </style></head>
 <body class="ui">
 <header class="ex-head"><h1>${esc(ctx.brand.name)} components</h1><div class="ui-segmented" role="group" aria-label="Colour mode"><button type="button" aria-pressed="true" data-mode="light">Light</button><button type="button" aria-pressed="false" data-mode="dark">Dark</button></div></header>
 <main>
-${sec('Buttons', row(ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true }), ui.btn(X.small, { size: 'sm' }), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' })))}
+${sec('Buttons', rowOf('btns', ui.btn(F.book), ui.btn(X.secondary, { variant: 'secondary' }), ui.btn(X.quiet, { variant: 'quiet' }), ui.btn(X.danger, { variant: 'danger' }), ui.btn(F.book, { disabled: true }), ui.btn(X.small, { size: 'sm' }), ui.btn(F.book, { size: 'lg', iconRight: 'arrow-right' })))}
 ${sec('Inputs', row(ui.field({ id: 'e1', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'e2', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] })) + row(ui.field({ id: 'e3', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'e4', label: F.notes, kind: 'textarea', help: F.notesHelp })) + row(ui.field({ id: 'e5', label: X.account, value: DM.account !== undefined ? DM.account : ctx.brand.name, disabled: true })))}
 ${sec('Choices', row(ui.check(X.checks[0], { checked: true }), ui.check(X.checks[1]), ui.check(X.checks[2], { disabled: true }), ui.switch(X.switches[0], { checked: true }), ui.switch(X.switches[1])) + row(ui.check(X.radios[0], { type: 'radio', name: 'v', checked: true }), ui.check(X.radios[1], { type: 'radio', name: 'v' }), ui.segmented(F.sizes, 1)))}
 ${sec('Status', row(...ctx.status.map((s) => ui.statusChip(s.id)), '<span class="ui-badge">3</span>'))}
-${sec('Cards', row(ui.card({ title: S.eta, text: S.pickup, meta: S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(DM.stat ? DM.stat[0] : S.paid, DM.stat ? DM.stat[1] : X.statLabel)))}
+${sec('Cards', rowOf('cards', ui.card({ title: S.eta, text: S.pickup, meta: S.status }), ui.card({ title: S.rider, text: S.riderNote, raised: true }), ui.stat(DM.stat ? DM.stat[0] : S.paid, DM.stat ? DM.stat[1] : X.statLabel)))}
 ${sec('Navigation', ui.crumbs([...X.crumbs, S.deliverTo]) + '<div style="height:16px"></div>' + ui.tabs(X.tabs, 0) + '<div style="height:16px"></div><nav class="ui-topbar" aria-label="Main"><strong class="ui-display">' + esc(ctx.brand.logo.showcase.wordmark) + '</strong><div class="ui-topbar__links">' + ui.links(X.links, 0) + '</div></nav>')}
 ${sec('List', ui.deliveryRows(5))}
 ${sec('Feedback', ui.alert('warning', S.alert) + '<div style="height:12px"></div>' + ui.alert('success', S.toast) + '<div style="height:12px"></div>' + ui.toast(S.toast) + '<div style="height:12px"></div>' + row(ui.spinner(), ui.skeleton('160px')))}
