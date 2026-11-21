@@ -1159,6 +1159,16 @@ html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
 .lib-surface .ig .ic:focus-visible{background:var(--v3-rowh);border-color:var(--v3-hair);outline:2px solid var(--v3-ink);outline-offset:-2px}
 .lib-surface .ig .ic:active{background:var(--v3-rowh);border-color:var(--v3-hair);transform:scale(.97)}
 .lib-surface .ig .ic.is-picked{background:var(--v3-rowc);border-color:var(--v3-hl20)}
+/* Mark on a tile whose line style can be edited: a small pen in the top-right corner, out of
+   the flow so the glyph and the label stay where they were. It follows the muted label ink. */
+.lib-surface .ig .ic svg.ic-edit{
+  position:absolute;top:6px;right:6px;width:12px;height:12px;margin:0;
+  stroke:var(--v3-sec);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  pointer-events:none;
+}
+@media (forced-colors:active){
+  .lib-surface .ig .ic svg.ic-edit{stroke:CanvasText}
+}
 /* A grouped grid opens each pack with a full-width heading row: the pack's name and its
    icon count, in place of a label on every cell. Its height is fixed (the box includes
    the hairline and the air above it), so the windowed grid, which swaps cells for

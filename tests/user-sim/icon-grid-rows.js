@@ -15,3 +15,12 @@ export function wholeRowCount(cols) {
 export function gridColumns(page) {
   return page.locator('.ig').evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length)
 }
+
+/**
+ * The grid cell for an icon name. A cell whose line style can be edited ends its accessible name with
+ * ", line style editable", so this matches the cell either way (a plain `aria-label=` match on the
+ * bare name would miss every stroke icon).
+ */
+export function iconCell(name) {
+  return `.ig .ic:is([aria-label="Customise ${name}"], [aria-label="Customise ${name}, line style editable"])`
+}
