@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
 import { stashResumeTarget } from '../../contexts/LoginPromptContext'
@@ -155,6 +155,19 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   }
   const onType = (id) => pickCategory(id, EXPORT_TYPES.find((t) => t.id === id).categories[0].id)
   const onCategory = (id) => pickCategory(type.id, id)
+
+  // Coming back from the templates grid (a pick, "Back to preview", a way out) lands on the top of the preview. The column keeps
+  // the grid's scroll position otherwise, and the stage and its Pro chip come back cut off. In a short window the whole body
+  // scrolls, so it is reset with the column. Instant, and no focus moves: the dock button that was pressed keeps it.
+  const lastView = useRef(view)
+  useLayoutEffect(() => {
+    const from = lastView.current
+    lastView.current = view
+    if (from !== 'templates' || view !== 'main') return
+    const col = mainRef.current
+    col?.scrollTo({ top: 0, behavior: 'auto' })
+    col?.closest('.xd-body')?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [view])
   const onFile = (id) => {
     lastFile.current[cat.id] = id
     apply({ ...pick, file: id })

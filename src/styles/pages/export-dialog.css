@@ -55,6 +55,15 @@
 .xd[data-layout="menu"] .xd-scroll{padding:var(--s-5)}
 .xd[data-layout="strip"] .xd-scroll{padding:var(--s-4)}
 .xd[data-layout="strip"] .xd-tabs{padding:0 var(--s-3)}
+/* A phone: every tab of a set fits at 360px and wider. The longest set is Branding for a free account (Guidelines, Brand book with
+ * its Pro tag, Style guide): about 445px with the icons and 12px padding, about 321px without them. The icon is decoration (the tab's
+ * accessible name has the words), so it goes; the label stays 14px and the tab 48px tall. Under 360px the bar scrolls sideways as before. */
+@media (max-width:479.98px){
+  .xd[data-layout] .xd-tabs{gap:0;padding:0 var(--s-2)}
+  .xd[data-layout] .xd-tab{padding:0 var(--s-2)}
+  .xd[data-layout] .xd-tab::after{left:var(--s-2);right:var(--s-2)}
+  .xd[data-layout] .xd-tab-i{display:none}
+}
 .xd-swap{display:flex;flex-direction:column;gap:var(--s-5);min-width:0;margin:0;padding:0;border:0;animation:xd-swap 150ms var(--ease-out)}
 .xd-step{display:flex;flex-direction:column;gap:var(--s-3);padding-top:var(--s-4);border-top:1px solid var(--border)}
 .xd-step-l{margin:0;font-size:13px;font-weight:600;color:var(--t1)}

@@ -129,6 +129,8 @@ export const preloadTheme = (kind, theme) => Promise.all(themeShots(kind, theme)
 )))
 
 export const themeThumb = (theme) => `/export-themes/${theme.id}-thumb.webp`
+/** The same thumbnail for a 2x screen: 284 px wide, the card's width at twice the pixels. Written by scripts/library/exportThemePreviews.mjs. */
+export const themeThumb2x = (theme) => `/export-themes/${theme.id}-thumb@2x.webp`
 
 /** The preview caption and the file's description for a kind, in a theme. */
 export function themeLines(kind, theme) {

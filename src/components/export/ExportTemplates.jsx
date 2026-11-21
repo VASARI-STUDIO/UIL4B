@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import ExportProTag from '../ExportProTag'
-import { pickerThemesFor, shapeClass, themeThumb, themedFileIsPro } from '../../config/exportThemePicker'
+import { pickerThemesFor, shapeClass, themeThumb, themeThumb2x, themedFileIsPro } from '../../config/exportThemePicker'
 
 // "View templates": every template the chosen file can be made in, as a grid inside the dialog (not a page of its own).
 // A card is the template's picture, its name and sample brand. A template that is Pro for this account carries the Pro mark; its
@@ -26,7 +26,7 @@ export default function ExportTemplates({ file, value, onPick, isPro, checking, 
                 onClick={() => onPick(t.id)}
               >
                 <span className={`xd-tpl-pic ${shapeClass(t.shape)}`}>
-                  <img src={themeThumb(t)} width="142" height="80" alt="" data-pin-nopin="true" loading="lazy" decoding="async" />
+                  <img src={themeThumb(t)} srcSet={`${themeThumb(t)} 1x, ${themeThumb2x(t)} 2x`} width="142" height="80" alt="" data-pin-nopin="true" loading="lazy" decoding="async" />
                 </span>
                 <span className="xd-tpl-n">{t.name}</span>
                 <span className="xd-tpl-b">{t.brand}</span>
