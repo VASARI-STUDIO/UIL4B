@@ -259,12 +259,12 @@ export function htCss(ctx) {
 .ht-mk{display:flex;flex-direction:column;gap:12px;min-width:0}
 .ht-mk figcaption{font-size:14px;line-height:1.5;color:var(--s)}
 .ht-mk figcaption b{display:block;color:var(--t);font-weight:600}
-.ht-mk__card,.ht-mk__sign{container-type:inline-size;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:8cqw;width:100%;max-width:420px;box-sizing:border-box}
+.ht-mk__card,.ht-mk__sign{container-type:inline-size;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:8%;width:100%;max-width:420px;box-sizing:border-box}
 .ht-mk__card{aspect-ratio:90/55}
 .ht-mk__sign{aspect-ratio:3/2;max-width:480px;padding:8% 8% 14%}
 .ht-mk__logo{display:flex}
-.ht-mk__rule{display:block;width:16%;height:3px}
-.ht-mk__p{font-size:14px;line-height:1.5}
+.ht-mk__rule{display:block;width:16%;height:3px;margin-top:auto}
+.ht-mk__p{font-size:14px;line-height:1.5;margin:12px 0 0}
 .ht-mk__line{font-size:clamp(24px,7cqw,40px);margin-top:16px}
 .ht-mk__bar{position:absolute;left:0;right:0;bottom:0;height:12px}
 .ht-mk__phone{width:100%;max-width:390px;border:10px solid var(--t);border-radius:28px;overflow:hidden;background:var(--g);box-sizing:border-box}

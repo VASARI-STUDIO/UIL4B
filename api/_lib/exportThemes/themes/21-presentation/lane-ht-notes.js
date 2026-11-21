@@ -131,8 +131,10 @@ const ORDER = { screen: 'Orders', id: 'Order 1042', status: 'Packing', due: 'Due
 const mockups = (ctx, { spread = false } = {}) => {
   const B = ctx.brand, A_ = B.applications, act = actF(ctx), dk = darkF(ctx), geo = 'colour' in ctx.logo.geos ? 'colour' : ctx.logo.versions[0];
   const ph = L(ctx).sunken;
-  // the card's rule and the sign's base are accents that show on their own grounds (the ground's own colour would vanish)
-  const rule = accentFor(ctx, act), base = accentFor(ctx, dk);
+  // the card's rule and the sign's base are the brand's accent token where it shows on their grounds (a drawn rule needs less contrast than text), else another accent
+  const tok = (ctx.colours.find((c) => c.id === 'accent') || {}).hex;
+  const on = (g) => (tok && ctx.ratio(tok, g) >= 1.5 ? tok : accentFor(ctx, g));
+  const rule = on(act), base = on(dk);
   const wm = (hex, width) => ctx.logo.html(geo, { width, colourway: 'reversed', color: inkOn(ctx, hex), label: 'Logo' });
   const card = A_.card || {}, sign = A_.signage || 'Pick up here';
   const who = [card.person, card.role].filter(Boolean), contact = [card.contact].filter(Boolean);
