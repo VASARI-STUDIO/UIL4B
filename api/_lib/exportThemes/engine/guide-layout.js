@@ -68,14 +68,16 @@ export const makeGuide = (pages, { order = PAGE_IDS, extra = ['ruler', 'applied'
 
 // ---- spare height ----
 // Content fills the page: sections stack from `top`; spare height goes first to the sections that can grow (flex, in px), then to the gaps (up to maxGap).
-export function stacker({ theme, bottom, footWarn = 70 }) {
+// `gapStretch` lets a theme whose pages run short spread the slack over the gaps up to that many times maxGap (default 1: a gap never passes maxGap),
+// so a sparse page does not leave one hole at its foot. A theme that does not ask keeps the layout it had.
+export function stacker({ theme, bottom, footWarn = 70, gapStretch = 1 }) {
   return function flow(id, top, sections, { gap = 28, maxGap = 60 } = {}) {
     const n = sections.length, nat = sum(sections.map((s) => s.h)) + gap * (n - 1);
     let slack = bottom - top - nat;
     if (slack < 0) throw new Error(`${theme} guide: ${id} is ${Math.ceil(-slack)} px too tall (top ${top}, sections ${sections.map((s) => Math.round(s.h)).join(', ')})`);
     const flexTotal = sum(sections.map((s) => s.flex || 0)), extra = sections.map(() => 0);
     if (flexTotal) { const give = Math.min(slack, flexTotal); sections.forEach((s, i) => { extra[i] = Math.floor(((s.flex || 0) / flexTotal) * give); }); slack -= sum(extra); }
-    const g = n > 1 ? Math.min(maxGap, gap + Math.floor(slack / (n - 1))) : gap;
+    const g = n > 1 ? Math.min(maxGap * gapStretch, gap + Math.floor(slack / (n - 1))) : gap;
     if (n > 1) slack -= (g - gap) * (n - 1);
     if (slack > footWarn) console.warn(`  ${theme} guide: ${id} leaves ${slack} px at the foot`);
     let y = top, html = '';

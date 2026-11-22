@@ -98,16 +98,21 @@ function baseCss(ctx) {
 }
 
 // ---- lane modules: the pages and css written in lane-<name>.js beside this file, merged in file-name order (engine/lanes.js) ----
-import { mergeLanes as __mergeLanes, laneCss as __laneCss } from '../../engine/lanes.js';
+import { mergeLanes as __mergeLanes, laneCss as __laneCss, laneGuideCss as __laneGuideCss } from '../../engine/lanes.js';
 import * as __g1 from './lane-g1.js';
 import * as __g2 from './lane-g2.js';
 import * as __g3 from './lane-g3.js';
 import * as __g5 from './lane-g5.js';
-const __L = __mergeLanes([__g1, __g2, __g3, __g5]);
+import * as __guide from './lane-guide.js';
+const __L = __mergeLanes([__g1, __g2, __g3, __g5, __guide]);
 Object.assign(guidelines, __L.guidelines);
 Object.assign(uikit, __L.uikit);
 if (__L.fonts.length) meta.fonts = [...(meta.fonts || []), ...__L.fonts];
 export const css = __laneCss(baseCss, __L);
+// the A4 style guide (lane-guide.js): its pages and its page css
+export const guide = {};
+Object.assign(guide, __L.guide);
+export const guideCss = __laneGuideCss(__L);
 export const brandBook = __L.brandBook || undefined;
 export const bookCss = __L.bookCss || undefined;
 export const readMe = __L.readMe || undefined;
