@@ -143,7 +143,7 @@ export function kitFiles(ctx, theme) {
   const B = ctx.brand, files = {}, slug = ctx.slug;
   if (ctx.edition === 'slot') {
     put(ctx, files, '01 Logo/logo-slot.svg', ctx.logo.slotSvgFile());
-    put(ctx, files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${mdEsc(B.name)} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
+    put(ctx, files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${mdEsc(B.name)} logo files go. Until then, \`logo-slot.svg\` is a quiet placeholder frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
   } else {
     const logo = ctx.logo;
     for (const id of logo.exportVersions) {

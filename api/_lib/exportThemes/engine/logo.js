@@ -84,13 +84,22 @@ export function makeLogo(ctx) {
   // the label weight is the chrome face weight nearest 400 (a chrome face loaded at one weight, say 500, must not be asked for 400)
   const chromeWs = ((ctx.theme && ctx.theme.chrome && ctx.theme.chrome.faces) || []).map((f) => f.weight);
   const slotWeight = chromeWs.length ? chromeWs.reduce((b, w) => (Math.abs(w - 400) < Math.abs(b - 400) ? w : b)) : 400;
-  function slotHtml({ width, color = 'currentColor', label = 'Your logo goes here' }) {
-    const h = width * primary.h / primary.w;
-    return `<div class="logo-slot" role="img" aria-label="Logo slot" style="width:${width}px;height:${h.toFixed(1)}px;box-sizing:border-box;border:1.5px dashed ${svgAttr(color)};color:${svgAttr(color)};display:flex;align-items:center;justify-content:center;font:${slotWeight} ${Math.max(11, Math.min(13, width / 14))}px/1.2 var(--chrome, var(--ff-body, sans-serif));text-align:center">${esc(label)}</div>`;
+  // The placeholder is the UIL4B mark as a quiet watermark: one tone (the page ink, so never a hue of its own) at low opacity, with a small
+  // "Your logo" label where the frame is big enough to carry one. The mark's two paths are public/favicon.svg, drawn on a 324 x 200 box.
+  const MARK = { w: 323.61, h: 200, paths: ['M0 0H100V123.61A123.61 123.61 0 0 0 126.43 200H76.39A76.39 76.39 0 0 1 0 123.61Z', 'M125 0H177.79A47.21 47.21 0 0 1 225 47.21V125H276.39A47.21 47.21 0 0 1 323.61 172.21V200H201.39A76.39 76.39 0 0 1 125 123.61Z'] };
+  const MARK_OPACITY = 0.16;
+  function slotHtml({ width, height, color = 'currentColor' }) {
+    const h = height || width * primary.h / primary.w;
+    const room = width >= 150 && h >= 70;
+    const mw = Math.min(width * 0.36, (h * (room ? 0.4 : 0.56)) * MARK.w / MARK.h), mh = mw * MARK.h / MARK.w;
+    const mark = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MARK.w} ${MARK.h}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" aria-hidden="true" focusable="false" style="display:block;flex:none;opacity:${MARK_OPACITY}">${MARK.paths.map((d) => `<path d="${d}" fill="currentColor"/>`).join('')}</svg>`;
+    const text = room ? `<span style="margin-top:${Math.round(mh * 0.18)}px;opacity:.62;font:${slotWeight} ${Math.max(11, Math.min(13, width / 14))}px/1.2 var(--chrome, var(--ff-body, sans-serif));letter-spacing:.02em">Your logo</span>` : '';
+    return `<div class="logo-slot" role="img" aria-label="Logo placeholder" style="width:${width}px;height:${h.toFixed(1)}px;box-sizing:border-box;color:${svgAttr(color)};display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center">${mark}${text}</div>`;
   }
   const slotSvgFile = () => {
     const w = 900, h = w * primary.h / primary.w, ink = ctx.roles.light.quiet;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" role="img" aria-label="Logo slot"><rect x="1.5" y="1.5" width="${w - 3}" height="${(h - 3).toFixed(1)}" fill="none" stroke="${svgAttr(ink)}" stroke-width="3" stroke-dasharray="14 10"/><text x="${w / 2}" y="${(h / 2 + 8).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="${svgAttr(ink)}">Your logo goes here. Proportion ${primary.w.toFixed(0)} : ${primary.h.toFixed(0)}.</text></svg>`;
+    const mw = Math.min(w * 0.3, h * 0.4 * MARK.w / MARK.h), k = mw / MARK.w, mh = MARK.h * k, top = (h - mh - 44) / 2;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" role="img" aria-label="Logo placeholder"><desc>Placeholder at the logo's proportion, ${primary.w.toFixed(0)} : ${primary.h.toFixed(0)}. Replace it with the approved logo.</desc><g fill="${svgAttr(ink)}" fill-opacity="${MARK_OPACITY}" transform="translate(${((w - mw) / 2).toFixed(1)} ${top.toFixed(1)}) scale(${k.toFixed(4)})">${MARK.paths.map((d) => `<path d="${d}"/>`).join('')}</g><text x="${w / 2}" y="${(top + mh + 34).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="${svgAttr(ink)}" fill-opacity=".7">Your logo</text></svg>`;
   };
 
   const logo = {
@@ -100,8 +109,9 @@ export function makeLogo(ctx) {
     small: small ? { belowPx: small.belowPx || 100 } : null,
     exportVersions: Object.keys(geos), geos, svg, slotSvgFile, colourwayOf,
     // markup for a page: the logo in the showcase edition, the slot frame in the slot edition
-    html(id, { width = 200, colourway, color, label } = {}) {
-      if (ctx.edition === 'slot') { const g = geos[id]; return slotHtml({ width, color, label }).replace(/height:[\d.]+px/, `height:${(width * g.h / g.w).toFixed(1)}px`); }
+    html(id, { width = 200, colourway, color } = {}) {
+      // `label` is no longer drawn: the placeholder says "Your logo" itself, and only where there is room
+      if (ctx.edition === 'slot') { const g = geos[id]; return slotHtml({ width, height: width * g.h / g.w, color }); }
       return svg(id, { colourway, width });
     },
     // the logo drawn as a flat-colour block for misuse examples (showcase) or the slot (slot edition)
