@@ -42,13 +42,6 @@ export function contrastText(bg) {
   }
 }
 
-function googleFontUrl(families) {
-  const unique = Array.from(new Set(families.filter(Boolean)))
-  if (!unique.length) return ''
-  const params = unique.map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700;800`).join('&')
-  return `https://fonts.googleapis.com/css2?${params}&display=swap`
-}
-
 const ROUNDING_MAP = {
   none: { radius: '0px', radiusS: '0px', radiusL: '0px', radiusXl: '0px' },
   subtle: { radius: '6px', radiusS: '4px', radiusL: '8px', radiusXl: '12px' },
@@ -127,7 +120,6 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
   const primaryText = contrastText(primary)
   const isDark = theme === 'dark'
   const rounding = ROUNDING_MAP[appearance?.rounding] || ROUNDING_MAP.default
-  const fontsUrl = googleFontUrl([headingFamily, bodyFamily])
 
   const cssVars = buildCSSVars({
     palette: design.palette,
@@ -247,7 +239,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${projectName} | Style Guide</title>
-  ${fontsUrl ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${fontsUrl}" rel="stylesheet">` : ''}
+  <!-- No web-font link: the file is self-contained and opens offline. The family names below stay in the font stack, so a font installed on the reader's machine still applies; the rest fall back to the system stack. -->
   <style>
 ${cssVars}
 * { box-sizing: border-box; margin: 0; padding: 0; }
