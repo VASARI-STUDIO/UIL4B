@@ -207,19 +207,26 @@ function declaredLength(req) {
   return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
-/**
- * @param ctx { body, decoded, plan, consume?, engine? }  the session and plan are already checked by the caller
- */
 // The first stack frame inside api/_lib, as a path relative to it with line and column, e.g. "exportThemes/engine/brand.js:95:11".
-// Code positions only, so it is safe to log.
+// Code positions only, so it is safe to log. The stack opens with "Name: message", and the message can run over several lines, so that
+// head is cut off first and only frame lines ("    at ") are read: a message that quotes a path cannot pass itself off as the throw site.
 function thrownAt(e) {
-  for (const line of String(e?.stack ?? '').split('\n').slice(1)) {
+  let stack = String(e?.stack ?? '')
+  let head = ''
+  try { head = `${e?.name ?? 'Error'}: ${e?.message ?? ''}` } catch { return '' }
+  if (stack.startsWith(head)) stack = stack.slice(head.length)
+  else if (e?.message) return ''
+  for (const line of stack.split('\n')) {
+    if (!line.startsWith('    at ')) continue
     const m = /api[\\/]_lib[\\/]([\w./\\-]+:\d+:\d+)/.exec(line)
     if (m) return m[1].replace(/\\/g, '/')
   }
   return ''
 }
 
+/**
+ * @param ctx { body, decoded, plan, consume?, engine? }  the session and plan are already checked by the caller
+ */
 export async function serveThemeExport(req, res, { body, decoded, plan, consume, engine }) {
   const { theme, row, format } = body
   const problem = themeRequestProblem(body)
