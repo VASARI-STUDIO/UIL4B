@@ -74,11 +74,11 @@ export function htCss(ctx) {
 .ht-traits .disp{container-type:inline-size}
 .ht-not{font-size:15px;line-height:22px;max-width:52ch}
 .ht-center{flex:1;display:flex;align-items:center;justify-content:center}
-.ht-clear{border-color:currentColor}
+.ht-clear{border-color:currentColor;box-sizing:border-box}
 .ht-ladder{display:flex;align-items:flex-end;gap:48px;margin:auto 0;flex-wrap:wrap}
 .ht-ladder li{display:flex;flex-direction:column;gap:12px;width:var(--w);max-width:100%}
-.ht-grounds{display:flex;flex:1}
-.ht-gr{flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:16px;padding:40px 24px 32px}
+.ht-grounds{display:flex;flex-wrap:wrap;flex:1;align-content:stretch}
+.ht-gr{flex:1 1 160px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:12px;padding:24px 20px 16px}
 .ht-gr__lg{flex:1;display:flex;align-items:center}
 .ht-onph{position:relative;margin:0;aspect-ratio:3/2;max-height:560px;overflow:hidden}
 .ht-onph__img,.ht-ph__img,.ht-contact__img{display:block;width:100%;height:100%;object-fit:cover}
@@ -90,6 +90,11 @@ export function htCss(ctx) {
 .ht-strip{min-height:468px}
 .ht-seg{display:flex;flex-direction:column;gap:4px;height:100%;padding:40px 16px 32px 24px}
 .ht-seg .tb-seg__p{margin-top:auto}
+/* a narrow share keeps its figure only: the name and hex are in the list below, so they are hidden by clipping rather than squeezed into the strip */
+.ht-seg{overflow:hidden}
+.ht-thin .ht-seg{padding:40px 6px 32px 12px}
+.ht-thin .ht-seg>:not(.tb-seg__p){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ht-tiny .tb-seg__p{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .ht-tk--flush .tb-tk__body{padding:0}
 .ht-prop{display:flex;flex-direction:column;flex:1}
 .ht-prop li{flex:var(--share) 1 0;display:flex;align-items:center;gap:24px;padding:8px 40px;min-height:56px}
@@ -233,9 +238,11 @@ ${['rest', 'hover', 'focus', 'pressed', 'disabled', 'error', 'checked'].map((s) 
 .hk-sws{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ht-faces li{grid-template-columns:1fr;gap:8px}
 .ht-face{font-size:32px;line-height:36px}
-.ht-grounds{flex-direction:column}
-.ht-gr{padding:24px}
+.ht-grounds{flex-direction:column;flex-wrap:nowrap}
+.ht-gr{flex:none;padding:16px 20px;flex-direction:row;align-items:center;justify-content:space-between}
 .ht-strip{min-height:420px}
+.ht-thin .ht-seg{padding:16px 24px}
+.ht-thin .ht-seg>:not(.tb-seg__p),.ht-tiny .tb-seg__p{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}
 .ht-ph,.ht-contact{position:static;aspect-ratio:3/2}
 .ht-contact{grid-template-columns:repeat(2,minmax(0,1fr));aspect-ratio:auto}
 .ht-contact{padding:12px 12px 16px}

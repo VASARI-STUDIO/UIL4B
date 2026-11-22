@@ -150,7 +150,7 @@ function inputs(ctx, K) {
   const R = roles(ctx), F = sc(ctx).form, ui = ctx.ui;
   const f = [ui.field({ id: 'hk-show', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'hk-name', label: F.dropoff, value: F.dropoffValue, help: F.notesHelp }),
     ui.field({ id: 'hk-code', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'hk-size', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] }),
-    ui.field({ id: 'hk-note', label: F.notes, kind: 'textarea', value: '' }), ui.field({ id: 'hk-off', label: F.pickup, value: F.pickupValue, disabled: true })];
+    ui.field({ id: 'hk-note', label: F.notes, kind: 'textarea', value: '' }), ui.field({ id: 'hk-off', label: F.lockedLabel || F.pickup, value: F.lockedValue || F.pickupValue, disabled: true })];
   const live = `<div class="hk-form">${f.join('')}</div>`;
   return page(ctx, R, K, live, lead('A label above every field, always. Help and errors sit under the field and are joined to it.') + note('The error names what went wrong and what to do.')
     + bench(ctx, K) + code(ctx, K, 'Field', f[2], /^\.ui-(field|label|input|error|help)/), { label: 'Fields' });
@@ -198,7 +198,7 @@ function table(ctx, K) {
   const R = roles(ctx), S = sc(ctx), ui = ctx.ui;
   const heads = ['Booking', 'Details', 'Status', S.paidLabel];
   const t = `<div class="hk-tw"><table class="ui-table"><thead><tr>${heads.map((h, i) => `<th scope="col"${i === 3 ? ' class="is-num"' : i === 1 ? ' class="hk-wide"' : ''}>${A(h)}</th>`).join('')}</tr></thead><tbody>${S.deliveries.map((d, i) => `<tr${i === 0 ? ' aria-selected="true"' : ''}><td>${A(d.to)}</td><td class="hk-wide">${A(d.when)}</td><td>${ui.statusChip(d.status)}</td><td class="is-num">${A(d.price)}</td></tr>`).join('')}</tbody></table></div>`;
-  return page(ctx, R, K, t, lead('Numbers right-aligned, statuses as words, the selected row marked by a bar.') + note('At phone width the details column folds away; the booking, its status and the price stay.') + code(ctx, K, 'Table', t.replace(/<tbody>.*<\/tbody>/, '<tbody></tbody>').replace(/ class="hk-wide"/g, '').replace(/^<div class="hk-tw">|<\/div>$/g, ''), /^\.ui-table/), { label: 'A table' });
+  return page(ctx, R, K, t, lead('Numbers right-aligned, statuses as words, the selected row marked by a bar.') + note('At phone width the details column folds away; the booking, its status and the price stay.') + code(ctx, K, 'Table', t.replace(/<tbody>(.*)<\/tbody>/, (m, rows) => '<tbody>' + rows.split('</tr>').slice(0, 2).join('</tr>') + '</tr></tbody>').replace(/ class="hk-wide"/g, '').replace(/^<div class="hk-tw">|<\/div>$/g, ''), /^\.ui-table/), { label: 'A table' });
 }
 function empty(ctx, K) {
   const R = roles(ctx), E = sc(ctx).empty, ui = ctx.ui;

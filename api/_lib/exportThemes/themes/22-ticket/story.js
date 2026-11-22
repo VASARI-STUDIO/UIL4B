@@ -34,7 +34,7 @@ export function story(ctx) {
     deliverToLabel: 'Show', deliverTo: first.to, paidLabel: 'Paid', paid: first.price, share: 'Send tickets',
     deliveries,
     form: {
-      title: 'Book seats', pickup: 'Show', pickupValue: first.to, dropoff: 'Name on the booking', dropoffValue: 'Maya Chen',
+      title: 'Book seats', pickup: 'Show', pickupValue: first.to, lockedLabel: 'Booking number', lockedValue: '4021', dropoff: 'Name on the booking', dropoffValue: 'Maya Chen',
       ready: 'Seats', readyValue: '6', readyError: 'A booking holds up to 4 seats. Enter 4 or fewer.',
       size: 'Section', sizes: ['Stalls', 'Circle', 'Balcony'], notes: 'Note for the box office', notesHelp: 'Access needs, or a seat to sit beside.',
       book: 'Book seats', bookWhy: 'Pick a show and a section first.',
@@ -62,5 +62,5 @@ export const screenContent = (ctx) => (ctx.edition === 'slot' ? story(ctx) : ctx
 export function exampleDemo(ctx) {
   if (ctx.edition !== 'slot') return {};
   const S = story(ctx);
-  return { cardMeta: 'Booking 4021 · ' + S.rider + ' · ' + S.status, noBadge: true, stat: [money(TOTAL_CENTS), 'Taken today'], account: S.rider };
+  return { cardMeta: 'Booking 4021 · ' + S.rider + ' · ' + S.status, noBadge: true, stat: [money(TOTAL_CENTS), 'Taken today'], account: 'Booking 4021, 2 seats' };
 }

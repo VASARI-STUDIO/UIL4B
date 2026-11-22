@@ -84,8 +84,10 @@ function logoVersions(ctx, R) {
   return `${open(ctx, R, 'logo-versions', body, P)}\n${zone(`<ul class="tb-full tb-sheet tb-sheet--logo">${order.map(cell).join('')}</ul>`)}`;
 }
 function clearSpace(ctx, R) {
-  const L = ctx.logo, g = L.geo, pad = (L.clearShare / 100) * 100 * g.height / g.width;
-  const body = `<div class="ht-center"><div class="tb-clear__box ht-clear" style="padding:${pad.toFixed(3)}%">${logoOn(ctx, R, 'colour', R.field, 420, 140)}</div></div>`;
+  const L = ctx.logo, g = L.geo, k = (L.clearShare / 100) * g.height / g.width, lw = 420;
+  // the frame has a definite width (the logo, plus the margin each side) so the percentage margin has something to measure; on a narrow page the logo shrinks and the margin shrinks with it
+  const frame = `width:min(100%,${(lw * (1 + 2 * k)).toFixed(1)}px);padding:min(${(lw * k).toFixed(1)}px,${((k / (1 + 2 * k)) * 100).toFixed(3)}%)`;
+  const body = `<div class="ht-center"><div class="tb-clear__box ht-clear" style="${frame}">${logoOn(ctx, R, 'colour', R.field, lw, 140)}</div></div>`;
   return page(ctx, R, 'clear-space', body,
     main(`<p class="tb-lead">Keep ${L.clearShare}% of the logo&rsquo;s height clear on every side.</p><p class="tb-p ht-gap">Nothing else enters the dashed line: no type, no edge of a photo, no other mark. Where a piece is tight, use a smaller logo, never a smaller margin.</p>`)
     + side(rows([['Clear space', `<span class="m">${L.clearShare}%</span> of the height`]])));
@@ -100,15 +102,17 @@ function minSize(ctx, R) {
 }
 function logoGrounds(ctx, R) {
   const B = ctx.brand, cw = B.logo.colourways, ids = Object.keys(cw);
+  // colourways that share a ground draw the same logo on it, so each ground is shown once
+  const seen = new Set(), shown = ids.filter((k) => !seen.has(cw[k].ground.toLowerCase()) && seen.add(cw[k].ground.toLowerCase()));
   const seg = (k) => {
     const c = cw[k], ink = R.inkOn(c.ground, 13, 600, `guide site grounds ${k}`);
-    return `<li class="ht-gr" style="background:${c.ground};color:${ink}"><span class="ht-gr__lg">${logoOn(ctx, R, 'colour', c.ground, 300, 72)}</span><span class="tb-b">${A(ctx.cap(k.replace(/-/g, ' ')))}</span></li>`;
+    return `<li class="ht-gr" style="background:${c.ground};color:${ink}"><span class="ht-gr__lg">${logoOn(ctx, R, 'colour', c.ground, 120, 34)}</span><span class="tb-b">${A(ctx.cap(k.replace(/-/g, ' ')))}</span></li>`;
   };
   const shot = (B.imagery.shots || [])[0];
   const onPhoto = shot ? full(`${h2('On a photograph')}<figure class="ht-onph">${ctx.photo(shot.id, { cls: 'ht-onph__img' })}<span class="ht-onph__lg" style="--onph:${R.table}">${logoOn(ctx, R, 'colour', R.table, 280, 64)}</span></figure><p class="tb-note ht-gap">Set it on the photograph&rsquo;s darkest quiet area, never across a face or a lit sign.</p>`) : '';
   const whens = ids.filter((k) => B.logo.when[k]).map((k) => [A(ctx.cap(k.replace(/-/g, ' '))), A(B.logo.when[k])]);
   const lead = whens.length ? main(rows(whens)) : main(`<p class="tb-lead">Each version is drawn on the ground it is made for.</p><p class="tb-p ht-gap">Keep to the pairing shown: the name and the mark hold their contrast only on their own ground.</p>`);
-  return `${open(ctx, R, 'logo-grounds', `<ul class="ht-grounds">${ids.map(seg).join('')}</ul>`, { cls: 'tb-tk--strip' })}\n${zone(lead + onPhoto)}`;
+  return `${open(ctx, R, 'logo-grounds', `<ul class="ht-grounds">${shown.map(seg).join('')}</ul>`, { cls: 'tb-tk--strip' })}\n${zone(lead + onPhoto)}`;
 }
 function logoMisuse(ctx, R) {
   const P = paperOf(R);
@@ -122,7 +126,7 @@ function logoMisuse(ctx, R) {
 function stripOf(ctx, R, cols, label) {
   return `<ul class="tb-strip ht-strip" aria-label="${A(label)}">${cols.map((c) => {
     const ink = R.inkOn(c.hex, 15, 600, `guide site strip ${c.id}`);
-    return `<li class="tb-seg${R.nearTable(c.hex) ? ' is-near' : ''}${ctx.ratio(c.hex, ctx.roles.light.surface) < 1.3 ? ' is-near-l' : ''}" style="--share:${c.share};background:${c.hex};color:${ink}"><span class="ht-seg"><span class="tb-b">${A(c.name)}</span><span class="m">${A(c.hex.toUpperCase())}</span><span class="tb-seg__p disp" style="--pfs:${Math.min(56, Math.max(24, Math.floor(c.share * 180)))}px">${pctOf(c.share)}</span></span></li>`;
+    return `<li class="tb-seg${c.share < 0.12 ? ' ht-thin' : ''}${c.share < 0.06 ? ' ht-tiny' : ''}${R.nearTable(c.hex) ? ' is-near' : ''}${ctx.ratio(c.hex, ctx.roles.light.surface) < 1.3 ? ' is-near-l' : ''}" style="--share:${c.share};background:${c.hex};color:${ink}"><span class="ht-seg"><span class="tb-b">${A(c.name)}</span><span class="m">${A(c.hex.toUpperCase())}</span><span class="tb-seg__p disp" style="--pfs:${Math.min(56, Math.max(24, Math.floor(c.share * 180)))}px">${pctOf(c.share)}</span></span></li>`;
   }).join('')}</ul>`;
 }
 function palette(ctx, R) {

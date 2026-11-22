@@ -36,8 +36,9 @@ function wordmark(ctx, geos, id, { width = 200, color, share, colourway } = {}) 
   const lay = id === 'horizontal' || id === 'stacked' ? id : '';
   const text = sym ? symbolOf(name) : name, h = (width * g.h) / g.w;
   const fs = Math.max(10, sym ? h * 0.6 : lay === 'horizontal' ? Math.min(h * 0.6, width / (text.length * 0.55 + 2.6)) : lay === 'stacked' ? Math.min(h * 0.3, width / (text.length * 0.55)) : Math.min(h * 0.8, width / (Math.max(text.length, 3) * 0.5)));
+  // the size also follows the width of the .tb-logo box (cqw), so a mark in a narrow column shrinks with it instead of running past the edge
   const ink = color ? 'color:' + color + ';' : '';
-  const size = share ? 'width:' + share * 100 + 'cqw;font-size:min(' + (fs * 2).toFixed(1) + 'px,' + ((fs / width) * share * 100).toFixed(2) + 'cqw)' : 'width:' + width + 'px;height:' + h.toFixed(1) + 'px;font-size:' + fs.toFixed(1) + 'px';
+  const size = share ? 'width:' + share * 100 + 'cqw;font-size:min(' + (fs * 2).toFixed(1) + 'px,' + ((fs / width) * share * 100).toFixed(2) + 'cqw)' : 'width:' + width + 'px;height:' + h.toFixed(1) + 'px;font-size:min(' + fs.toFixed(1) + 'px,' + ((fs / width) * 100).toFixed(2) + 'cqw)';
   const accent = !sym && colourway ? accentOf(ctx, colourway, color) : '';
   const [pre, post] = accent ? accentSplit(name) : [name, ''];
   const named = accent ? A(pre) + '<em class="tb-wm__a" style="color:' + accent + '">' + A(post) + '</em>' : A(text);
