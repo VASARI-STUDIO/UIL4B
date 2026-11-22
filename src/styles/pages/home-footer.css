@@ -178,7 +178,7 @@
   padding: 0 max(var(--gutter-x), env(safe-area-inset-right, 0px)) 0 max(var(--gutter-x), env(safe-area-inset-left, 0px));
 }
 .sp-footer--home .sp-footer-grid {
-  grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr));
+  grid-template-columns: 1.6fr repeat(5, minmax(0, 1fr));
   gap: 32px;
   padding-top: 40px;
   border-top: 1px solid rgba(239, 238, 234, .1);
@@ -256,13 +256,13 @@
   transform: translateY(18%);
 }
 
-/* Under 1024px the headline line takes its own row and the four columns hold one line each.
+/* Under 1024px the headline line takes its own row and the five columns sit three then two.
    The columns also sit nearer the amber end of the light, so the horizon dims to keep
    the bottom line under the 0.05 luminance ceiling. */
 @media (max-width: 1023px) {
   .sp-footer--home .sp-footer-horizon { opacity: .36; }
   .sp-footer--home .sp-footer-grid {
-    grid-template-columns: repeat(4, minmax(max-content, 1fr));
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
     gap: 32px 24px;
   }
   .sp-footer--home .sp-footer-brand { grid-column: 1 / -1; }
@@ -323,16 +323,17 @@
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost):active { transform: none; }
 
-/* /plans drops the "This page" column, so the headline line has four columns
-   instead of five. Phones keep the one-column grid above. */
+/* /plans and /mobile drop the "This page" column, so the headline line has
+   four columns instead of five, four across on a tablet. Phones keep the
+   single-column stack above. */
 @media (min-width: 1024px) {
-  .pricing .sp-footer--no-page .sp-footer-grid {
-    grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  .sp-footer--home.sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr));
   }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
-  .pricing .sp-footer--no-page .sp-footer-grid {
-    grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  .sp-footer--home.sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: repeat(4, minmax(max-content, 1fr));
   }
 }
 

@@ -209,8 +209,12 @@ test('the quiet links are the design\'s three, and each one goes somewhere real'
   // route as a page App.jsx renders AND a title in routeMetaMap.js (without
   // which the route matrix would not prerender it and vercel.json would 404 it).
   const src = stripJs(read(SPECTRUM_NAV))
-  const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)', to:/g)].map((m) => m[1])
-  assert.deepEqual(labels, ['Tools', 'Plans', 'On mobile'], 'the quiet links are Tools, Plans and On mobile, in that order')
+  // Help is a fourth entry that only the phone menu shows (menuOnly), so the
+  // wide bar keeps the design's three.
+  const bar = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)', to: '[^']+'(, hash: '[^']+')? \}/g)].map((m) => m[1])
+  assert.deepEqual(bar, ['Tools', 'Plans', 'On mobile'], 'the quiet links on the bar are Tools, Plans and On mobile, in that order')
+  assert.match(src, /\{ id: 'help', label: 'Help', to: '\/learn\/help', menuOnly: true \}/, 'the phone menu reaches the help centre')
+  assert.match(src, /BAR_QUIET = QUIET\.filter\(\(q\) => !q\.menuOnly\)/, 'the bar drops menu-only entries')
   const hashes = [...src.matchAll(/hash: '#([a-z-]+)'/g)].map((m) => m[1])
   assert.deepEqual(hashes, ['try'])
   const page = read('src/pages/Spectrum.jsx')

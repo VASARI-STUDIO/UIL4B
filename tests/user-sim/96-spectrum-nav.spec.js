@@ -343,7 +343,7 @@ test.describe('the phone menu carries what the bar drops', () => {
       'Tab walked out of the back of the menu').toBe(true)
   })
 
-  test('it holds Tools, Plans and On mobile, then a "This page" group of the five sections, and nothing else', async ({ page }) => {
+  test('it holds Tools, Plans, On mobile and Help, then a "This page" group of the five sections, and nothing else', async ({ page }) => {
     await phoneSalesPage(page)
     await page.locator('.spnav-burger').click()
     const menu = page.locator('.spnav-menu')
@@ -353,6 +353,7 @@ test.describe('the phone menu carries what the bar drops', () => {
       { label: 'Tools', href: '#try' },
       { label: 'Plans', href: '/plans' },
       { label: 'On mobile', href: '/mobile' },
+      { label: 'Help', href: '/learn/help' },
     ])
     await expect(menu.locator('.spnav-mi-label')).toHaveText('This page')
     const group = menu.getByRole('group', { name: 'This page' })
@@ -367,8 +368,8 @@ test.describe('the phone menu carries what the bar drops', () => {
     await expect(menu.getByText('Open the toolkit')).toHaveCount(0)
     await expect(menu.locator('.spnav-mi-note')).toHaveCount(0)
     await expect(menu.locator('[aria-label^="Theme"]')).toHaveCount(0)
-    // Close plus the three routes plus the five sections: nothing else takes focus.
-    expect(await menu.locator('a[href], button').count(), 'the menu carries more than its items again').toBe(9)
+    // Close plus the four routes plus the five sections: nothing else takes focus.
+    expect(await menu.locator('a[href], button').count(), 'the menu carries more than its items again').toBe(10)
   })
 
   test('off the sales page the menu has no "This page" group', async ({ page }) => {

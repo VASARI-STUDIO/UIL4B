@@ -25,6 +25,7 @@ import {
   LADDER,
   LIBRARY_COUNTS,
   PROOF,
+  PROOF_STATS,
   PRO_POINTS,
   TOOL_COUNT,
   numberWord,
@@ -208,13 +209,10 @@ test('not one of the prototype\'s proof numbers survives, and the bar\'s figures
       `the Spectrum page carries the prototype's social-proof copy ${phrase}. `
       + 'There is no measurement behind it.')
   }
-  // THE BAR SHIPS THREE PLACEHOLDER COUNTS ON PURPOSE, AND THEY ARE CONFINED.
-  // They are the only unmeasured figures on the page and sit in the one STATS
-  // array, so real counts replace them in a single edit (change the first
-  // assertion with that edit). The fourth figure is a fact about the product,
-  // derived rather than typed.
-  assert.deepEqual(STATS.map((s) => s.n), [186, 540, 72],
-    'a proof count changed; the three that ship are the ones in STATS')
+  // THE BAR CARRIES NO UNMEASURED FIGURE. The first three are the library sizes
+  // PROOF_STATS counts; the fourth is the tools figure, derived rather than typed.
+  assert.deepEqual(STATS.map((s) => s.n), PROOF_STATS.slice(1).map((s) => s.value),
+    'a proof count is no longer the library size PROOF_STATS counts')
   assert.equal(PROOF_ROWS.length, 4, 'the proof bar no longer carries four figures')
   assert.equal(PROOF_ROWS[3].n, createTools().filter((t) => !t.soon && !t.beta).length,
     'the tools figure is no longer the count of the live tools')
