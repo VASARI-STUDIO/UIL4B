@@ -10,7 +10,8 @@ const hexName = (ctx, hex) => COLOUR_ID_OF_HEX(ctx, hex)?.name || hex;
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
 // whichever of the page's text and ground colours reads better on a hex
 const inkOn = (ctx, hex, size = 24) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
-const isGround = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+// a colour that sits too close to the page to show its own edge gets a hairline (the page colour itself, or a near-white beside it)
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const sentences = (s) => s.split(/(?<=\.)\s+/);
 // the cross that marks a wrong example
 const CROSS = `<svg class="a-cross" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Not allowed"><circle cx="12" cy="12" r="12" fill="currentColor"/><path d="M8 8l8 8M16 8l-8 8" stroke="var(--ground)" stroke-width="2" stroke-linecap="square" fill="none"/></svg>`;

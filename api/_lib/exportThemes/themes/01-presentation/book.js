@@ -12,7 +12,8 @@ const onColour = (ctx, hex, size = 13, what = `book slide ${hex}`) => {
   const pick = ctx.textOn(hex, { size, prefer: first });
   ctx.pair(pick, hex, { size, what }); return pick;
 };
-const hairlineOn = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+// a colour too close to the page to show its own edge gets a hairline (the page colour itself, or a near-white beside it)
+const hairlineOn = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 
 // a copy button: visible text is the action, the accessible name says what it copies
 const copyBtn = (text, value, what, cls = '') => `<button type="button" class="bk-btn ${cls}" data-copy="${A(value)}" data-copy-label="${A(what)}" aria-label="${A(text + ' ' + what)}"><span class="bk-btn__t">${A(text)}</span></button>`;
