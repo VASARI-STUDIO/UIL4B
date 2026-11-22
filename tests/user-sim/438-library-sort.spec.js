@@ -134,6 +134,9 @@ test.describe('the icon and emoji libraries sort', () => {
       await go(page, '/create/icons')
       await choosePack(page, 'lucide')
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+      // The grid can still hold the previous listing for a moment; wait until the stub pack's own first
+      // icon leads it, so the order read below is the stub's.
+      await expect.poll(async () => (await iconNames(page))[0], { timeout: 20_000, message: 'the stub pack never replaced the previous listing' }).toBe(NAME(0))
 
       // Today's order, for the round trip at the end. It is the pack's own, which is not alphabetical.
       const started = (await iconNames(page)).slice(0, 40)
