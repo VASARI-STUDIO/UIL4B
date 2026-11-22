@@ -133,10 +133,6 @@ export function typeLadder({ baseSize, ratio }) {
 export function buildStyleGuideHtml(design, { projectName = 'Design System', watermark = true, date = new Date() } = {}) {
   const d = readDesign(design)
   const ladder = typeLadder(d)
-  const fontParam = [d.heading, d.body]
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .map(f => `family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@400;700`)
-    .join('&')
 
   const swatch = (hex, i) => {
     const { ink, ratio, label } = inkFor(hex)
@@ -172,7 +168,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(projectName)} | Style Guide</title>
-${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${fontParam}&display=swap" rel="stylesheet">` : ''}
+<!-- No web-font link: the file is self-contained and opens offline. The family names stay in the font stacks, so an installed font still applies; the rest fall back to the system stack. -->
 <style>
   :root{--ink:#101014;--mut:#5F5F69;--line:#E4E4E8;--page:#fff;--accent:${d.base || '#101014'}}
   *{box-sizing:border-box}
