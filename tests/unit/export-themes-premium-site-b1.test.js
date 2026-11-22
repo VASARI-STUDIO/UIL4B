@@ -83,7 +83,7 @@ for (const [theme, want] of Object.entries(THEMES)) {
   }
 }
 
-// 2. THE CONTENTS LINK ONLY TO PAGES IN THE ZIP, and the pages that matter are named so a silent drop is seen.
+// 2. THE CONTENTS LINK ONLY TO PAGES IN THE ZIP, and the pages that matter are named so a silent drop is seen. The one link to the sibling zip (../) is left out here.
 //    Break: make keep() return false for 'palette' (themes/24-standards/lane-hg.js): the palette page is dropped and the named-page check fails.
 for (const theme of Object.keys(THEMES)) {
   test(`${theme} contents link to pages that are in the zip, and every local link and asset is in the zip`, async () => {
@@ -91,7 +91,7 @@ for (const theme of Object.keys(THEMES)) {
       const files = await exportFiles(theme, row, DESIGN)
       const root = files['index.html']
       assert.ok(root, `${row}: index.html`)
-      const listed = [...root.matchAll(/href="([^"#:]+\.html)"/g)].map((m) => m[1])
+      const listed = [...root.matchAll(/href="([^"#:]+\.html)"/g)].map((m) => m[1]).filter((h) => !h.startsWith('../'))
       assert.ok(listed.length > 8, `${row}: the index lists ${listed.length} pages`)
       for (const href of listed) assert.ok(href in files, `${row}: the index links to ${href}, which is not in the zip`)
       for (const name of THEMES[theme][row === 'slides' ? 'guide' : 'kit']) assert.ok(`${name}.html` in files, `${row}: ${name}.html is missing`)
