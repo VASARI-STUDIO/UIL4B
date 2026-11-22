@@ -13,6 +13,9 @@
 //     Break: drop the themeHasRow line in themeRequestProblem.
 //  6. THE MD IS SENT AS A FILE: raw markdown, text/markdown, an attachment named for the slug and theme.
 //     Break: send the md as JSON in serveThemeExport.
+//  7. NO PAGE IS LEFT OUT for long brand names or a one-colour palette: every page id is drawn, in order, with no warning,
+//     and the markdown carries all six sections.
+//     Break: put the head's left label back to the full `${name} style guide`, or drop the one-row retry on the logo page.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
@@ -24,6 +27,8 @@ import { assertThemeAccess } from '../../api/_lib/themeAccess.js'
 const THEME = '27-swissfield'
 const out = {}
 const build = (format) => (out[format] ??= renderThemeExport({ theme: THEME, row: 'guide', format }))
+const PAGES = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast', 'tokens', 'usage']
+const drawnPages = (html) => [...html.matchAll(/<section class="pg" data-page="([a-z]+)"/g)].map((m) => m[1])
 
 test('the row is opt-in: only a theme that names it has it, and the others keep every other row', () => {
   const plain = EXPORT_THEMES.find((t) => !t.rows)
@@ -57,7 +62,7 @@ test('the pdf is one print document of the A4 pages, fonts embedded, nothing loa
   const { html } = await build('pdf')
   assert.ok(html.indexOf('<head>') < 200)
   assert.match(html, /<head><meta http-equiv="Content-Security-Policy"/)
-  assert.ok((html.match(/<section class="pg"/g) || []).length >= 7, 'every page is there')
+  assert.deepEqual(drawnPages(html), PAGES, 'every page is there, in order')
   assert.match(html, /794px/)
   assert.ok(!/<script[\s>]/i.test(html) && !/<form[\s>]/i.test(html))
   assert.ok(!/https?:\/\//i.test(html.replace(/xmlns="[^"]*"/g, '')), 'no origin')
@@ -108,4 +113,28 @@ test('the route sends the md as a file: raw body, text/markdown, an attachment',
   assert.match(headers['Content-Disposition'], /^attachment; filename="[a-z0-9-]+-style-guide-27-swissfield\.md"$/)
   assert.equal(typeof res.body, 'string')
   assert.match(res.body, /^# /m)
+})
+
+test('long names and small palettes draw every page, and the markdown keeps every section', async () => {
+  const NAMES = ['Kerbside', 'Bright Harbour Studio', 'Wild Tide Collective', 'Northern Rivers Community Credit Union']
+  const PALETTES = [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#F96B76'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  const warned = []
+  const keep = console.warn
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    for (const colors of PALETTES) {
+      for (const projectName of NAMES) {
+        const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+        const at = warned.length
+        const { html } = await renderThemeExport({ theme: THEME, row: 'guide', format: 'pdf', design, projectName })
+        const { md } = await renderThemeExport({ theme: THEME, row: 'guide', format: 'md', design, projectName })
+        const label = `${colors[0]} "${projectName}"`
+        assert.deepEqual(warned.slice(at).filter((w) => w.includes('left out')), [], `${label}: no page left out`)
+        assert.deepEqual(drawnPages(html), PAGES, `${label}: every page drawn`)
+        assert.deepEqual((md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'], `${label}: every md section`)
+      }
+    }
+  } finally {
+    console.warn = keep
+  }
 })

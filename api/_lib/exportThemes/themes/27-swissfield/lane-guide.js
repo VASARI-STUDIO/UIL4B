@@ -154,9 +154,13 @@ function strip(ctx, id, rise) {
 
 // the running head: brand, section, version
 function head(ctx, id, CR) {
-  const B = ctx.brand, left = `${B.name} style guide`, sec = NAME[id], ver = B.version.number;
-  const midX = Math.round(X0 + (CR - X0) / 2), lw = textWidth(CHROME[500], left, 13), sw = textWidth(CHROME[400], sec, 13), vw = textWidth(CHROME[400], ver, 13);
-  if (X0 + lw + 16 > midX || midX + sw + 16 > CR - vw) throw new Error(`Swiss Field guide: the running head does not fit in ${CR - X0} px on ${id}`);
+  const B = ctx.brand, sec = NAME[id], ver = B.version.number;
+  const midX = Math.round(X0 + (CR - X0) / 2), sw = textWidth(CHROME[400], sec, 13), vw = textWidth(CHROME[400], ver, 13);
+  // the left of the head takes the first wording that fits before the middle: the full title, the name alone, then the name cut short
+  const fits = (str) => X0 + textWidth(CHROME[500], str, 13) + 16 <= midX;
+  let left = [`${B.name} style guide`, B.name].find(fits);
+  if (!left) { let n = B.name; while (n.length > 1 && !fits(`${n.trimEnd()}…`)) n = n.slice(0, -1); left = `${n.trimEnd()}…`; }
+  if (midX + sw + 16 > CR - vw) throw new Error(`Swiss Field guide: the running head does not fit in ${CR - X0} px on ${id}`);
   return at(X0, 36, A(left), { cls: 'sg-h' }) + at(midX, 36, A(sec), { cls: 'sg-n', style: 'color:var(--quiet)' }) + at(0, 36, A(ver), { cls: 'sg-n', style: `left:auto;right:${W - CR}px;color:var(--quiet)` });
 }
 
@@ -299,13 +303,15 @@ function logoPage(ctx, maxTiles = 6) {
   }
   // a brand can carry many colourways: the page draws the first six (two rows) so the clear-space drawing keeps its room, and says so for the markdown
   if (groups.length > maxTiles) groups.length = maxTiles;
-  ctx.logoShown = groups.flatMap((g) => g.labels.map((label, i) => ({ key: i ? LF.grounds.find((o) => o.label === label).key : g.key, label })));
   // the ground is named once, in the section's note (its hex in mono, no #); each tile carries only its colourway
   const groundNote = { html: [...new Map(LF.grounds.map((g) => [g.groundHex.toLowerCase(), `${A(g.ground)} ${fig(g.groundHex.replace('#', '').toUpperCase())}`])).values()].join(', ') };
   const five = groups.length === 5 && (slot ? slotW(ctx, 100) : 100) + 30 <= Math.floor((CW - 48) / 5), lgw0 = five ? 100 : Math.min(180, Math.max(116, Math.round((44 * G.w) / G.h))), lgw = slot ? slotW(ctx, lgw0) : lgw0;
   // four tiles go in one row when the logo frame fits a quarter of the page: the room it saves goes to the clear-space drawing
   const four = groups.length === 4 && lgw + 30 <= Math.floor((CW - 48) / 4);
-  const perRow = five ? 5 : four ? 4 : Math.ceil(groups.length / Math.ceil(groups.length / 3)), tw = five ? Math.floor((CW - 48) / 5) : four ? Math.floor((CW - 48) / 4) : perRow === 2 ? Math.floor((CW - 25) / 2) : COLW, tx0 = (i) => (five ? X0 + (i % 5) * (tw + 12) : four ? X0 + (i % 4) * (tw + 16) : perRow === 2 ? X0 + (i % 2) * (tw + 25) : COL[i % 3]), lgh = (lgw * G.h) / G.w, rows = Math.ceil(groups.length / perRow), th0 = slot && lgh < 40 ? Math.ceil(14 + lgh + 10 + 22 + 10) : Math.max(104, Math.ceil(14 + lgh + 12 + 30 + 10));
+  let perRow = five ? 5 : four ? 4 : Math.ceil(groups.length / Math.ceil(groups.length / 3)), tw = five ? Math.floor((CW - 48) / 5) : four ? Math.floor((CW - 48) / 4) : perRow === 2 ? Math.floor((CW - 25) / 2) : COLW, tx0 = (i) => (five ? X0 + (i % 5) * (tw + 12) : four ? X0 + (i % 4) * (tw + 16) : perRow === 2 ? X0 + (i % 2) * (tw + 25) : COL[i % 3]);
+  if (lgw + 30 > tw && !five && !four && perRow > 2 && groups.length > 1) { perRow = 2; tw = Math.floor((CW - 25) / 2); tx0 = (i) => X0 + (i % 2) * (tw + 25); }
+  if (lgw + 30 > tw && !five && !four) { perRow = 1; tw = CW; tx0 = () => X0; }
+  const lgh = (lgw * G.h) / G.w, rows = Math.ceil(groups.length / perRow), th0 = slot && lgh < 40 ? Math.ceil(14 + lgh + 10 + 22 + 10) : Math.max(104, Math.ceil(14 + lgh + 12 + 30 + 10));
   if (lgw + 30 > tw) throw new Error(`Swiss Field guide: the colourway tile is ${tw} px wide and the logo frame needs ${lgw + 30}`);
   const B_h = SUBH + 16 + rows * th0 + (rows - 1) * 16;
   const drawB = (y) => {
@@ -402,6 +408,7 @@ function logoPage(ctx, maxTiles = 6) {
   }
   // checked before the hooks are written, so the one-row retry leaves no second copy
   if (gA.h + B_h + E_h + C_h + D_h + 4 * 18 > BOT - t.top && groups.length > perRow) return logoPage(ctx, perRow);
+  ctx.logoShown = groups.flatMap((g) => g.labels.map((label, i) => ({ key: i ? LF.grounds.find((o) => o.label === label).key : g.key, label })));
   hook(ctx, { lockups: LK.map(([id, name]) => [name, lkWhen(id)]) });
   if (slot) hookAdd(ctx, 'supply', [['Logo', 'Horizontal, stacked and symbol, SVG']]);
   const body = t.html + flow('logo', t.top, [

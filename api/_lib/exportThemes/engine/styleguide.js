@@ -234,7 +234,9 @@ export const GRADE_NOTE = 'Ratios follow WCAG 2.2 1.4.3. AA needs 4.5:1 for norm
 export function styleGuideMarkdown(ctx) {
   const H = ctx.mdHooks || {};
   const B = ctx.brand, pc = primaryColour(ctx), cs = colourFacts(ctx), ladder = typeLadder(ctx), ct = contrastFacts(ctx), lg = logoFacts(ctx), tg = tokenGroups(ctx), us = usageFacts(ctx), sf = stateFacts(ctx), tones = H.tones || listedTones(ctx);
-  const row = (...c) => `| ${c.join(' | ')} |`;
+  // a cell never breaks the table: a pipe in a brand's own words is escaped, a line break becomes a space
+  const cell = (c) => String(c).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+  const row = (...c) => `| ${c.map(cell).join(' | ')} |`;
   const dnote = 'displayNote' in H ? H.displayNote : displayWeightNote(ctx);
   const table = (head, rows) => [row(...head), row(...head.map(() => '---')), ...rows.map((r) => row(...r)), ''];
   // each section is its own list of lines, so a theme's own can go in after the one it follows; the heading numbers are put on last
@@ -297,8 +299,11 @@ export function styleGuideMarkdown(ctx) {
   const lines = [...S.head];
   let n = 0;
   const put = (sec) => { n += 1; lines.push(sec[0].replace('## ', `## ${String(n).padStart(2, '0')} · `), ...sec.slice(1)); };
+  // a themed guide sets ctx.pagesDrawn: a section whose page was left out is left out of the file too
+  const PAGE = { Logo: 'logo', Colour: 'colour', Typography: 'type', Contrast: 'contrast', Tokens: 'tokens', Usage: 'usage' };
+  const drawn = (k) => !Array.isArray(ctx.pagesDrawn) || ctx.pagesDrawn.includes(PAGE[k]);
   for (const k of ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage']) {
-    put(S[k]);
+    if (drawn(k)) put(S[k]);
     for (const x of (H.sections || []).filter((s) => s.after === k)) put([`## ${x.title}`, '', ...x.lines, '']);
   }
   return lines.join('\n');

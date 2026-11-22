@@ -110,6 +110,8 @@ function styleGuide(E, T, ctx, standalone) {
     try { pages.push({ id, html: T.guide[id](ctx) }) } catch (err) { console.warn(`[export] guide page ${id} left out (${err?.name || 'Error'})`) }
   }
   if (!pages.length) throw new Error('no guide page could be drawn')
+  // the markdown describes only the pages that were drawn
+  ctx.pagesDrawn = pages.map((p) => p.id)
   const doc = (title, list, stack) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
   return { pages, doc, ctx, md: E.styleGuideMarkdown(ctx) }
 }
