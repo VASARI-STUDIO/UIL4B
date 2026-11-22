@@ -193,7 +193,7 @@ const PAGES = {
   typefaces: (ctx) => {
     const F = ctx.brand.fonts;
     const face = (f, role) => `${tag(f.family, 'h2')}<ul class="hg-weights">${f.weights.map((w) => `<li style="font-family:var(--${role});font-weight:${w}">${A(f.family)} ${w}</li>`).join('')}</ul>`;
-    const mono = F.mono ? `${tag(F.mono.family, 'h2')}<p class="hg-monos">${A(ctx.roles.light.action)}</p>` : '';
+    const mono = F.mono ? `${tag(F.mono.family, 'h2')}<p class="hg-monos">0123456789 &amp; ()[]</p>` : '';
     return spread(ctx, 'typefaces', { rows: [
       [`<p class="hg-aa disp" aria-hidden="true">Aa</p>${P(`${F.display.family}, for lines and titles.`)}`, lead(`${h1(ctx, 'typefaces')}${face(F.body, 'body')}${mono}`)],
     ] });
