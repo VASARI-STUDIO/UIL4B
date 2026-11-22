@@ -2,9 +2,9 @@
 //
 // The UI kit and the book (PDF and HTML) take any template in the THEMES list below; the slides (PDF and HTML) take those and two more,
 // Label and Swiss Field, which draw the guidelines only. The templates are a grid inside the dialog, opened by "View templates" and
-// left by choosing a card or "Back to preview": one card per template, its picture, its name and its sample brand. A free account
-// sees the templates it can export first, and the Pro ones carry a Pro mark; a Pro account, or one whose plan is still being read, sees
-// one plain list. A free account can have the UI kit in Standards (for now) and the guidelines in Label and Swiss Field; every other
+// left by choosing a card or "Back to preview": one card per template, its picture, its name and its sample brand. The ten premium
+// templates (21 up) come first in id order, then the templates the file is free in, then the rest; the order is the same for every
+// account and while the plan is being read. The Pro ones carry a Pro mark for a free account. A free account can have the UI kit in Standards (for now) and the guidelines in Label and Swiss Field; every other
 // card and file is Pro, and the dock says so with a way out ("Use the free ..."). The files come from POST /api/ai?export=document,
 // which every test here answers itself (export-theme-mock.js), so what is checked is what the dialog asks for, what it does with each
 // answer, and what a person reads.
@@ -15,7 +15,7 @@
 //   - isThemeExportPro answers false for every theme          -> "a free account ... stays locked" (book, slides) and the kit's Pro templates
 //   - isPrintSafe returns true                                -> "a print document that is not the script-free one is refused"
 //   - the Retry-After seconds are read with parseFloat        -> "a Retry-After that is not whole seconds"
-//   - the grid lists the cards in the theme list's own order  -> "a free account ... Free first" (the free cards stay in place)
+//   - the grid lists the cards in the theme list's own order  -> "the premium ten first" and "the Pro mark matches the dock" (premium moves back)
 //   - the Pro mark is drawn on every card, or on none         -> "the Pro mark matches the dock"
 //   - the grid reads the UI kit's free rule for every file    -> "the Pro mark matches the dock" (guidelines, book)
 //   - isThemeExportPro ignores a theme's own free flag        -> "free, guidelines in Label" and the free guidelines downloads
@@ -24,7 +24,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { chooseFormat, chooseTemplate, exportPanel, openDetails, openTemplates, primaryButton, dockStatus, dockError, readTemplates, templateCard } from './export-rows.js'
+import { GALLERY, chooseFormat, chooseTemplate, exportPanel, openDetails, openTemplates, primaryButton, dockStatus, dockError, readTemplates, templateCard } from './export-rows.js'
 import { mockThemeApi, cleanHtml, tinyZip, printedDoc, printedCount } from './export-theme-mock.js'
 import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from './export-reduced-motion.js'
 
@@ -42,18 +42,19 @@ const NAMES = THEMES.map(([, name]) => name)
 const FREE_KIT = ['Standards']
 // The guidelines list: every template above, then the two guidelines-only templates, which are free.
 const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field']
+// The premium templates (21 up) in id order: first in every list that has them as Pro. Label and Swiss Field are free for the guidelines, so not premium.
+const PREMIUM = ['Keynote', 'Stub', 'Front Page', 'Standards Plate', 'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline']
 const FREE_GUIDE = ['Label', 'Swiss Field']
 const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label and Swiss Field.'
 const isGuide = (file) => file.startsWith('guidelines')
 const namesFor = (file) => (isGuide(file) ? GUIDE_NAMES : NAMES)
 const freeFor = (file) => (file === 'kit' ? FREE_KIT : isGuide(file) ? FREE_GUIDE : [])
 
-/** The card names in the order the grid shows them: a free account sees the templates it can export first; a Pro account the plain list. */
-const cardsFor = (file, free) => {
-  const names = namesFor(file)
-  if (!free) return names
+/** The card names in the order the grid shows them, the same for every account: premium in id order, then the file's free templates, then the rest. */
+const cardsFor = (file) => {
+  const rest = namesFor(file).filter((n) => !PREMIUM.includes(n))
   const ok = freeFor(file)
-  return [...names.filter((n) => ok.includes(n)), ...names.filter((n) => !ok.includes(n))]
+  return [...PREMIUM, ...rest.filter((n) => ok.includes(n)), ...rest.filter((n) => !ok.includes(n))]
 }
 /** The names that carry the Pro mark: for a free account every template the file is not free in; for a Pro account none. */
 const proFor = (file, free) => (free ? namesFor(file).filter((n) => !freeFor(file).includes(n)) : [])
@@ -96,7 +97,7 @@ async function open(page, { plan = 'free', file = 'kit', size, saved = true } = 
 }
 
 // The templates grid, opened by "View templates": one button card per template, the chosen one aria-pressed.
-const grid = (panel) => panel.locator('.xd-tpl-grid')
+const grid = (panel) => panel.locator(GALLERY)
 const cards = (panel) => grid(panel).locator('.xd-tpl-card')
 const pressed = (panel) => grid(panel).locator('.xd-tpl-card[aria-pressed="true"]')
 /** The template in use, read the way a person does: open the grid, see which card is chosen, go back to the preview. */
@@ -117,12 +118,13 @@ async function pick(panel, name) {
 /* ── Free and Pro, per template and per file ─────────────────────────────── */
 
 test.describe('Free and Pro', () => {
-  test(`a free account sees the UI kit open in Standards, the free card first, and the Pro mark on the other ${THEMES.length - 1}`, async ({ page }) => {
+  test(`a free account sees the UI kit open in Standards, the premium ten first, and the Pro mark on the other ${THEMES.length - 1}`, async ({ page }) => {
     watch(page, 'a free account reading the templates for the UI kit')
     const panel = await open(page, { plan: 'free', file: 'kit' })
     const read = await readTemplates(panel)
     expect(read.chosen, 'a free account starts on a template it can have').toEqual(['Standards'])
-    expect(read.names, `the free template first, then the ${THEMES.length - 1} in Pro`).toEqual(cardsFor('kit', true))
+    expect(read.names, `the premium ten first, then Standards, then the rest`).toEqual(cardsFor('kit'))
+    expect(read.names.indexOf('Standards'), 'the free card sits after the premium ten').toBe(PREMIUM.length)
     expect(read.pro, 'the Pro mark is on every template the kit is not free in').toEqual(proFor('kit', true))
     expect(read.pro).toHaveLength(THEMES.length - 1)
   })
@@ -215,11 +217,11 @@ test.describe('Free and Pro', () => {
   for (const file of Object.keys(FILES)) {
     const freeTemplates = freeFor(file)
     const names = namesFor(file)
-    test(`free, ${file}: the Pro mark matches the dock for every template, and the free ones come first`, async ({ page }) => {
+    test(`free, ${file}: the Pro mark matches the dock for every template, and the premium ten come first`, async ({ page }) => {
       watch(page, `a free account reading the Pro mark of each template on ${file}`)
       const panel = await open(page, { plan: 'free', file, saved: file === 'kit' })
       const read = await readTemplates(panel)
-      expect(read.names, 'a free account sees the templates it can export first').toEqual(cardsFor(file, true))
+      expect(read.names, 'the premium ten first, then the free templates, then the rest').toEqual(cardsFor(file))
       expect(read.pro, 'the mark is on exactly the templates the file is Pro in').toEqual(proFor(file, true))
       for (const name of names) {
         const free = freeTemplates.includes(name)
@@ -232,12 +234,12 @@ test.describe('Free and Pro', () => {
   }
 
   for (const file of Object.keys(FILES)) {
-    test(`a Pro account on ${file}: starts on Presentation, one plain list with no Pro marks, every template can be exported`, async ({ page }) => {
+    test(`a Pro account on ${file}: starts on Presentation, the same order with no Pro marks, every template can be exported`, async ({ page }) => {
       watch(page, `a Pro account on ${file}`)
       const panel = await open(page, { plan: 'pro', file })
       const read = await readTemplates(panel)
       expect(read.chosen).toEqual(['Presentation'])
-      expect(read.names, 'the plain list, in the picker’s order').toEqual(cardsFor(file, false))
+      expect(read.names, 'the same order as a free account').toEqual(cardsFor(file))
       expect(read.pro, 'no Pro marks for a Pro account').toEqual([])
       await expect(panel.locator('.xd-stage-pro')).toHaveCount(0)
       for (const name of ['Specification', 'Blueprint']) {
@@ -277,10 +279,10 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     const tabIndexes = await cards(panel).evaluateAll((els) => els.map((e) => e.tabIndex))
     expect(tabIndexes.every((t) => t === 0), 'each card can be reached with Tab').toBe(true)
     await cards(panel).first().focus()
-    await expect(cards(panel).first(), 'the free card is first').toContainText('Standards')
+    await expect(cards(panel).first(), 'the first premium template is first').toContainText('Keynote')
     await page.keyboard.press('Tab')
     await expect(cards(panel).nth(1), 'Tab goes to the next card').toBeFocused()
-    await expect(cards(panel).nth(1)).toContainText('Presentation')
+    await expect(cards(panel).nth(1)).toContainText('Stub')
     await expect(pressed(panel), 'focus alone chooses nothing').toContainText('Standards')
     await expect(exportPanel(page), 'the dialog stays open').toBeVisible()
   })
@@ -317,7 +319,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     await expectStage(panel, 'Standards', 'the stage opens on the free template')
     await openTemplates(panel)
     const ids = await cards(panel).locator('img').evaluateAll((imgs) => imgs.map((i) => (/\/export-themes\/([\w-]+)-thumb\.webp$/.exec(i.getAttribute('src')) || [])[1]))
-    const order = cardsFor('kit', true).map((n) => THEMES.find(([, name]) => name === n)[0])
+    const order = cardsFor('kit').map((n) => THEMES.find(([, name]) => name === n)[0])
     expect(ids, 'each card draws its own public thumbnail, in the grid’s order').toEqual(order)
     await templateCard(panel, 'Catalogue').focus()
     await page.keyboard.press('Enter')
@@ -355,7 +357,7 @@ for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTIO
 
 test.describe('the grid is in the dialog', () => {
   const measure = (page) => page.evaluate(() => {
-    const g = document.querySelector('.xd-tpl-grid').getBoundingClientRect()
+    const g = document.querySelector('.xd-tpl-grid:not(.xd-prem-grid)').getBoundingClientRect()
     const card = document.querySelector('.xd-card').getBoundingClientRect()
     const rows = [...document.querySelectorAll('.xd-tpl-card')].map((r) => Math.round(r.getBoundingClientRect().height))
     const dock = document.querySelector('.xd-dock').getBoundingClientRect()

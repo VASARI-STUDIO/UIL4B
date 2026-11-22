@@ -220,6 +220,13 @@
 .xd-tpl-pic img{display:block;width:100%;height:100%;object-fit:cover}
 .xd-tpl-n{font-size:14px;font-weight:600;line-height:1.3}
 .xd-tpl-b{font-size:var(--fs-caption);line-height:1.4;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xd-prem{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.xd-prem-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s-3)}
+.xd-prem-head .xd-step-l{margin:0}
+.xd-prem-grid{grid-template-columns:repeat(var(--xd-prem-n,4),minmax(0,166px));justify-content:start}
+.xd[data-layout="strip"] .xd-prem-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Rail: the stage gives up height so the strip is in view without scrolling (520 = everything else in the column; judgement). */
+.xd[data-layout="rail"]:has(.xd-prem){--xd-stage:clamp(220px,calc(min(820px,100dvh - 64px) - 520px),300px)}
 .xd-tpl-pro{position:absolute;top:var(--s-3);right:var(--s-3);padding:2px var(--s-2);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill)}
 
 /* The dock: View templates on the left, the price line between, the way out and Export on the right. The buttons sit in the dock's own flex row (the group is transparent), ordered by class. */
