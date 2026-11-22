@@ -88,7 +88,8 @@ for (const THEME of IDS) {
     assert.deepEqual(drawnPages(html), PAGES, 'every page is there, in order')
     assert.match(html, /794px/)
     assert.ok(!/<script[\s>]/i.test(html) && !/<form[\s>]/i.test(html))
-    assert.ok(!/https?:\/\//i.test(html.replace(/xmlns="[^"]*"/g, '')), 'no origin')
+    // an svg namespace names a vocabulary and never loads anything
+    assert.ok(!/https?:\/\//i.test(html.replace(/xmlns=(["'])[^"']*\1/g, '')), 'no origin')
     assert.ok(!/url\((?!['"]?data:)/.test(html), 'every url() is a data url')
     assert.match(html, /url\(data:font\/woff2/)
   })
@@ -130,7 +131,7 @@ for (const THEME of IDS) {
   test(`${THEME}: the route sends the md as a file: raw body, text/markdown, an attachment`, async () => {
     const headers = {}
     const res = { statusCode: 0, body: undefined, setHeader(k, v) { headers[k] = v }, status(c) { this.statusCode = c; return this }, send(b) { this.body = b; return this }, json(b) { this.body = b; return this } }
-    await serveThemeExport({ headers: {} }, res, { body: { theme: THEME, row: 'guide', format: 'md' }, decoded: { uid: 'u' }, plan: { id: 'free' }, consume: async () => ({ allowed: true }) })
+    await serveThemeExport({ headers: {} }, res, { body: { theme: THEME, row: 'guide', format: 'md' }, decoded: { uid: 'u' }, plan: { id: isThemeExportPro('guide', THEME) ? 'pro' : 'free' }, consume: async () => ({ allowed: true }) })
     assert.equal(res.statusCode, 200)
     assert.equal(headers['Content-Type'], 'text/markdown; charset=utf-8')
     assert.match(headers['Content-Disposition'], new RegExp(`^attachment; filename="[a-z0-9-]+-style-guide-${THEME}\\.md"$`))
