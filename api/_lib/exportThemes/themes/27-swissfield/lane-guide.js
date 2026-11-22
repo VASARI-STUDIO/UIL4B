@@ -556,10 +556,10 @@ function typePage(ctx) {
     ...(mo ? [{ fam: 'var(--bmono)', name: mo.family, role: 'Mono, Regular', w: 400, extra: '' }] : []),
   ];
   const glyphs = ['ABCDEFGHIJKLM', 'abcdefghijklm', '0123456789 &?!'];
-  const facesSec = { h: SUBH + 20 + 104 + glyphs.length * 20 + 4, flex: 100, draw: (y, extra) => {
+  const facesSec = { h: SUBH + 20 + 104 + glyphs.length * 20 + 4, draw: (y) => {
     let h = sub(X0, y, CW, 'Faces');
     faces.forEach((f, i) => {
-      const x = COL[i], fy = y + SUBH + 20 + Math.floor(extra / 2);
+      const x = COL[i], fy = y + SUBH + 20;
       h += at(x, fy, 'Aa', { style: `font:${f.w} 48px/48px ${f.fam};${f.extra}` })
         + at(x, fy + 58, A(f.name), { cls: 'sg-h' }) + at(x, fy + 76, A(f.role), { cls: 'sg-n', style: 'color:var(--quiet)' })
         + glyphs.map((gl, j) => at(x, fy + 104 + j * 20, A(gl), { w: COLW, style: `font:${f.w} 14px/20px ${f.fam};white-space:nowrap;${f.fam === 'var(--display)' ? `font-stretch:${d.stretch || 100}%;` : ''}` })).join('');
@@ -893,7 +893,7 @@ function appliedPage(ctx) {
     const inkOnGround = m.text.hex, card = app.card || {}, url = app.site && app.site.url;
     const boardLine = sign.line || B.lines.primary;
     // the hoarding: drawn at the aspect of the scene's board, placed on the photograph of a fence
-    // (HB is the section's height; where the page is full it is brought down, the slot's frame narrowing with it at the sign's own proportion)
+    // (HB is the section's height; where the page is full it is brought down, the slot's frame narrowing with it at the drawn aspect. Size and proportion rows show only when the stated size matches that aspect)
     const sceneAspect = ctx.sceneInfo('hoarding-site').quads[0].aspect, HH = 280, aw = Math.round(HH * sceneAspect);
     let FW = slot ? 380 : CW, HB = slot ? Math.round(((FW - 2) / aw) * HH) + 2 : 200;
     const setHB = (h) => { HB = h; if (slot) FW = Math.round(((h - 2) / HH) * aw) + 2; hoardSec.h = SUBH + 16 + HB; };
@@ -903,11 +903,11 @@ function appliedPage(ctx) {
     const hoardInner = hoardInnerAt(1), hoardUrl = slot ? '' : ctx.mockup('hoarding-site', [{ html: ctx.artPage(hoardInner, { w: aw, h: HH, css: guideCss() }), w: aw, h: HH }]);
     // the slot edition holds no photograph to caption, so the flat artwork carries the sign's spec in rows
     const sz = /([\d.]+) x ([\d.]+) mm/.exec(sign.size || '');
-    const szR = sz ? sz[1] / sz[2] : 0, drawnR = aw / HH;
-    const hoardSpec = [['Sign', String(sign.object || '').trim().toLowerCase() === 'sign' ? '' : sign.object], ['Size', sign.size && sizeFig(sign.size), true], ...(sz && Math.abs(szR - drawnR) / drawnR < 0.05 ? [['Proportion', fig(`${(sz[1] / sz[2]).toFixed(2)} to 1`), true]] : []), ['Ground', m.ground.name], ['Type', m.text.name]].filter((r) => r[1]);
+    const szR = sz ? sz[1] / sz[2] : 0, drawnR = aw / HH, ratioOk = sz && Math.abs(szR - drawnR) / drawnR < 0.05;
+    const hoardSpec = [['Sign', String(sign.object || '').trim().toLowerCase() === 'sign' ? '' : sign.object], ['Size', ratioOk && sizeFig(sign.size), true], ...(ratioOk ? [['Proportion', fig(`${(sz[1] / sz[2]).toFixed(2)} to 1`), true]] : []), ['Ground', m.ground.name], ['Type', m.text.name]].filter((r) => r[1]);
     const hoardSec = { h: SUBH + 16 + HB, draw: (y, more = 0) => {
       const py = y + SUBH + 16, HBd = HB + more;
-      // slot: the artwork flat, at the sign's own proportion, its spec in rows beside it; showcase: the same artwork placed in a mockup scene, and said to be
+      // slot: the artwork flat, at the board's drawn aspect, its spec in rows beside it; showcase: the same artwork placed in a mockup scene, and said to be
       return sub(X0, y, CW, 'Hoarding', slot ? `${m.ground.name} first` : { html: `${A(m.ground.name)} first, ${A(sign.object)}${sign.size ? `, ${sizeFig(sign.size)}` : ''}` })
         + (slot ? frame(X0, py, FW, HB, box(`left:0;top:0;width:${aw}px;height:${HH}px;transform:scale(${((FW - 2) / aw).toFixed(4)});transform-origin:0 0`, hoardInnerAt((FW - 2) / aw)), 'background:var(--ground)') : box(`left:${X0}px;top:${py}px;width:${CW}px;height:${HBd}px;overflow:hidden`, scene(CW, HBd, hoardUrl, 1, 0.5, 0.45)))
         + (slot ? hoardSpec.map(([k, v, raw], i) => at(X0 + FW + 24, py + i * 20, A(k), { cls: 'sg-n', style: 'color:var(--quiet)' }) + at(X0 + FW + 24 + 88, py + i * 20, raw ? v : A(v), { cls: 'sg-n', w: CW - FW - 24 - 88 })).join('') : '');
