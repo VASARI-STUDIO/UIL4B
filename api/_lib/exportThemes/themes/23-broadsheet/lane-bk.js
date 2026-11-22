@@ -34,7 +34,8 @@ const valBtn = (kind, value, name) => `<button type="button" class="bk-btn np-va
 const dl = (f, label, text) => (f ? `<a class="np-dl" href="${A(f.href)}" download aria-label="Download ${A(label)}, ${A(f.ext)}, ${A(f.sizeText)}">${A(text || f.ext)}</a>` : '');
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the better-reading text colour on a brand colour, from the brand's own light and dark text and grounds
-const onColour = (ctx, hex) => { const L = ctx.roles.light, D = ctx.roles.dark; return [L.text, L.surface, D.text, D.surface].reduce((a, b) => (ctx.ratio(b, hex) > ctx.ratio(a, hex) ? b : a)); };
+// the band label is small type, so it is held to 4.5:1 through the shared picker
+const onColour = (ctx, hex) => ctx.textOn(hex, { size: 12 });
 // a pale field needs an edge on the newsprint
 const pale = (ctx, hex) => ctx.ratio(hex, N.paper) < 1.25;
 

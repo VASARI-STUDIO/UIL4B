@@ -125,7 +125,7 @@ function colour(ctx, st, sec, i) {
   const B = ctx.brand, cols = ctx.colours;
   const rows = `<ul class="nb-crows">${cols.map((c) => `<li><span class="nb-sw" style="background:${c.hex}" aria-hidden="true"></span><span class="nb-crows__n">${A(c.name)}</span><span class="m">${Math.round(c.share * 100)}%</span>${P(c.lands, 'nb-note')}</li>`).join('')}</ul>`;
   const lengths = `<ul class="nb-lengths">${cols.map((c) => {
-    const ink = ctx.ratio('#ffffff', c.hex) >= ctx.ratio(B.colours.find((x) => x.role === 'text')?.hex || '#16181d', c.hex) ? '#ffffff' : (B.colours.find((x) => x.role === 'text')?.hex || '#16181d');
+    const tx = B.colours.find((x) => x.role === 'text')?.hex || '#16181d', ink = ctx.textOn(c.hex, { prefer: ctx.ratio('#ffffff', c.hex) >= ctx.ratio(tx, c.hex) ? '#ffffff' : tx });
     return `<li${nearPaper(ctx, c.hex) ? ' class="is-edge"' : ''} style="--c:${c.hex};--ci:${ink};--sh:${Math.max(0.12, c.share)}"><span class="nb-lengths__n">${A(c.name)}</span>${valBtn('HEX', c.hex, c.name)}<span class="m">${rgbOf(ctx, c.hex)}</span></li>`;
   }).join('')}</ul>`;
   const lead = P(`${B.name} by share: each length of tape is as long as that colour's share of a page. Press a value to copy it.`, 'nb-lead');

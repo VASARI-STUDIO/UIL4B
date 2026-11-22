@@ -78,7 +78,7 @@ function cover(ctx, K) {
 <ul class="ui-list hk-cover__r">${S.deliveries.slice(0, 3).map((d) => ui.row({ title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('')}</ul></div>`;
   const count = K.pages.filter((p) => p.section).length;
   return page(ctx, R, K, live,
-    main(`<p class="tb-big disp hk-title">${big(ctx, `${B.name} UI kit`, { max: 96, min: 40, maxLines: ctx.edition === 'slot' ? 2 : 1, nMax: 48, nMin: 28, nLines: 2 })}</p><p class="tb-lead ht-gap">The components the product ships, live, in light and dark, with the markup to copy.</p>`)
+    main(`<p class="tb-big disp hk-title">${big(ctx, `${B.name} UI kit`, { max: 96, min: 40, maxLines: ctx.edition === 'slot' ? 2 : 1, nMax: 48, nMin: 28, nLines: 2 })}</p><p class="tb-lead ht-gap">The components the product ships, live, in light and dark, with the markup to copy. <a href="example.html">Open example.html</a> to try every component in one page.</p>`)
     + side(rows([['Pages', m(String(count))], ['Version', A(B.version.number)], ['Issued', A(ctx.date)]]))
     + full(`${h2('Running order')}<ol class="ht-runs">${K.sections.map((s) => `<li class="ht-run"><h2 class="ht-run__h"><span class="num disp">${s.n}</span><span>${A(s.title)}</span></h2><ol>${s.pages.map((q) => `<li><a href="${K.href(q.id)}"><span class="num">${A(q.ref)}</span><span>${A(q.title)}</span></a></li>`).join('')}</ol></li>`).join('')}</ol>`), { label: 'The product, live' });
 }
