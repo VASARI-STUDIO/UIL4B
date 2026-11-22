@@ -5,6 +5,7 @@ import { kitCss } from './lane-hk-css.js';
 import { found } from './lane-hk-found.js';
 import { comp } from './lane-hk-comp.js';
 import { screensPages } from './lane-hk-screens.js';
+import { prepareSite, wordmarkCss } from './site-clean.js';
 
 const E = (ctx, s) => ctx.esc(s == null ? '' : String(s));
 
@@ -25,7 +26,8 @@ function foot(ctx, K) {
 }
 
 export const kitSite = {
-  css: (ctx) => kitCss(ctx),
+  prepare: prepareSite,
+  css: (ctx) => kitCss(ctx) + wordmarkCss(ctx),
   shell(ctx, K, body) {
     const p = K.page, n = ctx.brand.name;
     if (p.id === 'cover') return `<div class="sx">${bar(ctx, K)}${body}</div>`;

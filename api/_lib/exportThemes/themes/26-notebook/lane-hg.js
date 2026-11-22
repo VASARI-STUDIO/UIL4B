@@ -6,6 +6,7 @@ import { artKit } from './art.js';
 import { guideCss } from './lane-hg-css.js';
 import { P, H3, tag, pageOf, h1, lead, ink, reversed, cwKey, logoAt, cut, mock, photo, posOf, spread } from './lane-hg-parts.js';
 import { signSpec } from './helpers.js';
+import { prepareSite, wordmarkCss } from './site-clean.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const shots = (ctx) => ctx.brand.imagery.shots || [];
@@ -133,7 +134,7 @@ const PAGES = {
     }).filter(Boolean);
     const real = s0 && s0.photo && ctx.edition !== 'slot', R = reversed(ctx);
     const over = real ? `<span class="hg-over">${logoAt(ctx, 'horizontal', 192, mono)}</span>` : `<span class="hg-over hg-over--panel" style="background:${R.ground}">${logoAt(ctx, 'horizontal', 168, 'reversed')}</span>`;
-    const onPhoto = s0 ? `<figure class="hg-print"><div class="hg-print__f" style="aspect-ratio:4/3"><div class="hg-print__i"${posOf(s0) ? ` style="--pos:${posOf(s0)}"` : ''}>${ctx.photo(s0.id, { cls: 'hg-photo' })}${over}</div><span class="hg-piece" aria-hidden="true"></span></div><figcaption><span class="hg-k">${real ? 'On a photo, the light logo on a quiet part of the picture.' : 'On a photo, the logo sits on a solid panel of its own ground.'}</span></figcaption></figure>` : '';
+    const onPhoto = s0 ? `<figure class="hg-print"><div class="hg-print__f" style="aspect-ratio:4/3"><div class="hg-print__i"${posOf(s0) ? ` style="--pos:${posOf(s0)}"` : ''}>${real ? ctx.photo(s0.id, { cls: 'hg-photo' }) : `<span style="position:absolute;inset:0;background:${ctx.roles.light.action}"></span>`}${over}</div><span class="hg-piece" aria-hidden="true"></span></div><figcaption><span class="hg-k">${real ? 'On a photo, the light logo on a quiet part of the picture.' : 'On a photo, the logo sits on a solid panel of its own ground.'}</span></figcaption></figure>` : '';
     const rows = [[onPhoto, lead(`${h1(ctx, 'logo-grounds')}${P('The logo sits on each of these colours, in the colourway that reads on it. The brand does not put it on any other.')}`)]];
     for (let i = 0; i < tiles.length; i += 2) rows.push([tiles[i], tiles[i + 1] || null]);
     return spread(ctx, 'logo-grounds', { rows });
@@ -283,13 +284,13 @@ const PAGES = {
   // ---------------------------------------------------------------- 9 Close
   summary: (ctx) => {
     const B = ctx.brand, R = reversed(ctx), F = B.fonts;
-    const front = `<div class="hg-bigmark">${logoAt(ctx, 'colour', 240, R.key)}</div><p class="hg-endline disp">${A(B.lines.primary)}</p>`;
-    const strip = `<ul class="hg-chips">${ctx.colours.map((c) => `<li class="${nearPaper(ctx, c.hex) ? 'is-edge' : ''}" style="background:${c.hex};color:${ink(ctx, c.hex)}"><span>${A(c.name)}</span><span class="m">${A(c.hex)}</span></li>`).join('')}</ul>`;
+    const front = `<div class="hg-bigmark">${logoAt(ctx, 'colour', 240, R.key)}</div>${B.lines.primary ? `<p class="hg-endline disp">${A(B.lines.primary)}</p>` : ''}`;
+    const strip = `<ul class="hg-chips">${ctx.colours.map((c) => `<li${nearPaper(ctx, c.hex) ? ' class="is-edge"' : ''} style="background:${c.hex};color:${ink(ctx, c.hex)}"><span>${A(c.name)}</span><span class="m">${A(c.hex)}</span></li>`).join('')}</ul>`;
     const rules = (B.guideB && B.guideB.rules) || [];
     return spread(ctx, 'summary', { end: { side: 'v', ground: R.ground, ink: R.name, html: front }, rows: [
       [null, lead(`${h1(ctx, 'summary')}${strip}`)],
       [null, `${H3('Type')}${P(`${F.display.family} for lines and titles, ${F.body.family} for the rest.`)}`],
-      [null, `${H3('Three rules')}<ol class="hg-three">${rules.slice(0, 3).map((r) => `<li>${tag(r.title)}${P(r.text)}</li>`).join('')}</ol>`],
+      ...(rules.length ? [[null, `${H3('Three rules')}<ol class="hg-three">${rules.slice(0, 3).map((r) => `<li>${tag(r.title)}${P(r.text)}</li>`).join('')}</ol>`]] : []),
     ] });
   },
   'contact-scope': (ctx, S) => {
@@ -316,8 +317,28 @@ function contents(ctx, S) {
   return spread(ctx, 'contents', { tab: false, rows });
 }
 
+// a page that is the project's own words is kept when it has written some: the filler is already gone from the context the site is drawn from
+const has = (v) => (Array.isArray(v) ? v.some(has) : v && typeof v === 'object' ? Object.values(v).some(has) : typeof v === 'string' ? !!v.trim() : false);
+const WRITTEN = {
+  intro: (B) => [B.description, B.product, B.audience],
+  personality: (B) => B.personality,
+  voice: (B) => B.voice.principles,
+  'write-this': (B) => B.voice.writeThis,
+  messaging: (B) => [B.lines, B.voice.boilerplate25, B.voice.boilerplate50, B.voice.nameRules],
+  'photo-direction': (B) => B.imagery.direction,
+  'shot-list': (B) => B.imagery.shots.map((s) => s.slot),
+  'imagery-rules': (B) => B.imagery.rules,
+  'type-rules': (B) => B.type.rules,
+  social: (B) => B.applications.social,
+  signage: (B) => B.applications.signage,
+  'email-signature': (B) => [B.applications.email.person, B.applications.email.role],
+  'contact-scope': (B) => [B.contact.owner, B.contact.email],
+};
+
 export const guideSite = {
-  css: (ctx) => guideCss(ctx),
+  prepare: prepareSite,
+  keep(ctx, id) { return !WRITTEN[id] || has(WRITTEN[id](ctx.brand)); },
+  css: (ctx) => guideCss(ctx) + wordmarkCss(ctx),
   shell(ctx, S, ) {
     const B = ctx.brand, k = cwKey(ctx, 'horizontal'), R = reversed(ctx);
     const home = S.isFront ? 'index.html' : 'index.html';
