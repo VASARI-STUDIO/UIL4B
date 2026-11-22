@@ -210,7 +210,7 @@ html:not([data-theme=dark]) .hk-mode [data-mode=light],[data-theme=dark] .hk-mod
 
 /* screens */
 .hk-scr{display:flex;flex-direction:column}
-.hk-main2{display:grid;grid-template-columns:minmax(0,1fr) 240px;column-gap:32px;padding:24px}
+.hk-main2{display:grid;grid-template-columns:minmax(0,1fr) 288px;column-gap:32px;padding:24px}
 .hk-main2>div{min-width:0;display:flex;flex-direction:column}
 .hk-h2{margin:8px 0 16px;font-size:var(--fs-title);line-height:var(--lh-title);font-stretch:${stretch}%}
 .hk-form{display:flex;flex-direction:column;gap:12px;margin-top:8px}

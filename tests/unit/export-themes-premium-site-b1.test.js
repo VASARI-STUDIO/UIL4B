@@ -135,3 +135,40 @@ test('24-standards kit tells one story: the example total is the sum of the orde
   assert.match(kit['screen-dark.html'], /Order 1040 is 12 minutes late/, 'the dark screen does not show order 1040 late')
   assert.match(kit['screen-light.html'], /Order 1040[\s\S]{0,60}12 min late/, 'order 1040 is not late on the light screen')
 })
+
+// 5. NO "TO SHOOT" TILE and no stock kit filler (Account, Home, Section, One, Two, Three) on any page, with a design and with none.
+//    Break: print the shot-list thumbnails again (drop 'shot-list' from the pages keep() leaves out), or drop the sample story's example copy
+//    from the kit (remove `screenContent` from themes/24-standards/index.js meta) so ex() falls back to its filler.
+for (const [label, design] of DESIGNS) {
+  test(`24-standards prints no "To shoot" tile and no kit filler ${label}`, async () => {
+    for (const row of ['slides', 'ui-kit']) {
+      const files = await exportFiles('24-standards', row, design)
+      for (const p of htmlPages(files)) {
+        assert.doesNotMatch(files[p], /to-shoot|To shoot/, `${row} ${p}: a photo-slot tile`)
+        if (row === 'ui-kit') assert.doesNotMatch(files[p], />(?:Account|Home|Section|One|Two|Three)</, `${row} ${p}: stock filler`)
+      }
+    }
+  })
+}
+
+// 6. THE LAYOUTS PAGE DESCRIBES ONLY WHAT IT DRAWS: with no line written, there is no line on the page and the caption does not mention one.
+//    Break: print the `<p class="hg-lay__l">` unconditionally in layouts() (themes/24-standards/lane-hg-b.js) or restore the caption that names the line.
+test('24-standards layouts page names a line only when it draws one', async () => {
+  for (const design of [DESIGN, {}]) {
+    const page = (await exportFiles('24-standards', 'slides', design))['layouts.html']
+    assert.ok(page, 'layouts.html')
+    const drawn = /<p class="hg-lay__l/.test(page)
+    assert.equal(/the line starts on the margin/.test(page), drawn, 'the caption names a line the page does not draw, or the reverse')
+    assert.equal(/The line and the logo/.test(page), drawn, 'the lead names a line the page does not draw, or the reverse')
+  }
+})
+
+// 7. THE EXAMPLE EMAIL FITS ITS FIELD: the card beside the order list is wide enough for the sample address at 16 px.
+//    Break: set the side column back to 240px in lane-hk-css.js (.hk-main2).
+test('24-standards kit screen gives the order form at least 280 px', async () => {
+  const kit = await exportFiles('24-standards', 'ui-kit', DESIGN)
+  const m = /\.hk-main2\{[^}]*grid-template-columns:minmax\(0,1fr\) (\d+)px/.exec(cssOf(kit))
+  assert.ok(m, '.hk-main2 columns in the kit stylesheet')
+  assert.ok(Number(m[1]) >= 280, `the form column is ${m[1]}px, the sample address clips`)
+  assert.match(kit['screen-light.html'], /maya\.chen@example\.com/)
+})
