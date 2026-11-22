@@ -1,16 +1,16 @@
 {
   "Kerbside": {
     "print": {
-      "sha256": "d16f2a66445b9df1e4aba11658713a115bf921470f56e37c18e18327845b90d0",
-      "bytes": 285446,
+      "sha256": "4cba1ccb730f7cd94bfacc4376d86ddb80c623e496368d4994fd3d6e205573a5",
+      "bytes": 285462,
       "head": "f8a3d69d4625a8c9a288ac35fc2c6458ae06a4fe4ee1a1c1ee2e7b1efc7d08e2",
       "pages": {
         "cover": "89f373b5cb21713c9915a2c169f1f4b3d1b8d846bbb728f41b8211b6e0a4b106",
         "logo": "1cdbd5fa3725d06ab52931a2f1ea625084efd607b9a7e56646294436f906fe39",
-        "colour": "36a7b719ad69e01cc3fc1ea57581dfc7171aad747c24b877fbafea503b8d0c95",
-        "ruler": "abcfa7414d496c56f9a174c266ce0d4551961f24f19d9cba5d5cdf8183b05adc",
+        "colour": "b16842e8793f6605ffa3de9de60d46513eba1315aad7712d34616cff2a1ba808",
+        "ruler": "3f77b513a473489f285a4a78fe39d65aaeeb5a7886e79c34b5c6c34505f12362",
         "applied": "269d29421217ccc2c8c1000ee987d506e57ba132f5dbabd6e44d48da9ab704cc",
-        "type": "a74cc821b3e7da576a012efe37f745a44c906e69dba0accbe1ebdd4874b86258",
+        "type": "fe0188dc51823a490baddebe1ecce6743dba53e3e55bf2ca48f3b77ba63bf151",
         "contrast": "028a00c1c3b90f6b462a4cd78530939aeff4a0c1aa5f0c7d573db450f3bc2889",
         "tokens": "a1bdb1c263d7aeded7d7c8219a5e46febea60d565bbcf35f58b6795eafce7faa",
         "usage": "1b28e0bfbc29388c565804885d0304ece2b7ed143c0f044933bd52cc6a66a9cf"
@@ -20,16 +20,16 @@
   },
   "Bright Harbour Studio": {
     "print": {
-      "sha256": "36babada9100da57df84a12a5329a21ea0e3e1c3b8ec53814dc895b3441bd23c",
-      "bytes": 285525,
+      "sha256": "f6aa0d1db4b4fbf76688f6805a670ce73c33851fbe473045d472fe5e00129e0e",
+      "bytes": 285541,
       "head": "3f043819a9c50b606732d44d768394e71b8836c9fe0c86f5c9367948b1a4d0b1",
       "pages": {
         "cover": "e2bd9fd25daf1a14bec0ee374a78ea269279541feddfd85b40cbcae406d4b42e",
         "logo": "0e379b35cb471929b73fd6aea0076ff01fc31c2a1af5af1b8505246e2f86c4ad",
-        "colour": "42f4793b84e18a777189928465f99749b1cc7d41e1a9c8b292874b1f53c043b3",
-        "ruler": "dc878e132f1105ee7575434e3d37eed01bcb53ce74a19e981fc09673726af40b",
+        "colour": "b78991929add2353648da861e2195ffa5b57597342cc33178715aa3667fa076c",
+        "ruler": "d0ac354d366f3b94ddf544bcbb06bdc36f65ee009091409b26f3a0d01c65cd2e",
         "applied": "fa6fd1211efb7de9abcfb6743540c518b7fca308c9ba1de9860cad573b208b95",
-        "type": "8904ad5c0cd8cb732c243dc8331138e2954a04e5102941aeff07176a7e1badac",
+        "type": "97d7e95eef04f47c0d1cb5de54d5e9b9ba4741b85e40e67de4f41e031149fbb5",
         "contrast": "fc1854b677d01cd1174185b0f499167c88c8c28316d524ced930610da97ec490",
         "tokens": "01d7351c288a94081f454ae331be42a53bce1db77dca08b30193c37285af3731",
         "usage": "d550034ea8464de8a0ad51a589eb211421dd850d49a39083fce9906e2ffb664b"
@@ -39,16 +39,16 @@
   },
   "Wild Tide Collective": {
     "print": {
-      "sha256": "9597f7f40dc1a8956aac2da438219748c31d6575cb4b215633078a6806ca1d10",
-      "bytes": 284833,
+      "sha256": "af5b3a77f118163a1ad472dc73f1ce4a8ac368b3b4004e8a3afadc81c95699fa",
+      "bytes": 284849,
       "head": "28c2af8f772c9a9719037c9f27e94a6514dde80798fba3ecda599b4156c80ea6",
       "pages": {
         "cover": "9d434cd1d6c12c78f8de32ef9c426010a09131a0649153315fb13dbb042e4640",
         "logo": "7f804dbbcb317d75be3308aa854e6794ca7a233daefd688e8102d55403594c6d",
-        "colour": "cb40cf868249f4a06bda8f1c55733654c97ac5cde50ac68f124a46cc90e71b9f",
-        "ruler": "f38fa09747382ebc7b4dc3afdc7aaa762c2de7bd9513dc6ff36030b69f543a05",
+        "colour": "d0b2588331546b63d20a573678558bf45ebd35e8517e2c1f920c6a942de4bac7",
+        "ruler": "870a6937ece8bf31f9fe6ccd52495f775f3d4a5c8eb5a50168aeb12f2c7f13fb",
         "applied": "d1d07ae06f38412f2744f657f20c9fb228cb8aeffeddbb80317571094a2b3413",
-        "type": "4fecbb61b7d8d15f2f7c6bdd0967b89cff3b4ef1500175a1a14459d840fe3e1f",
+        "type": "186013072849c58ed3628e07cb55b831a27502e19e64973dc2c58ca3aea4ee54",
         "contrast": "c717a8f1e2f97b099fe967d6aa4196defeca0a421c56cf84136b8ee10e8a4bed",
         "tokens": "97beb8da7f7ba53cb7b27266bb8fdffe8573a36b8b4cd48283725abaef2b281c",
         "usage": "a2b817bc493bf5f9e25de359cc51495ca451b7b12664fc72bdd50198a4003be4"
@@ -58,16 +58,16 @@
   },
   "Northern Rivers Community Credit Union": {
     "print": {
-      "sha256": "d904e778bfa2da9ab1d94701c5064e70a1d53bab1d465aeefecd981cfe55729b",
-      "bytes": 286349,
+      "sha256": "048686b4531214a7a6596f847e43429fff3f6b8745af554ed2b7025180ad07ba",
+      "bytes": 286365,
       "head": "73b4bc1d5906ffd97962233926c6931273b1f22126940788fe6ffe6c76baf604",
       "pages": {
         "cover": "4afd3cbd536374fdedba454e798b38b3c77b5abcecc0ce227518ad79d9d6242f",
         "logo": "d17ff936e6496a4857dd741ef68bebf28b6daf05e69b475cad3117acf69eaca1",
-        "colour": "b7ced9f330a3c3cf29f64866ce15b25fffd88ceff68cbe07f5f9e88cd86996b9",
-        "ruler": "b9affa4a52846997d7b5c90d4e31e569a5bc5616f8f931a12c9c3e628099cc67",
+        "colour": "cd36c6fe52b2c39310c0dea9a321792239b686b75acbe4959b1f7c6e0b2f046b",
+        "ruler": "09a1d937bcee31ab1169ab40e5888197190e759917c0d6b4d0dbb90b24d1d5b6",
         "applied": "879fbf5f5617974fc528e910ff6bffad961c4029b7926bdfce5a677db79c5f0d",
-        "type": "a0e1936ccf833aff532d8764776b10fdbfda581c92d97c122d0975bb9cd0a128",
+        "type": "11e2ce147db4346f7f31bf70d5e67024b1a83b78af7e2cbb3fb0d961efdf3320",
         "contrast": "b5ab87b2cfffec54c368565e45eaf28974aeaa38942136608e2bdcbd4d09ed98",
         "tokens": "09ea3a521fdf48a36530e27ca3a7a4509d5ec025d5ab808d2dae9c24b485c2d4",
         "usage": "78930bb6c1ff4f27b1cd796c2fd400a379188861dc12984109fe3fcc972bb62a"

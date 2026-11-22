@@ -411,7 +411,7 @@ function colourPage(ctx) {
     // HEX (no #, as everywhere), RGB and CMYK are literal values, set in mono; the Text row is a colour's name, then its ratio in mono, then the grade
     const kv = [['HEX', f.hex.replace('#', '').toUpperCase(), true], ['RGB', `${r} ${g} ${b}`, true], ['CMYK', cmyk, true]];
     return hl(X0, y, cw, i === 0 ? 'var(--ink)' : 'var(--hair)')
-      + box(`left:${sx}px;top:${y + 14}px;width:${Math.max(32, Math.round((X0 + cw - sx) * ((f.share ?? 0) / maxShare)))}px;height:${rowH - 14 - 22}px;background:${f.hex};box-sizing:border-box;border:1px solid var(--hair)`)
+      + box(`left:${sx}px;top:${y + 14}px;width:${Math.max(32, Math.round((X0 + cw - sx) * ((f.share ?? 0) / maxShare)))}px;height:${rowH - 14 - 22}px;background:${f.hex};box-sizing:border-box;border:1px solid var(--quiet)`)
       + at(X0, y + 10, A(f.name), { cls: 'sg-h', style: 'font-size:15px;line-height:20px' })
       + at(X0, y + 32, A(`${cap1(f.role)}, ${fmtShare(f.share ?? 0)}`), { cls: 'sg-n', style: 'color:var(--quiet)' })
       + kv.map(([k, v], j) => at(X0, y + 64 + j * ls, A(k), { cls: 'sg-n', style: 'color:var(--quiet)' }) + mono(X0 + 56, y + 64 + j * ls + 1, v)).join('')
@@ -440,7 +440,7 @@ function rulerPage(ctx) {
   const noteH = noteTxt ? 16 + wrap(CHROME[400], noteTxt, 13, CW).length * 18 : 0;
   const rh0 = 30, table = { h: SUBH + 2 + m.segs.length * rh0 + noteH, flex: m.segs.length * 40, draw: (y, extra) => {
     const rh = rh0 + Math.floor(extra / m.segs.length), ty = y + SUBH - 24, bh = Math.max(12, Math.min(28, Math.round(rh * 0.4)));
-    const ink = (s, w, h, x, yy) => box(`left:${x}px;top:${yy}px;width:${w}px;height:${h}px;box-sizing:border-box;border:1px solid ${s.c.id === m.action.id ? 'var(--quiet)' : 'var(--hair)'};${s.c.id === m.action.id ? `background-color:var(--ground);${hatch(ctx)}` : `background:${s.c.hex};`}`);
+    const ink = (s, w, h, x, yy) => box(`left:${x}px;top:${yy}px;width:${w}px;height:${h}px;box-sizing:border-box;border:1px solid var(--quiet);${s.c.id === m.action.id ? `background-color:var(--ground);${hatch(ctx)}` : `background:${s.c.hex};`}`);
     const right = (x, yy, s, style = '') => at(x - 120, yy, A(s), { cls: 'sg-m', w: 120, style: `text-align:right;${style}` });
     // the column heads are words, set in the sans; the figures under them are mono
     const headR = (x, s) => at(x - 150, y + 9, s, { cls: 'sg-n', w: 150, style: 'text-align:right;color:var(--quiet)' });
@@ -529,13 +529,15 @@ function typePage(ctx) {
     ...(mo ? [{ fam: 'var(--bmono)', name: mo.family, role: 'Mono, Regular', w: 400, extra: '' }] : []),
   ];
   const glyphs = ['ABCDEFGHIJKLM', 'abcdefghijklm', '0123456789 &?!'];
-  const facesSec = { h: SUBH + 20 + 104 + glyphs.length * 20 + 4, draw: (y) => {
+  // the faces take spare height as air above the specimens and between the glyph rows, so the page ends on its foot
+  const facesSec = { h: SUBH + 20 + 104 + glyphs.length * 20 + 4, flex: 120, draw: (y, extra) => {
+    const pad = Math.floor(extra / 3), pitch = 20 + Math.floor(pad / glyphs.length);
     let h = sub(X0, y, CW, 'Faces');
     faces.forEach((f, i) => {
-      const x = COL[i], fy = y + SUBH + 20;
+      const x = COL[i], fy = y + SUBH + 20 + pad;
       h += at(x, fy, 'Aa', { style: `font:${f.w} 48px/48px ${f.fam};${f.extra}` })
         + at(x, fy + 58, A(f.name), { cls: 'sg-h' }) + at(x, fy + 76, A(f.role), { cls: 'sg-n', style: 'color:var(--quiet)' })
-        + glyphs.map((gl, j) => at(x, fy + 104 + j * 20, A(gl), { w: COLW, style: `font:${f.w} 14px/20px ${f.fam};white-space:nowrap;${f.fam === 'var(--display)' ? `font-stretch:${d.stretch || 100}%;` : ''}` })).join('');
+        + glyphs.map((gl, j) => at(x, fy + 104 + pad + j * pitch, A(gl), { w: COLW, style: `font:${f.w} 14px/20px ${f.fam};white-space:nowrap;${f.fam === 'var(--display)' ? `font-stretch:${d.stretch || 100}%;` : ''}` })).join('');
     });
     return h;
   } };
