@@ -60,7 +60,9 @@ function logoVersions(ctx, id) {
 }
 
 function clearSpace(ctx, id) {
-  const B = ctx.brand, L = ctx.logo, g = L.geos.colour, W = { w: 560, m: 448, n: 264 }, H = map3((k) => (W[k] * g.h) / g.w), cs = L.clearShare / 100, pad = map3((k) => H[k] * cs);
+  const B = ctx.brand, L = ctx.logo, g = L.geos.colour, cs = L.clearShare / 100;
+  // the phone sheet holds 312 px less the figure's 24 px dimension column: the logo and its clear space on both sides must fit that, so a deep clear space narrows the logo
+  const W = { w: 560, m: 448, n: Math.min(264, Math.floor(288 / (1 + (2 * cs * g.h) / g.w))) }, H = map3((k) => (W[k] * g.h) / g.w), pad = map3((k) => H[k] * cs);
   const box = `<div class="hg-clear" style="${sv('cs', pad)}"><div class="hg-hz" style="${sv('hz', W)}">${logoMode(ctx, 'colour', 560, B.name + ' logo')}</div></div>`;
   const hero = fig(box, { h: lab(ctx, map3((k) => W[k] + 2 * pad[k])), v: lab(ctx, map3((k) => H[k] + 2 * pad[k])), cls: 'hg-fig--clear', cap: `The dashed box is the clear space: ${L.clearShare}% of the logo's height on every side. Nothing enters it.` });
   return top(ctx, id, `Keep ${L.clearShare}% of the logo's height clear on every side.`) + hero + foot(ctx, 'cl', live(24, map3((k) => W[k] + 2 * pad[k])));

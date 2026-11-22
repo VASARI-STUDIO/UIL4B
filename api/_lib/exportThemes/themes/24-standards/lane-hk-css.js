@@ -108,7 +108,7 @@ html:not([data-theme=dark]) .hk-mode [data-mode=light],[data-theme=dark] .hk-mod
 .hk-fig__v{padding-right:8px}
 .hk-zoom{width:calc(var(--w) * 1px);zoom:var(--k,1)}
 .hk-zoom .ui-btn--block{width:100%}
-.hk-dh{display:flex;flex-direction:column;align-items:center;flex:none;width:calc(var(--w) * var(--k,1) * 1px);min-width:0}
+.hk-dh{display:flex;flex-direction:column;align-items:center;flex:none;width:calc(var(--w) * var(--k,1) * 1px);min-width:0;max-width:100%}
 .hk-dh b,.hk-dv b{font-size:12px;line-height:16px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
 .hk-dh i,.hk-dv i{display:block;position:relative;flex:none}
 .hk-dh i{width:100%;height:9px;border:solid var(--ink);border-width:0 1px}

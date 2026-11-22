@@ -174,7 +174,8 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .rb-lay--pale .logo-slot{color:${L.text}!important}
 ${only}
 .rb-lcomp__sh{display:flex;align-items:center;justify-content:center;aspect-ratio:3/2;padding:40px}
-.rb-lcomp__pr svg{display:block;max-width:100%;height:auto}
+.rb-lcomp__pr{min-width:0;max-width:100%}
+.rb-lcomp__pr svg,.rb-lcomp__pr .logo-slot{display:block;max-width:100%;height:auto}
 .rb-lcomp figcaption,.rb-gc figcaption,.rb-clear figcaption,.rb-min figcaption,.rb-mu figcaption{margin-top:12px}
 .rb-lcomp figcaption .rb-job,.rb-gc .rb-job{margin-top:4px}
 .rb-gang__sh{padding:40px 36px;--xi:8px}
