@@ -257,8 +257,9 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 
 /* The foot. */
 .pnav-menu-foot{min-height:52px;gap:24px;padding:8px 20px;border-top:1px solid var(--v3-hair)}
-/* On desktop the foot holds a two-line readout in every menu, so it takes that height even when Create's is one line. */
-@media(min-width:980px){.pnav-menu-foot{min-height:53px}.pnav-menu{width:min(1264px,calc(100vw - 48px));transform-origin:50% 0}}
+/* On desktop the foot holds a two-line readout in every menu, so it takes that height even when the line is one; the
+   readout sheds its own reserved box and centres, so a one-line note sits level with the link. */
+@media(min-width:980px){.pnav-menu-foot{min-height:53px}.pnav-menu .pnav-menu-readout{min-height:0;align-self:center;-webkit-line-clamp:2;line-clamp:2}.pnav-menu{width:min(1264px,calc(100vw - 48px));transform-origin:50% 0}}
 .pnav-menu-foot-note{align-self:center;margin:0;font-size:13px;line-height:18px;color:var(--v3-sec)}
 .pnav-menu-readout{font-size:13px;line-height:18px;color:var(--v3-sec)}
 .pnav-menu-readout b{font-weight:500;color:var(--v3-ink)}
