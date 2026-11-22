@@ -168,6 +168,15 @@ export const ICON_PACK_CREDITS = {
   pixelarticons: { name: 'Pixelarticons', author: 'Gerrit Halfmann', url: 'https://github.com/halfmage/pixelarticons', copyright: 'Copyright (c) 2019 Gerrit Halfmann', licenceUrl: 'https://github.com/halfmage/pixelarticons/blob/master/LICENSE', spdx: 'MIT' },
   'radix-icons': { name: 'Radix Icons', author: 'WorkOS', url: 'https://github.com/radix-ui/icons', copyright: 'Copyright (c) 2022 WorkOS', licenceUrl: 'https://github.com/radix-ui/icons/blob/master/LICENSE', spdx: 'MIT' },
   bi: { name: 'Bootstrap Icons', author: 'The Bootstrap Authors', url: 'https://github.com/twbs/icons', copyright: 'Copyright (c) 2019-2024 The Bootstrap Authors', licenceUrl: 'https://github.com/twbs/icons/blob/main/LICENSE', spdx: 'MIT' },
+  // ── Batch 3 (2026-11-22). IconaMoon and Lets Icons: CC-BY-4.0 from Iconify's registry; the authors' own sources could not be fetched. ──
+  iconamoon: { name: 'IconaMoon', author: 'Dariush Habibpour', url: 'https://icon-sets.iconify.design/iconamoon/', copyright: 'Dariush Habibpour', licenceUrl: 'https://creativecommons.org/licenses/by/4.0/', spdx: 'CC-BY-4.0' },
+  'icon-park-outline': { name: 'IconPark', author: 'ByteDance', url: 'https://github.com/bytedance/IconPark', copyright: 'Copyright 2019-present Bytedance Inc.', licenceUrl: 'https://github.com/bytedance/IconPark/blob/master/LICENSE', spdx: 'Apache-2.0' },
+  'icon-park-solid': { name: 'IconPark', author: 'ByteDance', url: 'https://github.com/bytedance/IconPark', copyright: 'Copyright 2019-present Bytedance Inc.', licenceUrl: 'https://github.com/bytedance/IconPark/blob/master/LICENSE', spdx: 'Apache-2.0' },
+  'icon-park-twotone': { name: 'IconPark', author: 'ByteDance', url: 'https://github.com/bytedance/IconPark', copyright: 'Copyright 2019-present Bytedance Inc.', licenceUrl: 'https://github.com/bytedance/IconPark/blob/master/LICENSE', spdx: 'Apache-2.0' },
+  stash: { name: 'Stash Icons', author: 'Pingback LLC', url: 'https://github.com/stash-ui/icons', copyright: 'Copyright (c) 2022 Pingback LLC', spdx: 'MIT' },
+  glyphs: { name: 'Glyphs', author: 'Goran Spasojevic', url: 'https://github.com/gorango/glyphs', copyright: 'Copyright (c) 2018 Goran Spasojevic', spdx: 'MIT' },
+  'lets-icons': { name: 'Lets Icons', author: 'Leonid Tsvetkov', url: 'https://icon-sets.iconify.design/lets-icons/', copyright: 'Leonid Tsvetkov', licenceUrl: 'https://creativecommons.org/licenses/by/4.0/', spdx: 'CC-BY-4.0' },
+  mynaui: { name: 'Myna UI Icons', author: 'Praveen Juge', url: 'https://github.com/praveenjuge/mynaui-icons', copyright: 'Copyright (c) Praveen Juge', spdx: 'MIT' },
 
   'simple-icons': { name: 'Simple Icons', author: 'Simple Icons Collaborators', url: 'https://github.com/simple-icons/simple-icons', copyright: null, spdx: 'CC0-1.0' },
   logos: { name: 'SVG Logos', author: 'Gil Barbara', url: 'https://github.com/gilbarbara/logos', copyright: null, spdx: 'CC0-1.0' },

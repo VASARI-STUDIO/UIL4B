@@ -1,0 +1,27 @@
+{
+  "prefix": "mynaui",
+  "total": 20,
+  "title": "Myna UI Icons",
+  "uncategorized": [
+    "home",
+    "home-solid",
+    "heart",
+    "heart-solid",
+    "star",
+    "star-solid",
+    "search",
+    "bell",
+    "bell-solid",
+    "calendar",
+    "check",
+    "plus",
+    "user",
+    "user-solid",
+    "mail",
+    "settings",
+    "download",
+    "upload",
+    "edit",
+    "trash"
+  ]
+}

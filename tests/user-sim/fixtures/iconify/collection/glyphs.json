@@ -1,0 +1,27 @@
+{
+  "prefix": "glyphs",
+  "total": 20,
+  "title": "Glyphs",
+  "uncategorized": [
+    "home",
+    "home-bold",
+    "home-duo",
+    "home-outline",
+    "heart",
+    "heart-bold",
+    "heart-duo",
+    "heart-outline",
+    "star",
+    "star-bold",
+    "star-duo",
+    "star-outline",
+    "search",
+    "search-bold",
+    "bell",
+    "bell-duo",
+    "calendar",
+    "check",
+    "plus",
+    "user"
+  ]
+}

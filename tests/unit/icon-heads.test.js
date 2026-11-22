@@ -72,3 +72,21 @@ test('the default listing never asks /collection for a Regular-weight pack', () 
   assert.match(regular, /loadPackHead\(pack\)/)
   assert.doesNotMatch(regular, /getCollectionNames\(/)
 })
+
+test('IconaMoon, Stash, Glyphs, Lets Icons and Myna UI keep their weight suffixes out of Regular', () => {
+  const keep = { iconamoon: 'home', stash: 'home', glyphs: 'home', 'lets-icons': 'home', mynaui: 'home' }
+  for (const [pack, name] of Object.entries(keep)) assert.equal(matchesRegular(pack, name), true, `${pack} ${name}`)
+  const drop = {
+    iconamoon: ['home-bold', 'home-fill', 'home-duotone', 'home-light', 'home-thin'],
+    stash: ['home-light', 'home-solid', 'home-duotone'],
+    glyphs: ['home-bold', 'home-duo', 'home-outline'],
+    'lets-icons': ['home-light', 'home-fill', 'home-duotone', 'home-duotone-line', 'home-duotone-fill', 'home-fill-duotone'],
+    mynaui: ['home-solid'],
+  }
+  for (const [pack, names] of Object.entries(drop)) for (const n of names) assert.equal(matchesRegular(pack, n), false, `${pack} ${n}`)
+  for (const pack of Object.keys(drop)) {
+    const re = { iconamoon: /-(?:thin|light|bold|fill|duotone)$/, stash: /-(?:light|solid|duotone)$/, glyphs: /-(?:bold|duo|outline)$/, 'lets-icons': /-(?:light|fill|duotone(?:-line|-fill)?|fill-duotone)$/, mynaui: /-solid$/ }[pack]
+    assert.ok(read(pack).names.every((n) => !re.test(n)), `the committed ${pack} head holds Regular names only`)
+  }
+  for (const pack of ['icon-park-outline', 'icon-park-solid', 'icon-park-twotone']) assert.equal(matchesRegular(pack, 'home'), true, `${pack} is one style per prefix`)
+})

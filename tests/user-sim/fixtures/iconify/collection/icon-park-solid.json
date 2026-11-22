@@ -1,0 +1,27 @@
+{
+  "prefix": "icon-park-solid",
+  "total": 20,
+  "title": "IconPark Solid",
+  "uncategorized": [
+    "home",
+    "home-two",
+    "heart",
+    "heart-ballon",
+    "star",
+    "star-one",
+    "search",
+    "setting",
+    "user",
+    "bell",
+    "calendar",
+    "check-one",
+    "close",
+    "plus",
+    "download",
+    "upload",
+    "mail",
+    "edit",
+    "delete",
+    "love-and-help"
+  ]
+}

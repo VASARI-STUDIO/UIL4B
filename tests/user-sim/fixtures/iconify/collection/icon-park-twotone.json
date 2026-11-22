@@ -1,0 +1,27 @@
+{
+  "prefix": "icon-park-twotone",
+  "total": 20,
+  "title": "IconPark Two-tone",
+  "uncategorized": [
+    "home",
+    "home-two",
+    "heart",
+    "heart-ballon",
+    "star",
+    "star-one",
+    "search",
+    "setting",
+    "user",
+    "bell",
+    "calendar",
+    "check-one",
+    "close",
+    "plus",
+    "download",
+    "upload",
+    "mail",
+    "edit",
+    "delete",
+    "love-and-help"
+  ]
+}

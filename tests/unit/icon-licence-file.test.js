@@ -69,3 +69,24 @@ test('Lucide also carries the MIT text for its Feather-derived icons; CC0 and CC
   assert.match(licenceFileText(['solar']), /480 Design[\s\S]*creativecommons\.org\/licenses\/by\/4\.0/)
   assert.ok(APACHE_2_0.length > 9000)
 })
+
+test('the eight packs of batch 3 name their notices and link their licence', () => {
+  const expected = {
+    iconamoon: ['CC-BY-4.0', 'Dariush Habibpour', 'https://creativecommons.org/licenses/by/4.0/'],
+    'icon-park-outline': ['Apache-2.0', 'Copyright 2019-present Bytedance Inc.', 'https://github.com/bytedance/IconPark/blob/master/LICENSE'],
+    'icon-park-solid': ['Apache-2.0', 'Copyright 2019-present Bytedance Inc.', 'https://github.com/bytedance/IconPark/blob/master/LICENSE'],
+    'icon-park-twotone': ['Apache-2.0', 'Copyright 2019-present Bytedance Inc.', 'https://github.com/bytedance/IconPark/blob/master/LICENSE'],
+    stash: ['MIT', 'Copyright (c) 2022 Pingback LLC', null],
+    glyphs: ['MIT', 'Copyright (c) 2018 Goran Spasojevic', null],
+    'lets-icons': ['CC-BY-4.0', 'Leonid Tsvetkov', 'https://creativecommons.org/licenses/by/4.0/'],
+    mynaui: ['MIT', 'Copyright (c) Praveen Juge', null],
+  }
+  for (const [prefix, [spdx, copyright, link]] of Object.entries(expected)) {
+    const file = licenceFileText([prefix])
+    assert.equal(ICON_PACK_CREDITS[prefix].spdx, spdx, `${prefix} licence`)
+    assert.ok(file.includes(copyright), `${prefix}: credit line`)
+    if (link) assert.ok(file.includes(link), `${prefix}: licence link`)
+    if (spdx === 'MIT') assert.ok(file.includes('Permission is hereby granted, free of charge'), `${prefix}: MIT text`)
+    if (spdx === 'Apache-2.0') assert.ok(file.includes('Apache License'), `${prefix}: Apache text`)
+  }
+})

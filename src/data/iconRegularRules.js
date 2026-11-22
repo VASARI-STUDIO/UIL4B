@@ -14,5 +14,12 @@ export const REGULAR_RULES = {
   bi: n => !/-fill$/.test(n),
   // -sharp is a square-cornered alternate of the same glyph, -solid its fill.
   pixelarticons: n => !/-(?:sharp|solid)$/.test(n),
+  // These weights share one prefix as name suffixes; the bare name is the Regular line glyph.
+  iconamoon: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n),
+  stash: n => !/-(?:light|solid|duotone)$/.test(n),
+  // Glyphs: -outline is a heavier tinted twin of the bare line glyph, so it stays out of Regular.
+  glyphs: n => !/-(?:bold|duo|outline)$/.test(n),
+  'lets-icons': n => !/-(?:light|fill|duotone(?:-line|-fill)?|fill-duotone)$/.test(n),
+  mynaui: n => !/-solid$/.test(n),
 }
 export const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true

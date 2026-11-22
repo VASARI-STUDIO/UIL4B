@@ -370,5 +370,101 @@
     "height": 16,
     "category": "UI 16px / 32px",
     "palette": false
+  },
+  "iconamoon": {
+    "name": "IconaMoon",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-bold",
+      "home-fill"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "icon-park-outline": {
+    "name": "IconPark Outline",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-two",
+      "heart"
+    ],
+    "height": 48,
+    "category": "UI Other / Mixed Grid",
+    "palette": false
+  },
+  "icon-park-solid": {
+    "name": "IconPark Solid",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-two",
+      "heart"
+    ],
+    "height": 48,
+    "category": "UI Other / Mixed Grid",
+    "palette": false
+  },
+  "icon-park-twotone": {
+    "name": "IconPark Two-tone",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-two",
+      "heart"
+    ],
+    "height": 48,
+    "category": "UI Other / Mixed Grid",
+    "palette": false
+  },
+  "stash": {
+    "name": "Stash Icons",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-light",
+      "home-solid"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "glyphs": {
+    "name": "Glyphs",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-bold",
+      "home-duo"
+    ],
+    "height": 80,
+    "category": "UI Other / Mixed Grid",
+    "palette": false
+  },
+  "lets-icons": {
+    "name": "Lets Icons",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-light",
+      "home-fill"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "mynaui": {
+    "name": "Myna UI Icons",
+    "total": 20,
+    "samples": [
+      "home",
+      "home-solid",
+      "heart"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
   }
 }

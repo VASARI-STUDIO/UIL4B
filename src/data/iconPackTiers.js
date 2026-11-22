@@ -79,6 +79,14 @@ export const ICON_PACK_TIERS = {
   pixelarticons:      { tier: 'free', why: 'pixelarticons.com, free. The free set only, never the Pro glyphs.' },
   'radix-icons':      { tier: 'free', why: 'The Radix team publish it free. Drawn on a 15px grid.' },
   bi:                 { tier: 'free', why: 'icons.getbootstrap.com, free. Outline and fill pairs on a 16px grid.' },
+  iconamoon:          { tier: 'free', why: 'IconaMoon publish it free (CC BY 4.0). Bold, fill and duotone weights share one prefix.' },
+  'icon-park-outline': { tier: 'free', why: 'ByteDance publish IconPark free (Apache-2.0). The outline style, one of three IconPark prefixes.' },
+  'icon-park-solid':  { tier: 'free', why: 'ByteDance publish IconPark free (Apache-2.0). The solid style, one of three IconPark prefixes.' },
+  'icon-park-twotone': { tier: 'free', why: 'ByteDance publish IconPark free (Apache-2.0). The two-tone style, one of three IconPark prefixes.' },
+  stash:              { tier: 'free', why: 'The Stash team publish it free on GitHub (MIT). Regular, light, solid and duotone styles.' },
+  glyphs:             { tier: 'free', why: 'Published free on GitHub (MIT). Regular, bold and duo weights.' },
+  'lets-icons':       { tier: 'free', why: 'Lets Icons publish it free (CC BY 4.0). Fill and duotone styles beside the line set.' },
+  mynaui:             { tier: 'free', why: 'Myna UI publish it free on GitHub (MIT). Line and solid styles.' },
 
   // ── paid · brands ────────────────────────────────────────────────────────
   // Read the `why` before moving one of these. The first four HAVE a free
