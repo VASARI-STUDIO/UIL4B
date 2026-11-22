@@ -5,6 +5,7 @@
 // Round 1 builds the six gate pages; the rest of the 33 pages, the UI kit and the brand book come in round 2.
 import { guidelines } from './guidelines.js';
 import { nb, tokens, CHROME_STEMS } from './helpers.js';
+import { screenContent, exampleDemo } from './story.js';
 
 // The typefaces page greys out the weights the brand does not load, so those weights must exist. The server builds this theme from the Offcut
 // sample brand, whose body face (Onest) loads 400 to 600: the lettering page asks for the 300 and 700 files beside them.
@@ -21,6 +22,8 @@ export const meta = {
     { family: 'Atkinson Hyperlegible Mono', weight: 400, stem: CHROME_STEMS.mono, q: 'Atkinson+Hyperlegible+Mono:wght@400' },
     ...spare,
   ],
+  // the slot edition's sample screens: one story (story.js), read by the kit, the code package's example page and the guide's mock-ups
+  screenContent, exampleDemo,
 };
 
 export { guidelines };

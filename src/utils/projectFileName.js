@@ -24,3 +24,12 @@ export function exportProjectName({ projects, projectId, design, working } = {})
   const project = named(projects, projectId) || named(projects, design?.source?.projectId) || named(projects, working?.source?.projectId)
   return text(project?.name) || text(design?.name)
 }
+
+/** What a document prints for a project with no name. The file names have no stand-in (an unnamed project is just "design"). */
+export const UNNAMED_PROJECT = 'Design System'
+
+/**
+ * The project name the documents print: the one `exportProjectName` found, or the stand-in for the unnamed. The preview, the
+ * download and the clipboard copy all read it through here, so a page is never headed one thing on screen and another on disk.
+ */
+export const documentProjectName = (name) => text(name) || UNNAMED_PROJECT

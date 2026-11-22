@@ -572,6 +572,8 @@ const LINES = {
   large: 'This design is too large to export. Try a smaller logo.',
   rate: 'Too many exports just now. Try again in a minute.',
   build: 'That file didn’t build. Try again.',
+  contrast: 'Some text in this theme would be too hard to read in these colours. Change a colour or pick another theme.',
+  font: 'This theme couldn’t load one of the project’s fonts. Pick another font or theme.',
   network: 'The file couldn’t be made. Check your connection and try again.',
 }
 
@@ -591,6 +593,8 @@ test.describe('the error line for each answer', () => {
     ['429 with no Retry-After', { status: 429, body: leaky({ code: 'rate_limited' }) }, LINES.rate],
     ['500', { status: 500, body: leaky() }, LINES.build],
     ['500 build_failed', { status: 500, body: leaky({ code: 'build_failed' }) }, LINES.build],
+    ['422 contrast', { status: 422, body: leaky({ code: 'contrast' }) }, LINES.contrast],
+    ['422 font_missing', { status: 422, body: leaky({ code: 'font_missing' }) }, LINES.font],
     ['502 with an HTML body', { status: 502, body: `<html>${LEAK}</html>` }, LINES.build],
     ['503 from the platform', { status: 503, body: leaky() }, LINES.build],
   ]
