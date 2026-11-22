@@ -124,11 +124,11 @@ for (const width of WIDTHS) {
 
       for (const p of PACKS) {
         await pickPack(page, p.prefix)
-        // Packs share counts, so wait for this pack's own name before trusting the count.
+        // The three IconPark styles share names and counts, so wait for this pack's own batch request first.
+        await expect.poll(() => urls.some((u) => u.includes(`/${p.prefix}.json?icons=`)), { message: `${p.label} glyphs came from the batch endpoint`, timeout: 15000 }).toBe(true)
         await expect.poll(() => cellNames(page), { message: `${p.label} lists ${p.sample}`, timeout: 15000 }).toContain(p.sample)
         await packListed(page, p.label, p.shown)
         await allGlyphsDrawn(page, p.shown)
-        expect(urls.some((u) => u.includes(`/${p.prefix}.json?icons=`)), `${p.label} glyphs came from the batch endpoint`).toBe(true)
         await expect(page.locator('.ig-gate')).toHaveCount(0)
         const credit = page.locator('.sp-footer-notice-list')
         await expect(credit).toContainText(`${p.credit} (${p.licence})`)
