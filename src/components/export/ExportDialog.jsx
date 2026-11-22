@@ -13,6 +13,7 @@ import { readExportTemplates } from '../../config/exportTemplates'
 import { defaultThemeId, themeFitsFile, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
 import ExportNav, { ExportTabs } from './ExportNav'
 import ExportPreview from './ExportPreview'
+import ExportPremiumStrip from './ExportPremiumStrip'
 import ExportTemplates from './ExportTemplates'
 import ExportSteps, { ExportDock, fileOptions } from './ExportSteps'
 // The reused pieces (pills, tiles, fields, the Pro preview) are styled by the
@@ -193,6 +194,14 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     setThemePick(wayOut.theme ?? null)
     runner.reset()
   }
+  // "See all" on the premium strip: the link unmounts with the main view, so focus moves to the chosen card in the gallery, else its first card.
+  const seeAll = () => {
+    setView('templates')
+    requestAnimationFrame(() => {
+      const grid = mainRef.current?.querySelector('.xd-tpl-grid')
+      ;(grid?.querySelector('.xd-tpl-card.is-on') || grid?.querySelector('.xd-tpl-card'))?.focus()
+    })
+  }
   const onTemplate = (id) => {
     touched.current = true
     setThemePick(id)
@@ -340,6 +349,18 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                       design={design}
                       chosen={chosen}
                     />
+                    {themedNow && (cat.id === 'slides' || cat.id === 'kit') && (
+                      <ExportPremiumStrip
+                        file={pick.file}
+                        value={theme}
+                        onPick={onTemplate}
+                        isPro={isPro}
+                        checking={checking}
+                        catName={cat.name}
+                        count={layout === 'rail' ? 4 : layout === 'menu' ? 3 : 2}
+                        onSeeAll={seeAll}
+                      />
+                    )}
                     <details className="xd-more">
                       <summary>File details</summary>
                       <ExportSteps

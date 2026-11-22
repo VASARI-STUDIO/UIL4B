@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { UI_KIT_PAGES, GUIDELINES_PAGES, GUIDELINES_ONLY_PAGES, PICKER_THEMES, defaultThemeId, themedFile, themedFileIsPro, themedZipName, pickerThemesFor, themeFitsFile, freeGuidelinesThemeNames, freeThemeNames } from '../../src/config/exportThemePicker.js'
+import { UI_KIT_PAGES, GUIDELINES_PAGES, GUIDELINES_ONLY_PAGES, PICKER_THEMES, defaultThemeId, themedFile, themedFileIsPro, themedZipName, pickerThemesFor, themeFitsFile, freeGuidelinesThemeNames, freeThemeNames, isPremiumTheme, premiumThemesFor, orderedThemesFor } from '../../src/config/exportThemePicker.js'
 import { requestThemeExport, isPrintSafe, printInWindow, PRINT_FRAME_SANDBOX, zipNameFrom, ERROR_LINES } from '../../src/utils/exportThemeRequest.js'
 import { UIKIT_PAGES, GUIDE_PAGES } from '../../api/_lib/exportThemes/engine/pages.js'
 import { PRINT_CSP } from '../../api/_lib/exportThemeRoute.js'
@@ -59,6 +59,33 @@ test('a themed file is Pro by the route\'s own rule, and the book as PNG pages t
   assert.equal(themedFileIsPro('book', '04-standards'), true)
   assert.equal(themedFileIsPro('guidelines-html', '07-spec'), true)
   assert.equal(themedFile('book-png'), null)
+})
+
+const PREMIUM_IDS = ['21-presentation', '22-ticket', '23-broadsheet', '24-standards', '26-notebook', '28-riso', '29-blueprint', '30-fluted', '31-contact', '32-dieline']
+const CLASSIC_IDS = ['01-presentation', '02-poster', '03-broadsheet', '04-standards', '05-specimen', '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse']
+
+test('premium themes are the ten new ones that are Pro for the file, in id order, and never Label or Swiss Field', () => {
+  for (const file of ['kit', 'book', 'book-html', 'guidelines', 'guidelines-html']) {
+    assert.deepEqual(premiumThemesFor(file).map((t) => t.id), PREMIUM_IDS, file)
+  }
+  assert.equal(isPremiumTheme('guidelines', '25-label'), false)
+  assert.equal(isPremiumTheme('guidelines', '27-swissfield'), false)
+  assert.equal(isPremiumTheme('kit', '04-standards'), false)
+  assert.equal(isPremiumTheme('kit', '10-inuse'), false)
+  assert.equal(isPremiumTheme('kit', '21-presentation'), true)
+})
+
+test('the picker order is premium first, then the themes free for the file, then the rest', () => {
+  const ids = (file) => orderedThemesFor(file).map((t) => t.id)
+  // The UI kit is free in Standards, so it leads the classics; the guidelines are free in Label and Swiss Field; the book is free in none.
+  assert.deepEqual(ids('kit'), [...PREMIUM_IDS, '04-standards', ...CLASSIC_IDS.filter((id) => id !== '04-standards')])
+  assert.deepEqual(ids('guidelines'), [...PREMIUM_IDS, '25-label', '27-swissfield', ...CLASSIC_IDS])
+  assert.deepEqual(ids('book'), [...PREMIUM_IDS, ...CLASSIC_IDS])
+  // The same themes, none dropped or doubled, and the picker's own table order is untouched.
+  for (const file of ['kit', 'guidelines', 'book']) assert.deepEqual([...ids(file)].sort(), pickerThemesFor(file).map((t) => t.id).sort(), file)
+  assert.equal(defaultThemeId(false, 'guidelines'), '25-label')
+  assert.equal(defaultThemeId(false, 'kit'), '04-standards')
+  assert.equal(defaultThemeId(true, 'kit'), '01-presentation')
 })
 
 const ok = (body, headers = {}) => ({ ok: true, status: 200, headers: { get: (k) => headers[k] ?? null }, json: async () => body, blob: async () => new Blob(['zip']) })

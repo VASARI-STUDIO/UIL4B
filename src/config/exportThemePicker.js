@@ -95,6 +95,24 @@ export const themedFileIsPro = (fileId, themeId) => {
   return t ? isThemeExportPro(t.row, themeId) : false
 }
 
+/** A premium theme for this file: one of the new themes (21 up) that is Pro for this file. Independent of the account. */
+export function isPremiumTheme(fileId, id) {
+  return parseInt(id, 10) >= 21 && themedFileIsPro(fileId, id)
+}
+
+/** The file's premium themes, in id order (21, 22, 23, 24, 26, 28, 29, 30, 31, 32). */
+export function premiumThemesFor(fileId) {
+  return pickerThemesFor(fileId)
+    .filter((t) => isPremiumTheme(fileId, t.id))
+    .sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10))
+}
+
+/** Every theme for the file in the order the picker shows: premium first, then the themes free for this file, then the rest in list order. */
+export function orderedThemesFor(fileId) {
+  const rest = pickerThemesFor(fileId).filter((t) => !isPremiumTheme(fileId, t.id))
+  return [...premiumThemesFor(fileId), ...rest.filter((t) => !themedFileIsPro(fileId, t.id)), ...rest.filter((t) => themedFileIsPro(fileId, t.id))]
+}
+
 /**
  * The theme a picker starts on for a file: for an account that is not Pro, the first theme the file is free in (Label for the
  * guidelines, Standards for the UI kit), or the first theme that can draw it when it is free in none (the book opens locked, and
