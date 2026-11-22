@@ -100,23 +100,22 @@ function pagesDoc(E, T, ctx, kind, standalone, only) {
 
 // The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
 // A site that cannot be laid out for this brand gives null, and the caller serves the stacked document instead.
-async function premiumSite(kind, ctx, T, dirs) {
+async function premiumSite(kind, ctx, T) {
   try {
     const files = kind === 'kit' ? (await import('./exportThemes/engine/kit-site-build.js')).kitSiteFiles(ctx, T)
       : (await import('./exportThemes/engine/guide-site-build.js')).guideSiteFiles(ctx, T)
-    return relinkSites(files, dirs)
+    return dropSiblingLinks(files)
   } catch (err) { console.warn(`[export] ${kind} site not built (${err?.name || 'Error'}); serving the single document`); return null }
 }
 
 // The themes link the guide and the kit to each other as sibling folders named ui-kit-html and guidelines-html (the engine's
-// layout). Each export is its own zip with its own top folder, so those links are pointed at the other zip's top folder: they
-// work when both zips are unpacked in the same place, which is where a browser saves them.
-export function relinkSites(files, { guide, kit }) {
+// layout). Each export is its own zip holding one format, so the sibling is never in it: a link to it would be dead on arrival.
+// Every anchor into a sibling folder is written as a span with the same classes and text, so the name stays and the dead href goes.
+const SIBLING_LINK = /<a\b([^>]*?)\shref="\.\.\/(?:ui-kit-html|guidelines-html)\/[^"]*"([^>]*)>([\s\S]*?)<\/a>/g
+export function dropSiblingLinks(files) {
   const out = {}
   for (const [path, body] of Object.entries(files)) {
-    out[path] = typeof body === 'string' && /\.html$/.test(path)
-      ? body.replaceAll('../ui-kit-html/', `../${kit}/`).replaceAll('../guidelines-html/', `../${guide}/`)
-      : body
+    out[path] = typeof body === 'string' && /\.html$/.test(path) ? body.replace(SIBLING_LINK, '<span$1$2>$3</span>') : body
   }
   return out
 }
@@ -157,14 +156,14 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   const dirs = { guide: `${slug}-brand-guidelines-${theme}`, kit: `${slug}-ui-kit-${theme}` }
   if (row === 'ui-kit') {
     const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, T.kitSite ? siteBrand(brand) : brand)
-    const site = T.kitSite ? await premiumSite('kit', ctx, T, dirs) : null
+    const site = T.kitSite ? await premiumSite('kit', ctx, T) : null
     const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), ...(site || { 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }) }
     return { name: `${dirs.kit}.zip`, zip: await zipOf(E, files, dirs.kit) }
   }
   if (row === 'slides') {
     if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand), 'guidelines', true)) }
     const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, T.guideSite ? siteBrand(brand) : brand)
-    const site = T.guideSite ? await premiumSite('guide', ctx, T, dirs) : null
+    const site = T.guideSite ? await premiumSite('guide', ctx, T) : null
     const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
     return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
   }

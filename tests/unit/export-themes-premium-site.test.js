@@ -10,8 +10,8 @@
 //     Break: write a page with fs-style put() skipped (a file map entry that bypasses put() in guide-site-build.js or kit-site-build.js).
 //  4. A THEME WITH NO SITE KEEPS THE DOCUMENT.
 //     Break: serve a site for every theme without checking T.guideSite / T.kitSite.
-//  5. THE GUIDE AND THE KIT LINK TO EACH OTHER ACROSS THEIR ZIPS: a link out of one zip names the other zip's top folder and a
-//     page that is in it, so both work when unpacked side by side. Break: drop relinkSites() in exportThemeRoute.js.
+//  5. NO LINK LEAVES ITS ZIP: the guide and the kit zips are separate downloads, so a page names the other product as plain text, with no
+//     href to a folder that may not be there. Break: put the ../ui-kit-html/ links back (drop dropSiblingLinks() in exportThemeRoute.js).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
@@ -108,24 +108,12 @@ test('a theme with no site keeps the single document in both rows', async () => 
   assert.ok(!('index.html' in kit))
 })
 
-test('the guide and the UI kit link to each other by the top folder of the other zip', async () => {
+test('no page in the guide or the UI kit links out of its own zip', async () => {
   for (const theme of ['28-riso', '32-dieline']) {
-    const guide = await exportZip(theme, 'slides', true)
-    const kit = await exportZip(theme, 'ui-kit', true)
-    const out = (from, other) => {
-      const seen = []
-      for (const p of htmlPages(from.files)) {
-        for (const m of from.files[p].matchAll(/\b(?:href|src)="\.\.\/([^"#?]+)/g)) {
-          const [dir, ...rest] = m[1].split('/')
-          seen.push(m[1])
-          assert.equal(dir, other.top, `${theme} ${p} -> ../${m[1]}`)
-          assert.ok(rest.join('/') in other.files, `${theme} ${p} -> ../${m[1]} is not in the other zip`)
-        }
-      }
-      return seen
+    for (const row of ['slides', 'ui-kit']) {
+      const zip = await exportZip(theme, row, true)
+      for (const p of htmlPages(zip.files)) assert.ok(!/\b(?:href|src)="\.\.\//.test(zip.files[p]), `${theme} ${row} ${p} links out of the zip`)
     }
-    assert.ok(out(guide, kit).length > 0, `${theme}: the guide links to the kit`)
-    assert.ok(out(kit, guide).length > 0, `${theme}: the kit links to the guide`)
   }
 })
 
