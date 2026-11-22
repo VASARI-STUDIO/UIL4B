@@ -309,7 +309,8 @@ test.describe('the nav does not animate layout', () => {
     expect(hot.tile, 'a tile appears behind the glyph on hover').toBe('rgba(0, 0, 0, 0)')
     expect(hot.icon, 'the glyph slot itself moves on hover').toBe(rest.icon)
     expect(hot.rowX, 'the row moves when it is pointed at').toBe(rest.rowX)
-    expect([hot.ink, hot.glyph], 'the name takes neither the row ink nor the glyph hue on hover').toContain(hot.nameColour)
+    const solid = (c) => c.replace(/^rgba\((\d+), (\d+), (\d+), 1\)$/, 'rgb($1, $2, $3)')
+    expect([solid(hot.ink), solid(hot.glyph)], 'the name takes neither the row ink nor the glyph hue on hover').toContain(solid(hot.nameColour))
   })
 })
 

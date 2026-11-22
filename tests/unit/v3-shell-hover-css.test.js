@@ -42,9 +42,10 @@ test('no :hover selector sits outside @media(hover:hover)', () => {
   assert.deepEqual(bare.map((r) => r.split('{')[0].trim()), [])
 })
 
-test('a selected theme segment is a raised chip with a ring edge, not a washed fill', () => {
+test('a selected theme segment is a solid ink block (--sel-solid on --sel-on-solid), not a washed fill', () => {
   const rule = css.split('\n').find((l) => l.includes('.theme-seg :is([aria-checked="true"]'))
   assert.ok(rule, 'selected segment rule found')
-  assert.match(rule, /background:var\(--v3-raised\)/)
-  assert.match(rule, /box-shadow:inset 0 0 0 1px var\(--v3-ring\)/)
+  assert.match(rule, /background:var\(--sel-solid\)/)
+  assert.match(rule, /color:var\(--sel-on-solid\)/)
+  assert.doesNotMatch(rule, /--v3-raised|--v3-ring/)
 })

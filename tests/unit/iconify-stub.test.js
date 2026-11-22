@@ -14,6 +14,8 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { answerIconify, answerSnapshot, fixturePacks, headPackNames, headPackOfUrl, ICONIFY_HOSTS, refusesCollection, SNAPSHOT_PATH_RE, snapshotPacks } from '../user-sim/iconify-stub.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
+import { ANIMATED_PACKS } from '../../src/data/iconPackTiers.js'
+import { STROKE_PACKS } from '../../src/utils/iconEditable.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -23,10 +25,10 @@ const json = (a) => JSON.parse(a.body)
 test('every pack IconLibrary.jsx browses on first paint has a fixture file', () => {
   const page = read('src/pages/IconLibrary.jsx')
   const start = page.indexOf('const ICON_GROUPS =')
-  const end = page.indexOf("// The group tray", start)
+  const end = page.indexOf("// The category tray's options", start)
   assert.ok(start >= 0 && end > start, 'the catalogue declarations must be available')
-  const { packs, groups } = new Function(`${page.slice(start, end)}; return { packs: ALL_PACKS, groups: Object.keys(ICON_GROUPS) }`)()
-  assert.deepEqual(groups, ['coloured', 'brands', 'flags'])
+  const { packs, groups } = new Function('ANIMATED_PACKS', 'STROKE_PACKS', `${page.slice(start, end)}; return { packs: ALL_PACKS, groups: Object.keys(ICON_GROUPS) }`)(ANIMATED_PACKS, STROKE_PACKS)
+  assert.deepEqual(groups, ['coloured', 'brands', 'flags', 'flat', 'animated', 'editable'])
   for (const pack of ['twemoji', 'fluent-emoji', 'noto', 'openmoji']) {
     assert.ok(packs.includes(pack), `${pack} stays in the default listing and the pack menu without an Emoji chip`)
   }

@@ -4,9 +4,9 @@
 // able to see where it stands, take it back, and send it again if it never
 // left. The reviewer should be able to see what they are approving.
 //
-//   1. STATUS. Pending, approved and not-approved designs and icons each carry
-//      their own tag, read from the queue document, in "Your submissions" on the
-//      member's own profile (/u/me). The V3 Community page is a showcase of
+//   1. STATUS. Pending and not-approved designs and icons each carry their own
+//      tag, read from the queue document, in "Your submissions" on the member's
+//      own profile (/u/me); an approved one moves to the Made tab. The V3 Community page is a showcase of
 //      sample pieces and no longer mixes a member's own work into its grid, so
 //      none of it appears there; a rejected design is listed as not approved.
 //   2. WITHDRAW AND RETRY. A design can be withdrawn like an icon, behind an
@@ -48,6 +48,7 @@ const iconDoc = (over = {}) => ({
 const queued = (page) => page.locator('#your-submissions')
 const subRow = (page, name) => queued(page).locator('.cm-sub', { hasText: name })
 const statusOfRow = (page, name) => subRow(page, name).locator('.cm-sub-status')
+const liveRow = (page, name) => page.locator('#cm-tabpanel').getByRole('list', { name: 'Approved work' }).getByRole('listitem').filter({ hasText: name })
 /** The member's own profile, where Your submissions lives (no handle chosen: /u/me). */
 async function openYourSubmissions(page) {
   await go(page, '/u/me#your-submissions')
@@ -55,7 +56,7 @@ async function openYourSubmissions(page) {
 }
 
 test.describe('community · status on your own submissions', () => {
-  test('a pending and an approved design each carry their own tag in Your submissions', async ({ page }) => {
+  test('a pending design reads pending in Your submissions; an approved one moves to Made', async ({ page }) => {
     watch(page, 'a member with two designs in different states')
     await signIn(page, {
       plan: 'free',
@@ -68,8 +69,9 @@ test.describe('community · status on your own submissions', () => {
 
     await expect(statusOfRow(page, 'Waiting Design'),
       'a pending design must say it is pending review').toHaveText('Pending review')
-    await expect(statusOfRow(page, 'Passed Design'),
-      'an approved design must say it is approved, not still pending').toHaveText('Approved')
+    await expect(subRow(page, 'Passed Design'), 'an approved design leaves Your submissions').toHaveCount(0)
+    await expect(liveRow(page, 'Passed Design'), 'an approved design is listed under Made').toBeVisible()
+    await expect(liveRow(page, 'Passed Design').getByRole('button', { name: 'Remove Passed Design' })).toBeEnabled()
   })
 
   test('a rejected design is out of the showcase and listed under Your submissions as not approved', async ({ page }) => {
@@ -95,7 +97,7 @@ test.describe('community · status on your own submissions', () => {
     await expect(statusOfRow(page, 'Turned Down Design')).toHaveText('Not approved')
   })
 
-  test('icons read pending, approved and not approved by their queue status', async ({ page }) => {
+  test('icons read pending and not approved by their queue status; an approved one moves to Made', async ({ page }) => {
     watch(page, 'a member with three icons in different states')
     await signIn(page, {
       plan: 'free',
@@ -108,7 +110,8 @@ test.describe('community · status on your own submissions', () => {
     await openYourSubmissions(page)
 
     await expect(statusOfRow(page, 'Icon waiting')).toHaveText('Pending review')
-    await expect(statusOfRow(page, 'Icon passed'), 'an approved icon must not read as pending').toHaveText('Approved')
+    await expect(subRow(page, 'Icon passed'), 'an approved icon leaves Your submissions').toHaveCount(0)
+    await expect(liveRow(page, 'Icon passed'), 'an approved icon is listed under Made').toContainText('Approved')
     await expect(statusOfRow(page, 'Icon turned down'), 'a rejected icon must not read as pending').toHaveText('Not approved')
   })
 })

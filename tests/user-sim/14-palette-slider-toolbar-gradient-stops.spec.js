@@ -10,8 +10,8 @@ import { go, watch } from './helpers.js'
 /* ── 1 · The adjust tracks preview the palette they would produce ─────────────
  * The drawn Adjust bar (D:1037-1044) paints each slider as a 20px gradient
  * pill (the 24px control around it is taller; the focus ring is drawn on the
- * pill itself, see 143-palette-colour-values-css-sheet-adjust) with a light
- * 15px thumb centred in it that carries its own dark shadow. The earlier "lens"
+ * pill itself, see 143-palette-colour-values-css-sheet-adjust) with an ink
+ * 15px thumb centred in it, edged in the raised ground. The earlier "lens"
  * thumb, which sampled the track colour into its centre, went with that
  * redraw; what these tests keep is that the tracks are painted from the
  * palette, follow each other, never rebuild under their own thumb, and that
@@ -75,9 +75,10 @@ test.describe('Palette Builder · global-adjust slider tracks', () => {
     await expect(page.getByRole('slider', { name: 'Tone adjustment' })).toBeVisible()
 
     // Chrome does not expose ::-webkit-slider-thumb through getComputedStyle,
-    // so read the authored rules. The guarantee is that the thumb ALWAYS
-    // carries both a light core (readable on a dark track) and a dark shadow
-    // (readable on a light one), in both themes — the drawn thumb (D:55).
+    // so read the authored rules. The thumb is a round 15px disc filled with
+    // --range-thumb and edged with 2px of --range-thumb-edge; those two tokens
+    // are the ink and the raised ground, so one of them always contrasts with
+    // a light track and the other with a dark one.
     const thumbRules = await page.evaluate(() => {
       const out = []
       for (const sheet of document.styleSheets) {
@@ -94,9 +95,33 @@ test.describe('Palette Builder · global-adjust slider tracks', () => {
     const base = thumbRules.filter(r => /background/.test(r.css))
     expect(base.length, 'the thumb is styled').toBeGreaterThanOrEqual(1)
     for (const rule of base) {
-      expect(rule.css, `${rule.selector}: light core`).toMatch(/background(?:-color)?:\s*(?:#fafaf8|rgb\(250, 250, 248\))/i)
-      expect(rule.css, `${rule.selector}: dark shadow`).toMatch(/box-shadow:[^;]*rgba\(0,\s*0,\s*0,\s*0?\.6\)/i)
-      expect(rule.css, `${rule.selector}: no theme-dependent core`).not.toMatch(/background(?:-color)?:\s*var\(/)
+      expect(rule.css, `${rule.selector}: ink core`).toMatch(/background(?:-color)?:\s*var\(--range-thumb\)/)
+      expect(rule.css, `${rule.selector}: ground edge`).toMatch(/border:\s*2px solid var\(--range-thumb-edge\)/)
+      expect(rule.css, `${rule.selector}: round`).toMatch(/border-radius:\s*(?:999px|50%)/)
+    }
+    expect(base.some(r => /slider-thumb/.test(r.selector) && /width:\s*15px/.test(r.css) && /height:\s*15px/.test(r.css)), 'the WebKit thumb is 15px').toBe(true)
+
+    // The core and the edge must contrast with each other in both themes: that is what keeps the
+    // thumb readable on the lightest and darkest stops of a track.
+    for (const theme of ['light', 'dark']) {
+      const ratio = await page.evaluate((t) => {
+        const root = document.documentElement
+        const was = root.getAttribute('data-theme')
+        root.setAttribute('data-theme', t)
+        const probe = document.createElement('i')
+        document.body.appendChild(probe)
+        const lum = (token) => {
+          probe.style.background = `var(${token})`
+          const [r, g, b] = getComputedStyle(probe).backgroundColor.match(/[\d.]+/g).slice(0, 3).map(Number)
+            .map(v => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 })
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        }
+        const a = lum('--range-thumb'), b = lum('--range-thumb-edge')
+        probe.remove()
+        if (was === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', was)
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
+      }, theme)
+      expect(ratio, `${theme}: thumb core against its edge`).toBeGreaterThanOrEqual(7)
     }
   })
 

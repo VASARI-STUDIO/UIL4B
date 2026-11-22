@@ -16,7 +16,7 @@
   border: 0;
   background: var(--fpr-fill);
 }
-.fpr-page .tl-pill[aria-pressed="true"], .fpr-page .tl-pill[aria-selected="true"], :is(.fpr-page, .fpr-sheet) .fpr-lock[aria-pressed="true"] { background: var(--fpr-sel); color: var(--t0); }
+.fpr-page .tl-pill[aria-pressed="true"], .fpr-page .tl-pill[aria-selected="true"], :is(.fpr-page, .fpr-sheet) .fpr-lock[aria-pressed="true"] { background: var(--fpr-sel); color: var(--t0); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 :is(.fpr-page .fpr-panel, .fpr-sheet) .tl-btn, :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-input, .fpr-page .fpr-dock .svt-trigger { background: var(--fpr-fill-2); }
 :is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-wand { background: transparent; }
 :is(.fpr-page, .fpr-sheet) .fpr-wmenu { flex: none; font-variant-numeric: tabular-nums; }
@@ -50,7 +50,7 @@
 :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply { padding: 12px; border-radius: 8px; }
 :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-head { font-size: 20px; }
 :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-cta { font-size: 14px; font-weight: 500; }
-:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply[aria-pressed="true"] { background: var(--fpr-sel); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply[aria-pressed="true"] { background: var(--fpr-sel); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 
 /* ── Dock: the status line, then the save pill ───────────────────────────── */
 .fpr-page .fpr-dock-note { font-size: 12px; line-height: 16px; }
@@ -134,7 +134,7 @@
   width: 32px; min-width: 32px; height: 32px; min-height: 32px; margin-block: -4px; margin-inline: 0 -8px; padding: 0;
   border: 0; background: transparent; color: var(--tl-dim);
 }
-:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock[aria-pressed="true"] { background: var(--fpr-fill); color: var(--tl-ink); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock[aria-pressed="true"] { background: var(--fpr-fill); color: var(--tl-ink); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 @media (hover: hover) and (pointer: fine) {
   :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock:hover { background: var(--fpr-fill); color: var(--tl-ink); }
 }
@@ -190,7 +190,7 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform .12s var(--tl-ease, ease-out), background-color .15s ease, color .15s ease;
 }
-:is(.fpr-page, .fpr-sheet) .fpr-wopt[aria-selected="true"] { background: var(--fpr-sel); color: var(--tl-ink); }
+:is(.fpr-page, .fpr-sheet) .fpr-wopt[aria-selected="true"] { background: var(--fpr-sel); color: var(--tl-ink); box-shadow: inset 0 0 0 1px var(--sel-edge); }
 :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):active { transform: scale(.97); }
 :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
@@ -273,7 +273,8 @@ html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { tra
   .fpr-page .fpr-stage-head { display: block; }
   .fpr-page .fpr-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; width: 100%; padding: 2px; border-radius: 999px; background: var(--fpr-fill); }
   .fpr-page .fpr-presets .tl-pill { min-width: 0; padding-inline: 4px; justify-content: center; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 500; }
-  .fpr-page .fpr-presets .tl-pill.is-on { background: var(--fpr-sel); }
+  .fpr-page .fpr-presets .tl-pill.is-on { background: var(--sel-solid); color: var(--sel-on-solid); box-shadow: none; }
+  .fpr-page .tl-pills.fpr-presets[data-slide]::before { background: var(--sel-solid); border-color: var(--sel-solid); }
 }
 
 /* ── Phone dock: Heading and Body pills, Save, Copy CSS ──────────────────── */

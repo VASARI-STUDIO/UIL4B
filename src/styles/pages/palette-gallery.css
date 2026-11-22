@@ -19,7 +19,7 @@
 /* Selection: the ring and the tick are non-text, so the plain accent. The tick
    is a 24px fill carrying a glyph — `--accent-ink` on `--accent-mid`, the
    same pair as the page's accent buttons. */
-.lib-surface.pgl-page .pgal-card.is-selected .pgal-stripes{outline-color:var(--accent)}
+.lib-surface.pgl-page .pgal-card.is-selected .pgal-stripes{outline-color:var(--focus-ink)}
 .lib-surface.pgl-page .pgal-tick{background:var(--accent-fill);color:var(--accent-ink)}
 .lib-surface.pgl-page .pgal-use.is-selected svg{stroke:var(--accent)}
 
@@ -30,7 +30,7 @@
 .lib-surface.pgl-page .pgal-use.is-selected,
 .lib-surface.pgl-page .pgal-use--pro{color:var(--accent-mid)}
 .lib-surface.pgl-page .pgal-use:focus-visible,
-.lib-surface.pgl-page .pgal-cmp:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface.pgl-page .pgal-cmp:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .lib-surface.pgl-page .pgal-cmp{border-radius:var(--btn-radius)}
 .lib-surface.pgl-page .pgal-cmp:hover{color:var(--t0)}
 
@@ -49,7 +49,7 @@
    It used to mix toward --t0, which in dark is near-white — 1.53:1 under a
    white label. */
 .lib-surface.pgl-page .pgl-build-link:hover{background:var(--t1);color:var(--bg-0)}
-.lib-surface.pgl-page .pgl-build-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface.pgl-page .pgl-build-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* Section counts are values, not toggles. */
 .lib-surface.pgl-page .pgl-section-count{border-radius:var(--radius-xs)}

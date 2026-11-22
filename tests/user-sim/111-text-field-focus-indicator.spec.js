@@ -1,8 +1,6 @@
-// A focused text field shows ONE indicator. The global rule paints a 2px offset
-// outline on :focus-visible, and a separate global rule paints an accent border
-// plus a 3px halo on :focus. On the fields below both used to fire on the same
-// box, so a click read as two concentric rings. This reads the computed style
-// of the real focused element in a real browser, in both themes.
+// A focused text field shows ONE indicator: the global ink outline on :focus-visible, with no
+// border change and no halo stacked on it. This reads the computed style of the real focused
+// element in a real browser, in both themes.
 //
 // "Rest" is read before the field is ever focused, with the pointer parked
 // away from it (a few of these fields change border on hover), and the focused
@@ -28,17 +26,17 @@ const look = (locator) => locator.evaluate((el) => {
 const parkPointer = (page) => page.mouse.move(2, 2)
 
 /**
- * Put the sheet that holds the global field-focus halo last in <head>, so it
+ * Put the sheet that holds the global hero-input focus reset last in <head>, so it
  * wins every tie on specificity. Which sheet lands last depends on the build
  * and on how the route was reached, and the Home search fields only lose to
- * the halo when the global sheet is the later one. Forcing the worst order
+ * the reset when the global sheet is the later one. Forcing the worst order
  * makes the check hold whichever order a visitor's browser ends up with.
  */
 const globalSheetLast = (page) => page.evaluate(() => new Promise((resolve, reject) => {
   const sheet = [...document.styleSheets].find((s) => {
-    try { return [...s.cssRules].some((r) => r.selectorText === 'input:focus, select:focus, textarea:focus') } catch { return false }
+    try { return [...s.cssRules].some((r) => r.selectorText === 'input.hcmd-input:focus') } catch { return false }
   })
-  if (!sheet || !sheet.ownerNode) return reject(new Error('global field-focus sheet not found'))
+  if (!sheet || !sheet.ownerNode) return reject(new Error('global hero-input sheet not found'))
   const link = sheet.ownerNode
   link.addEventListener('load', () => resolve(), { once: true })
   document.head.appendChild(link)

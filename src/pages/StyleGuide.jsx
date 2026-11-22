@@ -142,6 +142,7 @@ export default function StyleGuide({ toast }) {
           <button
             key={s.id}
             className={`pt-t${section === s.id ? ' on' : ''}`}
+            aria-pressed={section === s.id}
             onClick={() => setSection(s.id)}
             style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600 }}
           >

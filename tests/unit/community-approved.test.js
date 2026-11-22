@@ -13,7 +13,7 @@ import path from 'node:path'
 import {
   filterApproved, communityGradientRows, communityPaletteRows,
   newCommunityRows, withCommunityOpen, COMMUNITY_ID_PREFIX,
-  createApprovedLoader, visibleRows, approvedRows,
+  createApprovedLoader, visibleRows, waitingRows, approvedRows,
 } from '../../src/utils/approvedSubmissions.js'
 import { filterNoun } from '../../src/utils/galleryFilterNoun.js'
 import { paletteHaystack } from '../../src/utils/paletteSearch.js'
@@ -230,11 +230,11 @@ test('both galleries merge the approved rows, de-duplicated, outside the cap', (
   assert.match(pals, /kind === 'community'/)
 })
 
-test('the hub lists every status in Your submissions and approved work under Made', () => {
+test('the hub keeps approved work out of Your submissions and lists it under Made', () => {
   const grad = read('src/pages/GradientGallery.jsx')
   assert.match(grad, /s\.status !== 'withdrawn' && s\.status !== 'approved'/)
   const hub = read('src/components/community/useCommunityHub.js')
-  assert.match(hub, /visibleRows\(\[/)
+  assert.match(hub, /waitingRows\(\[/)
   assert.match(hub, /approvedRows\(\[/)
 })
 
@@ -248,6 +248,16 @@ test('the hub filters: visibleRows drops only hidden, approvedRows keeps only ap
   assert.deepEqual(approvedRows(rows, hidden).map((r) => r.id), ['a'])
   assert.deepEqual(visibleRows(rows).map((r) => r.id), ['a', 'b', 'c', 'd'], 'no hidden set')
   assert.deepEqual(approvedRows(undefined, hidden), [])
+})
+
+test('the hub filters: waitingRows drops hidden and approved rows, keeps pending, rejected and local', () => {
+  const rows = [
+    { id: 'a', status: 'approved' }, { id: 'b', status: 'pending' }, { id: 'c', status: 'rejected' },
+    { id: 'd', status: 'pending' }, { id: 'e', synced: false }, null,
+  ]
+  assert.deepEqual(waitingRows(rows, new Set(['d'])).map((r) => r.id), ['b', 'c', 'e'])
+  assert.deepEqual(waitingRows(rows).map((r) => r.id), ['b', 'c', 'd', 'e'], 'no hidden set')
+  assert.deepEqual(waitingRows(undefined), [])
 })
 
 test('the hub lists palette submissions so a sent palette no longer reads Not sent', () => {

@@ -87,7 +87,7 @@
 
 .seo-page .seo-tab:hover { color: var(--tl-ink); }
 
-.seo-page .seo-tab.is-active { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.seo-page .seo-tab.is-active { color: var(--sel-ink); background: var(--tl-wash-on); border-color: var(--sel-edge); box-shadow: none; }
 
 .seo-page .seo-tab:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
@@ -217,7 +217,7 @@
 
 .seo-page .seo-seg button:hover { color: var(--tl-ink); }
 
-.seo-page .seo-seg button.is-active { color: var(--tl-ink); background: var(--tl-card); border-color: var(--tl-line); }
+.seo-page .seo-seg button.is-active { color: var(--sel-on-solid); background: var(--sel-solid); border-color: var(--sel-solid); }
 
 .seo-page .seo-seg button:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; }
 

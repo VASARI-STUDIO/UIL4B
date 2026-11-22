@@ -1610,19 +1610,20 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   expect(mixed.whiteSpace, 'the pack label stays on one line').toBe('nowrap')
   expect(mixed.tracking, 'quiet label: no letter-spacing').toBe(0)
 
-  // A GROUP is the other mixed set, and it names its packs once each in a heading row instead.
-  // Brand logos holds logo.dev marks alongside glyph packs, so it is a cross-pack collection.
-  // At this width the group is its one-line trigger (the toolbar never wraps),
-  // so the chip lives in the menu it opens.
-  const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
+  // A CATEGORY is the other mixed set, and it names its packs once each in a heading row instead.
+  // Coloured -> Brands holds logo.dev marks alongside glyph packs, so it is a cross-pack collection.
+  // At this width the category is its one-line trigger (the toolbar never wraps),
+  // so the option lives in the menu it opens; the style bar that follows sits on the row.
+  const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Category' })
   if (await trig.count()) await trig.click()
-  await page.getByRole('button', { name: /Brand logos/i }).first().click()
+  await page.getByRole('group', { name: 'Icon category' }).first().getByRole('button', { name: /^Coloured/ }).click()
+  await page.getByRole('group', { name: 'Coloured icon type' }).getByRole('button', { name: 'Brands', exact: true }).click()
   await expect.poll(() => page.locator('.ig .ig-pack-head').count(), {
     message: 'a grouped mixed set opens each pack under a heading',
     timeout: 20000,
   }).toBeGreaterThan(1)
   const grouped = await read()
-  expect(grouped.cells, 'the Brand logos group is populated').toBeGreaterThan(20)
+  expect(grouped.cells, 'the Coloured Brands set is populated').toBeGreaterThan(20)
   expect(grouped.labels, 'no cell draws its own pack label under a heading row').toBe(0)
   const unnamed = await page.locator('.ig .ic').evaluateAll((els) => els.filter((el) => !/^(Customise|Copy) .+, .+$/.test(el.getAttribute('aria-label') || '')).length)
   expect(unnamed, 'every cell still names its pack to a screen reader').toBe(0)

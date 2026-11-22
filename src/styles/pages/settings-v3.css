@@ -102,7 +102,7 @@ html[data-theme="light"] .stg.stg {
 .stg.stg .sub-plans { background: none; padding: 0; }
 .stg.stg .sub-billing-toggle { width: max-content; margin: 0 0 24px; padding: 4px; border: 0; border-radius: 999px; background: var(--raised); gap: 0; }
 .stg.stg .sub-billing-toggle button { height: 36px; min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--sec); }
-.stg.stg .sub-billing-toggle button.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--seg-ring); }
+.stg.stg .sub-billing-toggle button.active { background: var(--ink); color: var(--on-ink); font-weight: 600; box-shadow: none; }
 .stg.stg .sub-billing-toggle .sub-save { color: inherit; }
 .stg.stg .sub-tiers { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; margin: 0; }
 .stg.stg .sub-tier-pro { order: -1; border: 0; }
@@ -355,7 +355,7 @@ html[data-reduced-motion="true"] .stg.stg .mi-go > .mi-a { transition: none; }
 /* appearance: the board's track, pill and knob */
 .stg.stg .theme-seg { gap: 0; padding: 4px; border: 0; background: var(--raised); }
 .stg.stg .theme-seg-btn { height: 36px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--sec); }
-.stg.stg .theme-seg-btn[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--seg-ring); }
+.stg.stg .theme-seg-btn[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); font-weight: 600; box-shadow: none; }
 .stg.stg .toggle-switch::after { background: var(--ink); box-shadow: none; }
 .stg.stg .toggle-switch.on::after { background: var(--ground); }
 

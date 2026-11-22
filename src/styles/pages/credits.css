@@ -80,7 +80,7 @@
   font-size: var(--fs-body);
 }
 .crd-search-input::placeholder { color: var(--t2); opacity: 1; }
-.crd-search-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crd-search-input:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .crd-search-status {
   min-height: 1.5em;
   margin: var(--s-2) 0 0;
@@ -326,7 +326,7 @@ a.crd-row-link .crd-row-name {
  * tests/unit/focus-ring-geometry.test.js fails the build over it. */
 .crd a:focus-visible,
 .crd summary:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 2px;
 }
 

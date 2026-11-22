@@ -75,7 +75,7 @@
 
 .bs-page .bs-btn:active:not(:disabled) { transform: scale(.98); }
 
-.bs-page .bs-btn:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.bs-page .bs-btn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .bs-page .bs-btn:disabled { opacity: .5; cursor: not-allowed; }
 
@@ -156,7 +156,7 @@
 .bs-page .bs-band-open:hover { color: var(--tl-ink); text-decoration: underline; text-underline-offset: 3px; }
 
 .bs-page .bs-wall-link:focus-visible,
-.bs-page .bs-band-open:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.bs-page .bs-band-open:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .bs-page .bs-wall-close {
   display: inline-flex;
@@ -174,7 +174,7 @@
 
 .bs-page .bs-wall-close:hover { color: var(--tl-ink); }
 
-.bs-page .bs-wall-close:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.bs-page .bs-wall-close:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .bs-page .bs-composer { display: flex; flex-direction: column; gap: 8px; }
 
@@ -200,7 +200,7 @@
 
 .bs-page .bs-field:hover:not(:disabled) { border-color: var(--tl-line-on); }
 
-.bs-page .bs-field:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; border-color: var(--tl-ink); }
+.bs-page .bs-field:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 1px; border-color: var(--tl-ink); }
 
 .bs-page .bs-field::placeholder { color: var(--tl-faint); }
 
@@ -243,7 +243,7 @@
    exists to refuse. */
 .bs-page .bs-result { display: flex; flex-direction: column; gap: 0; border-radius: 8px; }
 
-.bs-page .bs-result:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 6px; }
+.bs-page .bs-result:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 6px; }
 
 .bs-page .bs-result-h { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-bottom: 6px; }
 

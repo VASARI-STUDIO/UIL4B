@@ -69,7 +69,7 @@
 .pvd-rail-scroll{display:flex;flex-direction:column;gap:var(--s-5);flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4)}
 .plb-modal--preview .pvd-seg{flex:none;width:100%;height:36px;padding:2px;gap:0;background:color-mix(in srgb,var(--v3-ink) 6%,transparent);border:0;border-radius:999px}
 .plb-modal--preview .pvd-seg .plb-mode{flex:1;min-width:0;height:32px;padding:0;font-size:13px;font-weight:500}
-.plb-modal--preview .pvd-seg .plb-mode--on{background:color-mix(in srgb,var(--v3-ink) 16%,transparent);box-shadow:none}
+.plb-modal--preview .pvd-seg .plb-mode--on{background:var(--sel-solid);color:var(--sel-on-solid);box-shadow:none}
 .pvd-rail .pvd-note{flex:none;margin:0;padding:var(--s-4) var(--s-5) var(--s-5);font-size:13px;font-weight:500;line-height:1.4}
 /* "Use" on a compared palette: the ink pill, above the note. */
 .pvd-rail .pvd-use{flex:none;width:calc(100% - 2 * var(--s-4));margin:var(--s-2) var(--s-4) 0}
@@ -82,8 +82,8 @@
 .pvd-rail .pvd-group-l{margin-bottom:var(--s-1);font-weight:500}
 .pvd-rail .pvd-opt{height:32px;font-size:15px;font-weight:500;color:var(--v3-ink)}
 .pvd-rail .pvd-opt-name{margin-right:auto}
-.pvd-rail .pvd-opt.is-on,.pvd-rail .pvd-opt.is-on:hover{background:color-mix(in srgb,var(--v3-ink) 14%,transparent);font-weight:500}
-.pvd-rail .pvd-opt:focus-visible,.pvd-rail .pvd-state:focus-visible{outline:2px solid var(--v3-ink);outline-offset:0}
+.pvd-rail .pvd-opt.is-on,.pvd-rail .pvd-opt.is-on:hover{background:color-mix(in srgb,var(--v3-ink) 14%,transparent);font-weight:500;box-shadow:inset 0 0 0 1px var(--v3-ink)}
+.pvd-rail .pvd-opt:focus-visible,.pvd-rail .pvd-state:focus-visible{outline:2px solid var(--focus-ink);outline-offset:0}
 /* The open preview's states, nested under its row; only the chosen one has the dot. */
 .pvd-rail .pvd-states{margin:0 0 0 var(--s-3);gap:0}
 .pvd-rail .pvd-state{position:relative;justify-content:flex-start;height:32px;padding:0 var(--s-3) 0 28px;font-size:13px;font-weight:500;color:var(--v3-ink)}
@@ -92,7 +92,7 @@
 .pvd-opt{position:relative;display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;height:36px;padding:0 var(--s-3);
   font-size:var(--fs-body-s);color:rgba(var(--v3-ink-rgb), .86);text-align:left;background:none;border:0;border-radius:8px;cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pvd-opt.is-on{background:var(--v3-l2);color:var(--v3-ink);font-weight:600}
+.pvd-opt.is-on{background:var(--v3-l2);color:var(--v3-ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--v3-ink)}
 .pvd-opt svg{flex:none;color:var(--v3-sec)}
 /* A slow load: a 12px ring on the chosen option. It appears 400ms in, so a fast
  * load never flashes it. */
@@ -101,7 +101,7 @@
 @keyframes pvd-spin-in{from{opacity:0}to{opacity:1}}
 @keyframes pvd-spin{to{transform:rotate(360deg)}}
 @media (hover:hover){.pvd-opt:hover{background:var(--v3-rowh);color:var(--v3-ink)}.pvd-opt.is-on:hover{background:var(--v3-l2)}}
-.pvd-opt:focus-visible,.pvd-chip:focus-visible,.pvd-menu-btn:focus-visible,.pvd-colours:focus-visible,.pvd-link:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.pvd-opt:focus-visible,.pvd-chip:focus-visible,.pvd-menu-btn:focus-visible,.pvd-colours:focus-visible,.pvd-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* 768 to 1023: the list behind one button. */
 .pvd-pickbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);flex:none;padding:var(--s-3) var(--s-5) 0}
@@ -182,7 +182,7 @@
   font-size:13px;color:var(--v3-ink);text-align:left;background:var(--v3-raised);border:1px solid var(--v3-hair);border-radius:999px;cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 @media (hover:hover){.pvd-chip:hover{background:var(--v3-rowh)}}
-.pvd-chip.is-on{background:var(--v3-l2);border-color:var(--v3-ink)}
+.pvd-chip.is-on{background:var(--v3-l2);border-color:var(--t0)}
 .pvd-chip.is-off{color:var(--v3-sec);cursor:default}
 .pvd-sw{flex:none;width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px oklch(0 0 0 / .14)}
 [data-theme="dark"] .pvd-sw{box-shadow:inset 0 0 0 1px oklch(1 0 0 / .18)}
@@ -216,7 +216,7 @@
 .pvd-more{flex:none;display:inline-flex;align-items:center;min-height:32px;padding:0 10px;font-size:13px;font-weight:500;color:var(--v3-ink);background:none;border:0;border-radius:8px;cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard)}
 @media (hover:hover){.pvd-more:hover{background:var(--v3-rowh)}}
-.pvd-more:focus-visible,.pvd-state-btn:focus-visible,.pvd-state:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.pvd-more:focus-visible,.pvd-state-btn:focus-visible,.pvd-state:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .pvd-more-pop{position:absolute;right:var(--s-5);bottom:calc(100% + var(--s-1));z-index:5;display:flex;flex-direction:column;gap:var(--s-2);width:min(440px,calc(100% - 2 * var(--s-5)));max-height:min(50dvh,320px);overflow-y:auto;overscroll-behavior:contain;padding:var(--s-3);
   background:var(--v3-raised);border:1px solid var(--v3-hair);border-radius:12px;box-shadow:var(--v3-shadow)}
 .pvd-more-pop .pvd-chips{flex-wrap:wrap}
@@ -231,7 +231,7 @@
 .pvd-states{display:flex;flex-direction:column;gap:2px}
 .pvd-state{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;height:36px;padding:0 var(--s-3);font-size:var(--fs-body-s);color:rgba(var(--v3-ink-rgb), .86);text-align:left;background:none;border:0;border-radius:8px;cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pvd-state.is-on{background:var(--v3-l2);color:var(--v3-ink);font-weight:600}
+.pvd-state.is-on{background:var(--v3-l2);color:var(--v3-ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--v3-ink)}
 @media (hover:hover){.pvd-state:hover{background:var(--v3-rowh);color:var(--v3-ink)}.pvd-state.is-on:hover{background:var(--v3-l2)}}
 .pvd-sheet-t{margin:0 0 var(--s-2);padding:0 var(--s-4);font-size:15px;font-weight:600;color:var(--v3-ink)}
 
@@ -246,7 +246,7 @@
 .pvd-dock-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s-2);height:44px;padding:0 var(--s-4);font-size:var(--fs-body-s);font-weight:600;color:var(--v3-ink);background:var(--v3-raised);border:1px solid var(--v3-hair);border-radius:12px;cursor:pointer;
   transition:background-color var(--dur-1) var(--ease-standard)}
 @media (hover:hover){.pvd-dock-btn:hover{background:var(--v3-rowh)}}
-.pvd-dock-btn:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.pvd-dock-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .pvd-scenes-btn{flex:1;min-width:0;justify-content:flex-start}
 .pvd-scenes-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* The sheet opens upward, so the caret points up */

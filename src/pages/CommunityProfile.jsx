@@ -90,8 +90,11 @@ function Thumb({ row }) {
 
 const LIBRARY_OF = { palette: '/discover/palettes', gradient: '/discover/gradients' }
 
-/** The owner's approved work, with a way to see each piece where it now lives. */
-function LiveList({ rows }) {
+/**
+ * The owner's approved work, with a way to see each piece where it now lives and,
+ * when the hub is passed (the owner's own profile), a way to take it down.
+ */
+function LiveList({ rows, hub = null }) {
   return (
     <ul className="cm-sub-list cm-live-list" aria-label="Approved work">
       {rows.map((row) => (
@@ -101,9 +104,17 @@ function LiveList({ rows }) {
             <p className="cm-sub-name">{row.name}</p>
             <p className="cm-sub-meta">{[KIND_WORD[row.kind], dateOf(row.createdAt)].filter(Boolean).join(' · ')}</p>
           </div>
-          {LIBRARY_OF[row.kind]
-            ? <Link className="cm-btn cm-btn-text cm-live-go" to={LIBRARY_OF[row.kind]}>See in library</Link>
-            : <span className="cm-sub-status" data-status="Approved">Approved</span>}
+          <div className="cm-sub-actions">
+            {LIBRARY_OF[row.kind]
+              ? <Link className="cm-btn cm-btn-text cm-live-go" to={LIBRARY_OF[row.kind]}>See in library</Link>
+              : <span className="cm-sub-status" data-status="Approved">Approved</span>}
+            {hub && (
+              <button
+                type="button" className="cm-btn cm-btn-text" disabled={hub.busyIds.has(row.id)}
+                aria-label={`Remove ${row.name}`} onClick={() => hub.withdraw(row)}
+              >Remove</button>
+            )}
+          </div>
         </li>
       ))}
     </ul>
@@ -122,7 +133,7 @@ function Submissions({ hub }) {
       <h2 className="cm-h2" id="cm-subs-h" tabIndex={-1} ref={headRef}>Your submissions</h2>
       {rows.length === 0 ? (
         <div className="cm-empty cm-empty-left">
-          <h3 className="cm-empty-h">Nothing shared yet</h3>
+          <h3 className="cm-empty-h">{hub.live.length > 0 ? 'Nothing waiting for review' : 'Nothing shared yet'}</h3>
           <p className="cm-empty-t">Share a project from your dashboard, or upload an image that shaped your work.</p>
           <div className="cm-row">
             <button type="button" className="cm-btn cm-btn-ink" onClick={() => hub.ask('pick')}>Share your work</button>
@@ -191,7 +202,7 @@ function Profile({ hub, person, own, toast }) {
   const all = own ? [] : piecesBy(person.handle)
   const shown = all.filter((p) => (tab === 'inspiration') === isInspiration(p))
   const counts = { made: all.filter((p) => !isInspiration(p)).length, inspiration: all.filter(isInspiration).length }
-  // Everything sent from this account. Rows hold every status; an approved gradient is only in live.
+  // Everything sent from this account: rows hold what is waiting, live what is approved.
   const rowIds = new Set(hub.rows.map((r) => r.id))
   const n = hub.rows.length + hub.live.filter((r) => !rowIds.has(r.id)).length
 
@@ -211,7 +222,7 @@ function Profile({ hub, person, own, toast }) {
       <Tabs value={tab} onChange={setTab} counts={own ? null : counts} />
       <div role="tabpanel" id="cm-tabpanel" aria-labelledby={`cm-tab-${tab}`} className="cm-tabpanel">
         {own && tab === 'made' && hub.live.length > 0 ? (
-          <LiveList rows={hub.live} />
+          <LiveList rows={hub.live} hub={hub} />
         ) : shown.length > 0 ? (
           <div className="cm-swap" key={tab}>
             <PieceGrid pieces={shown} actions={actions} tileMenu={tileMenu} showMaker={false} label={tab === 'made' ? 'Made' : 'Inspiration'} />

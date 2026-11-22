@@ -209,6 +209,33 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await ctx.close()
 })
 
+// The fallback keeps to the category in view. Animated holds no built-in pack, so it is empty under the notice and
+// the notice does not promise built-in icons; Editable holds four, so it draws them.
+test('during an outage the fallback keeps to the chosen category', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, REFUSED)
+  await signIn(page, { plan: 'pro' })
+  await refuseIconify(page)
+  const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
+
+  await go(page, '/create/icons?category=animated')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  await expect(notice).toContainText('no built-in icons in this category')
+  // One message and one retry: the notice says it, the grid does not repeat it.
+  await expect(page.getByText('No built-in icons in this category right now.')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(1)
+  await expect(notice.getByRole('button', { name: 'Try again' })).toBeVisible()
+  expect(await page.locator('.ig .ic:not(.ig-skel)').count(), 'no static icon stands in for an animated one').toBe(0)
+
+  await go(page, '/create/icons?category=editable')
+  await expect(notice).toBeVisible({ timeout: 15000 })
+  await expect(notice).toContainText('showing built-in icons')
+  await expect.poll(() => page.locator('.ig .ic:not(.ig-skel)').count(), { timeout: 15000 }).toBeGreaterThan(20)
+  await ctx.close()
+})
+
 // NARROWING TO A PACK THE FALLBACK DOES NOT COVER USED TO SAY NOTHING AT ALL.
 //
 // When the catalogue is unreachable the surface falls back to its built-in set
@@ -589,20 +616,20 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
 // is a badge at all: the tray is the SAME WIDTH for a gated viewer as for a
 // Pro one, so the gate never reshapes the toolbar for the people it gates.
 //
-// MUTATION: drop `lock` from groupOptions in IconLibrary.jsx — the signed-out
+// MUTATION: drop `lock` from categoryOptions in IconLibrary.jsx — the signed-out
 // rung fails on "at least one chip carries the lock". Render the lock inline
 // (position:static) in library.css — the width comparison fails.
-// The group chips are read in whichever form the toolbar gives them. The
+// The category chips are read in whichever form the toolbar gives them. The
 // toolbar row never wraps and the icon
-// row also carries the weight segment, so at 1440 the group is its one-line
+// row also carries the style bar, so at 1440 the category is its one-line
 // trigger and the chips are read from the menu it opens. `form` says which.
 async function groupChips(page) {
   await expect(page.locator('.ig-toolbar')).toBeVisible({ timeout: 20000 })
   await page.evaluate(() => document.fonts.ready)
-  const trigger = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
+  const trigger = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Category' })
   const form = (await trigger.count()) ? 'menu' : 'tray'
   if (form === 'menu') await trigger.click()
-  const tray = page.getByRole('group', { name: 'Filter by icon group' }).first()
+  const tray = page.getByRole('group', { name: 'Icon category' }).first()
   await expect(tray).toBeVisible({ timeout: 20000 })
   return tray.evaluate((el, f) => ({
     form: f,
@@ -614,7 +641,7 @@ async function groupChips(page) {
   }), form)
 }
 
-test('the group chips mark a locked group before it is clicked, at no cost in width', async ({ browser }) => {
+test('the category chips mark a locked category before it is clicked, at no cost in width', async ({ browser }) => {
   test.skip(isLiveIconify(), LIVE)
   const read = async (plan) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
@@ -632,17 +659,23 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered: All icons, Coloured, Brand logos and Flags, with no Emoji chip').toBe(4)
+  expect(anon.chips.length, 'the category tray rendered: All, Coloured, Animated and Editable').toBe(4)
+  expect(anon.chips.map((c) => c.name.replace(/ · .*$/, '')), 'the four categories in order').toEqual(['All', 'Coloured', 'Animated', 'Editable'])
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
       .toBe(/ · (Pro|Log in)$/.test(c.name))
   }
-  expect(anon.chips.map((c) => c.name).filter((n) => /^My icons/i.test(n)), 'My icons is a toggle, not a group chip').toEqual([])
-  expect(locked(anon).map((c) => c.name), 'signed out, every group is locked and asks for Pro').toEqual(
-    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro'],
+  expect(anon.chips.map((c) => c.name).filter((n) => /^My icons/i.test(n)), 'My icons is a toggle, not a category chip').toEqual([])
+  expect(locked(anon).map((c) => c.name.replace(/ · .*$/, '')), 'signed out, Coloured and Animated are locked; All and Editable are not').toEqual(
+    ['Coloured', 'Animated'],
   )
-  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same three stay locked').toEqual(locked(anon).map((c) => c.name))
+  expect(locked(anon).map((c) => c.name), 'signed out, each locked category names the tier it needs').toEqual(
+    [expect.stringMatching(/^Coloured · (Pro|Log in)$/), expect.stringMatching(/^Animated · (Pro|Log in)$/)],
+  )
+  expect(locked(free).map((c) => c.name), 'a free account opens neither, so Coloured and Animated stay locked and ask for Pro').toEqual(
+    ['Coloured · Pro', 'Animated · Pro'],
+  )
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
   // The width half only means something for the TRAY: it is what the toolbar's

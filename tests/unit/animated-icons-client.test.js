@@ -77,7 +77,9 @@ test('the page never builds a direct Iconify request for an animated set', () =>
 
   // The /search endpoint is never given an animated prefix: a scoped search reads the
   // server-listed names, and an unscoped Pro search drops animated hits.
-  assert.match(PAGE, /if \(isAnimatedPack\(packFilter\)\) \{[\s\S]*?getCollectionNames\(packFilter\)[\s\S]*?return\s*\}/)
+  // A scoped animated search (and the Animated category's own, across its three sets) is answered
+  // from the listed names; the branch returns before the Iconify /search request is composed.
+  assert.match(PAGE, /const animatedPacks = isAnimatedPack\(packFilter\)\s*\?\s*\[packFilter\][\s\S]*?if \(animatedPacks\) \{[\s\S]*?getCollectionNames\(p\)[\s\S]*?\n {6}return\n {4}\}/)
   assert.match(PAGE, /\.filter\(ic => !isAnimatedPack\(ic\.pack\)\)/)
 
   // The collection cache for these sets never touches localStorage.

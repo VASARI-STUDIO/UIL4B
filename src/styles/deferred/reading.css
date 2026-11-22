@@ -155,7 +155,7 @@ html[data-reduced-motion="true"] [data-reveal]{animation:none!important;opacity:
 .nf .nf-more .trail-item::before{content:none}
 .nf .nf-more a{display:flex;align-items:center;width:100%;min-height:48px;font-size:16px;color:var(--accent-mid);font-weight:500;text-decoration:none}
 .nf .nf-more a:hover{text-decoration:underline;text-underline-offset:3px}
-.nf :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.nf :focus-visible{outline:2px solid var(--focus-ink);outline-offset:3px}
 html[data-reduced-motion="true"] .nf .nf-card::after{transition:none;transform:translateY(-50%)!important}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .nf .nf-card::after{transition:none;transform:translateY(-50%)!important}}
 /* The guide 404 sits inside the reading shell, whose footer is a lighter surface

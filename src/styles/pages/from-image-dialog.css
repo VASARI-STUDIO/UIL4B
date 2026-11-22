@@ -11,14 +11,14 @@
   width:min(720px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;
   --stage-h:56dvh;
 }
-.plb-imgcard[data-drop="true"]{outline:2px dashed var(--accent);outline-offset:-8px}
+.plb-imgcard[data-drop="true"]{outline:2px dashed var(--focus-ink);outline-offset:-8px}
 .plb-imgbody{display:contents}
 
 .plb-imghead{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:var(--s-3);flex:none;min-height:56px;padding:0 var(--s-3) 0 var(--s-5);background:var(--card);border-bottom:1px solid var(--border)}
 .plb-imgtitle{margin:0;margin-right:auto;font-size:var(--fs-h5);font-weight:600;color:var(--t0)}
 .plb-imgx{display:flex;align-items:center;justify-content:center;width:44px;height:44px;color:var(--t1);background:none;border:0;border-radius:50%;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .plb-imgx:hover{color:var(--t0);background:var(--bg-2)}
-.plb-imgx:focus-visible,.plb-imglink:focus-visible,.plb-imgstep:focus-visible,.plb-imgmoodbtn:focus-visible,.plb-imgsample:focus-visible img{outline:2px solid var(--accent);outline-offset:2px}
+.plb-imgx:focus-visible,.plb-imglink:focus-visible,.plb-imgstep:focus-visible,.plb-imgmoodbtn:focus-visible,.plb-imgsample:focus-visible img{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 .plb-imgmain,.plb-imgrail{display:flex;flex-direction:column;gap:var(--s-3);min-width:0;padding-inline:var(--s-5)}
 .plb-imgmain{padding-top:var(--s-5);padding-bottom:var(--s-3)}
@@ -40,7 +40,7 @@
 .plb-imgpoint--on .plb-imgdot{border-color:var(--accent)}
 .plb-imgpoint--link .plb-imgdot{transform:scale(1.15);box-shadow:0 0 0 2px var(--ink),0 1px 3px oklch(0 0 0/.3)}
 .plb-imgpoint:focus-visible{outline:none}
-.plb-imgpoint:focus-visible .plb-imgdot{outline:2px solid var(--accent);outline-offset:3px}
+.plb-imgpoint:focus-visible .plb-imgdot{outline:2px solid var(--focus-ink);outline-offset:3px}
 
 /* The fade-in plays once per extraction (data-intro), never on a mood or count change */
 @keyframes plb-img-in{from{opacity:0}to{opacity:1}}
@@ -61,7 +61,7 @@ html[data-reduced-motion="true"] .plb-imgstage[data-intro="true"] .plb-imgpoint,
 .plb-imgacts{display:flex;flex-wrap:wrap;gap:var(--s-1) var(--s-4)}
 .plb-imglink{min-height:36px;padding:0 var(--s-1);font-size:var(--fs-body-s);font-weight:500;color:var(--t1);background:none;border:0;border-radius:var(--btn-radius);cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .plb-imglink:hover{color:var(--t0);text-decoration:underline}
-.plb-imgerr:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plb-imgerr:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .plb-imgerr{margin:0;padding:var(--s-2) var(--s-3);font-size:var(--fs-caption);font-weight:600;line-height:1.4;color:var(--err-strong);background:color-mix(in srgb,var(--err) 12%,transparent);border-radius:var(--radius-s)}
 
 /* Empty: drop zone and samples */
@@ -106,7 +106,7 @@ html[data-reduced-motion="true"] .plb-imgstage[data-intro="true"] .plb-imgpoint,
 .plb-imgmood-in{position:absolute;opacity:0;pointer-events:none}
 .plb-imgmood-dot{flex:none;box-sizing:border-box;width:16px;height:16px;border:1.5px solid var(--bh);border-radius:50%}
 .plb-imgmood[data-on="true"] .plb-imgmood-dot{border:5px solid var(--accent)}
-.plb-imgmood-in:focus-visible+.plb-imgmood-dot{outline:2px solid var(--accent);outline-offset:2px}
+.plb-imgmood-in:focus-visible+.plb-imgmood-dot{outline:2px solid var(--focus-ink);outline-offset:2px}
 .plb-imgmood-t{display:flex;flex-direction:column;flex:1;min-width:0;padding-block:var(--s-1)}
 .plb-imgmood-name{font-size:var(--fs-body-s);color:var(--t0)}
 .plb-imgmood[data-on="true"] .plb-imgmood-name{font-weight:600}
@@ -138,7 +138,7 @@ html[data-reduced-motion="true"] .plb-imgstage[data-intro="true"] .plb-imgpoint,
 .plb-imgsheet-h{margin:0 0 var(--s-2);font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
 .plb-imgopt{display:flex;align-items:center;gap:var(--s-3);min-height:56px;padding:0 var(--s-2);border-radius:var(--radius-s);cursor:pointer}
 .plb-imgopt[aria-selected="true"]{background:var(--bg-2)}
-.plb-imgopt:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.plb-imgopt:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .plb-imgopt-t{display:flex;flex-direction:column;flex:1;min-width:0}
 .plb-imgopt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
 .plb-imgopt-note{font-size:var(--fs-caption);color:var(--t2)}

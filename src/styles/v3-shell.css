@@ -4,8 +4,8 @@
    global.css; every rule here is scoped to a selector this file owns, and
    matches the specificity of the global rule it replaces.
 
-   Rules of the surface: no blur, no glow, no gradient (the one exception is
-   the chroma ring on Upgrade), no blue. Focus is a 2px ink outline. Radii are
+   Rules of the surface: no blur, no glow, no gradient (the exceptions are
+   the chroma ring on Upgrade and the footer and gallery-slab horizon light), no blue. Focus is a 2px ink outline. Radii are
    16 / 12 / 8 / 999. Controls are 36px on desktop and 44px on the phone. */
 
 /* ── Roles ─────────────────────────────────────────────────────────────── */
@@ -39,6 +39,35 @@
   --v3-outl:oklch(1 0 0 / .1);
   --v3-ring:rgba(239,238,234,.14);--v3-seg-on:rgba(239,238,234,.12);
   --v3-h-colour:#EBC84B;--v3-h-type:#35C7E6;--v3-h-icons:#3DD68C;--v3-h-imagery:#F0873A;--v3-h-ai:#EC6FA8;
+}
+
+/* ── Focus and selected: one style, in ink (D31) ───────────────────────── */
+:root,[data-theme]{
+  --focus-ink:var(--v3-ink);
+  --focus-halo:var(--v3-on-ink);          /* the inner tone of the two-tone ring */
+  --focus-w:2px;
+  --focus-offset:2px;
+  --sel-tr:color var(--dur-1) var(--v3-ease),background-color var(--dur-1) var(--v3-ease),border-color var(--dur-1) var(--v3-ease); /* one transition list for selectable controls */
+  --focus-ring-media:0 0 0 var(--focus-offset) var(--focus-halo); /* fills the offset gap on photo or colour grounds */
+  --sel-ink:var(--v3-ink);
+  --sel-edge:var(--v3-ink);                /* 1px edge, 2px underline, swatch ring */
+  --sel-wash:var(--v3-rowc);
+  --sel-solid:var(--v3-ink);
+  --sel-on-solid:var(--v3-on-ink);
+  --sel-line:inset 0 -2px 0 var(--sel-edge);                      /* the one tab form: a 2px underline, no layout shift */
+  --sel-ring:0 0 0 2px var(--sel-gap,var(--v3-ground)),0 0 0 4px var(--sel-edge); /* the swatch form: a two-tone ring */
+  --sel-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 8.5 3.2 3.2L13 4.8' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E");  /* the row form: a 16px check, painted through a mask */
+  --control-accent:var(--v3-ink);          /* accent-color: checkbox, radio, progress */
+  --range-track:var(--v3-rowhc);
+  --range-thumb:var(--v3-ink);
+  --range-thumb-edge:var(--v3-raised);
+}
+
+@media (forced-colors:active){
+  :focus-visible{outline-color:Highlight;box-shadow:none}
+  /* Selected marks itself with an inset Highlight outline; :where() and :not(:focus-visible) keep it from outranking the focus ring. */
+  :where(button,[role=tab],[role=radio],[role=option],[role=menuitemradio]):where([aria-pressed=true],[aria-checked=true],[aria-selected=true],.is-on,.is-active,.active):not(:focus-visible){outline:2px solid Highlight;outline-offset:-2px}
+  :is([class*=menu-row][aria-pressed=true],.lbry-filtermenu .lbry-filter[data-active=true])::after{forced-color-adjust:none;background:CanvasText}
 }
 @property --mi-a{syntax:'<angle>';inherits:false;initial-value:0deg}
 
@@ -137,7 +166,7 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 .pnav-pop-row-label{font-size:13px;font-weight:500;color:var(--v3-t56)}
 :is(.pnav-pop,.pnav-sheet) .theme-seg{height:36px;padding:2px;border:0;border-radius:999px;background:var(--v3-ground);box-shadow:none}
 :is(.pnav-pop,.pnav-sheet) .theme-seg button,:is(.pnav-pop,.pnav-sheet) .theme-seg [role="radio"]{border-radius:999px;color:var(--v3-sec);font-size:13px;font-weight:500}
-:is(.pnav-pop,.pnav-sheet) .theme-seg :is([aria-checked="true"],[aria-pressed="true"],.is-on,.on){background:var(--v3-raised);color:var(--v3-ink);box-shadow:inset 0 0 0 1px var(--v3-ring)}
+:is(.pnav-pop,.pnav-sheet) .theme-seg :is([aria-checked="true"],[aria-pressed="true"],.is-on,.on){background:var(--sel-solid);color:var(--sel-on-solid);box-shadow:none}
 @media(hover:hover){.pnav-pop-item[aria-disabled="true"]:hover{background:none}}
 
 /* ── The mega menus ────────────────────────────────────────────────────── */

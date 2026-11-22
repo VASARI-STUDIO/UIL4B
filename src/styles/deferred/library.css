@@ -32,7 +32,7 @@
    The dot colours are the --ok / --warn values from the dark palette, stated
    literally for the same reason. */
 .lib-switch{display:grid;grid-template-columns:1fr;gap:4px;width:100%;padding:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-l)}
-.lib-switch-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.lib-switch-btn:focus-visible{outline:2px solid var(--focus-ink);box-shadow:var(--focus-ring-media);outline-offset:2px}
 .lib-switch-btn>svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .lib-net{display:inline-flex;align-items:center;gap:7px}
 .lib-net i{width:7px;height:7px;border-radius:50%;background:#facc15;flex:none}
@@ -207,8 +207,9 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-modal-views{display:flex;gap:3px;width:max-content;max-width:calc(100% - 56px);margin:14px 28px 0;padding:3px;flex-shrink:0;background:color-mix(in srgb,var(--v3-ink) 4%,transparent);border:1px solid var(--v3-hair);border-radius:var(--radius-pill)}
 .pl-modal-view{appearance:none;background:none;border:none;border-radius:var(--radius-pill);padding:0 16px;min-height:32px;font:inherit;font-size:13px;font-weight:600;line-height:1;white-space:nowrap;color:var(--v3-sec);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pl-modal-view:hover{color:var(--v3-ink)}
-.pl-modal-view.is-on{color:var(--v3-ink);background:color-mix(in srgb,var(--v3-ink) 9%,transparent)}
+.pl-modal-view.is-on{color:var(--sel-on-solid);background:var(--sel-solid);box-shadow:none}
 .pl-modal-view:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.pl-modal-view.is-on:focus-visible{outline-color:var(--sel-on-solid)}
 @media(pointer:coarse){.pl-modal-view{min-height:44px}}
 
 /* ── The live output ──────────────────────────────────────────────────────
@@ -297,7 +298,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-close:hover{border-color:var(--v3-hl20);background:var(--v3-rowh);color:var(--v3-ink)}
 
 /* Recents rail */
-.ig-rail{margin:8px 0 28px}
+.ig-rail{margin:0 0 20px}
 .ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--v3-sec);margin-bottom:10px}
 .ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--v3-t56);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .ig-rail-clear:hover{color:var(--v3-ink);border-color:var(--v3-hair);background:var(--v3-raised)}
@@ -521,7 +522,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
    the shared field metrics instead, which is what consistency has to mean for a
    control this size. */
 .lbry-select{flex:0 0 auto;min-width:0;max-width:220px;height:38px;padding:0 10px;border:1px solid var(--v3-hair);border-radius:var(--radius);background:var(--v3-l2);color:color-mix(in srgb,var(--v3-ink) 86%,transparent);font-family:var(--font);font-size:11px;font-weight:650;cursor:pointer}
-.lbry-select:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.lbry-select:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 @media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
 
 /* `.pl-sort` is retired with `.pl-toolbar`: the Prompt Library's sort is
@@ -595,7 +596,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .dgh-hero p{
   max-width:min(58ch,100%);margin:10px 0 0;
   font-size:clamp(14px,1.2vw,15.5px);line-height:1.5;
-  color:rgba(247,247,244,.68);
+  color:rgba(247,247,244,.8);
 }
 .lib-surface .dgh-action{margin-top:16px}
 /* The 2-line clamp below 641 survives untouched: it is `.dgh-copy>p` in
@@ -637,7 +638,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
   background:rgba(247,247,244,.1);border-color:rgba(247,247,244,.24);color:#F7F7F4;
 }
 .lib-surface .lib-switch-btn.is-active{
-  background:rgba(247,247,244,.14);border-color:rgba(247,247,244,.34);color:#F7F7F4;
+  background:rgba(247,247,244,.14);border-color:#F7F7F4;color:#F7F7F4;
 }
 /* The sliding selected tab. IconEmojiLibrary measures the selected tab
    (useSlideIndicator) and sets --si-x/-y/-w/-h/-r on the tablist; its ::before
@@ -649,7 +650,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lib-switch[data-slide]::before{
   content:"";position:absolute;left:0;top:0;z-index:-1;box-sizing:border-box;
   width:var(--si-w);height:var(--si-h);
-  border:1px solid rgba(247,247,244,.34);border-radius:var(--si-r,var(--radius-pill));
+  border:1px solid #F7F7F4;border-radius:var(--si-r,var(--radius-pill));
   background:rgba(247,247,244,.14);
   transform:translate(var(--si-x),var(--si-y));pointer-events:none;
 }
@@ -772,25 +773,11 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
   min-height:38px;background:transparent;
 }
 .lib-surface .lbry-filtermenu .lbry-filter[data-active="true"]{
-  color:var(--v3-ink);background:var(--v3-l2);border-color:var(--v3-hair);
+  color:var(--sel-ink);background:var(--sel-wash);border-color:transparent;
 }
-/* AND THE DARK ANSWER TRAVELS WITH IT. In dark `--bg-2` and `--card` are the
-   same hex, and `--card` is the menu's own ground, so the rule above paints the
-   chosen row in exactly the colour beneath it: rgb(25,26,29) on rgb(25,26,29),
-   a selection that differs from an unselected row by text colour alone.
-   global.css already carries the dark value
-   (`[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]`,
-   `--bg-3`) — but that is (0,4,0), EQUAL to the rule above, and this sheet
-   loads after it, so the restyle silently took the fix back and
-   65-new-surfaces-breakpoints:300 went red on the identical two numbers.
-   Restating it at (0,5,0) HERE, rather than raising the global rule, is what
-   stops load order deciding it a third time: the sheet that introduces a
-   theme-blind fill is the sheet that owes the theme its exception. The tray's
-   sliding indicator needs none — it is painted `--t0`, which is ink in both
-   themes. */
-[data-theme="dark"] .lib-surface .lbry-filtermenu .lbry-filter[data-active="true"]{
-  background:var(--v3-l2);
-}
+/* The selected row is --sel-wash (theme-aware) plus a 16px check, so it needs no dark restatement. */
+.lbry-filtermenu .lbry-filter[data-active="true"]::after{content:"";flex:0 0 16px;height:16px;background:var(--sel-ink);-webkit-mask:var(--sel-check) center/contain no-repeat;mask:var(--sel-check) center/contain no-repeat}
+.lbry-filtermenu .lbry-filter[data-active="true"]:not(:has(.lbry-filter-count))::after{margin-left:auto}
 /* RESTATED, not inherited: the base floors are (0,1,0) and everything above is
    (0,3,0), so without this the touch target would have gone from 44 to 40. */
 @media(pointer:coarse){
@@ -1496,9 +1483,9 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 }
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter:hover{background:transparent;color:var(--v3-ink)}
 .lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter[data-active="true"]{
-  background:color-mix(in srgb,var(--v3-ink) 9%,transparent);color:var(--v3-ink);border:0;
+  background:var(--sel-solid);color:var(--sel-on-solid);border:0;
 }
-.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter-ind{background:color-mix(in srgb,var(--v3-ink) 9%,transparent)}
+.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter-ind{background:var(--sel-solid)}
 @media(pointer:coarse){.lib-surface :is(.pgl-toolbar,.grg-toolbar) .lbry-filters .lbry-filter{min-height:44px}}
 /* The Mood pill (line 237): a 5% ground over an 8% hairline, the key dim at
    12.5, the value in ink at 13.5/540. */
@@ -1556,3 +1543,7 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 
 /* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */
 [data-theme="dark"] :is(.lib-surface,.fbd-overlay) .lbry-search{background:var(--bg-3)}
+
+/* D33: the category tray slides its indicator; reduced motion stops it (both forms of the house guard). */
+html[data-reduced-motion="true"] .lbry-filter-ind,html[data-reduced-motion="true"] .lbry-filters .lbry-filter{transition:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .lbry-filter-ind,html:not([data-reduced-motion="false"]) .lbry-filters .lbry-filter{transition:none}}
