@@ -206,3 +206,57 @@ for (const THEME of IDS) {
     }
   })
 }
+
+// 11. THE USAGE CARD READS: its title and body take an ink that reaches 4.5 on the card fill, even when the raised colour is mid-grey.
+//     Break: set the card's `color:` back to `L.text` in themes/24-standards/guide-pages-c.js.
+// 12. NO BORDER TOKEN, NO DROPPED PAGE: a brand without a border-control token still draws the usage page (link not underlined, card with no edge).
+//     Break: dereference `lk.border.token` or `cd.edge.token` without the guard in guide-pages-c.js.
+// 13. A ONE-COLOUR OR ALL-THE-SAME PALETTE draws without NaN or Infinity; each page is drawn or named in a "left out" warning.
+const hexLum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] }
+const hexRatio = (a, b) => { const [x, y] = [hexLum(a), hexLum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+const guideHtml = async (colors, projectName = 'Kerbside') => {
+  const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+  const warns = []
+  const warn = console.warn
+  console.warn = (...a) => { warns.push(a.join(' ')) }
+  try {
+    const { html } = await renderThemeExport({ theme: '24-standards', row: 'guide', format: 'pdf', design, projectName })
+    const { md } = await renderThemeExport({ theme: '24-standards', row: 'guide', format: 'md', design, projectName })
+    return { html, md, left: warns.filter((w) => /left out/.test(w)) }
+  } finally { console.warn = warn }
+}
+const usageCard = (html) => { const m = html.match(/background:(#[0-9a-fA-F]{6});border:[^"]*"[^>]*><div style="[^"]*color:(#[0-9a-fA-F]{6})/); return m && { fill: m[1], ink: m[2] } }
+
+test('24-standards: the usage card text reaches 4.5 on a mid-grey raised colour', async () => {
+  for (const colors of [['#8a8a8a', '#111111', '#f5f5f5'], ['#1a1a1a', '#8a8a8a', '#ffffff', '#8a8a8a'], ['#767676', '#222222', '#eeeeee'], ['#949494', '#101010', '#fafafa']]) {
+    const { html, left } = await guideHtml(colors)
+    assert.match(html, /data-page="usage"/, `usage page drawn for ${colors}`)
+    assert.deepEqual(left, [])
+    const card = usageCard(html)
+    assert.ok(card, `card found for ${colors}`)
+    assert.ok(hexRatio(card.ink, card.fill) >= 4.5, `card ${card.ink} on ${card.fill} is ${hexRatio(card.ink, card.fill).toFixed(2)}`)
+  }
+})
+
+test('24-standards: a brand with no border-control token still draws the usage page', async () => {
+  const original = standardsGuide.usage
+  standardsGuide.usage = (ctx) => { ctx.borders = ctx.borders.filter((b) => b.token !== 'border-control'); return original(ctx) }
+  try {
+    const { html, md, left } = await guideHtml(['#0A7562', '#033C31', '#D9E6E1'])
+    assert.match(html, /data-page="usage"/)
+    assert.deepEqual(left, [])
+    assert.match(md, /not underlined/)
+    assert.match(md, /no edge/)
+  } finally { standardsGuide.usage = original }
+})
+
+test('24-standards: a one-colour and an all-the-same palette hold no NaN or Infinity', async () => {
+  for (const colors of [['#F96B76'], ['#336699', '#336699', '#336699'], ['#ffffff'], ['#000000', '#000000']]) {
+    const { html, md, left } = await guideHtml(colors)
+    assert.doesNotMatch(html, /NaN|Infinity/, `html for ${colors}`)
+    assert.doesNotMatch(md, /NaN|Infinity/, `md for ${colors}`)
+    for (const id of PAGES) {
+      assert.ok(drawnPages(html).includes(id) || left.some((w) => w.includes(id)), `${id} drawn or named for ${colors}`)
+    }
+  }
+})

@@ -1,5 +1,5 @@
 // Theme 24, Standards: the style guide's contrast, tokens and usage pages. Hairline registers, bars measured against a scale of 21, spacing quoted in x.
-import { contrastFacts, tokenGroups, usageFacts, GRADE_NOTE } from '../../engine/styleguide.js';
+import { contrastFacts, colourFacts, tokenGroups, usageFacts, GRADE_NOTE } from '../../engine/styleguide.js';
 import { r1, sum, hook } from '../../engine/guide-layout.js';
 import { A } from './helpers.js';
 import { copyOf } from './guide-copy.js';
@@ -127,13 +127,24 @@ export function usagePage(ctx) {
     return sec(K, X0, y, CW, catNo(ctx, 'usage', 3), 'Link') + specReg(X0, by, lspec)
       + obj(K, PLX, by, PLW, lH, R.ground, at(24, Math.floor((lH - lk.type.line) / 2), A(lk.text), { style: `${font(lk.type)}color:${lkCol.hex};text-decoration:underline;text-decoration-thickness:${lk.border ? lk.border.px : 1.5}px;text-underline-offset:3px;white-space:nowrap` }), { frame: true });
   } };
+  // the card's ink: its colour's own ink when that reads at 4.5, else the text colour, else the best of the ink, black and white
+  const cardInk = (() => {
+    let own = null;
+    try { const cf = colourFacts(ctx).find((c) => c.hex.toLowerCase() === String(cd.fill).toLowerCase()); own = cf && cf.ink ? cf.ink.hex : null; } catch { own = null; }
+    const cands = [own, L.text, R.ink, '#000000', '#ffffff'].filter(Boolean);
+    return cands.find((h) => ctx.ratio(h, cd.fill) >= 4.5) || cands.reduce((a, b) => (ctx.ratio(b, cd.fill) > ctx.ratio(a, cd.fill) ? b : a));
+  })();
+  const cardInkName = lkHexName(cardInk) || cardInk.replace('#', '').toUpperCase();
+  const edgeText = cd.edge ? `${cd.edge.token}, ${cd.edge.px} px ${cd.edgeName}` : 'no edge';
+  const cardLine = `${cd.fillName} fill, \`${cd.radius.token}\` ${cd.radius.px} px, ${cd.edge ? `\`${cd.edge.token}\` ${cd.edge.px} px ${cd.edgeName} edge` : 'no edge'}, padding \`${cd.pad.token}\`, ${cd.title.name} ${cd.title.size}/${cd.title.line} px for the title and ${cd.body.name} ${cd.body.size}/${cd.body.line} px for the text, both in ${cardInkName}`;
   hook(ctx, { usage: {
     button: `${bt.fillName} fill, ${bt.labelName} label, \`${bt.radius.token}\` ${bt.radius.px} px, ${bt.type.name} ${bt.type.size}/${bt.type.line} px at ${bt.type.weight}, \`${bt.padY.token}\` over and \`${bt.padX.token}\` across`,
-    link: `${lk.type.name} ${lk.type.size}/${lk.type.line} px at ${lk.type.weight}, ${lkCol.name}, underlined at \`${lk.border.token}\` ${lk.border.px} px`,
+    link: `${lk.type.name} ${lk.type.size}/${lk.type.line} px at ${lk.type.weight}, ${lkCol.name}, ${lk.border ? `underlined at \`${lk.border.token}\` ${lk.border.px} px` : 'not underlined'}`,
+    card: cardLine,
   } });
   // the card, drawn as its spec says
-  const cspec = [['Fill', cd.fillName], ['Edge', `${cd.edge.token}, ${cd.edge.px} px ${cd.edgeName}`, 1], ['Radius', `${cd.radius.token}, ${cd.radius.px} px`, 1], ['Padding', cd.pad.token, 1], ['Title', `${cd.title.name}, ${cd.title.size} / ${cd.title.line}`, 1], ['Text', `${cd.body.name}, ${cd.body.size} / ${cd.body.line}`, 1]];
-  const pad = cd.pad.px, edgePx = cd.edge.px, cardW = Math.min(PLW - 48, 300), tx = cardW - 2 * pad - 2 * edgePx;
+  const cspec = [['Fill', cd.fillName], ['Edge', edgeText, 1], ['Radius', `${cd.radius.token}, ${cd.radius.px} px`, 1], ['Padding', cd.pad.token, 1], ['Title', `${cd.title.name}, ${cd.title.size} / ${cd.title.line}`, 1], ['Text', `${cd.body.name}, ${cd.body.size} / ${cd.body.line}, ${cardInkName}`, 1]];
+  const pad = cd.pad.px, edgePx = cd.edge ? cd.edge.px : 0, cardW = Math.min(PLW - 48, 300), tx = cardW - 2 * pad - 2 * edgePx;
   const tSt = cd.title.face === 'display' ? K.st : 1, tStem = stemOf(ctx, cd.title.face, cd.title.weight), bStem = stemOf(ctx, cd.body.face, cd.body.weight);
   // a brand's own paragraph can run to several sentences: the card shows the first that fits four lines, else the words that do, ending in an ellipsis
   const fit4 = (s) => nLines(bStem, s, cd.body.size, tx) <= 4, words = String(cd.bodyText).split(/\s+/);
@@ -149,7 +160,7 @@ export function usagePage(ctx) {
     const by = y + SUBH + 8, hh = cH + extra;
     return sec(K, X0, y, CW, catNo(ctx, 'usage', 4), 'Card') + specReg(X0, by, cspec)
       + obj(K, PLX, by, PLW, hh, R.ground, rect(Math.floor((PLW - cardW) / 2), Math.floor((hh - cardH) / 2), cardW, cardH, `background:${cd.fill};border:${edgePx}px solid ${cd.edgeColour};padding:${pad}px;border-radius:${cd.radius.px}px`,
-        `<div style="${font(cd.title)}color:${L.text}">${A(cd.titleText)}</div><div style="margin-top:8px;${font(cd.body)}color:${L.text}">${A(bodyText)}</div>`), { frame: true });
+        `<div style="${font(cd.title)}color:${cardInk}">${A(cd.titleText)}</div><div style="margin-top:8px;${font(cd.body)}color:${cardInk}">${A(bodyText)}</div>`), { frame: true });
   } };
   return shell(ctx, 'usage', t.html + flow('usage', t.top, [buttonSec, statesSec, linkSec, cardSec], { gap: 20, maxGap: 40 }));
 }
