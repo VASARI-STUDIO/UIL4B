@@ -40,7 +40,8 @@ export const THEME_ROW_FORMATS = Object.freeze({
 
 // Rows a theme has only when it opts in: by a rows list that names them, or by `extraRows` on a theme with no rows list (which keeps every
 // other row). The style guide is drawn by a theme's own lane (lane-guide.js), so a theme without one must not be offered it. Gating follows
-// the guidelines: free where they are free. Swiss Field (27) stays on a rows list because it is guidelines-only (no UI kit, no book).
+// the guidelines: free where they are free. Standards Plate (24) opts in with extraRows and keeps every other row; Swiss Field (27) stays
+// on a rows list because it is guidelines-only (no UI kit, no book).
 const OPT_IN_ROWS = Object.freeze(['guide'])
 
 // The themes whose UI kit a free account can download. Interim: Standards, until the Free pair (Label and Swiss Field) has UI kits
