@@ -66,6 +66,15 @@ export function cssK(ctx) {
 .k-ghex{font-size:13px;line-height:18px}
 .k-glands{font-family:var(--body);font-size:15px;line-height:22px;max-width:470px;margin-top:4px}
 .k-gc--tall .k-glands{font-size:17px;line-height:26px;margin-top:14px}
+.k-gcs--many .k-gc{flex-basis:84px}
+.k-gcs--many .k-gc--tall{flex:0 1 150px}
+.k-gcs--many .k-gc:last-child{padding-bottom:26px}
+.k-gcs--many .k-gface{padding-top:10px}
+.k-gcs--many .k-gname b{font-size:26px}
+.k-gcs--many .k-glands{font-size:13px;line-height:18px;margin-top:2px}
+.k-gcs--many .k-gc--tall .k-gface{padding-top:20px}
+.k-gcs--many .k-gc--tall .k-gname b{font-size:76px}
+.k-gcs--many .k-gc--tall .k-glands{font-size:15px;line-height:22px;margin-top:8px}
 .k-lip{position:absolute;left:0;right:0;bottom:0;height:22px;z-index:40;background:var(--ground);border-top:1.5px solid var(--rod)}
 
 /* colour values: per colour, the card lifted out beside its drawer of ten edges */

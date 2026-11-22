@@ -70,7 +70,7 @@ ${hole(24, 'k-hole--card')}
 <div class="k-gface"><p class="k-gname"><b class="k-disp">${A(c.name)}</b><span class="k-mono k-ghex">${A(c.hex)}</span></p><p class="k-glands">${A(c.lands)}</p></div></li>`;
     }).join('');
     const inner = `<p class="k-lead">${cs.length} colours, each named for where it lands. ${A(action.name)} is the colour people know ${A(ctx.brand.name)} by, and ${A(ground.name)} is the page. Each tab is as wide as the colour's share of a typical page.</p>
-<div class="k-drawer k-drawer--pal"><ol class="k-gcs">${cards}</ol><span class="k-lip"></span></div>`;
+<div class="k-drawer k-drawer--pal"><ol class="k-gcs${cs.length > 6 ? ' k-gcs--many' : ''}">${cards}</ol><span class="k-lip"></span></div>`;
     return sheet(ctx, 'palette', inner, 'k-pg-pal');
   },
 

@@ -122,9 +122,11 @@ function colour(ctx) {
   const steps = Object.keys(ctx.colours[0].ramp);
   const nC = ctx.colours.length, nT = ctx.tones.length;
   // the tint table: ten strips with their step numbers; the step that is the colour itself is marked by a bar
+  // a step is labelled when it is an end of the ramp or the colour itself; an end next to the colour's own step gives way to it
+  const shown = (c, i) => { const b = steps.indexOf(String(c.rampBase)), n = steps.length - 1; return i === b || (i === 0 && b > 1) || (i === n && b < n - 1); };
   const tint = (c) => (c.rampBase === 50
     ? `<p class="bk-tint bk-tint--none bk-cap">${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</p>`
-    : `<div class="bk-tint" role="img" aria-label="${A(c.name)} tint ramp, steps ${steps[0]} to ${steps.at(-1)}. Step ${c.rampBase} is the colour itself.">${steps.map((k) => `<span class="bk-t${+k === c.rampBase ? ' is-base' : ''}"><i class="${ctx.ratio(c.ramp[k], L.surface) < 1.25 ? 'is-hair' : ''}" style="background:${c.ramp[k]}"></i><em class="num">${k}</em></span>`).join('')}</div>`);
+    : `<div class="bk-tint" role="img" aria-label="${A(c.name)} tint ramp, steps ${steps[0]} to ${steps.at(-1)}. Step ${c.rampBase} is the colour itself.">${steps.map((k, i) => `<span class="bk-t${+k === c.rampBase ? ' is-base' : ''}${shown(c, i) ? ' is-k' : ''}"><i class="${ctx.ratio(c.ramp[k], L.surface) < 1.25 ? 'is-hair' : ''}" style="background:${c.ramp[k]}"></i><em class="num">${k}</em></span>`).join('')}</div>`);
   const spec = (c, num) => {
     const rgb = rgbOf(ctx, c.hex), ok = c.oklch || ctx.C.oklchString(c.hex);
     return `<div class="bk-spec"><p class="bk-cnum num">${num}</p><p class="bk-cname">${A(c.name)}</p><p class="bk-clands">${A(c.lands)}</p><dl class="bk-vals"><div><dt>HEX</dt><dd>${c.hex}</dd></div><div><dt>RGB</dt><dd>${rgb}</dd></div><div><dt>OKLCH</dt><dd>${ok}</dd></div></dl><div class="bk-copies"><span class="bk-cap">Copy</span>${copyBtn('HEX', c.hex, `${c.name} HEX`, '', 'Copy HEX')}${copyBtn('RGB', rgb, `${c.name} RGB`, '', 'Copy RGB')}${copyBtn('OKLCH', ok, `${c.name} OKLCH`, '', 'Copy OKLCH')}</div></div>`;

@@ -198,6 +198,10 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk-t i{display:block;height:28px}
 .bk-t em{font-style:normal;font-size:11px;line-height:1;text-align:center;color:var(--bk-quiet);padding-bottom:3px;border-bottom:2px solid transparent}
 .bk-t.is-base em{color:var(--bk-ink);border-bottom-color:var(--bk-ink)}
+.bk-t em{visibility:hidden;white-space:nowrap}
+.bk-t.is-k em{visibility:visible}
+.bk-t:first-child em{text-align:left}
+.bk-t:last-child em{text-align:right}
 .bk-spec{display:flex;flex-direction:column;border-top:1px solid var(--bk-ink);padding-top:8px}
 .bk-cnum{font-size:12px;color:var(--bk-quiet)}
 .bk-cname{font-size:17px;font-weight:600;line-height:1.3}
