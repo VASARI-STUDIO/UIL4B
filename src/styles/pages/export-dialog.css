@@ -225,8 +225,8 @@
 .xd-prem-head .xd-step-l{margin:0}
 .xd-prem-grid{grid-template-columns:repeat(var(--xd-prem-n,4),minmax(0,166px));justify-content:start}
 .xd[data-layout="strip"] .xd-prem-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-/* Rail: the stage gives up height so the strip is in view without scrolling (520 = everything else in the column; judgement). */
-.xd[data-layout="rail"]:has(.xd-prem){--xd-stage:clamp(220px,calc(min(820px,100dvh - 64px) - 520px),300px)}
+/* Rail: the stage gives up height so the strip is in view without scrolling (548 = everything else in the column plus a 28px gap above the dock). */
+.xd[data-layout="rail"]:has(.xd-prem){--xd-stage:clamp(160px,calc(min(820px,100dvh - 64px) - 548px),300px)}
 .xd-tpl-pro{position:absolute;top:var(--s-3);right:var(--s-3);padding:2px var(--s-2);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill)}
 
 /* The dock: View templates on the left, the price line between, the way out and Export on the right. The buttons sit in the dock's own flex row (the group is transparent), ordered by class. */
