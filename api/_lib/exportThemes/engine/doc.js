@@ -2,6 +2,7 @@
 import { esc } from './brand.js';
 import { fontFaceCss } from './tokens.js';
 import { finishText } from './placeholders.js';
+import { screenCss } from './guide-layout.js';
 
 // the theme's own faces, embedded beside the brand's: meta.chrome (running heads, folios) and any extra meta.fonts ({ family, weight, stem, q, stretch?, style? });
 // style 'italic' declares a real italic face (stem like "Literata-i400", query "Literata:ital,wght@1,400")
@@ -39,19 +40,20 @@ ${stackBg ? `@media screen{body.stack{background:${stackBg};padding:24px 0}body.
 }
 
 // One HTML document holding one or more pages, finished for the edition (slot placeholders swapped in).
+// `screen` is a phone edition (guide-layout.js screenGuide): the site documents carry it beside the pages, shown below 842 px, and take a device-width viewport; the print document never has one.
 // fontUrl(face) is where a face loads from: the assets/fonts folder beside the document, or a data URL for a document that stands alone.
-export function pageDoc(ctx, theme, { title, pages, size, stack = false, fontUrl = (f) => `assets/fonts/${f.stem}.woff2` }) {
+export function pageDoc(ctx, theme, { title, pages, size, stack = false, screen = '', fontUrl = (f) => `assets/fonts/${f.stem}.woff2` }) {
   const faces = fontFaceCss(ctx, fontUrl, chromeFaces(theme));
   return finishText(`<!doctype html>
 <html lang="en-AU">
-<head><meta charset="utf-8"><meta name="viewport" content="width=${size.w}"><title>${esc(title)}</title>
+<head><meta charset="utf-8"><meta name="viewport" content="${screen ? 'width=device-width, initial-scale=1' : `width=${size.w}`}"><title>${esc(title)}</title>
 <style>
 ${faces}
 ${frameCss(size, ctx.roles.light.sunken, ctx.kind === 'guide' ? {} : pageSizeMap(theme.meta))}
-${theme.css(ctx)}${ctx.kind === 'guide' && theme.guideCss ? '\n' + theme.guideCss(ctx) : ''}
+${theme.css(ctx)}${ctx.kind === 'guide' && theme.guideCss ? '\n' + theme.guideCss(ctx) : ''}${screen ? '\n' + screenCss(ctx) : ''}
 </style></head>
 <body${stack ? ' class="stack"' : ''}>
-${pages.join('\n')}
+${screen ? `${screen}\n<div class="sg-pages">\n${pages.join('\n')}\n</div>` : pages.join('\n')}
 </body></html>
 `, 'page.html', ctx);
 }

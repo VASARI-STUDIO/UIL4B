@@ -34,7 +34,19 @@
  * The logo page can carry many colourways. Draw it with `drawWithFewer((max) => ..., 6)`; when the page is too tall, return
  * `{ fewer: n }` from the draw (n smaller than max) and it is drawn again with at most n tiles. Return the page html otherwise.
  * Write the md hooks after the check, so the retry never leaves a second copy.
+ *
+ * The phone document
+ * ------------------
+ * The pages are fixed A4 and cannot reflow, so on a phone they would be a shrunken poster. `screenGuide(ctx, ids)` builds the same facts
+ * (colourFacts, typeLadder, contrastFacts, logoFacts, tokenGroups, usageFacts) as one single-column document. The route passes it to
+ * `pageDoc` as `screen` for the site documents (index.html and each page's html) and never for the print/PDF document. `screenCss(ctx)`
+ * shows it below 842 px (an A4 page plus a margin) and the A4 pages above that and in print. A theme does nothing for it: the colour
+ * and font variables (--ink, --quiet, --hair, --ground, --display, --body, --bmono) are set from the brand's roles and faces, so the
+ * edition wears the brand without wearing the theme. A theme that wants its own look can add rules after `.sg-screen` in its guideCss.
  */
+import { colourFacts, typeLadder, contrastFacts, logoFacts, tokenGroups, usageFacts, GRADE_NOTE } from './styleguide.js';
+import { esc } from './brand.js';
+
 export const PAGE = { W: 794, H: 1123, X0: 48, XR: 746, CW: 698, COL: [48, 289, 530], COLW: 216 };
 
 export const r1 = (n) => Math.round(n * 10) / 10;
@@ -107,3 +119,107 @@ const slotLabel = (ctx, w, id = 'colour') => {
   return 'Logo';
 };
 export const logoArt = (ctx, id, w, o = {}) => ctx.logo.html(id, { width: r1(w), ...o, ...(ctx.edition === 'slot' ? { label: slotLabel(ctx, w, id) } : {}) });
+
+// ---- the phone document ----
+export const SCREEN_BREAK = 842;
+const SCREEN_IDS = ['logo', 'colour', 'type', 'contrast', 'tokens', 'usage'];
+const TITLES = { logo: 'Logo', colour: 'Colour', type: 'Type', contrast: 'Contrast', tokens: 'Tokens', usage: 'Usage' };
+const pctText = (s) => `${+(s * 100).toFixed(1)}%`;
+const wName = (w) => ({ 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black' })[w] || String(w);
+
+// the rules that show the phone document below the break and the A4 pages everywhere else (and always in print)
+export function screenCss(ctx) {
+  const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, mo = B.fonts.mono;
+  return `.sg-screen{display:none}
+@media screen and (max-width:${SCREEN_BREAK - 1}px){
+.sg-pages{display:none}
+.sg-screen{display:block;--ink:${L.text};--quiet:${L.quiet};--hair:${L.divider};--ground:${L.surface};--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;--bmono:'${(mo || b).family}',monospace;background:var(--ground);color:var(--ink);font:400 16px/24px var(--body);padding:24px 20px 48px;min-height:100vh;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
+body.stack:has(.sg-screen){padding:0}
+.sg-screen h1,.sg-screen h2,.sg-screen h3,.sg-screen p,.sg-screen ul{margin:0;padding:0}
+.sg-screen ul{list-style:none}
+.sg-screen .sg-wrap{max-width:640px;margin:0 auto}
+.sg-screen h1{font:${ctx.weights.heading} clamp(32px,9vw,48px)/1.08 var(--display);font-stretch:${d.stretch || 100}%;letter-spacing:-0.01em;text-wrap:balance}
+.sg-screen h2{font:500 16px/24px var(--body);border-top:1px solid var(--ink);padding-top:8px;margin:40px 0 16px}
+.sg-screen .sg-quiet{color:var(--quiet)}
+.sg-screen .sg-mono{font-family:var(--bmono);font-variant-numeric:tabular-nums}
+.sg-screen li{border-top:1px solid var(--hair);padding:12px 0}
+.sg-screen li:last-child{border-bottom:1px solid var(--hair)}
+.sg-screen .sg-row{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.sg-screen .sg-sw{height:56px;margin-bottom:10px;border:1px solid var(--hair)}
+.sg-screen .sg-bar{height:8px;background:var(--hair);margin-top:8px}
+.sg-screen .sg-bar i{display:block;height:100%;background:var(--ink)}
+.sg-screen .sg-tile{border:1px solid var(--hair);padding:16px;margin-bottom:12px;display:flex;align-items:center;min-height:96px}
+.sg-screen .sg-btn{display:inline-block;padding:12px 20px;min-height:44px}
+}
+@media print{.sg-screen{display:none!important}.sg-pages{display:block!important}}
+`;
+}
+
+const inkFor = (ctx, hex) => { const L = ctx.roles.light; return ctx.C.ratio(L.text, hex) >= ctx.C.ratio(L.surface, hex) ? L.text : L.surface; };
+const li = (...rows) => `<li>${rows.join('')}</li>`;
+const row = (a, b) => `<div class="sg-row"><span>${a}</span><span>${b}</span></div>`;
+const faceVar = (face) => `var(--${face === 'display' ? 'display' : 'body'})`;
+
+const screenSection = {
+  logo(ctx) {
+    const LF = logoFacts(ctx), shown = ctx.logoShown || LF.grounds.map((g) => ({ key: g.key, label: g.label }));
+    const tiles = shown.map((t) => {
+      const g = LF.grounds.find((o) => o.key === t.key);
+      return `<div class="sg-tile" style="background:${g.groundHex}">${logoArt(ctx, 'colour', 180, { colourway: g.key, color: inkFor(ctx, g.groundHex) })}</div><p class="sg-quiet" style="margin:-4px 0 16px">${esc(t.label)}</p>`;
+    }).join('');
+    return `<p>Keep ${esc(LF.unitText)} clear on every side. Never under ${ctx.logo.minSize.screenPx} px wide on screen.</p><div style="margin-top:16px">${tiles}</div>`;
+  },
+  colour(ctx) {
+    const cs = colourFacts(ctx), top = Math.max(...cs.map((c) => c.share || 0)) || 1;
+    return `<ul>${cs.map((c) => li(
+      `<div class="sg-sw" style="background:${c.hex}"></div>`,
+      row(`<b style="font-weight:500">${esc(c.name)}</b>`, `<span class="sg-mono">${c.hex.replace('#', '')}</span>`),
+      row(`<span class="sg-quiet">${esc(c.role)}</span>`, `<span class="sg-mono sg-quiet">${pctText(c.share || 0)}</span>`),
+      `<div class="sg-bar"><i style="width:${Math.round(((c.share || 0) / top) * 100)}%"></i></div>`,
+    )).join('')}</ul>`;
+  },
+  type(ctx) {
+    const sample = (ctx.brand.type.sample && ctx.brand.type.sample.headline) || ctx.brand.name;
+    return `<ul>${typeLadder(ctx).map((t) => {
+      const w = t.face === 'display' ? ctx.weights.heading : t.weight, st = t.face === 'display' ? `font-stretch:${ctx.brand.fonts.display.stretch || 100}%;` : '';
+      return li(
+        `<div style="font:${w} min(${t.size}px,11vw)/${t.lineRatio} ${faceVar(t.face)};${st}margin-bottom:8px">${esc(sample)}</div>`,
+        row(`<b style="font-weight:500">${esc(t.name)}</b>`, `<span class="sg-mono">${t.size} px / ${t.line}</span>`),
+        `<p class="sg-quiet">${esc(t.family)} ${wName(w)}, ${t.rem}. ${esc(t.use || '')}</p>`,
+      );
+    }).join('')}</ul>`;
+  },
+  contrast(ctx) {
+    const CF = contrastFacts(ctx);
+    return `<ul>${CF.pairs.map((p) => li(
+      `<div class="sg-tile" style="background:${p.bgHex};color:${p.fgHex};min-height:0;padding:12px 16px">${esc(p.label)}</div>`,
+      row(esc(p.use || ''), `<span class="sg-mono">${esc(p.ratioText)}:1 ${esc(p.grade)}</span>`),
+    )).join('')}</ul><p class="sg-quiet" style="margin-top:16px">${esc(GRADE_NOTE)}${CF.failing ? ` ${CF.failing} other pair${CF.failing === 1 ? '' : 's'} fail and are never used for text.` : ''}</p>`;
+  },
+  tokens(ctx) {
+    const T = tokenGroups(ctx);
+    const group = (title, rows) => `<h3 class="sg-quiet" style="font:400 16px/24px var(--body);margin:16px 0 4px">${title}</h3><ul>${rows.join('')}</ul>`;
+    return group('Space', T.space.map((s) => li(row(esc(s.token || s.name || ''), `<span class="sg-mono">${s.px} px</span>`))))
+      + group('Radii', T.radii.map((r) => li(row(r.tokens.map(esc).join(', '), `<span class="sg-mono">${r.px} px</span>`))))
+      + group('Borders', T.borders.map((b) => li(row(b.tokens.map(esc).join(', '), `<span class="sg-mono">${b.px} px</span>`))));
+  },
+  usage(ctx) {
+    const U = usageFacts(ctx), bt = U.button, cd = U.card;
+    const btn = `<span class="sg-btn" style="background:${bt.fill};color:${bt.label};border-radius:${bt.radius.px}px;font:${bt.type.weight} ${bt.type.size}px/${bt.type.line}px var(--body)">${esc(bt.primary)}</span>`;
+    const card = `<div style="background:${cd.fill};color:${inkFor(ctx, cd.fill)};border:${cd.border.px}px solid ${cd.edgeColour};border-radius:${cd.radius.px}px;padding:${cd.pad.px}px;margin-top:16px"><div style="font:${cd.title.weight} ${Math.min(cd.title.size, 24)}px/1.2 ${faceVar(cd.title.face)};margin-bottom:8px">${esc(cd.titleText)}</div><div>${esc(cd.bodyText)}</div></div>`;
+    return `<p class="sg-quiet" style="margin-bottom:12px">Button: ${esc(bt.fillName)} fill, ${esc(bt.labelName)} label, ${bt.radius.px} px radius, ${esc(bt.type.name)} ${bt.type.size} px.</p>${btn}${card}<p style="margin-top:16px"><span style="text-decoration:underline;text-underline-offset:3px">${esc(U.link.text)}</span> <span class="sg-quiet">links are underlined, ${esc(U.link.type.name)} ${U.link.type.size} px.</span></p>`;
+  },
+};
+
+// the same facts as one column; `ids` limits it to the pages a document holds (a page's own html shows only its own section)
+export function screenGuide(ctx, ids = null) {
+  const drawn = Array.isArray(ctx.pagesDrawn) ? ctx.pagesDrawn : SCREEN_IDS;
+  const want = SCREEN_IDS.filter((id) => drawn.includes(id) && (!ids || ids.includes(id)));
+  const whole = !ids || ids.includes('cover');
+  if (!want.length && !whole) return '';
+  const B = ctx.brand;
+  const head = whole
+    ? `<h1>${esc(B.name)} style guide</h1><p class="sg-quiet" style="margin-top:12px">Version ${esc(B.version.number)}</p>`
+    : `<h1>${esc(TITLES[want[0]])}</h1><p class="sg-quiet" style="margin-top:12px">${esc(B.name)} style guide</p>`;
+  return `<main class="sg-screen"><div class="sg-wrap">${head}${want.map((id) => `${whole ? `<h2>${TITLES[id]}</h2>` : '<div style="height:32px"></div>'}${screenSection[id](ctx)}`).join('')}</div></main>`;
+}

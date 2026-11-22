@@ -54,7 +54,7 @@ const THEMES = Object.freeze({
 })
 
 async function loadEngine() {
-  const [brandMod, pages, doc, files, book, loaders, validate, styleguide] = await Promise.all([
+  const [brandMod, pages, doc, files, book, loaders, validate, styleguide, guideLayout] = await Promise.all([
     import('./exportThemes/brandFromProject.js'),
     import('./exportThemes/engine/pages.js'),
     import('./exportThemes/engine/doc.js'),
@@ -63,8 +63,9 @@ async function loadEngine() {
     import('./exportThemes/node-loaders.js'),
     import('./exportThemes/engine/validate.js'),
     import('./exportThemes/engine/styleguide.js'),
+    import('./exportThemes/engine/guide-layout.js'),
   ])
-  return { ...brandMod, ...pages, ...doc, ...files, ...book, loaders: loaders.default, BrandInputError: validate.BrandInputError, styleGuideMarkdown: styleguide.styleGuideMarkdown }
+  return { ...brandMod, ...pages, ...doc, ...files, ...book, loaders: loaders.default, BrandInputError: validate.BrandInputError, styleGuideMarkdown: styleguide.styleGuideMarkdown, screenGuide: guideLayout.screenGuide }
 }
 
 const dataUrl = (E) => (f) => `data:font/woff2;base64,${Buffer.from(E.loaders.fontFile(f.stem, 'woff2')).toString('base64')}`
@@ -118,7 +119,9 @@ function styleGuide(E, T, ctx, standalone) {
   // the markdown describes only the pages that were drawn
   ctx.pagesDrawn = pages.map((p) => p.id)
   const doc = (title, list, stack) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
-  return { pages, doc, ctx, md: E.styleGuideMarkdown(ctx) }
+  // the site documents also carry the phone edition (the print document does not): the whole guide in index.html, a page's own section in its html
+  const site = (title, list, ids) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack: !ids, screen: E.screenGuide(ctx, ids), ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  return { pages, doc, site, ctx, md: E.styleGuideMarkdown(ctx) }
 }
 
 // The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
@@ -197,8 +200,8 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
     const title = `${brand.name} style guide`
     if (format === 'pdf') return { html: withCsp(g.doc(title, g.pages.map((x) => x.html), true)) }
     if (format === 'md') return { md: g.md, name: `${name}.md` }
-    const files = { ...E.fontFiles(g.ctx, T), 'index.html': g.doc(title, g.pages.map((x) => x.html), true), 'style-guide.md': g.md }
-    for (const x of g.pages) files[`${x.id}.html`] = g.doc(`${title}: ${x.id}`, [x.html], false)
+    const files = { ...E.fontFiles(g.ctx, T), 'index.html': g.site(title, g.pages.map((x) => x.html), null), 'style-guide.md': g.md }
+    for (const x of g.pages) files[`${x.id}.html`] = g.site(`${title}: ${x.id}`, [x.html], [x.id])
     return { name: `${name}.zip`, zip: await zipOf(E, files, name) }
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
