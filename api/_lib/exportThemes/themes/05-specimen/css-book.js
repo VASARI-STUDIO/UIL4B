@@ -167,7 +167,7 @@ body:has(>.bk){background:${L.surface}}
 .kb-clear{display:inline-block;max-width:100%;background:var(--kb-fix-ground);color:var(--kb-fix-ink);box-shadow:inset 0 0 0 1.5px var(--kb-fix-quiet)}
 .kb-clear__z{outline:1px dashed var(--kb-action);outline-offset:-1px}
 .kb-clear__l{width:360px;max-width:100%;box-shadow:0 0 0 1px var(--kb-fix-hair)}
-.kb-clear__l svg,.kb-clear__l .logo-slot{display:block;width:100%;height:auto}
+.kb-clear__l svg,.kb-clear__l .logo-slot{display:block;width:100%;max-width:100%;height:auto}
 .kb-never{display:flex;flex-direction:column}
 .kb-never li{display:grid;grid-template-columns:28px minmax(0,1fr);font-family:var(--body);font-size:16px;line-height:1.5;color:var(--kb-soft);padding:10px 0;border-top:1px solid var(--kb-hair)}
 .kb-never li:first-child{border-top:0;padding-top:0}

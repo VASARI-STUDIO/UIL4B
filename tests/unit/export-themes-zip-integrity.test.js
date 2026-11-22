@@ -112,6 +112,7 @@ test('the 27 guidelines build with the fonts the checkout carries', async () => 
 const NARROW = [
   ['08-monograph', 'book', 'pdf', null], ['08-monograph', 'book', 'html', 'index.html'], ['24-standards', 'book', 'pdf', null],
   ['24-standards', 'book', 'html', 'index.html'], ['24-standards', 'slides', 'html', 'clear-space.html'], ['24-standards', 'ui-kit', 'zip', 'navigation.html'],
+  ['05-specimen', 'book', 'pdf', null], ['05-specimen', 'book', 'html', 'index.html'], ['09-blueprint', 'book', 'pdf', null], ['09-blueprint', 'book', 'html', 'index.html'],
 ]
 test('the responsive pages that overflowed are no wider than a 390 px screen', { timeout: 300_000 }, async (t) => {
   let chromium
