@@ -4,6 +4,7 @@
 // colour id, a hex or a brand. The pages place everything with absolute coordinates and measure text with the fonts' own metrics: a page that does not fit throws.
 import { A, nb, nbu, textWidth, wrapU as wrap, faceStem, model, fmtShare, hexOf, cap1, spell, weightName, longDate, twoTone, firstSentence, box, at } from './swiss.js';
 import { colourFacts, typeLadder, contrastFacts, logoFacts, tokenGroups, usageFacts, GRADE_NOTE } from '../../engine/styleguide.js';
+import { PAGE, PAGE_IDS, r1, sum, hook, hookAdd, withHooks, pageSection, makeGuide, stacker, headLabel, drawWithFewer, SLOT_MIN_H, slotW, logoArt } from '../../engine/guide-layout.js';
 import { copyOf, copyRaw } from './guide-copy.js';
 
 // The guide speaks in the brand's own faces: its text face (Medium and Regular) for titles, labels and notes, its mono face for literal values. These are the stems the
@@ -12,28 +13,13 @@ const CHROME = { 400: '', 500: '' };
 let MONO = '';
 const useFaces = (ctx) => { CHROME[400] = faceStem(ctx, 'body', 400); CHROME[500] = faceStem(ctx, 'body', 500); MONO = faceStem(ctx, 'mono', 400); };
 
-const W = 794, H = 1123, X0 = 48, XR = 746, CW = 698, SY = 1075, SH = 48, BOT = 1022, SUBH = 32;
-const COL = [48, 289, 530], COLW = 216;
-// the logo at a width; the slot edition draws a frame, and every frame carries the one word Logo. A frame under 22 px tall cannot hold the word inside its dashed edge, so no page draws one:
-// each width is chosen so the frame is tall enough (a frame that is not says so here, and the page is changed)
-const SLOT_MIN_H = 22;
-const slotW = (ctx, w) => Math.max(w, Math.ceil((SLOT_MIN_H * ctx.logo.geos.colour.w) / ctx.logo.geos.colour.h));
-const slotLabel = (ctx, w, id = 'colour') => {
-  const h = (w * ctx.logo.geos[id].h) / ctx.logo.geos[id].w;
-  if (h < SLOT_MIN_H - 0.5) console.warn(`  Swiss Field guide: a slot frame ${Math.round(w)} px wide is only ${Math.round(h)} px tall and cannot hold its label`);
-  return 'Logo';
-};
-const logoArt = (ctx, id, w, o = {}) => ctx.logo.html(id, { width: r1(w), ...o, ...(ctx.edition === 'slot' ? { label: slotLabel(ctx, w, id) } : {}) });
+const { W, H, X0, XR, CW, COL, COLW } = PAGE;
+// the foot strip (its top and height), the lowest y content reaches, and a section header's height
+const SY = 1075, SH = 48, BOT = 1022, SUBH = 32;
 // a literal figure inside a sentence is set in the mono face
 const fig = (s) => `<span class="sg-i">${A(s)}</span>`;
 const NAME = { cover: 'Cover', logo: 'Logo', colour: 'Colour', ruler: 'Proportion', applied: 'Applied', type: 'Type', contrast: 'Contrast', tokens: 'Tokens', usage: 'Usage' };
-const ORDER = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast', 'tokens', 'usage'];
 
-const r1 = (n) => Math.round(n * 10) / 10;
-// what the pages say that the engine's facts do not: style-guide.md reads it (engine/styleguide.js, ctx.mdHooks), so the file and the pages agree
-const hook = (ctx, patch) => { ctx.mdHooks = { ...(ctx.mdHooks || {}), ...patch }; };
-const hookAdd = (ctx, key, rows) => hook(ctx, { [key]: [...((ctx.mdHooks || {})[key] || []), ...rows] });
-const sum = (a) => a.reduce((x, y) => x + y, 0);
 const hl = (x, y, w, c = 'var(--hair)') => box(`left:${r1(x)}px;top:${r1(y)}px;width:${r1(w)}px;height:1px;background:${c}`);
 const vl = (x, y, h, c = 'var(--hair)') => box(`left:${r1(x)}px;top:${r1(y)}px;width:1px;height:${r1(h)}px;background:${c}`);
 // a section header: an ink rule, the name under it, and an optional note at the right
@@ -157,9 +143,7 @@ function head(ctx, id, CR) {
   const B = ctx.brand, sec = NAME[id], ver = B.version.number;
   const midX = Math.round(X0 + (CR - X0) / 2), sw = textWidth(CHROME[400], sec, 13), vw = textWidth(CHROME[400], ver, 13);
   // the left of the head takes the first wording that fits before the middle: the full title, the name alone, then the name cut short
-  const fits = (str) => X0 + textWidth(CHROME[500], str, 13) + 16 <= midX;
-  let left = [`${B.name} style guide`, B.name].find(fits);
-  if (!left) { let n = B.name; while (n.length > 1 && !fits(`${n.trimEnd()}…`)) n = n.slice(0, -1); left = `${n.trimEnd()}…`; }
+  const left = headLabel(B.name, (str) => X0 + textWidth(CHROME[500], str, 13) + 16 <= midX);
   if (midX + sw + 16 > CR - vw) throw new Error(`Swiss Field guide: the running head does not fit in ${CR - X0} px on ${id}`);
   return at(X0, 36, A(left), { cls: 'sg-h' }) + at(midX, 36, A(sec), { cls: 'sg-n', style: 'color:var(--quiet)' }) + at(0, 36, A(ver), { cls: 'sg-n', style: `left:auto;right:${W - CR}px;color:var(--quiet)` });
 }
@@ -177,23 +161,11 @@ function title(ctx, id, sentences, w, maxLines = 2) {
 
 function shell(ctx, id, { rise = false, body = '' } = {}) {
   const CR = rise ? pageRuler(ctx).groundW - 24 : XR;
-  return `<section class="pg" data-page="${id}">${strip(ctx, id, rise)}${head(ctx, id, CR)}${body}</section>`;
+  return pageSection(id, `${strip(ctx, id, rise)}${head(ctx, id, CR)}${body}`);
 }
 
-// Content fills the page: sections stack from `top`; spare height goes first to the sections that can grow (flex, in px), then to the gaps (up to maxGap).
-function flow(id, top, sections, { gap = 28, maxGap = 60 } = {}) {
-  const n = sections.length, nat = sum(sections.map((s) => s.h)) + gap * (n - 1);
-  let slack = BOT - top - nat;
-  if (slack < 0) throw new Error(`Swiss Field guide: ${id} is ${Math.ceil(-slack)} px too tall (top ${top}, sections ${sections.map((s) => Math.round(s.h)).join(', ')})`);
-  const flexTotal = sum(sections.map((s) => s.flex || 0)), extra = sections.map(() => 0);
-  if (flexTotal) { const give = Math.min(slack, flexTotal); sections.forEach((s, i) => { extra[i] = Math.floor(((s.flex || 0) / flexTotal) * give); }); slack -= sum(extra); }
-  const g = n > 1 ? Math.min(maxGap, gap + Math.floor(slack / (n - 1))) : gap;
-  if (n > 1) slack -= (g - gap) * (n - 1);
-  if (slack > 70) console.warn(`  Swiss Field guide: ${id} leaves ${slack} px at the foot`);
-  let y = top, html = '';
-  sections.forEach((s, i) => { html += s.draw(y, extra[i]); y += s.h + extra[i] + g; });
-  return html;
-}
+// Content fills the page: sections stack from `top`; spare height goes to the sections that can grow, then to the gaps (engine/guide-layout.js)
+const flow = stacker({ theme: 'Swiss Field', bottom: BOT });
 
 // ---------------------------------------------------------------- cover
 function cover(ctx) {
@@ -262,7 +234,8 @@ function xScale(x0, y, len, u, color, bare = false) {
   }
   return h + at(endX - 44, y - 20, `${len.toFixed(1)} x`, { cls: 'sg-s', w: 44, style: `text-align:right;color:${color}` });
 }
-function logoPage(ctx, maxTiles = 6) {
+const logoPage = (ctx) => drawWithFewer((max) => logoDraw(ctx, max), 6);
+function logoDraw(ctx, maxTiles) {
   const L = ctx.logo, G = L.geos.colour, unit = L.geo.unit, LF = logoFacts(ctx), m = model(ctx);
   const slot = ctx.edition === 'slot';
   const t = title(ctx, 'logo', [`One x clear on every side. Never under ${L.minSize.screenPx} px wide.`, 'One x clear on every side.'], CW);
@@ -408,7 +381,7 @@ function logoPage(ctx, maxTiles = 6) {
     Object.assign(gA, { u, fw: fwX * u, fh: fhX * u, lw: xw * u, lh: xh * u, h: SUBH + 28 + Math.max(fhX * u, textH) });
   }
   // checked before the hooks are written, so the one-row retry leaves no second copy
-  if (gA.h + B_h + E_h + C_h + D_h + 4 * 18 > BOT - t.top && groups.length > perRow) return logoPage(ctx, perRow);
+  if (gA.h + B_h + E_h + C_h + D_h + 4 * 18 > BOT - t.top && groups.length > perRow) return { fewer: perRow };
   ctx.logoShown = groups.flatMap((g) => g.labels.map((label, i) => ({ key: i ? LF.grounds.find((o) => o.label === label).key : g.key, label })));
   hook(ctx, { lockups: LK.map(([id, name]) => [name, lkWhen(id)]) });
   if (slot) hookAdd(ctx, 'supply', [['Logo', 'Horizontal, stacked and symbol, SVG']]);
@@ -959,13 +932,11 @@ function appliedPage(ctx) {
   return shell(ctx, 'applied', { body: t.html + flow('applied', t.top, secs, { gap: photographed && !slot ? 26 : photographed || !slot ? 28 : 20, maxGap: 72 }) });
 }
 
-const withFaces = (fn) => (ctx) => { useFaces(ctx); return fn(ctx); };
-export const guide = {
+const withFaces = (fn) => (ctx) => withHooks(ctx, () => { useFaces(ctx); return fn(ctx); });
+export const guide = makeGuide({
   cover: withFaces(cover), logo: withFaces(logoPage), colour: withFaces(colourPage), ruler: withFaces(rulerPage), type: withFaces(typePage), contrast: withFaces(contrastPage),
   tokens: withFaces(tokensPage), usage: withFaces(usagePage), applied: withFaces(appliedPage),
-  extra: () => ['ruler', 'applied'],
-  order: () => ORDER,
-};
+}, { order: PAGE_IDS, extra: ['ruler', 'applied'] });
 
 export function guideCss() {
   return `/* Swiss Field style guide: A4 portrait. The ruler strip, the head and the title follow the 1920 book's rules at page scale; sizes are 11, 12, 13 and 15 px, with the page title at the scale's own Title step. */
