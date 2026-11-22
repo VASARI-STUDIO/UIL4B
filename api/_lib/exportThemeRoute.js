@@ -179,7 +179,7 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
  */
 export async function renderThemePage({ theme, kind, page, design, projectName }, engine) {
   const E = engine || await loadEngine()
-  const brand = E.projectToBrand({ design, projectName }, theme)
+  const brand = E.projectToBrand({ design, projectName })
   const T = await THEMES[theme]()
   if (kind === 'book') return { html: withCsp(bookPrint(E, T, brand, brand.slug)) }
   const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand)
