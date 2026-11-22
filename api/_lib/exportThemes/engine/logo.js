@@ -90,16 +90,16 @@ export function makeLogo(ctx) {
   const MARK_OPACITY = 0.16;
   function slotHtml({ width, height, color = 'currentColor' }) {
     const h = height || width * primary.h / primary.w;
-    const room = width >= 150 && h >= 70;
+    const room = width >= 110 && h >= 56;
     const mw = Math.min(width * 0.36, (h * (room ? 0.4 : 0.56)) * MARK.w / MARK.h), mh = mw * MARK.h / MARK.w;
     const mark = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MARK.w} ${MARK.h}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" aria-hidden="true" focusable="false" style="display:block;flex:none;opacity:${MARK_OPACITY}">${MARK.paths.map((d) => `<path d="${d}" fill="currentColor"/>`).join('')}</svg>`;
-    const text = room ? `<span style="margin-top:${Math.round(mh * 0.18)}px;opacity:.62;font:${slotWeight} ${Math.max(11, Math.min(13, width / 14))}px/1.2 var(--chrome, var(--ff-body, sans-serif));letter-spacing:.02em">Your logo</span>` : '';
+    const text = room ? `<span style="margin-top:${Math.round(mh * 0.18)}px;font:${slotWeight} ${Math.max(11, Math.min(13, width / 14))}px/1.2 var(--chrome, var(--ff-body, sans-serif));letter-spacing:.02em">Your logo</span>` : '';
     return `<div class="logo-slot" role="img" aria-label="Logo placeholder" style="width:${width}px;height:${h.toFixed(1)}px;box-sizing:border-box;color:${svgAttr(color)};display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center">${mark}${text}</div>`;
   }
   const slotSvgFile = () => {
     const w = 900, h = w * primary.h / primary.w, ink = ctx.roles.light.quiet;
     const mw = Math.min(w * 0.3, h * 0.4 * MARK.w / MARK.h), k = mw / MARK.w, mh = MARK.h * k, top = (h - mh - 44) / 2;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" role="img" aria-label="Logo placeholder"><desc>Placeholder at the logo's proportion, ${primary.w.toFixed(0)} : ${primary.h.toFixed(0)}. Replace it with the approved logo.</desc><g fill="${svgAttr(ink)}" fill-opacity="${MARK_OPACITY}" transform="translate(${((w - mw) / 2).toFixed(1)} ${top.toFixed(1)}) scale(${k.toFixed(4)})">${MARK.paths.map((d) => `<path d="${d}"/>`).join('')}</g><text x="${w / 2}" y="${(top + mh + 34).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="${svgAttr(ink)}" fill-opacity=".7">Your logo</text></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" role="img" aria-label="Logo placeholder"><desc>Placeholder at the logo's proportion, ${primary.w.toFixed(0)} : ${primary.h.toFixed(0)}. Replace it with the approved logo.</desc><g fill="${svgAttr(ink)}" fill-opacity="${MARK_OPACITY}" transform="translate(${((w - mw) / 2).toFixed(1)} ${top.toFixed(1)}) scale(${k.toFixed(4)})">${MARK.paths.map((d) => `<path d="${d}"/>`).join('')}</g><text x="${w / 2}" y="${(top + mh + 34).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="${svgAttr(ink)}">Your logo</text></svg>`;
   };
 
   const logo = {

@@ -1,12 +1,12 @@
 {
   "Kerbside": {
     "print": {
-      "sha256": "9ae777f7865b0607bb1680551d7a8ef2a424a36d41e379f30626c60af385bc6e",
-      "bytes": 289782,
+      "sha256": "23665cb877c507276fd8a5531d1c61eac7ef1acde425f7c5ab9fbc3999835ee6",
+      "bytes": 290034,
       "head": "f8a3d69d4625a8c9a288ac35fc2c6458ae06a4fe4ee1a1c1ee2e7b1efc7d08e2",
       "pages": {
-        "cover": "651eba185198ac6ae9281972589d978c315b87ad3e3734a45cac43372c65d8d5",
-        "logo": "455c653eb1324a4cf948b6c7ac54a8216142fbecd3b525b5e87ce4daf2ae794f",
+        "cover": "54a26d50cc78900c16d3b813d6c0db42a57c8dcc00f20a384d16b382e70f51b1",
+        "logo": "0cd1ffb5f5206eb1ea0ef4a417333deb8d8910a8cb233fe4df17f235067a8579",
         "colour": "b16842e8793f6605ffa3de9de60d46513eba1315aad7712d34616cff2a1ba808",
         "ruler": "3f77b513a473489f285a4a78fe39d65aaeeb5a7886e79c34b5c6c34505f12362",
         "applied": "dcdd324ecdf2fff0920294212af0e54189dfc320bd4f066c6695d61c127164cf",

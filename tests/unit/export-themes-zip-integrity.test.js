@@ -77,6 +77,8 @@ test('every relative link in every build lands on a file or an id in the same zi
       for (const b of broken('doc.html', res.body.html, null)) problems.push(`${where}: ${b}`)
       continue
     }
+    // The guide's md is one markdown file, not a zip, so it has no pages to link between.
+    if (/^text\/markdown/.test(res.headers['Content-Type'] || '')) continue
     const zip = await JSZip.loadAsync(res.buffer)
     const files = new Map()
     for (const [name, entry] of Object.entries(zip.files)) {
