@@ -24,7 +24,7 @@ import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
 import { themedFile, themedFileIsPro, themedZipName } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
-import { exportProjectName } from '../utils/exportProjectName'
+import { exportProjectName } from '../utils/projectFileName'
 import { readIdentity } from '../utils/kitIdentity'
 
 // Everything that happens between a click on Export and a file in the downloads

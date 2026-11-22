@@ -12,7 +12,7 @@
 // and the page the person sees (the cover carries the name, not the stand-in).
 //
 // MUTATIONS (each must fail the group named after it):
-//   - exportProjectName.js: read only `projectId` (drop the design's and the working design's source) -> every test here
+//   - projectFileName.js: read only `projectId` (drop the design's and the working design's source) -> every test here
 //   - ExportPreview.jsx: pass `name` (the stand-in-filled one) to brandOf again                      -> (a) and the cover
 //   - useExportRunner.js: read the name from `projects.find(projectId)` only                         -> (b) and (c)
 import { test, expect } from './base.js'

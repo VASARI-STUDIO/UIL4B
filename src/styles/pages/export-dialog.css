@@ -127,7 +127,7 @@
 .xd-stagecol{display:flex;flex-direction:column;gap:var(--s-3);min-width:0}
 .xd-meta{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2) var(--s-4);min-height:28px;min-width:0}
 .xd-status{flex:1 1 auto;min-width:0;margin:0;font-size:var(--fs-body-s);line-height:20px;color:var(--t1)}
-.xd-full{flex:none;min-height:28px;padding:0 var(--s-1);border:0;border-radius:var(--radius-xs);background:none;font:inherit;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-text);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.xd-full{flex:none;min-height:28px;padding:0 var(--s-1);border:0;border-radius:var(--btn-radius);background:none;font:inherit;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-text);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .xd-full:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 @media (hover:hover){.xd-full:hover{color:var(--t0)}}
 @media (pointer:coarse){.xd-meta,.xd-full{min-height:44px}.xd-full{padding:0 var(--s-2)}}

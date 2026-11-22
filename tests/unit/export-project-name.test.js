@@ -1,4 +1,4 @@
-// The name an export carries comes from one place (src/utils/exportProjectName.js), and the project's name is on the project record.
+// The name an export carries comes from one place (src/utils/projectFileName.js), and the project's name is on the project record.
 //   1. THE OPEN PROJECT'S ID: the dialog on a project page is handed one.            Break: ignore `projectId`.
 //   2. A TOOL PAGE: no id is handed over, but the design knows its project
 //      (design.source.projectId), and so does the working design when the tool
@@ -6,7 +6,7 @@
 //   3. NO PROJECT: the design's own name, else ''; never a stand-in.                  Break: return 'Design System' for ''.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { exportProjectName } from '../../src/utils/exportProjectName.js'
+import { exportProjectName } from '../../src/utils/projectFileName.js'
 
 const projects = [{ id: 'k1', name: 'Kerbside' }, { id: 'h2', name: 'Harbour' }]
 
