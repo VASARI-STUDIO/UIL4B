@@ -135,13 +135,21 @@ export function usagePage(ctx) {
   const cspec = [['Fill', cd.fillName], ['Edge', `${cd.edge.token}, ${cd.edge.px} px ${cd.edgeName}`, 1], ['Radius', `${cd.radius.token}, ${cd.radius.px} px`, 1], ['Padding', cd.pad.token, 1], ['Title', `${cd.title.name}, ${cd.title.size} / ${cd.title.line}`, 1], ['Text', `${cd.body.name}, ${cd.body.size} / ${cd.body.line}`, 1]];
   const pad = cd.pad.px, edgePx = cd.edge.px, cardW = Math.min(PLW - 48, 300), tx = cardW - 2 * pad - 2 * edgePx;
   const tSt = cd.title.face === 'display' ? K.st : 1, tStem = stemOf(ctx, cd.title.face, cd.title.weight), bStem = stemOf(ctx, cd.body.face, cd.body.weight);
-  const ctH = nLines(tStem, cd.titleText, cd.title.size, tx, tSt) * cd.title.line, cbH = nLines(bStem, cd.bodyText, cd.body.size, tx) * cd.body.line, cardH = 2 * edgePx + 2 * pad + ctH + 8 + cbH;
+  // a brand's own paragraph can run to several sentences: the card shows the first that fits four lines, else the words that do, ending in an ellipsis
+  const fit4 = (s) => nLines(bStem, s, cd.body.size, tx) <= 4, words = String(cd.bodyText).split(/\s+/);
+  let bodyText = cd.bodyText;
+  if (!fit4(bodyText)) {
+    const first = (String(cd.bodyText).match(/^.*?[.!?](?=\s|$)/) || [''])[0];
+    if (first && fit4(first)) bodyText = first;
+    else { let n = words.length; while (n > 1 && !fit4(words.slice(0, n).join(' ') + '…')) n--; bodyText = words.slice(0, n).join(' ').replace(/[,;:\s]+$/, '') + '…'; }
+  }
+  const ctH = nLines(tStem, cd.titleText, cd.title.size, tx, tSt) * cd.title.line, cbH = nLines(bStem, bodyText, cd.body.size, tx) * cd.body.line, cardH = 2 * edgePx + 2 * pad + ctH + 8 + cbH;
   const cH = Math.max(specH(cspec), cardH + 48);
   const cardSec = { h: SUBH + 8 + cH, flex: 80, draw: (y, extra = 0) => {
     const by = y + SUBH + 8, hh = cH + extra;
     return sec(K, X0, y, CW, catNo(ctx, 'usage', 4), 'Card') + specReg(X0, by, cspec)
       + obj(K, PLX, by, PLW, hh, R.ground, rect(Math.floor((PLW - cardW) / 2), Math.floor((hh - cardH) / 2), cardW, cardH, `background:${cd.fill};border:${edgePx}px solid ${cd.edgeColour};padding:${pad}px;border-radius:${cd.radius.px}px`,
-        `<div style="${font(cd.title)}color:${L.text}">${A(cd.titleText)}</div><div style="margin-top:8px;${font(cd.body)}color:${L.text}">${A(cd.bodyText)}</div>`), { frame: true });
+        `<div style="${font(cd.title)}color:${L.text}">${A(cd.titleText)}</div><div style="margin-top:8px;${font(cd.body)}color:${L.text}">${A(bodyText)}</div>`), { frame: true });
   } };
   return shell(ctx, 'usage', t.html + flow('usage', t.top, [buttonSec, statesSec, linkSec, cardSec], { gap: 20, maxGap: 40 }));
 }
