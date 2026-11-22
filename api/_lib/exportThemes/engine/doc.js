@@ -47,8 +47,8 @@ export function pageDoc(ctx, theme, { title, pages, size, stack = false, fontUrl
 <head><meta charset="utf-8"><meta name="viewport" content="width=${size.w}"><title>${esc(title)}</title>
 <style>
 ${faces}
-${frameCss(size, ctx.roles.light.sunken, pageSizeMap(theme.meta))}
-${theme.css(ctx)}
+${frameCss(size, ctx.roles.light.sunken, ctx.kind === 'guide' ? {} : pageSizeMap(theme.meta))}
+${theme.css(ctx)}${ctx.kind === 'guide' && theme.guideCss ? '\n' + theme.guideCss(ctx) : ''}
 </style></head>
 <body${stack ? ' class="stack"' : ''}>
 ${pages.join('\n')}

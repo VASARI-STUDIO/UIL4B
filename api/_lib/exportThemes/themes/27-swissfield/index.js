@@ -37,23 +37,27 @@ function baseCss(ctx) {
 }
 
 export const uikit = {};
+export const guide = {};
 export { guidelines };
 
 // ---- lane modules: the pages and css written in lane-<name>.js beside this file, merged in file-name order (engine/lanes.js) ----
-import { mergeLanes as __mergeLanes, laneCss as __laneCss } from '../../engine/lanes.js';
+import { mergeLanes as __mergeLanes, laneCss as __laneCss, laneGuideCss as __laneGuideCss } from '../../engine/lanes.js';
 import * as __g1 from './lane-g1.js';
 import * as __g2 from './lane-g2.js';
 import * as __g3 from './lane-g3.js';
 import * as __g5 from './lane-g5.js';
-const __L = __mergeLanes([__g1, __g2, __g3, __g5]);
+import * as __guide from './lane-guide.js';
+const __L = __mergeLanes([__g1, __g2, __g3, __g5, __guide]);
 Object.assign(guidelines, __L.guidelines);
 Object.assign(uikit, __L.uikit);
+Object.assign(guide, __L.guide);
 // A Free theme ships the Free twelve only (SPEC section 6). The pages outside it (intro, contents, voice, messaging, contact-scope, logo-versions) stay drafted in
 // their files but are not exported, so the build skips them. The engine's page list sets the order: cover, personality, write-this, logo, clear-space, palette,
 // contrast, typefaces, hierarchy, business-card, social, summary.
 for (const id of Object.keys(guidelines)) if (!FREE_PAGES.includes(id)) delete guidelines[id];
 if (__L.fonts.length) meta.fonts = [...(meta.fonts || []), ...__L.fonts];
 export const css = __laneCss(baseCss, __L);
+export const guideCss = __laneGuideCss(__L);
 export const brandBook = __L.brandBook || undefined;
 export const bookCss = __L.bookCss || undefined;
 export const readMe = __L.readMe || undefined;

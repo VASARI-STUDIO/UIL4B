@@ -105,8 +105,10 @@ for (const [name, colors] of Object.entries(PALETTES)) {
         try {
           const res = await ask({ theme, row, format, design, projectName: 'Kerbside' })
           if (res.code !== 200) { problems.push(`${where}: ${res.code} ${res.body?.code || ''}`); continue }
-          // the print row (pdf) answers with the document as JSON; every other format is a zip
-          if (format !== 'pdf') {
+          // the print row (pdf) answers with the document as JSON, the guide's markdown as text; every other format is a zip
+          if (format === 'md') {
+            if (typeof res.buffer !== 'string' || res.buffer.length < 100 || !/^text\/markdown/.test(res.headers['Content-Type'] || '')) problems.push(`${where}: not markdown`)
+          } else if (format !== 'pdf') {
             if (!Buffer.isBuffer(res.buffer) || res.buffer.length < 100 || res.buffer.subarray(0, 2).toString() !== 'PK') problems.push(`${where}: not a zip`)
           } else if (res.body?.ok !== true || res.body.theme !== theme || res.body.row !== row || res.body.format !== format) {
             problems.push(`${where}: wrong success shape`)

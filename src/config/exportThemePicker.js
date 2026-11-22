@@ -57,6 +57,9 @@ export const THEMED_FILES = Object.freeze({
   'book-html': Object.freeze({ row: 'book', format: 'html' }),
   guidelines: Object.freeze({ row: 'slides', format: 'pdf' }),
   'guidelines-html': Object.freeze({ row: 'slides', format: 'html' }),
+  'style-guide': Object.freeze({ row: 'guide', format: 'pdf' }),
+  'style-guide-html': Object.freeze({ row: 'guide', format: 'html' }),
+  'style-guide-md': Object.freeze({ row: 'guide', format: 'md' }),
 })
 export const themedFile = (fileId) => (Object.hasOwn(THEMED_FILES, fileId) ? THEMED_FILES[fileId] : null)
 
@@ -82,7 +85,7 @@ export const themeFitsFile = (themeId, fileId) => {
 }
 
 // The zips a themed file downloads as, by file id. The PDF rows save nothing: the document opens in the print window.
-const THEMED_ZIPS = Object.freeze({ kit: 'ui-kit', 'book-html': 'brand-book', 'guidelines-html': 'brand-guidelines' })
+const THEMED_ZIPS = Object.freeze({ kit: 'ui-kit', 'book-html': 'brand-book', 'guidelines-html': 'brand-guidelines', 'style-guide-html': 'style-guide' })
 
 /** `lumen-ui-kit-04-standards.zip` from ('Lumen', 'kit', '04-standards'), or '' for a file that is not a themed zip. */
 export const themedZipName = (project, fileId, themeId) => (
