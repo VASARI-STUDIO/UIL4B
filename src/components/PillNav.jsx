@@ -431,18 +431,25 @@ function AppHeader() {
     stateRef.current.sheet = sheet
   }, [open, menu, sheet])
 
-  // The panel's left edge sits under the open trigger, held 24px clear of the
-  // viewport (10px below 980px wide, where a 24px gutter leaves the panel too narrow),
-  // and it grows from the trigger. Placed after render and again on resize.
+  // From 980px wide all three menus share one frame: right-anchored 24px clear of the
+  // viewport, wherever the trigger is, and opening from the same point (CSS
+  // transform-origin). Below 980px the panel's left edge sits under the open trigger,
+  // held 10px clear, and grows from the trigger. Placed after render and again on resize.
   useLayoutEffect(() => {
     if (!open) return undefined
     const place = () => {
       const panel = menuRef.current
+      if (!panel) return
+      const vw = window.innerWidth
+      if (vw >= 980) {
+        panel.style.left = `${Math.max(24, vw - 24 - panel.offsetWidth)}px`
+        panel.style.transformOrigin = ''
+        return
+      }
       const trig = triggerRefs.current[open]
-      if (!panel || !trig) return
+      if (!trig) return
       const tl = trig.getBoundingClientRect().left
-      const gap = window.innerWidth < 980 ? 10 : 24
-      const left = Math.max(gap, Math.min(tl, window.innerWidth - gap - panel.offsetWidth))
+      const left = Math.max(10, Math.min(tl, vw - 10 - panel.offsetWidth))
       panel.style.left = `${left}px`
       panel.style.transformOrigin = `${Math.max(0, tl - left)}px 0`
     }
