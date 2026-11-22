@@ -21,6 +21,9 @@
 //     Break: drop the drawn(k) check in styleGuideMarkdown, or the ctx.pagesDrawn line in styleGuide.
 //  9. A TABLE CELL NEVER BREAKS THE TABLE: a pipe is escaped and a line break becomes a space.
 //     Break: remove either replace in mdCell (api/_lib/exportThemes/engine/styleguide.js).
+// 10. A PAGE THAT THROWS TAKES ITS MARKDOWN HOOKS WITH IT: an applied page that writes a supply row and then throws leaves
+//     no trace of that row in the md, and the Logo section is still there.
+//     Break: drop `ctx.mdHooks = hooks` in the catch of styleGuide (api/_lib/exportThemeRoute.js).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
@@ -29,6 +32,7 @@ import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow, isThemeExportPro } from 
 import { pickerThemesFor, themedFile, themedZipName } from '../../src/config/exportThemePicker.js'
 import { assertThemeAccess } from '../../api/_lib/themeAccess.js'
 import { mdCell } from '../../api/_lib/exportThemes/engine/styleguide.js'
+import { guide as swissGuide } from '../../api/_lib/exportThemes/themes/27-swissfield/index.js'
 
 const THEME = '27-swissfield'
 const out = {}
@@ -165,4 +169,24 @@ test('a markdown table cell escapes pipes and flattens line breaks', () => {
   assert.equal(mdCell('a|b\nc'), 'a\\|b c')
   assert.equal(mdCell('x\r\ny'), 'x y')
   assert.equal(mdCell(42), '42')
+})
+
+test('a page that throws after writing a markdown hook leaves no trace in the markdown', async () => {
+  const applied = swissGuide.applied
+  const keep = console.warn
+  const warned = []
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  swissGuide.applied = (ctx) => {
+    ctx.mdHooks = { ...(ctx.mdHooks || {}), supply: [...((ctx.mdHooks || {}).supply || []), ['Planted row', 'never drawn']] }
+    throw new Error('applied failed')
+  }
+  try {
+    const { md } = await renderThemeExport({ theme: THEME, row: 'guide', format: 'md', projectName: 'Kerbside' })
+    assert.ok(warned.some((w) => w.includes('guide page applied left out')), 'the stand-in page really threw')
+    assert.ok(!md.includes('Planted row'), 'the hook the failed page wrote is gone')
+    assert.match(md, /^## 01 · Logo$/m, 'the Logo section is still drawn')
+  } finally {
+    swissGuide.applied = applied
+    console.warn = keep
+  }
 })
