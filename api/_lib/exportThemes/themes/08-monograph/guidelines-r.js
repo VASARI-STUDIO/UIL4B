@@ -16,7 +16,7 @@ export const drumNo = (ctx, c) => drums(ctx).indexOf(c) + 1;
 export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role) || (role === 'accent' ? ctx.colours.find((c) => c.role === 'highlight') : undefined);
 export const pc = (c) => Math.round(c.share * 100);
 // whichever of the text and ground colours reads better on a hex
-export const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };
+export const inkOn = (ctx, hex, size = 13) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
 // the ink a sheet's margin words print in: the drum's own ink where it passes 4.5 : 1 on the paper, else the text colour
 export const readInk = (ctx, hex) => (ctx.ratio(hex, ctx.roles.light.surface) >= 4.5 ? hex : ctx.roles.light.text);
 

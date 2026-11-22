@@ -128,7 +128,6 @@ const MIRRORS = [
   ['.ui-pill-accent:hover', '.ui-pill-accent.dcs-hover'],
   ['.ui-pill-ghost:hover', '.ui-pill-ghost.dcs-hover'],
   [':focus-visible', '.dcs-focus, input.dcs-field-focus, textarea.dcs-field-focus'],
-  ['input:focus,select:focus,textarea:focus', '.dcs-field-focus'],
   ['.lib-surface .lbry-search:focus-within', '.lib-surface .lbry-search.dcs-focus-within'],
 ]
 for (const [source, mirror] of MIRRORS) {

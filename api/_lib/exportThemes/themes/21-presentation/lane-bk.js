@@ -34,11 +34,11 @@ const L = (ctx) => ctx.roles.light;
 const DK = (ctx) => ctx.roles.dark;
 const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
 const lower = (h) => String(h).toLowerCase();
-const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
+const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // the deck's chrome rule: the quiet tone that reaches 4.5:1 on the field, else the best of text, ground and dark soft text
 const chromeOn = (ctx, hex) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, DK(ctx).quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
-  return q || [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
+  return q || ctx.textOn(hex, { size: 12, prefer: [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0] });
 };
 // reading text on a field: the soft text tone of the matching mode when it passes, else the ink
 const softOn = (ctx, hex) => {
@@ -53,8 +53,8 @@ const cwFor = (ctx, hex) => cwOnGround(ctx, hex) || (lower(inkOn(ctx, hex)) === 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the colours a field gets: background, ink, chrome and reading tone as custom properties, each pair checked
 const fieldStyle = (ctx, hex, what, size = 12) => {
-  const ink = inkOn(ctx, hex);
-  ctx.pair(ink, hex, { size: Math.max(size, 15), what });
+  const ink = inkOn(ctx, hex, size);
+  ctx.pair(ink, hex, { size, what });
   return `background:${hex};color:${ink};--q:${chromeOn(ctx, hex)};--soft:${softOn(ctx, hex)};--ink:${ink};--bg:${hex}`;
 };
 
@@ -239,7 +239,7 @@ function colour(ctx, st) {
   const leadBand = band(ctx, st, sec, lead.name, `<div class="pz-clead"><h3 class="pz-d pz-clead__n" style="font-size:${fitSize(ctx, [lead.name], 0.6, 220)}">${A(lead.name)}</h3><div class="pz-clead__s"><p class="pz-lead">${A(lead.lands)}</p>${vals(lead)}</div></div>${ramp(lead)}`, { hex: lead.hex, cls: `pz-band--tall${hair(lead.hex)}`, what: 'book colour lead' });
   const others = cols.filter((c) => c !== lead);
   const nsize = fitSize(ctx, others.map((c) => c.name), 0.9, 64);
-  const rest = split(ctx, st, sec, 'The palette', others.map((c) => ({ hex: c.hex, what: `book colour ${c.name}`, cls: `pz-col${hair(c.hex)}`, html: `<h3 class="pz-d pz-col__n" style="font-size:${nsize}">${A(c.name)}</h3><p class="pz-c pz-col__l">${A(c.lands)}</p>${vals(c)}${ramp(c)}` })), { cls: `pz-split--${others.length}` });
+  const rest = split(ctx, st, sec, 'The palette', others.map((c) => ({ hex: c.hex, what: `book colour ${c.name}`, cls: `pz-col${hair(c.hex)}`, html: `<h3 class="pz-d pz-col__n" style="font-size:${nsize}">${A(c.name)}</h3><p class="pz-c pz-col__l">${A(c.lands)}</p>${vals(c)}${ramp(c)}` })), { cls: `pz-split--${others.length}`, endAt: others.length >= 7 ? 3 : others.length >= 5 ? 2 : undefined });
   // tones: the text tones and fills the interface leans on, each a row on the page ground
   const tones = ctx.tones.length ? band(ctx, st, sec, 'Tones', `<p class="pz-t pz-tones__i">Tones are not brand colours. They are the steps between them that text and the interface need.</p><ul class="pz-tones">${ctx.tones.map((t) => `<li><span class="pz-tones__sw" style="background:${t.hex}" aria-hidden="true"></span><span class="pz-tones__n"><b class="pz-l">${A(t.name)}</b><span class="pz-c">${A(t.lands || ctx.cap(t.role))}</span></span>${valBtn('HEX', t.hex, t.name)}</li>`).join('')}</ul>`) : '';
   // contrast: every pair the brand uses, each row set in its own two colours, the ratio as the big number

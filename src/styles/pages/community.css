@@ -236,8 +236,9 @@
   transition: background-color 150ms ease, color 150ms ease, transform 120ms var(--v3-ease);
 }
 .cm-tabs button:active { transform: scale(.97); }
-.cm-tabs button[aria-selected="true"] { background: var(--v3-seg-on); color: var(--v3-ink); box-shadow: 0 0 0 1px var(--v3-hair); }
+.cm-tabs button[aria-selected="true"] { background: var(--sel-solid); color: var(--sel-on-solid); }
 .cm-tab-n { color: var(--v3-t56); font-variant-numeric: tabular-nums; }
+.cm-tabs button[aria-selected="true"] .cm-tab-n { color: color-mix(in srgb, var(--sel-on-solid) 72%, transparent); }
 @media (hover: hover) { .cm-tabs button[aria-selected="false"]:hover { color: var(--v3-ink); } }
 .cm-tabpanel { margin-top: 32px; }
 .cm-tabpanel > .cm-empty { padding-top: 0; }
@@ -254,7 +255,7 @@
 .cm-thumb-strip i { flex: 1 1 0; align-self: stretch; }
 .cm-sub-name { overflow: hidden; font-size: 16px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .cm-sub-meta, .cm-sub-status { font-size: 14px; color: var(--v3-sec); }
-.cm-sub-actions { display: flex; gap: 4px; }
+.cm-sub-actions { display: flex; align-items: center; gap: 4px; }
 /* Approved work on the owner's Made tab: the same row, one link where Withdraw was. */
 .cm-live { grid-template-columns: 48px minmax(0, 1fr) auto; }
 .cm-live-go { min-height: 44px; white-space: nowrap; }

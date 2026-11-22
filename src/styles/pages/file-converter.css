@@ -106,10 +106,10 @@
 .fc .fc-tab[aria-selected="true"] {
   color: var(--tl-ink);
   background: var(--tl-wash-on);
-  border-color: var(--tl-line-on);
+  border-color: var(--sel-edge);
 }
 
-.fc .fc-tab:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.fc .fc-tab:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-about {
   max-width: 78ch;
@@ -139,7 +139,7 @@
   transform: rotate(45deg);
 }
 .fc .fc-howto[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
-.fc .fc-howto summary:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.fc .fc-howto summary:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .fc .fc-howto[open] .fc-about { padding-bottom: 8px; }
 
 .fc .fc-3d-note {
@@ -315,14 +315,14 @@
 .fc .fc-seg-opt[aria-checked="true"] {
   color: var(--tl-ink);
   background: var(--tl-card);
-  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--tl-line-on);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
 }
 
 @media (hover: hover) {
   .fc .fc-seg-opt:hover:not([aria-checked="true"]):not([aria-disabled="true"]) { color: var(--tl-ink); background: var(--tl-wash-2); }
 }
 
-.fc .fc-seg-opt:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
+.fc .fc-seg-opt:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 .fc .fc-seg-opt[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 
@@ -351,7 +351,7 @@
   height: var(--si-h);
   border-radius: var(--si-r, 999px);
   background: var(--tl-card);
-  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--tl-line-on);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
   transform: translate(var(--si-x), var(--si-y));
   pointer-events: none;
 }
@@ -373,7 +373,7 @@
   color: var(--tl-ink);
   background: var(--tl-card);
   border-color: transparent;
-  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--tl-line-on);
+  box-shadow: var(--shadow-xs), inset 0 0 0 1px var(--sel-edge);
 }
 
 /* Flip horizontal and vertical stay side by side at every width. */
@@ -434,7 +434,7 @@
 
 .fc .fc-btn:active:not(:disabled) { transform: scale(.98); }
 
-.fc .fc-btn:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.fc .fc-btn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-btn:disabled { opacity: .5; cursor: not-allowed; }
 
@@ -479,7 +479,7 @@
   background: var(--tl-wash-on);
 }
 
-.fc .fc-drop:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 3px; }
+.fc .fc-drop:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 3px; }
 
 .fc .fc-drop-ico {
   display: inline-grid;
@@ -575,7 +575,7 @@
 
 .fc .fc-card--btn:hover { border-color: var(--tl-line-on); }
 
-.fc .fc-card--btn:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.fc .fc-card--btn:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-thumb {
   display: flex;
@@ -613,7 +613,7 @@
 
 .fc .fc-remove:hover:not(:disabled) { color: var(--err-strong); border-color: var(--tl-line-on); }
 
-.fc .fc-remove:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.fc .fc-remove:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-remove:disabled { opacity: .45; cursor: not-allowed; }
 
@@ -810,7 +810,7 @@
   -webkit-user-select: none;
 }
 
-.fc .fc-crop-box:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 0; }
+.fc .fc-crop-box:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 0; }
 
 /* The censor box marks a patch, not what is kept, so it does not dim the rest of the picture. */
 .fc .fc-crop-box[data-tone="censor"] { outline-style: dashed; outline-width: 2px; box-shadow: none; }
@@ -1057,7 +1057,7 @@
    the tile's size and never competes with the accent focus ring outside it. */
 .fc .fc-frame[aria-pressed="true"] { border-color: var(--tl-ink); box-shadow: inset 0 0 0 1px var(--tl-ink); }
 
-.fc .fc-frame:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.fc .fc-frame:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 .fc .fc-frame-no {
   position: absolute;
@@ -1298,11 +1298,11 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
 .fc .fc-rail-tab[data-active="true"] {
   color: var(--tl-ink);
   background: var(--tl-wash-on);
-  border-color: var(--tl-line-on);
+  border-color: var(--sel-edge);
 }
 
 .fc .fc-rail-tab:focus-visible,
-.fc .fc-rail-sheet-item:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
+.fc .fc-rail-sheet-item:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 /* The small filled mark: this group holds an edit. */
 .fc .fc-rail-mark {

@@ -7,7 +7,7 @@ import { A, fit, edition } from './helpers.js';
 import { typeToken } from '../../engine/typeToken.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
-const hairlineOn = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const hairlineOn = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const copyBtn = (text, value, what, cls = '') => `<button type="button" class="bk-btn ${cls}" data-copy="${A(value)}" data-copy-label="${A(what)}" aria-label="${A(text + ' ' + what)}"><span class="bk-btn__t">${A(text)}</span></button>`;
 const sub = (t) => `<h3 class="bk-h3">${A(t)}</h3>`;
 const dl = (f, label) => (f ? `<a class="bk-dl" href="${A(f.href)}" download aria-label="Download ${A(label)}, ${A(f.ext)}, ${A(f.sizeText)}">${A(f.ext)}</a>` : '');

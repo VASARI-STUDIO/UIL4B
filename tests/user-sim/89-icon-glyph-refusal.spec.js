@@ -170,7 +170,7 @@ test.describe('the icon grid when only one pack batch fails', () => {
     // POSITIVE CONTROL. While the retry is pending, the failed pack's cells really are blank
     // (a placeholder, or a coloured slot with no artwork). Without this, the
     // "none blank" check below would also pass for a grid that never had any.
-    const blank = () => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg:not(.ic-edit)))').length)
+    const blank = () => page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
     await expect.poll(() => seen.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     await expect.poll(blank, { timeout: 2_000, message: 'the failed pack left no blank cells to recover' }).toBeGreaterThan(0)
     // Asked again after the cool-down, without anyone scrolling or clicking.
@@ -197,7 +197,7 @@ test.describe('the icon grid when only one pack batch fails', () => {
     await expect(page.getByText(/couldn.t reach the icon service/i), 'a retry failing must not raise the outage notice').toHaveCount(0)
     // Names given up on are quiet empty slots, not skeletons that pulse for the
     // session. The positive control is that those cells exist: still no artwork.
-    const blankCells = await page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg:not(.ic-edit)))').length)
+    const blankCells = await page.evaluate(() => document.querySelectorAll('.ig .ic:not(:has(img)):not(:has(svg))').length)
     expect(blankCells, 'the failed pack left no empty cells, so there is nothing to check').toBeGreaterThan(0)
     await expect(page.locator('.ig .ic :is(.ig-glyph-wait, .ig-chip--wait)'), 'a given-up name is still a loading skeleton').toHaveCount(0)
   })

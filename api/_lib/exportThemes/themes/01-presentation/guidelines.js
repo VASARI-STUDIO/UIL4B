@@ -16,7 +16,7 @@ const slide = (ctx, id, inner, o = {}) => {
 const PANEL = ['var(--panel)', 'var(--ink)'], SIGNAL = ['var(--accent)', 'var(--accent-ink)'], DARK = ['var(--dark)', 'var(--dark-ink)'], PAGE = ['var(--ground)', 'var(--ink)'];
 const sty = ([bg, fg]) => `background:${bg};color:${fg}`;
 // whichever of the page's text and ground colours reads better on a hex
-const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };
+const inkOn = (ctx, hex, size = 13) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
 
 const own = {
   cover(ctx) {

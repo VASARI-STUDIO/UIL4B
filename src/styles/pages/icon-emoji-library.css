@@ -37,7 +37,7 @@
   border-color:var(--border);background:transparent;
 }
 @media(pointer:coarse){.iel-page .icust-close{width:44px;height:44px}}
-.iel-page .icust-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .icust-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 /* The nav's `.pnav-pop-tag` is a 999px accent pill painted in `--accent-strong`.
    On this page it is a quiet 6px tag in the derived accent. */
 .iel-page .pnav-pop-tag{
@@ -56,7 +56,7 @@
 .iel-page .ig-addbtn{height:40px;border-color:var(--bh);background:transparent}
 @media(pointer:coarse){.iel-page .ig-addbtn{height:44px}}
 .iel-page .ig-addbtn:hover{border-color:color-mix(in srgb,var(--t0) 34%,transparent);background:var(--hvr);color:var(--t0)}
-.iel-page .ig-addbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .ig-addbtn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .iel-page .ig-rail-clear:hover{color:var(--t0);border-color:var(--border);background:var(--hvr)}
 /* SC 2.5.8: measured 124x21 — alone on its line after the allowance text,
    so no reading of the Inline exception reaches it. */
@@ -77,7 +77,7 @@
    take the grid from 25 columns to 12 at 1280 and multiply the scroll by four.
    So the grid stays; what changes is its STATE language, onto the design's
    picked cell (accent wash over an accent hairline). */
-.iel-page .emoji-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.iel-page .emoji-cell:focus-visible{outline:2px solid var(--focus-ink);outline-offset:1px}
 .iel-page .emoji-tone-btn{border-color:var(--bh);background:transparent;min-height:44px;height:auto}
 .iel-page .emoji-tone-btn.open{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
 .iel-page .emoji-tone-pop{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-m)}
@@ -139,7 +139,7 @@
 }
 @media(hover:hover){.iel-page .emd-tone:hover{background:var(--hvr);border-color:var(--bh)}}
 .iel-page .emd-tone[aria-pressed="true"]{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
-.iel-page .emd-tone:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .emd-tone:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 .iel-page .emd-rows{margin:0;padding:0;list-style:none}
 .iel-page .emd-row{
@@ -169,7 +169,7 @@
   display:flex;flex-wrap:nowrap;gap:8px;margin:0;padding:0 0 4px;list-style:none;
   overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
 }
-.iel-page .emd-styles-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .emd-styles-row:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 /* Five equal columns, so every set fits the dialog without a sideways scroll. */
 .iel-page .emd-style{flex:1 1 0;min-width:56px;display:flex;flex-direction:column;align-items:center;gap:6px}
 .iel-page .emd-style-art{
@@ -181,7 +181,7 @@
 .iel-page .emd-style-img{display:block;width:48px;height:48px;object-fit:contain}
 .iel-page .emd-style-save{position:relative;box-sizing:border-box;padding:0;font:inherit;color:var(--t1);cursor:pointer;transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
 @media(hover:hover){.iel-page .emd-style-save:hover{border-color:var(--bh)}}
-.iel-page .emd-style-save:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .emd-style-save:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .iel-page .emd-style-save:active{transform:scale(.97)}
 /* The download mark sits in the corner of the art, on its own chip so it reads on every set's colours. */
 .iel-page .emd-style-badge{position:absolute;right:4px;bottom:4px;width:20px;height:20px;display:grid;place-items:center;border-radius:999px;background:var(--bg-1);color:var(--t0);border:1px solid var(--border)}
@@ -196,7 +196,7 @@
   transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
 }
 @media(hover:hover){.iel-page .emd-lock:hover{background:var(--hvr);border-color:var(--bh)}}
-.iel-page .emd-lock:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .emd-lock:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .iel-page .emd-lock svg{flex:none;color:var(--t2)}
 .iel-page .emd-lock-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .iel-page .emd-lock-head{font-family:var(--font);font-size:14px;font-weight:600;line-height:1.4}
@@ -238,8 +238,7 @@
   color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:560;white-space:nowrap;cursor:pointer;
 }
 .iel-page .ig-weight-btn:hover{color:var(--t0)}
-.iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--card);color:var(--t0);box-shadow:0 1px 2px rgba(10,10,18,.08)}
-[data-theme="dark"] .iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--bg-3)}
+.iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--t0);color:var(--bg-0);box-shadow:none}
 .iel-page .ig-weight-btn[aria-disabled="true"]{color:var(--t3);cursor:not-allowed}
 .iel-page .ig-weight-measure{display:flex;gap:2px;visibility:hidden}
 .iel-page .ig-weight--single{background:transparent;border-color:transparent}
@@ -248,7 +247,8 @@
   color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:400;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.iel-page .ig-weight-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.iel-page .ig-weight-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
+.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline-color:var(--bg-0)}
 @media(pointer:coarse){
   .iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span,.iel-page .ig-weight-status{min-height:44px}
 }
@@ -325,8 +325,9 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 
 /* "Send feedback" in the masthead's status line: a quiet text button, because
    these routes have no floating Feedback button and no More menu. The ground is
-   the fixed dark hero, so the ink is a light neutral (5.9:1, above the 4.5:1
-   the 11px text needs). */
+   the fixed dark hero, so the ink is a light neutral. Over the horizon light
+   its lowest reading is 5.6:1 (dark, 360px), above the 4.5:1 the 11px text
+   needs. */
 .iel-page .lib-feedback{
   appearance:none;display:inline-flex;align-items:center;min-height:24px;padding:0;
   border:0;background:none;font:inherit;color:rgba(247,247,244,.66);
@@ -372,4 +373,53 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 @media(max-width:430px){
   .iel-page.lib-surface .lib-switch-btn>svg,
   .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
+}
+
+/* D33: the style bar holds the width of its widest variant. The hidden measure rows and the live row share one grid cell. */
+.iel-page .ig-weight{display:grid}
+.iel-page .ig-weight>.ig-weight-measure,.iel-page .ig-weight>.ig-weight-row{grid-area:1/1}
+.iel-page .ig-weight>.ig-weight-measure{height:0;overflow:hidden}
+.iel-page .ig-weight>.ig-weight-row{display:flex;gap:2px;min-width:0}
+.iel-page .lbry-toolbar-quick{display:flex;flex-direction:column;gap:8px}
+.iel-page .lbry-toolbar-quick>.lbry-filters[aria-label]{width:100%;max-width:none}
+.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter{flex:1 1 0;min-width:max-content;padding:0 10px;font-size:12.5px;font-weight:560}
+/* The max-content floor above beats the library's 44px touch floor, so a short label ("All") sat at its text plus padding (about 38px) when the row was tight. Longer labels are already well past 44. */
+.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:first-of-type{min-width:44px}
+@media(max-width:400px){.iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span{padding:0 10px}}
+/* At 340 and under the four category labels only fit with less padding and gap; every segment keeps a 44px touch width. */
+@media(max-width:340px){.iel-page .lbry-toolbar-quick>.lbry-filters[aria-label]{gap:2px}.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter{flex:1 0 auto;min-width:44px;padding:0 6px;font-size:12px}.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:has(.lbry-filter-lock){padding:0 17px 0 6px}}
+
+/* D33 review r1. S1: the pressed category pill is ink on ink, so its focus ring flips to the page colour (the style bar does the same above). */
+.iel-page .lbry-filters .lbry-filter[data-active="true"]:focus-visible{outline-color:var(--bg-0)}
+/* S2: category first, style second, with a clear gap so two pressed pills do not read as one control. */
+.iel-page.lib-surface .lbry-toolbar-filters{gap:16px}
+/* P1: locked pill padlock at 12px with a full-contrast stroke. The chip keeps the same 30px of side padding as an open one (9 + 21), so marking a category locked costs no tray width. */
+.iel-page.lib-surface .lbry-filter-lock{right:4px;width:12px;height:12px;opacity:1}
+.iel-page.lib-surface .lbry-filter-lock svg{width:12px;height:12px;stroke-width:2.2}
+.iel-page.lib-surface .lbry-filters .lbry-filter:has(.lbry-filter-lock){padding-left:9px;padding-right:21px}
+@media(max-width:340px){.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:has(.lbry-filter-lock){padding:0 20px 0 6px}}
+/* P1: gate preview, a bundled static sample of the locked category, blurred, with the lock and a plain label sharp over it. */
+.iel-page .ig-gate-sample{position:relative}
+.iel-page .ig-gate-sample-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));grid-auto-rows:92px;gap:10px;height:194px;overflow:hidden;filter:blur(3px);opacity:.85}
+.iel-page .ig-gate-sample-cell{display:grid;place-items:center;color:var(--t0)}
+.iel-page .ig-gate-sample-cell svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.iel-page .ig-gate-sample-cell svg [data-fill]{fill:currentColor;stroke:none}
+.iel-page .ig-gate-sample-lock{
+  position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:var(--radius-pill);background:var(--bg-0);color:var(--t0);border:1px solid var(--border);
+  font:600 13px/1 var(--font);white-space:nowrap;
+}
+.iel-page .ig-gate-sample-lock svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:640px){.iel-page .ig-gate-sample-grid{grid-auto-rows:72px;gap:2px;height:146px}.iel-page .ig-gate-sample-grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}}
+html[data-reduced-motion="true"] .iel-page .ig-gate-sample-grid{filter:blur(3px)}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .iel-page .ig-gate-sample-grid{filter:blur(3px)}}
+/* P2 polish: the active category beside "Filters" on the 641 to 1000 range where the groups fold into the popover. */
+.iel-page .lbry-filtersbtn-hint{display:inline-block;max-width:13ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;color:var(--t2)}
+@media(max-width:640px){.iel-page .lbry-filtersbtn-hint{display:none}}
+/* P3: retry button under the category empty line. */
+.iel-page .ig-empty-actions{display:flex;justify-content:center;margin-top:10px}
+/* Forced colours: pressed category and style pills fill with Highlight so they differ from a focused one (outline only). */
+@media (forced-colors: active){
+  .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"],.iel-page .ig-weight-btn[aria-pressed="true"]{forced-color-adjust:none;background:Highlight;color:HighlightText}
+  .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"]:focus-visible,.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline:2px solid HighlightText;outline-offset:-2px}
 }

@@ -58,7 +58,23 @@ export function pair(fg, bg, { size = 16, weight = 400, what = '' } = {}) {
   const r = ratio(fg, bg);
   const large = size >= 24 || (size >= 18.66 && weight >= 700);
   const need = large ? 3 : 4.5;
-  if (r < need) throw new Error(`Contrast ${fg} on ${bg} is ${r.toFixed(2)}:1, needs ${need}:1 (${size}px/${weight}) ${what}`);
+  // code: the route answers a coded error with its own status and code, not the generic build failure
+  if (r < need) throw Object.assign(new Error(`Contrast ${fg} on ${bg} is ${r.toFixed(2)}:1, needs ${need}:1 (${size}px/${weight}) ${what}`), { code: 'contrast' });
   return r;
 }
 export const isLarge = (size, weight = 400) => size >= 24 || (size >= 18.66 && weight >= 700);
+
+// The contrast a text size needs: 4.5, or 3 when large.
+export const needFor = (size = 16, weight = 400) => (isLarge(size, weight) ? 3 : 4.5);
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+export const isHex = (c) => typeof c === 'string' && HEX.test(c);
+// A text colour for bg that always reaches the ratio its size needs, and never throws. The first candidate that passes wins, so pass them
+// in the order the design prefers; then near-black #111111 and near-white #FAFAFA, but only where they pass; last black or white, whichever
+// reads better (one of them is always at least 4.58:1, sqrt(21)). A candidate that is not a hex colour is skipped. pair() stays the hard
+// assertion for a pair a theme designed itself; this is for text on a colour that came from the user's palette.
+export function readableOn(bg, candidates = [], { size = 16, weight = 400 } = {}) {
+  if (!isHex(bg)) return candidates.find(isHex) || '#000000';
+  const need = needFor(size, weight);
+  for (const c of [...candidates, '#111111', '#FAFAFA']) if (isHex(c) && ratio(c, bg) >= need) return c;
+  return ratio('#000000', bg) >= ratio('#FFFFFF', bg) ? '#000000' : '#FFFFFF';
+}

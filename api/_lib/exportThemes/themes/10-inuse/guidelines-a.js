@@ -4,7 +4,7 @@
 import { A, fit, std, mk, phoneToday } from './helpers.js';
 
 const hexName = (ctx, hex) => ctx.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
-const isGround = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const isHair = (ctx, hex) => isGround(ctx, hex) || hex.toLowerCase() === '#ffffff';
 const sentences = (s) => s.split(/(?<=\.)\s+/);
 const words = (s) => s.trim().split(/\s+/).length;

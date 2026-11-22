@@ -41,6 +41,11 @@ import useToolbarPeek from './useToolbarPeek'
 //      as chips in a popover (desktop) or a bottom sheet (phone);
 //   3  the action leaves the row too and sits at the foot of that panel.
 //
+// `sort` (the Icon and Emoji libraries' sort menu) rides with the groups: it
+// sits on the row after the action while the row is at stage 0 or 1, and goes
+// into the panel's foot, above the action, from stage 2. A phone starts at
+// stage 2, so there it is never on the row and costs the row no width.
+//
 // Each stage's NEED is measured once it has rendered — the widths of
 // everything on the row except the search field, plus the search field's
 // FLOOR, plus the gaps — and cached. The search field is the one flexible
@@ -79,6 +84,8 @@ function LibraryToolbar({
   search,
   count,
   action,
+  // A node drawn on the row after the action at stages 0 and 1, and in the Filters panel from stage 2 (see above).
+  sort,
   // A node that stays at the row's right end at every stage and is never moved
   // into the Filters panel (the Icon Library's My icons toggle). Giving one also
   // sends a phone's `action` straight to the sheet, so the row holds search,
@@ -95,6 +102,9 @@ function LibraryToolbar({
   // Filters control once the groups have moved behind it, so hidden state is
   // still stated (the same reason a collapsed trigger names its selection).
   activeFilters = 0,
+  // A short word for what the folded filters hold, drawn after "Filters" on a wide screen where the label shows
+  // (the active category, say). Decorative: the accessible name stays "Filters". Optional; a surface that omits it is unchanged.
+  filtersHint,
   className = '',
   // The phone sheet's heading, and a class for the layer it is portalled into
   // (the sheet sits outside the page root, so a page scopes its styling here).
@@ -103,9 +113,11 @@ function LibraryToolbar({
 }) {
   const phone = useMediaQuery(PHONE_QUERY)
   const groups = Children.toArray(children).filter(Boolean)
-  const quickIndex = phone && Number.isInteger(quick) && groups[quick] ? quick : -1
-  const quickGroup = quickIndex >= 0 ? groups[quickIndex] : null
-  const panelGroups = quickIndex >= 0 ? groups.filter((_, i) => i !== quickIndex) : groups
+  // `quick` is one child's index, or an array of indexes drawn in that order (the Icon library draws
+  // its category control and style bar both). The integer form is unchanged for every other toolbar.
+  const quickIndexes = phone ? (Array.isArray(quick) ? quick : [quick]).filter((i) => Number.isInteger(i) && groups[i]) : []
+  const quickGroup = quickIndexes.length ? quickIndexes.map((i) => groups[i]) : null
+  const panelGroups = quickIndexes.length ? groups.filter((_, i) => !quickIndexes.includes(i)) : groups
 
   const minStage = phone ? (pinned && action ? 3 : 2) : 0
   const [stage, setStage] = useState(minStage)
@@ -133,7 +145,7 @@ function LibraryToolbar({
 
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
-  const hasPanel = panelGroups.length > 0 || (effective >= 3 && !!action)
+  const hasPanel = panelGroups.length > 0 || (effective >= 3 && !!action) || (effective >= 2 && !!sort)
 
   // Measure the stage on screen, then move one step if it does not fit or if a
   // lower stage is already known to. Driven by a ResizeObserver on the row AND
@@ -177,18 +189,22 @@ function LibraryToolbar({
     obs.observe(row)
     for (const el of row.children) obs.observe(el)
     return () => obs.disconnect()
-  }, [decide, effective, phone, groups.length, count, action, pinned])
+  }, [decide, effective, phone, groups.length, count, action, sort, pinned])
 
   // A font swap changes every option's width, so every cached need is stale.
   // Cleared ONCE, when the fonts settle: clearing on every stage change would
   // empty the cache on each step, and a row that had stepped up could never
-  // find a lower stage to step back down to.
+  // find a lower stage to step back down to. The row then starts again from
+  // its floor: a stage reached while the fallback font was wider has no
+  // measured lower stage left to step back down to, so it would stay there.
   useEffect(() => {
     let cancelled = false
     document.fonts?.ready?.then(() => {
       if (cancelled) return
       needs.current = {}
-      decide()
+      const { effective, minStage } = live.current
+      if (effective !== minStage) setStage(minStage)
+      else decide()
     }).catch(() => {})
     return () => { cancelled = true }
   }, [decide])
@@ -257,13 +273,16 @@ function LibraryToolbar({
             setOpen={setOpen}
             close={close}
             activeFilters={activeFilters}
+            hint={filtersHint}
             sheetTitle={sheetTitle}
             sheetClassName={sheetClassName}
             groups={panelGroups}
             action={effective >= 3 ? action : null}
+            sort={sort}
           />
         )}
         {action && effective < 3 && <div className="lbry-toolbar-action">{action}</div>}
+        {sort && effective < 2 && <div className="lbry-toolbar-sort">{sort}</div>}
         {pinned && <div className="lbry-toolbar-pinned">{pinned}</div>}
       </div>
       {quickGroup && (
@@ -283,7 +302,7 @@ function LibraryToolbar({
 export default memo(LibraryToolbar)
 
 // The one control the groups collapse into, and the panel it opens.
-function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action, sheetTitle, sheetClassName }) {
+function FiltersControl({ phone, open, setOpen, close, activeFilters, hint, groups, action, sort, sheetTitle, sheetClassName }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const firstControl = ':is(button,a[href],input,select,textarea,[tabindex]):not([disabled]):not([aria-disabled="true"]):not([tabindex="-1"])'
   // Desktop: the app's non-modal disclosure (usePopover — dismissal, focus-in,
@@ -303,7 +322,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
   const panelBody = (
     <ToolbarModeContext.Provider value="expand">
       <div className="lbry-panel-groups">{groups}</div>
-      {action && <div className="lbry-panel-action">{action}</div>}
+      {(sort || action) && <div className="lbry-panel-action">{sort}{action}</div>}
     </ToolbarModeContext.Provider>
   )
 
@@ -325,6 +344,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
       >
         <FiltersGlyph />
         <span className="lbry-filtersbtn-label">Filters</span>
+        {hint ? <span className="lbry-filtersbtn-hint" aria-hidden="true">{` · ${hint}`}</span> : null}
         {activeFilters > 0 && <span className="lbry-filtersbtn-count">{activeFilters}</span>}
       </button>
       {open && !phone && (

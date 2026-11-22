@@ -69,7 +69,7 @@ export function put(ctx, { x, y, w, cls = '', html, role = 'body', size = 16, li
 }
 // the better of ink and ground on a fill, asserted
 export function onFill(ctx, T, bg, size = TXT, weight = 400) {
-  const best = ctx.ratio(T.ink, bg) >= ctx.ratio(T.ground, bg) ? T.ink : T.ground;
+  const best = ctx.textOn(bg, { size, weight, prefer: ctx.ratio(T.ink, bg) >= ctx.ratio(T.ground, bg) ? T.ink : T.ground });
   ctx.pair(best, bg, { size, weight, what: '(Text on a strong field)' });
   return best;
 }

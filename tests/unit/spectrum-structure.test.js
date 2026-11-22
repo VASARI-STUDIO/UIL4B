@@ -334,6 +334,6 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
 test('the page never removes an outline', () => {
   assert.ok(!/outline\s*:\s*(none|0)\b/.test(CSS),
     'spectrum.css sets outline:none somewhere. Focus has to stay visible on every control.')
-  assert.ok(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent\)/.test(CSS),
-    'spectrum.css no longer paints a focus ring on the accent')
+  assert.ok(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus-ink\)/.test(CSS),
+    'spectrum.css no longer paints the ink focus ring')
 })

@@ -7,6 +7,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import useExportRunner from '../../hooks/useExportRunner'
+import { exportProjectName } from '../../utils/projectFileName'
 import { DEFAULT_PRESET, EXPORT_TYPES, freeWayOut, readLastPick, readLastTheme, resolvePreset, startFor, storeLastPick } from '../../config/dialogExport'
 import { readExportTemplates } from '../../config/exportTemplates'
 import { defaultThemeId, themeFitsFile, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
@@ -53,7 +54,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const [signingIn, setSigningIn] = useState(false)
   const design = useExportDesign()
   const project = projectId ? projects.find((p) => String(p.id) === String(projectId)) || null : null
-  const name = project?.name || design?.name || ''
+  const name = exportProjectName({ projects, projectId, design, working })
 
   // An account without Pro, signed in or out, starts on a free file: the slides, in Label. The pick the dialog was given (or the last
   // one this session, with its theme) stands only when it is free for them; a Pro document is still one click away.

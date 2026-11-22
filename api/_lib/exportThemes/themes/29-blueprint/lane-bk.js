@@ -86,7 +86,7 @@ function colour(ctx) {
   const fg = (hex) => {
     const own = ctx.pairs.filter((p) => p.bgHex.toUpperCase() === hex.toUpperCase()).sort((a, b) => b.ratio - a.ratio)[0];
     if (own && own.ratio >= 4.5) return own.fgHex;
-    return ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text;
+    return ctx.textOn(hex, { size: 13, prefer: ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text });
   };
   // the field widths are the shares exactly; a field under a tenth of the page sets its name on its side
   const sum = cols.reduce((a, c) => a + c.share, 0), wd = cols.map((c) => (c.share / sum) * 100);

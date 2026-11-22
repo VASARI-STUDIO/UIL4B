@@ -5,14 +5,17 @@
 import { A } from './helpers.js';
 import { nearestWeight } from '../../engine/brand.js';
 
+const NUMW = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+const countOf = (n, one, many) => `${NUMW[n] || n} ${n === 1 ? one : many}`;
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
-// the readable text colour on a brand colour: the better of the light-mode text and surface colours, checked
+// the readable text colour on a brand colour: the better of the light-mode text and surface colours, else the engine's fallback (ctx.textOn), checked
 const onColour = (ctx, hex) => {
-  const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface;
+  const L = ctx.roles.light, first = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface;
+  const pick = ctx.textOn(hex, { size: 13, prefer: first });
   ctx.pair(pick, hex, { size: 13, what: `book swatch ${hex}` }); return pick;
 };
 // a swatch that sits on the ground (Deck, White) needs a hairline to be seen
-const hairlineOn = (ctx, hex) => [ctx.roles.light.surface, ctx.roles.light.raised].some((h) => h.toLowerCase() === hex.toLowerCase());
+const hairlineOn = (ctx, hex) => [ctx.roles.light.surface, ctx.roles.light.raised].some((h) => ctx.ratio(h, hex) < 1.25);
 
 // a copy button: visible text is the action, the accessible name says what it copies
 const copyBtn = (text, value, what, cls = '', verb = text) => `<button type="button" class="bk-btn ${cls}" data-copy="${A(value)}" data-copy-label="${A(what)}" aria-label="${A(verb + ' ' + what)}"><span class="bk-btn__t">${A(text)}</span></button>`;
@@ -40,7 +43,7 @@ const term = (t) => `<span class="bk-term">${A(t)}</span>`;
 function overview(ctx) {
   const B = ctx.brand, cw = B.logo.colourways['on-buoy'];
   const clauses = B.personality.map((p) => `${term(p.trait)} ${A(p.means)}`);
-  const work = `<div class="bk-buoy" style="background:${cw.ground};color:${cw.name}"><span class="bk-buoy__k">${A(B.name)}</span>${fluid(ctx, 'colour', 360, { colourway: 'on-buoy', color: cw.name, label: 'Your logo goes here' })}</div>
+  const work = `<div class="bk-buoy" style="background:${cw.ground};color:${cw.name}"><span class="bk-buoy__k">${A(B.name)}</span>${fluid(ctx, 'colour', 360, { colourway: 'on-buoy', color: ctx.edition === 'slot' ? ctx.textOn(cw.ground, { size: 11, prefer: cw.name }) : cw.name, label: 'Your logo goes here' })}</div>
 <div class="bk-hero"><h1 class="disp" id="h-overview-line">${A(B.lines.primary)}</h1><p class="bk-measure bk-x">Every size in this manual is given in x, the stroke of the wake.</p></div>
 <div class="bk-two bk-two--even"><div>${sub('What it does')}<p class="bk-body">${A(B.product)}</p></div><div>${sub('Who it serves')}<p class="bk-body">${A(B.audience)}</p></div></div>`;
   return page(ctx, 1, 'overview', 'Overview', A(B.description), clauses, work, 'bk-sec--overview');
@@ -85,7 +88,7 @@ function logo(ctx) {
   const ver = ([id, w], i) => {
     const c = cw[L.colourwayOf(id)], files = ctx.book.logo(id), name = `${L.labels[id]} logo`;
     const links = slot ? '' : `<span class="bk-dls">${dl(files.svg, name)}${dl(files.png.find((p) => p.w === 1024), name + ', 1024 px wide')}</span>`;
-    return `<li class="bk-ver"><p class="bk-ver__h"><span class="num">3.${k0 + i + 1}</span><b>${A(L.labels[id])}</b></p><div class="bk-ground${hairlineOn(ctx, c.ground) ? ' is-hair' : ''}" style="background:${c.ground}">${fluid(ctx, id, w, { color: c.name, label: L.labels[id] })}</div><div class="bk-capt"><span>${A(B.logo.when[id])}</span>${links}</div></li>`;
+    return `<li class="bk-ver"><p class="bk-ver__h"><span class="num">3.${k0 + i + 1}</span><b>${A(L.labels[id])}</b></p><div class="bk-ground${hairlineOn(ctx, c.ground) ? ' is-hair' : ''}" style="background:${c.ground}">${fluid(ctx, id, w, { color: slot ? ctx.textOn(c.ground, { size: 11, prefer: c.name }) : c.name, label: L.labels[id] })}</div><div class="bk-capt"><span>${A(B.logo.when[id])}</span>${links}</div></li>`;
   };
   const minBlock = slot
     ? `<p class="bk-body">Set the smallest size once the logo is in place. Below that size the name and the wake stop reading as one mark.</p>`
@@ -96,7 +99,7 @@ function logo(ctx) {
   const busy = `<svg class="bk-busy" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${bands}</svg><span class="bk-onbusy${slot ? ' is-plate' : ''}">${L.forMisuse(112, { fill: hull })}</span>`;
   const specs = [
     `<div style="transform:scale(1.25,0.6)">${L.forMisuse(104)}</div>`,
-    L.forMisuse(112, { fill: wrong }),
+    L.forMisuse(112, { fill: slot ? ctx.textOn(ctx.roles.light.surface, { size: 11, prefer: wrong }) : wrong }),
     `<div style="transform:rotate(-14deg)">${L.forMisuse(112)}</div>`,
     `<div style="filter:drop-shadow(4px 5px 0 ${ctx.roles.light.quiet})">${L.forMisuse(112)}</div>`,
     busy,
@@ -119,9 +122,11 @@ function colour(ctx) {
   const steps = Object.keys(ctx.colours[0].ramp);
   const nC = ctx.colours.length, nT = ctx.tones.length;
   // the tint table: ten strips with their step numbers; the step that is the colour itself is marked by a bar
+  // a step is labelled when it is an end of the ramp or the colour itself; an end next to the colour's own step gives way to it
+  const shown = (c, i) => { const b = steps.indexOf(String(c.rampBase)), n = steps.length - 1; return i === b || (i === 0 && b > 1) || (i === n && b < n - 1); };
   const tint = (c) => (c.rampBase === 50
-    ? `<p class="bk-tint bk-tint--none bk-cap">The ground. No tints.</p>`
-    : `<div class="bk-tint" role="img" aria-label="${A(c.name)} tint ramp, steps ${steps[0]} to ${steps.at(-1)}. Step ${c.rampBase} is the colour itself.">${steps.map((k) => `<span class="bk-t${+k === c.rampBase ? ' is-base' : ''}"><i class="${ctx.ratio(c.ramp[k], L.surface) < 1.25 ? 'is-hair' : ''}" style="background:${c.ramp[k]}"></i><em class="num">${k}</em></span>`).join('')}</div>`);
+    ? `<p class="bk-tint bk-tint--none bk-cap">${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</p>`
+    : `<div class="bk-tint" role="img" aria-label="${A(c.name)} tint ramp, steps ${steps[0]} to ${steps.at(-1)}. Step ${c.rampBase} is the colour itself.">${steps.map((k, i) => `<span class="bk-t${+k === c.rampBase ? ' is-base' : ''}${shown(c, i) ? ' is-k' : ''}"><i class="${ctx.ratio(c.ramp[k], L.surface) < 1.25 ? 'is-hair' : ''}" style="background:${c.ramp[k]}"></i><em class="num">${k}</em></span>`).join('')}</div>`);
   const spec = (c, num) => {
     const rgb = rgbOf(ctx, c.hex), ok = c.oklch || ctx.C.oklchString(c.hex);
     return `<div class="bk-spec"><p class="bk-cnum num">${num}</p><p class="bk-cname">${A(c.name)}</p><p class="bk-clands">${A(c.lands)}</p><dl class="bk-vals"><div><dt>HEX</dt><dd>${c.hex}</dd></div><div><dt>RGB</dt><dd>${rgb}</dd></div><div><dt>OKLCH</dt><dd>${ok}</dd></div></dl><div class="bk-copies"><span class="bk-cap">Copy</span>${copyBtn('HEX', c.hex, `${c.name} HEX`, '', 'Copy HEX')}${copyBtn('RGB', rgb, `${c.name} RGB`, '', 'Copy RGB')}${copyBtn('OKLCH', ok, `${c.name} OKLCH`, '', 'Copy OKLCH')}</div></div>`;
@@ -151,10 +156,12 @@ function colour(ctx) {
   const clauses = ctx.colours.map((c) => `${term(c.name)} ${A(c.lands)}`);
   const key = `<li class="bk-key"><p class="bk-cnum">Key</p><dl><div><dt>Chip</dt><dd>Click it to copy the HEX.</dd></div><div><dt>Figure</dt><dd>The share of a page the colour takes.</dd></div><div><dt>Tint table</dt><dd>Steps ${steps[0]} to ${steps.at(-1)}. The bar marks the colour itself.</dd></div></dl></li>`;
   const work = `<ol class="bk-chips">${ctx.colours.map(cell).join('')}${key}</ol>
-<div class="bk-block">${sub('Text tones')}<ol class="bk-chips bk-chips--tones">${ctx.tones.map(toneCell).join('')}</ol></div>
+${ctx.tones.length ? `<div class="bk-block">${sub('Text tones')}<ol class="bk-chips bk-chips--tones">${ctx.tones.map(toneCell).join('')}</ol></div>` : ''}
 <div class="bk-block">${sub('Contrast, pair by pair')}<p class="bk-body bk-measure">Every text pair ${A(B.name)} uses, with its WCAG ratio. Text needs 4.5 : 1. Type at 24 px and over needs 3 : 1. Sizes are given in x, which is ${x} px on screen.</p><ol class="bk-pairs">${ctx.pairs.map(pair).join('')}</ol></div>
 <div class="bk-block">${sub('Interface roles')}<p class="bk-body bk-measure">The same roles in the light and dark previews. Use the switch to see the other set.</p>${roles('light')}${roles('dark')}</div>`;
-  return page(ctx, 4, 'colour', 'Colour', 'Five colours and two tones. Deck and Hull do most of the work.', clauses, work, 'bk-sec--colour');
+  const lead2 = ctx.colours.slice(0, 2).map((c) => c.name);
+  const colourLead = `${countOf(ctx.colours.length, 'colour', 'colours')}${ctx.tones.length ? ` and ${countOf(ctx.tones.length, 'tone', 'tones').toLowerCase()}` : ''}. ${lead2.length > 1 ? `${lead2[0]} and ${lead2[1]} do` : `${lead2[0]} does`} most of the work.`;
+  return page(ctx, 4, 'colour', 'Colour', colourLead, clauses, work, 'bk-sec--colour');
 }
 
 function typography(ctx) {

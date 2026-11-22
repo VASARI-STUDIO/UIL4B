@@ -8,7 +8,7 @@ import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../..
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../../utils/communityQueueApi'
 import { isPostLimit } from '../../utils/communityLimits'
 import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
-import { approvedRows, visibleRows } from '../../utils/approvedSubmissions'
+import { approvedRows, waitingRows } from '../../utils/approvedSubmissions'
 import { handleProblem, readStoredHandle } from '../../utils/communityHandle'
 import { TOAST_ACTION_MIN_MS } from '../../utils/toastDuration'
 import { appendIconSubmission, buildIconPayload, readIconSubmissions, removeIconSubmission } from '../../utils/iconSubmission'
@@ -178,10 +178,10 @@ export default function useCommunityHub(toast) {
   const iconsRead = !uid || listsRead.icon
 
   /**
-   * One list for Your submissions, newest first, every status with its tag. An
-   * approved piece stays here as Approved and is listed under Made as well.
+   * One list for Your submissions, newest first: pending, rejected and local
+   * work with its tag. An approved piece leaves it and is listed under Made.
    */
-  const rows = useMemo(() => visibleRows([
+  const rows = useMemo(() => waitingRows([
     ...icons.map((s) => ({ ...s, kind: 'icon' })),
     ...designs.map((s) => ({ ...s, kind: Array.isArray(s.colors) ? 'palette' : 'design' })),
     ...uploads.map((s) => ({ ...s, kind: 'image', synced: false })),
@@ -312,6 +312,8 @@ export default function useCommunityHub(toast) {
         setIconServer((prev) => prev.filter((s) => s.id !== row.id))
       } else if (row.kind === 'image') {
         setUploads((prev) => prev.filter((s) => s.id !== row.id))
+      } else if (row.kind === 'gradient') {
+        setGradientServer((prev) => prev.filter((s) => s.id !== row.id))
       } else {
         writeCommunitySubmissions(readCommunitySubmissions().filter((s) => s.id !== row.id))
         setDesignLocal((prev) => prev.filter((s) => s.id !== row.id))
@@ -344,7 +346,8 @@ export default function useCommunityHub(toast) {
     }
     entry.timer = setTimeout(entry.commit, TOAST_ACTION_MIN_MS)
     pending.current.set(row.id, entry)
-    toast?.('Submission withdrawn', 'success', { action: { label: 'Undo', onAction: undo } })
+    const said = row.status === 'approved' ? 'Removed from the gallery' : 'Submission withdrawn'
+    toast?.(said, 'success', { action: { label: 'Undo', onAction: undo } })
   }, [toast, commit, unhide])
 
   useEffect(() => {

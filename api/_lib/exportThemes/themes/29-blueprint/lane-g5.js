@@ -66,7 +66,10 @@ function socialGrounds(ctx) {
   const pick = (hex, taken) => {
     const own = colourOf(ctx, hex);
     if (own && !taken.includes(own.hex.toUpperCase())) return own.hex;
-    return ctx.colours.filter((c) => !taken.includes(c.hex.toUpperCase()) && ctx.ratio(c.hex, L.text) >= 7).sort((a, b) => d(a.hex, hex) - d(b.hex, hex))[0].hex;
+    // the dark brand colours first; a palette with none dark takes the nearest unused colour, then any colour
+    const free = ctx.colours.filter((c) => !taken.includes(c.hex.toUpperCase()));
+    const dark = free.filter((c) => ctx.ratio(c.hex, L.text) >= 7);
+    return (dark.length ? dark : free.length ? free : ctx.colours).slice().sort((a, b) => d(a.hex, hex) - d(b.hex, hex))[0].hex;
   };
   const g1 = pick(L.raised, [rev.ground.toUpperCase()]);
   return [rev.ground, g1, pick(L.surface, [rev.ground.toUpperCase(), g1.toUpperCase()])];

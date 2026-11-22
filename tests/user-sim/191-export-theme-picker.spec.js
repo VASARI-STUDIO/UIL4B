@@ -103,7 +103,7 @@ const pressed = (panel) => grid(panel).locator('.xd-tpl-card[aria-pressed="true"
 const chosenName = async (panel) => (await readTemplates(panel)).chosen
 const expectChosen = (panel, name, message) => expect.poll(() => chosenName(panel), { message }).toEqual([name])
 /** The first picture or live page on the stage, named for its template ("Catalogue theme, ..." or "Catalogue ... page, with your brand"). */
-const stageName = (panel) => panel.locator('.xd-box img, .xd-box iframe').first().evaluate((el) => el.getAttribute('alt') || el.getAttribute('title') || '')
+const stageName = (panel) => panel.locator('.xd-box img:not([aria-hidden]), .xd-box iframe').first().evaluate((el) => el.getAttribute('alt') || el.getAttribute('title') || '')
 const expectStage = (panel, name, message) => expect.poll(() => stageName(panel), { message }).toMatch(new RegExp(`^${name}\\b`))
 
 /** Choose a template from the grid and check the dialog went back to the preview with it chosen. */

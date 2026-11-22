@@ -341,7 +341,7 @@
 /* Pressed is carried by three things, not by colour alone: the ink darkens,
    the ground fills, and a hairline in the strong border colour draws the box. */
 .v3d .v3d-seg button[aria-pressed="true"],
-.v3d .v3d-tool[aria-pressed="true"] { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.v3d .v3d-tool[aria-pressed="true"] { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--sel-edge); }
 
 .v3d .v3d-seg button:focus-visible,
 .v3d .v3d-tool:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; }
@@ -459,7 +459,7 @@
 
 /* "For Blender" on the toolbar is a toggle: pressed while its settings hold,
    drawn as the pressed chip is. */
-.v3d .v3d-preset[aria-pressed="true"] { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+.v3d .v3d-preset[aria-pressed="true"] { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--sel-edge); }
 
 /* Output choices: real radios in their groups, so arrow keys move between
    them and a screen reader hears "radio, 3 of 8". What the chosen format

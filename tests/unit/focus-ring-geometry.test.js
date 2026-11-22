@@ -87,9 +87,9 @@ test('no :focus rule in any of the app stylesheets sets border-radius', () => {
 test('the global :focus-visible rule still paints a visible ring (WCAG 2.4.7)', () => {
   const rule = focusRules().find((r) => r.prelude === ':focus-visible')
   assert.ok(rule, 'the global :focus-visible rule is gone entirely')
-  assert.match(rule.body, /outline\s*:\s*2px\s+solid\s+var\(--accent\)/,
-    'the global focus ring must stay a 2px solid --accent outline')
-  assert.match(rule.body, /outline-offset\s*:\s*2px/,
+  assert.match(rule.body, /outline\s*:\s*var\(--focus-w,\s*2px\)\s+solid\s+var\(--focus-ink/,
+    'the global focus ring must stay a 2px solid --focus-ink outline')
+  assert.match(rule.body, /outline-offset\s*:\s*(?:var\(--focus-offset,\s*)?2px\b/,
     'the ring sits 2px off the control so it clears the control\'s own border')
   assert.doesNotMatch(rule.body, /outline\s*:\s*(none|0)\b/,
     'removing the focus ring is never the fix for a mis-shaped focus ring')

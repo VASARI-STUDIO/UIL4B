@@ -147,13 +147,18 @@ export function createApprovedLoader({ list, keepMs = 5 * 60 * 1000, now = Date.
   }
 }
 
-/**
- * The hub's Your submissions list: everything not hidden, whatever its status.
- * An approved piece stays listed with its Approved tag (and is in Made too).
- */
+/** Every row that is not hidden, whatever its status. */
 export function visibleRows(rows, hiddenIds) {
   const hidden = hiddenIds instanceof Set ? hiddenIds : new Set()
   return (Array.isArray(rows) ? rows : []).filter((s) => s && !hidden.has(s.id))
+}
+
+/**
+ * The hub's Your submissions list: pending, rejected and local rows. An approved
+ * piece leaves it and is listed under Made instead.
+ */
+export function waitingRows(rows, hiddenIds) {
+  return visibleRows(rows, hiddenIds).filter((s) => s.status !== 'approved')
 }
 
 /** The hub's approved list, for the profile's Made tab. */

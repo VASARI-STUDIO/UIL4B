@@ -10,7 +10,7 @@ const onColour = (ctx, hex, size = 13, what = `book slide ${hex}`) => {
   const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface;
   ctx.pair(pick, hex, { size, what }); return pick;
 };
-const hairlineOn = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const hairlineOn = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 
 // a copy button: visible text is the action, the accessible name says what it copies
 const copyBtn = (text, value, what, cls = '') => `<button type="button" class="bk-btn ${cls}" data-copy="${A(value)}" data-copy-label="${A(what)}" aria-label="${A(text + ' ' + what)}"><span class="bk-btn__t">${A(text)}</span></button>`;
@@ -111,8 +111,8 @@ function colour(ctx) {
   const toneKeys = [['success', 'Success'], ['warning', 'Warning'], ['danger', 'Danger'], ['info', 'Info']];
   const roles = (mode) => {
     const r = ctx.roles[mode];
-    const items = [...roleKeys.map(([k, n]) => [n, r[k]]), ...toneKeys.map(([k, n]) => [n, r[k].fg])];
-    return `<ul class="bk-roles bk-for-${mode}">${items.map(([n, hx]) => `<li><button type="button" class="bk-role" data-copy="${hx}" data-copy-label="${mode} ${A(n)} HEX ${hx}" aria-label="Copy HEX ${A(hx)}, ${mode} ${A(n)}"><span class="bk-role__sw${hairlineOn(ctx, hx) ? ' is-hair' : ''}" style="background:${hx}" aria-hidden="true"></span><span class="bk-role__n">${A(n)}</span><span class="bk-role__h">${hx}</span></button></li>`).join('')}</ul>`;
+    const items = [...roleKeys.map(([k, n]) => [n, r[k], k]), ...toneKeys.map(([k, n]) => [n, r[k].fg, k])];
+    return `<ul class="bk-roles bk-for-${mode}">${items.map(([n, hx, k]) => `<li><button type="button" class="bk-role" data-copy="${hx}" data-copy-label="${mode} ${A(n)} HEX ${hx}" aria-label="Copy HEX ${A(hx)}, ${mode} ${A(n)}"><span class="bk-role__sw${hairlineOn(ctx, hx) ? ' is-hair' : ''}${k === 'action' && ctx.ratio(hx, r.surface) < 3 ? ' is-edged' : ''}" style="background:${hx}${k === 'action' && ctx.ratio(hx, r.surface) < 3 ? `;--sw-edge:${r.actionEdge || r.border}` : ''}" aria-hidden="true"></span><span class="bk-role__n">${A(n)}</span><span class="bk-role__h">${hx}</span></button></li>`).join('')}</ul>`;
   };
   const opening = slide('bk-slide--title bk-slide--bar', `<h2 class="disp bk-giant" id="h-colour">Colour</h2><p class="bk-lead">Click a swatch to copy its HEX. Click a value on any colour slide to copy it. Wider swatches take more of a page.</p>`, `<div class="bk-bar">${bar}</div>`);
   return sec('colour', 'bk-sec--colour', `

@@ -9,8 +9,8 @@ const hexName = (ctx, hex) => COLOUR_ID_OF_HEX(ctx, hex)?.name || hex;
 // the brand colour that plays a role (action, text, panel, ground), else the nth colour
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
 // whichever of the page's text and ground colours reads better on a hex
-const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };
-const isGround = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const inkOn = (ctx, hex, size = 13) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const sentences = (s) => s.split(/(?<=\.)\s+/);
 // the cross that marks a wrong example
 const CROSS = `<svg class="a-cross" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Not allowed"><circle cx="12" cy="12" r="12" fill="currentColor"/><path d="M8 8l8 8M16 8l-8 8" stroke="var(--ground)" stroke-width="2" stroke-linecap="square" fill="none"/></svg>`;
@@ -137,7 +137,7 @@ ${dim('a-dim--v', `left:50%;top:0;height:${r(X)}px`)}${dim('a-dim--v', `left:50%
     const tile = (c, i) => {
       const ink = inkOn(ctx, c.hex);
       const body = i === 0 ? `<span class="disp a-ptext">${A(texts[0])}</span>` : `<span class="a-ptext2">${A(texts[i % texts.length])}</span>`;
-      return `<figure class="a-pt-tile ${i === 0 ? 'a-p0' : ''} ${isGround(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex};color:${ink}">${body}<figcaption class="cap"><span class="disp a-pn">${A(c.name)}</span>${A(ctx.cap(c.role))}. ${A(c.lands)}</figcaption></figure>`;
+      return `<figure class="a-pt-tile ${i === 0 ? 'a-p0' : ''} ${isGround(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex};color:${ink}">${body}<figcaption class="cap"><span class="disp a-pn">${A(c.name)}</span>${c.name.toLowerCase() === String(c.role).toLowerCase() ? '' : `${A(ctx.cap(c.role))}. `}${A(ctx.cap(String(c.lands ?? "")))}</figcaption></figure>`;
     };
     const inner = `<p class="lead a-glead">${A(lead)}</p><div class="a-pal" style="grid-template-columns:2fr repeat(${cs.length - 1},minmax(0,1fr))">${cs.map(tile).join('')}</div>`;
     return slide(ctx, 'palette', inner, { fo: inkOn(ctx, cs[0].hex) });
@@ -164,7 +164,7 @@ ${dim('a-dim--v', `left:50%;top:0;height:${r(X)}px`)}${dim('a-dim--v', `left:50%
     const mono = (s) => `<dd class="a-mono">${A(s)}</dd>`;
     const colour = (c) => {
       const ink = inkOn(ctx, c.hex);
-      const strip = c.rampBase === 50 ? `<span class="a-vnote">The ground. No tints.</span>` : `<span class="a-vramp">${steps.map((k) => `<i class="a-chip ${+k === c.rampBase ? 'a-chip--base' : ''}" style="background:${c.ramp[k]}"><em class="num">${k}</em></i>`).join('')}</span>`;
+      const strip = c.rampBase === 50 ? `<span class="a-vnote">${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</span>` : `<span class="a-vramp">${steps.map((k) => `<i class="a-chip ${+k === c.rampBase ? 'a-chip--base' : ''}" style="background:${c.ramp[k]}"><em class="num">${k}</em></i>`).join('')}</span>`;
       return `<div class="a-vcell ${isGround(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex};color:${ink};--ci:${ink}">${strip}<b class="disp a-vn">${A(c.name)}</b><dl class="a-vv"><dt>HEX</dt>${mono(c.hex)}<dt>RGB</dt>${mono(c.rgb.replace(/R(\d+) G(\d+) B(\d+)/, 'R $1  G $2  B $3'))}<dt>OKLCH</dt>${mono(c.oklch)}</dl></div>`;
     };
     const tones = ctx.tones.map((t) => `<li><i class="a-sw ${isGround(ctx, t.hex) ? 'hairline' : ''}" style="background:${t.hex}"></i><span><b>${A(t.name)}</b><span class="a-mono">${A(t.hex)}</span></span></li>`).join('');

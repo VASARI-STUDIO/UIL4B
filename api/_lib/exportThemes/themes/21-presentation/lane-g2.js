@@ -20,11 +20,11 @@ const topForBaseline = (ctx, role, weight, size, lh, y) => { const f = loadFont(
 const L = (ctx) => ctx.roles.light;
 const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
 const nameOfHex = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
-const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
+const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // chrome rule (spec 2.3): the brand's quiet tone that reaches 4.5:1 on the ground; else the best of the text colour, the page ground and the dark soft text
 const chromeOn = (ctx, hex) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
-  return q || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
+  return q || ctx.textOn(hex, { size: 12, prefer: [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0] });
 };
 const px = (n) => +(+n).toFixed(2);
 const box = (x, y, w, h, st = '', inner = '', cls = '') => `<div class="r-a ${cls}" style="left:${px(x)}px;top:${px(y)}px;${w ? `width:${px(w)}px;` : ''}${h ? `height:${px(h)}px;` : ''}${st}">${inner}</div>`;

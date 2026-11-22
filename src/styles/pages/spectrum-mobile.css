@@ -137,7 +137,7 @@
   justify-items: center;
   align-items: start;
 }
-.spm .spm-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+.spm .spm-row:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 6px; }
 @media (max-width: 860px) {
   .spm .spm-row {
     grid-auto-flow: column;

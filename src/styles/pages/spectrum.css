@@ -317,7 +317,7 @@
   box-shadow: 0 30px 70px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
   transition: border-color .16s ease, box-shadow .16s ease;
 }
-.sp-search .hcmd-bar:focus-within { border-color: var(--sp-link); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.sp-search .hcmd-bar:focus-within { outline: var(--focus-w) solid var(--focus-ink); outline-offset: var(--focus-offset); }
 .sp-search .hcmd-prompt { font-size: 0; font-weight: 400; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-search .hcmd-prompt::after { content: "⌕"; font-family: var(--mono); font-size: 15px; }
 .sp-search input.hcmd-input { height: auto; font-size: 16.5px; font-weight: 400; line-height: normal; color: var(--sp-ink); }
@@ -406,13 +406,12 @@
 }
 
 /* ── focus ────────────────────────────────────────────────────────────────────
-   The design's ring: 2px in the link colour, offset 3px. `:focus-visible`
+   The design's ring: 2px in ink, offset 3px. `:focus-visible`
    only, so a pointer press never paints it, and no rule here removes an
    outline. No border-radius in a focus rule — an outline follows its own
    element's radius (tests/unit/focus-ring-geometry.test.js). */
 .spectrum :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-color: var(--sp-link);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 3px;
 }
 .spectrum .sp-search input.hcmd-input:focus-visible { outline-color: transparent; }

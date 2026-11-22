@@ -315,7 +315,7 @@
 .stg .stg-credit a { display: inline-flex; align-items: center; min-height: 24px; color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 @media (pointer: coarse) { .stg .stg-credit a { min-height: 44px; } }
 
-.stg :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.stg :focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 3px; }
 
 /* ── Responsive ───────────────────────────────────────────────────────────────
    The nav NEVER WRAPS and is never a sideways scroller (S8 in

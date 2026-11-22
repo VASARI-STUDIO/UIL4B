@@ -483,14 +483,14 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
    the track itself instead, hugging the pill that is visibly focused. The
    track's pill radius is on its base rule in tool-layout.css. Each engine's
    track is its own rule: a selector the browser cannot parse drops the list. */
-/* The slider ring stays the link colour, not the ink ring: tests/user-sim/143 pins it to --tl-link. */
+/* The slider ring is the shared ink ring (--focus-ink) on the track: tests/user-sim/143 pins it. */
 .plb .plb-adjust .tl-slider input[type="range"]:focus { outline: none; box-shadow: none; }
 .plb .plb-adjust .tl-slider input[type="range"]:focus::-webkit-slider-runnable-track {
-  outline: 2px solid var(--tl-link);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 2px;
 }
 .plb .plb-adjust .tl-slider input[type="range"]:focus::-moz-range-track {
-  outline: 2px solid var(--tl-link);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 2px;
 }
 .plb .plb-adjust .tl-slider-k {
@@ -690,7 +690,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
   color: var(--tl-soft);
   cursor: pointer;
 }
-.plb .plb-val-copy:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 0; }
+.plb .plb-val-copy:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 0; }
 @media (hover: hover) and (pointer: fine) {
   .plb .plb-val-copy:hover { background: var(--tl-card2); color: var(--tl-ink); }
 }
@@ -780,7 +780,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-match-btn:active { background: var(--tl-card2); }
 .plb .plb-match-btn:focus-visible,
 .plb .plb-match-retry:focus-visible,
-.plb .plb-match-how summary:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
+.plb .plb-match-how summary:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 /* The seam chip: your colour and the match butted together, no gap. */
 .plb .plb-match-seam { position: relative; display: flex; width: 48px; height: 36px; border-radius: 6px; overflow: hidden; }
@@ -996,7 +996,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sw-chip:not(.lockt-rowcell) { background: var(--plb-rc); }
 .plb .plb-sw-hex { position: absolute; left: 4px; bottom: 2px; font-family: var(--mono); font-size: 11px; line-height: 14px; opacity: 0; transition: opacity 120ms var(--tl-ease); pointer-events: none; }
 @container (max-width: 47px) { .plb .plb-sw-hex { display: none; } }
-.plb .plb-sw-row:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
+.plb .plb-sw-row:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 .plb .plb-sw-row:focus-visible .plb-sw-hex { opacity: 1; }
 
 /* Applied: wash, a 2px gap ring round the chips, "On your board" in words. */
@@ -1030,7 +1030,7 @@ html[data-reduced-motion="true"] .plb .plb-vision { animation: none; }
 .plb .plb-sw-help { margin: 0; padding: 0 var(--s-4) var(--s-2); font-size: 12px; line-height: 16px; color: var(--tl-dim); }
 .plb .plb-sw-help[hidden] { display: none; }
 .plb .plb-sw-compare { height: 32px; padding: 0 var(--s-2); border: 0; border-radius: 999px; background: none; color: var(--tl-ink); font: inherit; font-size: 12px; font-weight: 560; cursor: pointer; }
-.plb .plb-sw-info:focus-visible, .plb .plb-sw-compare:focus-visible, .plb .plb-sx-search input:focus-visible, .plb .plb-sx-link:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.plb .plb-sw-info:focus-visible, .plb .plb-sw-compare:focus-visible, .plb .plb-sx-search input:focus-visible, .plb .plb-sx-link:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .plb .plb-sw-info:hover, .plb .plb-sw-compare:hover { background: var(--tl-wash); color: var(--tl-ink); } }
 
 /* End of the list: flat, hairline above, no card. */
@@ -1181,7 +1181,7 @@ html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
 /* A pad wider than the drawn control keeps the target at 44px. */
 .plb-coach-x::after, .plb-coach-hide::after { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 .plb-coach-x:active { transform: scale(.97); }
-.plb-coach-x:focus-visible, .plb-coach-hide:focus-visible, .plb-coach-go:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.plb-coach-x:focus-visible, .plb-coach-hide:focus-visible, .plb-coach-go:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (hover: hover) {
   .plb-coach-x:hover { border-color: var(--tl-line-on); color: var(--tl-ink); background: var(--tl-wash-2); }
   .plb-coach-hide:hover { color: var(--tl-ink); }
@@ -1218,7 +1218,7 @@ html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
   }
 }
 /* The control the beat points at wears a ring; no motion, so reduced motion needs nothing. */
-.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached, .plb[data-coach-ring="more"] .tl-more-btn { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.plb .plb-seedchip.is-coached, .plb .plb-save.is-coached, .plb[data-coach-ring="more"] .tl-more-btn { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 /* ── Save one colour to a project (SaveColourDialog) ─────────────────────── */
 .plb-sc { max-width: 400px; }
@@ -1238,7 +1238,7 @@ html[data-reduced-motion="true"] .plb-coach { animation-name: plb-coach-fade; }
   font-family: var(--font); font-size: var(--fs-body-s); font-weight: 560; color: var(--tl-ink);
   transition: background-color var(--dur-1) var(--ease-standard);
 }
-.plb-sc-row:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: -2px; }
+.plb-sc-row:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 .plb-sc-row:active { background: var(--tl-wash-2); }
 .plb-sc-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plb-sc-row-tag { flex: none; font-size: var(--fs-caption); font-weight: 500; color: var(--tl-dim); }

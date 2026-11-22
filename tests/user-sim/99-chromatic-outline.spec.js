@@ -1,9 +1,10 @@
 // Outline-only buttons draw a rotating colour-band outline on hover (where a
-// pointer can hover) and on keyboard focus. Filled buttons never do. Reduced
+// pointer can hover) and while pressed. Filled buttons never do. Reduced
 // motion keeps the ring still; a tap on a touch screen never leaves it on.
+// Keyboard focus draws the one ink focus ring instead, not the colour band.
 //
-// Read off the ring itself: the ::before's opacity and animation name, in the
-// real app, on the Palette Builder's toolbar (a quiet ToolButton beside the
+// Read off the ring itself: the ::before opacity and animation name, in the
+// real app, on the Palette Builder toolbar (a quiet ToolButton beside the
 // accent Save) and on Settings (a default .btn).
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
@@ -49,7 +50,7 @@ test.describe('the chromatic outline', () => {
     expect(filled.content === 'none' || filled.opacity === 0, 'a filled button drew the ring').toBe(true)
   })
 
-  test('keyboard focus shows the ring', async ({ page }) => {
+  test('keyboard focus draws the ink ring and leaves the colour band off', async ({ page }) => {
     watch(page, 'a keyboard user tabbing through Settings')
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
@@ -59,7 +60,19 @@ test.describe('the chromatic outline', () => {
     await btn.focus()
     await page.keyboard.press('Shift+Tab')
     await page.keyboard.press('Tab')
-    await expect.poll(async () => (await ring(btn)).opacity).toBeCloseTo(0.92, 2)
+    await expect(btn).toBeFocused()
+    const focus = await btn.evaluate((el) => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--focus-ink)'
+      el.parentElement.append(probe)
+      const ink = getComputedStyle(probe).color
+      probe.remove()
+      const cs = getComputedStyle(el)
+      return { ink, color: cs.outlineColor, width: cs.outlineWidth, style: cs.outlineStyle, visible: el.matches(':focus-visible') }
+    })
+    expect(focus.visible, 'focus-visible').toBe(true)
+    expect([focus.style, focus.width, focus.color]).toEqual(['solid', '2px', focus.ink])
+    expect((await ring(btn)).opacity, 'focus alone does not draw the colour band').toBe(0)
   })
 
   test('reduced motion keeps the ring still', async ({ browser }) => {

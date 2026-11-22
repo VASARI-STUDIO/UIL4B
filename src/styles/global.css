@@ -129,6 +129,10 @@
    block 78 -> 105px). The defect was the typeface; the sizes were set. */
 :where(button,input,select,textarea){font-family:inherit}
 :root{
+  /* The horizon's eased fall-off, shared by the home footer's light and the
+     gallery hero slab's, so the two always fade the same way. Used as the
+     stop list of a radial-gradient mask. */
+  --horizon-fade:#000 0%,rgba(0,0,0,.93) 10%,rgba(0,0,0,.8) 20%,rgba(0,0,0,.64) 30%,rgba(0,0,0,.48) 40%,rgba(0,0,0,.33) 50%,rgba(0,0,0,.2) 60%,rgba(0,0,0,.11) 70%,rgba(0,0,0,.05) 80%,rgba(0,0,0,.015) 90%,rgba(0,0,0,0) 100%;
   /* ── TYPE — two families (V2). Docs: docs/reference/design-language-v2.md#type ──
      TWO families ship and there is no serif role. --display is an alias of
      --font: the same UI face, named for the job it does (hero type,
@@ -389,7 +393,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
    because four independent local workarounds for one global fault is the
    evidence that the global rule was the thing to fix, and that evidence is
    historical rather than a live inventory. */
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:focus-visible{outline:var(--focus-w,2px) solid var(--focus-ink,var(--t0));outline-offset:var(--focus-offset,2px)}
 :focus:not(:focus-visible){outline:none}
 
 /* ─── App Layout ─── */
@@ -429,10 +433,10 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .lib-switch-btn small{font-size:var(--fs-micro);color:rgba(255,255,255,.5)}
 .lib-switch-btn.is-active small{color:rgba(255,255,255,.66)}
 .lib-head-status{display:flex;flex-direction:column;align-items:flex-start;gap:6px;color:rgba(255,255,255,.55);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none}
-/* .48 not lower: at 11px this needs 4.5:1 against the masthead ground, and it
-   measures 4.99. It was .38 (3.51) for one commit — the dark hero is a much
-   darker ground than the page this text used to sit on. */
-.lib-keyhint{color:rgba(255,255,255,.48)}
+/* .6 not lower: at 11px this needs 4.5:1 against the masthead ground. At .48
+   it measured 4.99 on the bare slab but 4.55 once the horizon light sat
+   under it; .6 keeps a margin. */
+.lib-keyhint{color:rgba(255,255,255,.6)}
 
 /* ─── Color Studio Nav & Sections ─── */
 /* Re-deal stagger (CS#3.10) — remount-replayed via key change; per-index delay.
@@ -507,8 +511,8 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 /* ── THE CHROMATIC OUTLINE on outline-only buttons ──────────────────────────
    An outline button (a hairline over a quiet or card ground: the default .btn,
    .ui-pill-out, the marketing nav's search controls and the tool layout's quiet
-   and square buttons) draws its outline in the colour-band hues on hover and on
-   :focus-visible. Filled buttons (accent, primary, inverse) and borderless
+   and square buttons) draws its outline in the colour-band hues on hover. Keyboard focus
+   is the global ink ring only, not this ring. Filled buttons (accent, primary, inverse) and borderless
    ghost buttons do not.
 
    The ring is a ::before laid exactly over the border box and masked to its
@@ -527,15 +531,13 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
    1.83:1 (hue 48 on the page); the 1.5px ring is not re-measured there.
 
    Hover only where the pointer can hover: a tap on a phone must not leave the
-   ring stuck on, so touch gets a flash while pressed. :focus-visible shows it on
-   every device. Reduced motion keeps a still 1.5px ring; forced colours draw the
+   ring stuck on, so touch gets a flash while pressed. Reduced motion keeps a still 1.5px ring; forced colours draw the
    plain system border. */
 @property --chroma-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
 @property --chroma-w{syntax:'<length>';inherits:false;initial-value:.5px}
 :where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative}
 :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;padding:var(--chroma-w);border-radius:inherit;background:conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(.25,1,.5,1),--chroma-w 0s linear 280ms,--chroma-angle 0s linear 280ms}
 :is(.tl,.tl-sheet-layer) .tl-tray .tl-btn::before{content:none}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),--chroma-w 360ms cubic-bezier(.25,1,.5,1),--chroma-angle 560ms cubic-bezier(.45,.05,.3,1)}
 @media (hover:hover) and (pointer:fine){
   :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-w 360ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-angle 560ms cubic-bezier(.45,.05,.3,1) 40ms}
 }
@@ -575,15 +577,12 @@ html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):activ
    It is a default, and every component class outranks it. Do not unwrap it, and
    do not add a bare `input[type=...]` rule beside it — put new element defaults
    inside the :where() list. Pinned by tests/unit/input-specificity.test.js. */
-:where(input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:all var(--dur-2) var(--ease-standard);max-width:100%}
+:where(input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:border-color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard);max-width:100%}
 :where(input[type="number"])::-webkit-inner-spin-button,:where(input[type="number"])::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 :where(input[type="number"]){-moz-appearance:textfield}
-input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-/* A text field that is keyboard- or pointer-focused already wears the offset
-   outline from the global :focus-visible rule (or the tool-layout one). The
-   border change and halo above would be a second ring around the same box, so
-   these fields give them up and keep the outline as their one indicator. */
-:is(.fb-input,.fb-textarea,.auth-field input,.cpk-hex):focus-visible{border-color:var(--border);box-shadow:none}
+/* Text fields, selects and textareas wear only the global ink ring on focus:
+   no border change and no halo, so there is one indicator, not two. */
+:where(input[type="checkbox"],input[type="radio"],progress){accent-color:var(--control-accent)}
 :where(input[type="color"]){width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
 :where(input[type="color"]):hover{border-color:var(--bh)}
 /* Strip the native swatch chrome so the colour well reads as one clean, rounded
@@ -592,11 +591,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 :where(input[type="color"])::-webkit-color-swatch-wrapper{padding:0}
 :where(input[type="color"])::-webkit-color-swatch{border:none;border-radius:var(--radius-xs)}
 :where(input[type="color"])::-moz-color-swatch{border:none;border-radius:var(--radius-xs)}
-:where(input[type="range"]){-webkit-appearance:none;width:100%;height:32px;border-radius:2px;background:transparent;outline:none;cursor:pointer;padding:0;border:none}
-:where(input[type="range"])::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--bg-4)}
-:where(input[type="range"])::-moz-range-track{height:4px;border-radius:2px;background:var(--bg-4)}
-:where(input[type="range"])::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-top:-8px;position:relative;z-index:2}
-:where(input[type="range"])::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+:where(input[type="color"]):focus-visible{box-shadow:var(--focus-ring-media)}
+/* Range: a 4px track and a round ink thumb. Focus moves from the invisible 32px
+   input box to the thumb: the global ring is switched off on the input and a
+   two-tone ring is drawn on the thumb instead. The three focus rules below must
+   stay together or a slider has no visible focus at all. */
+:where(input[type="range"]){-webkit-appearance:none;appearance:none;width:100%;height:32px;background:transparent;outline:none;cursor:pointer;padding:0;border:none}
+:where(input[type="range"])::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:var(--range-track)}
+:where(input[type="range"])::-moz-range-track{height:4px;border-radius:999px;background:var(--range-track)}
+:where(input[type="range"])::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-7px;border-radius:50%;background:var(--range-thumb);border:2px solid var(--range-thumb-edge);cursor:pointer}
+:where(input[type="range"])::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--range-thumb);border:2px solid var(--range-thumb-edge);cursor:pointer}
+:where(input[type="range"]):focus-visible{outline:none}
+:where(input[type="range"]):focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 2px var(--focus-halo),0 0 0 4px var(--focus-ink)}
+:where(input[type="range"]):focus-visible::-moz-range-thumb{box-shadow:0 0 0 2px var(--focus-halo),0 0 0 4px var(--focus-ink)}
+@media (forced-colors:active){input[type="range"]:focus-visible{outline:2px solid Highlight;outline-offset:2px}}
 /* `margin` in full, not `margin-bottom`. Two of these are <h2> on
    /create/contrast — a card's title is a section heading, not a <label>
    with nothing to label — and a heading arrives carrying the user agent's
@@ -610,9 +618,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .code:hover{border-color:var(--bh)}
 
 /* ─── Toggle pills ─── */
-.pt-t{display:inline-flex;align-items:center;padding:9px 14px;border-radius:var(--btn-radius);font-size:11px;border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:all var(--t);font-weight:500;background:none;font-family:var(--font);min-height:36px}
+.pt-t{display:inline-flex;align-items:center;padding:9px 14px;border-radius:var(--btn-radius);font-size:11px;border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:var(--sel-tr);font-weight:500;background:none;font-family:var(--font);min-height:36px}
 .pt-t:hover{background:var(--bg-2);color:var(--t0)}
-.pt-t.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+.pt-t.on{background:var(--sel-wash);border-color:var(--sel-edge);color:var(--sel-ink);font-weight:600}
 
 /* ─── Custom semantic-hue slider (ColorStudio States) ─── */
 
@@ -757,14 +765,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .ic span:not(:where(.ig-chip)){max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;font-size:11px;color:var(--t2);text-align:center;font-family:var(--font);letter-spacing:0;line-height:1.25}
 
 /* ─── Image Converter ─── */
-.pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
+.pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:var(--sel-tr)}
 .pl-tab:hover{color:var(--t0)}
 .pl-tab-count{font-size:var(--fs-caption);font-weight:560;font-variant-numeric:tabular-nums;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
 .pl-card-saves{color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums}
-.pl-chip{padding:6px 14px;border-radius:var(--btn-radius);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
+.pl-chip{padding:6px 14px;border-radius:var(--btn-radius);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:var(--sel-tr);white-space:nowrap;flex-shrink:0}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
-.pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
+.pl-chip.active{background:var(--sel-wash);border-color:var(--sel-edge);color:var(--sel-ink)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
 /* PATTERN B (the tablet band) is handled for this surface by the shared
    toolbar: `.lbry-toolbar` has a 641-980 layout of its own and the Prompt
@@ -830,7 +838,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade var(--dur-1) var(--ease-entrance)}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:background-color var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
-.emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
+.emoji-skin-btn.active{border-color:var(--sel-edge);background:var(--sel-wash);box-shadow:0 0 0 1px var(--sel-edge)}
 
 /* ─── Toast ─── */
 .toast{position:fixed;bottom:calc(24px + var(--toast-lift) + var(--toast-dock,0px) + env(safe-area-inset-bottom,0px));right:max(24px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
@@ -864,7 +872,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast.has-action{max-width:min(420px,calc(100vw - 32px))}
 .toast-action{flex:0 0 auto;min-height:32px;padding:0 14px;margin:-4px 0;border:1px solid var(--border);border-radius:999px;background:none;color:var(--t0);font:inherit;font-size:13px;font-weight:600;cursor:pointer;pointer-events:auto;transition:background var(--t),border-color var(--t)}
 .toast-action:hover{background:var(--bg-2);border-color:var(--bh)}
-.toast-action:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .toast:not(.show) .toast-action{pointer-events:none}
 @media(pointer:coarse){.toast-action{min-height:44px;margin:-8px 0}}
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
@@ -945,11 +952,10 @@ html[data-reduced-motion="true"] .sk::after{animation:none;background:none}
 @keyframes cp-fade{from{opacity:0}to{opacity:1}}
 @keyframes cp-rise{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 .cp-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);width:min(640px,calc(100vw - 32px));max-height:min(70dvh,calc(var(--vvh,100dvh) - 32px));display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.cp-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;background:none;border:none;cursor:pointer;text-align:left;font-family:var(--font);border-radius:var(--radius-s);color:var(--t1);transition:all var(--t)}
-.cp-item:hover,.cp-item.active{background:var(--hvr);color:var(--t0)}
-.cp-item.active{outline:none;box-shadow:inset 0 0 0 1px var(--accent-glow)}
-.cp-item-icon{width:30px;height:30px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--t1);flex-shrink:0;transition:all var(--t)}
-.cp-item.active .cp-item-icon{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent-mid)}
+.cp-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;background:none;border:none;cursor:pointer;text-align:left;font-family:var(--font);border-radius:var(--radius-s);color:var(--t1);transition:var(--sel-tr)}
+.cp-item:hover{background:var(--hvr);color:var(--t0)}
+.cp-item.active{background:var(--sel-wash);color:var(--t0);outline:var(--focus-w) solid var(--focus-ink);outline-offset:-2px}
+.cp-item-icon{width:30px;height:30px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--t1);flex-shrink:0}
 
 /* ═══════════════════════════════════════
    RESPONSIVE — clean cascade, mobile parity
@@ -1235,7 +1241,7 @@ html[data-reduced-motion="true"] .rail-overflow{scroll-snap-type:none}
 .settings-suggest-item.on{background:var(--bg-2);color:var(--t0)}
 .sub-billing-toggle{display:inline-flex;padding:4px;gap:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;margin-bottom:18px}
 .sub-billing-toggle button{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:none;background:none;border-radius:999px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;font-family:var(--font);transition:background var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
-.sub-billing-toggle button.active{background:var(--card);color:var(--t0);box-shadow:var(--warm-shadow)}
+.sub-billing-toggle button.active{background:var(--t0);color:var(--bg-0)}
 
 /* Subscription — tier cards */
 .sub-tiers{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:stretch}
@@ -1275,7 +1281,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    the viewport, and a 24px blur is longer than 8px: it bled a grey smudge
    across x 16-160, y 0-5 of every page. */
 .skip-link{position:fixed;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:200;transform:translateY(calc(-100% - 16px - env(safe-area-inset-top,0px)));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-fill);color:var(--accent-fg);text-decoration:none;transition:transform var(--dur-2) var(--ease-standard);font-family:var(--font);font-size:max(var(--fs-caption),var(--fs-body-s));font-weight:600;letter-spacing:normal;text-transform:none}
-.skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
+.skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--focus-ink);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
 @media(pointer:coarse){.skip-link{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box}}
@@ -1314,12 +1320,12 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 @keyframes checkout-spin{to{transform:rotate(360deg)}}
 .lang-tile{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:border-color var(--t),background var(--t),color var(--t),box-shadow var(--t),transform var(--t);text-align:left;position:relative}
 .lang-tile:hover{border-color:var(--bh);background:var(--bg-2);transform:translateY(-1px)}
-.lang-tile.active{border-color:var(--accent);background:var(--accent-bg);color:var(--t0);box-shadow:0 0 0 1px var(--accent),0 4px 16px var(--accent-glow)}
+.lang-tile.active{border-color:var(--sel-edge);background:var(--sel-wash);color:var(--t0);box-shadow:0 0 0 1px var(--sel-edge)}
 .lang-flag{width:32px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--bg-2);border:1px solid var(--border);overflow:hidden;flex-shrink:0;line-height:1}
-.lang-tile.active .lang-flag{background:var(--card);border-color:var(--accent)}
+.lang-tile.active .lang-flag{background:var(--card);border-color:var(--sel-edge)}
 .lang-tile-label{font-size:13px;font-weight:600;color:var(--t0);line-height:1.2}
 .lang-tile-code{font-size:11px;color:var(--t2);line-height:1}
-.lang-tile-check{flex-shrink:0;color:var(--accent);opacity:0;transition:opacity var(--t)}
+.lang-tile-check{flex-shrink:0;color:var(--sel-ink);opacity:0;transition:opacity var(--t)}
 .lang-tile.active .lang-tile-check{opacity:1}
 
 
@@ -1551,18 +1557,18 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* Alt text examples panel */
 .alt-example.good{background:color-mix(in srgb,var(--ok) 8%,var(--bg-0));border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
 .alt-example.bad{background:color-mix(in srgb,var(--err) 7%,var(--bg-0));border-color:color-mix(in srgb,var(--err) 25%,transparent)}
-.aipg-mode-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:all var(--dur-2) var(--ease-standard)}
+.aipg-mode-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:var(--sel-tr)}
 .aipg-mode-btn:hover{color:var(--t0)}
-.aipg-mode-btn.active{color:var(--t0);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.aipg-mode-btn.active{color:var(--sel-on-solid);background:var(--sel-solid)}
 .aipg-preset{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .aipg-preset:hover{border-color:var(--accent)}
-.aipg-preset.active{border-color:var(--accent);background:var(--brand-bg)}
+.aipg-preset.active{border-color:var(--sel-edge);background:var(--sel-wash)}
 .aipg-rulecat-arr.open{transform:rotate(90deg)}
-.aipg-rule{display:inline-flex;align-items:center;gap:6px;padding:6px 11px 6px 8px;font-size:12px;font-weight:500;font-family:var(--font);border:1px solid var(--border);border-radius:99px;background:var(--bg-1);color:var(--t1);cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.aipg-rule{display:inline-flex;align-items:center;gap:6px;padding:6px 11px 6px 8px;font-size:12px;font-weight:500;font-family:var(--font);border:1px solid var(--border);border-radius:99px;background:var(--bg-1);color:var(--t1);cursor:pointer;transition:var(--sel-tr)}
 .aipg-rule:hover{border-color:var(--accent);color:var(--t0)}
-.aipg-rule.active{border-color:var(--accent);background:var(--brand-bg);color:var(--accent-text)}
-.aipg-rule-check{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border);flex-shrink:0;transition:all var(--dur-2) var(--ease-standard)}
-.aipg-rule.active .aipg-rule-check{background:var(--accent);border-color:var(--accent);color:#fff}
+.aipg-rule.active{border-color:var(--sel-edge);background:var(--sel-wash);color:var(--sel-ink)}
+.aipg-rule-check{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border);flex-shrink:0;transition:var(--sel-tr)}
+.aipg-rule.active .aipg-rule-check{background:var(--sel-solid);border-color:var(--sel-solid);color:var(--sel-on-solid)}
 .aipg-rule-check.radio{border-radius:50%}
 .aipg-builder-actions .btn-accent{flex:1}
 
@@ -1816,7 +1822,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .rp-reasons{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;border:0;min-width:0}
 .rp-reasons legend{padding:0;margin-bottom:6px}
 .rp-opt{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 10px;border:1px solid transparent;border-radius:var(--radius-s);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-.rp-opt input{flex-shrink:0;width:16px;height:16px;margin:2px 0 0;accent-color:var(--accent);cursor:pointer}
+.rp-opt input{flex-shrink:0;width:16px;height:16px;margin:2px 0 0;accent-color:var(--control-accent);cursor:pointer}
 .rp-opt.on{border-color:var(--accent-mid);background:var(--accent-wash)}
 @media(hover:hover){.rp-opt:hover{background:var(--hvr)}.rp-opt.on:hover{background:var(--accent-wash)}}
 .rp-opt-text{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -1851,7 +1857,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-cap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
 .fb-cap-label{display:flex;align-items:center;gap:9px;min-height:32px;padding:3px 6px;border-radius:var(--radius-s);cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
 .fb-cap-label:hover{background:var(--hvr)}
-.fb-cap-check{flex-shrink:0;width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin:0}
+.fb-cap-check{flex-shrink:0;width:15px;height:15px;accent-color:var(--control-accent);cursor:pointer;margin:0}
 .fb-cap-name{flex-shrink:0;font-size:12px;font-weight:560;color:var(--t1)}
 /* The value is the evidence. It gets the mono face because it is a literal —
    the exact string that will appear in the report, not a paraphrase of it. */
@@ -1971,17 +1977,17 @@ main[tabindex="-1"]:focus-visible{outline:none}
 /* ─── UI Builder: Code tabs ─── */
 
 /* New project modal */
-.proj-new-start-opt.active{border-color:var(--accent);background:var(--brand-bg)}
+.proj-new-start-opt.active{border-color:var(--sel-edge);background:var(--sel-wash)}
 @keyframes adm-pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* Admin tabs */
 .adm-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);margin-bottom:28px;flex-wrap:wrap}
-.adm-tab{padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:all var(--dur-2) var(--ease-standard);position:relative;white-space:nowrap}
+.adm-tab{padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:var(--sel-tr);position:relative;white-space:nowrap}
 .adm-tab:hover{color:var(--t0);background:var(--hvr)}
-.adm-tab.active{color:var(--t0);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.adm-time-btn{padding:5px 12px;font-size:11px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:all var(--dur-2) var(--ease-standard)}
+.adm-tab.active{color:var(--sel-on-solid);background:var(--sel-solid)}
+.adm-time-btn{padding:5px 12px;font-size:11px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--btn-radius);transition:var(--sel-tr)}
 .adm-time-btn:hover{color:var(--t0)}
-.adm-time-btn.active{color:var(--t0);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.adm-time-btn.active{color:var(--sel-on-solid);background:var(--sel-solid)}
 
 /* Stat cards */
 .adm-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
@@ -2009,7 +2015,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
 .adm-th-sort.active{color:var(--accent-text)}
 .adm-country-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .adm-country-chip:hover{color:var(--t0);background:var(--bg-2)}
-.adm-country-chip.active{color:var(--t0);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.adm-country-chip.active{color:var(--sel-ink);border-color:var(--sel-edge);background:var(--sel-wash)}
 
 @media(max-width:768px){
   .adm-stats{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
@@ -2030,9 +2036,6 @@ main[tabindex="-1"]:focus-visible{outline:none}
 .fc-dl{width:100%;justify-content:center;margin-top:auto}
 @keyframes fc-spin{to{transform:rotate(360deg)}}
 .ch-submit-btn{flex-shrink:0}
-.ch-filter{padding:6px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--bg-2);color:var(--t1);transition:all var(--t)}
-.ch-filter:hover{border-color:var(--bh);color:var(--t0)}
-.ch-sort-btn{padding:5px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--t2);font-family:var(--font);transition:all var(--dur-2) var(--ease-standard)}
 .ic-acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:16px 18px;background:none;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:background var(--t)}
 .ic-acc-head.is-open .ic-acc-chevron{transform:rotate(180deg)}
 .ic-acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-3) var(--ease-out)}
@@ -2647,6 +2650,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
 .smap-cat-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .smap-cat-h h3{font-size:var(--fs-h5);font-weight:600;letter-spacing:-.01em;color:var(--t0);margin:0}
 .smap-link-a.active .smap-link-label{color:var(--hue-strong,var(--accent-strong))}
+.smap-link-a.active .smap-link-label{font-weight:600}
 /* Shrinks and wraps its own text; the route does not shrink, so when the pair
    cannot share a line it is the ROUTE that moves down. min-width:0 lets the
    label go below its automatic flex minimum rather than forcing the overflow
@@ -2932,7 +2936,6 @@ html.lenis{scroll-behavior:auto!important}
 @media(hover:hover){.pnav-more:hover{background:rgba(var(--ink-rgb),.07)}}
 .pnav-more[aria-expanded="true"]{background:rgba(var(--ink-rgb),.08)}
 .pnav-mobile{display:none}
-.pnav-trigger:focus-visible,.pnav-search-field:focus-visible,.pnav-theme:focus-visible,.pnav-iconbtn:focus-visible,.pnav-act:focus-visible,.pnav-login:focus-visible,.pnav-upgrade:focus-visible,.pnav-avatar-btn:focus-visible,.pnav-more:focus-visible,.pnav-mobile:focus-visible,.pnav-logo:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 
 /* Folding, so the row never wraps. Measured in the report. */
 @media(max-width:1099px){
@@ -2958,7 +2961,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-sep{height:1px;margin:4px 6px;background:rgba(var(--ink-rgb),.08)}
 .pnav-pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:0;border-radius:var(--radius);background:none;color:rgba(var(--ink-rgb),.86);font-family:var(--font);font-size:13.5px;font-weight:400;text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .pnav-pop-item:hover,.pnav-pop-item:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
-.pnav-pop-item:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-pop-item:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .pnav-pop-item svg{flex:0 0 auto;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-pop-item--danger{color:var(--err-strong,var(--err))}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong,var(--err))}
@@ -2986,7 +2989,6 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-signout-alert p{margin:0 0 6px}
 .pnav-signout-alert-actions{display:flex;flex-wrap:wrap;gap:0 16px}
 .pnav-signout-alert button{min-height:36px;padding:0;border:0;background:none;color:rgb(var(--ink-rgb));font-family:var(--font);font-size:12.5px;font-weight:560;text-decoration:underline;text-underline-offset:3px;border-radius:var(--radius-xs);cursor:pointer}
-.pnav-signout-alert button:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .pnav-sheet .pnav-signout-alert{padding:12px;font-size:14px}
 .pnav-sheet .pnav-signout-alert button{min-height:44px;font-size:14px}
 
@@ -2995,8 +2997,9 @@ html.lenis{scroll-behavior:auto!important}
 .theme-seg-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0;height:34px;padding:0 4px;border:none;background:none;border-radius:var(--btn-radius);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:1;white-space:nowrap;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out),box-shadow var(--dur-1) var(--ease-out)}
 .theme-seg-btn svg{flex:0 0 auto}
 .theme-seg-btn:hover{color:var(--t0)}
-.theme-seg-btn[aria-pressed="true"]{background:var(--bg-1);color:var(--t0);box-shadow:var(--shadow-xs)}
-.theme-seg-btn:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.theme-seg-btn[aria-pressed="true"]{background:var(--sel-solid);color:var(--sel-on-solid)}
+.theme-seg-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
+.theme-seg-btn[aria-pressed="true"]:focus-visible{outline-color:var(--sel-on-solid)}
 .toggle-row .theme-seg{flex:0 0 auto;width:250px}
 
 /* ══ THE MEGA MENU — `UIL4B App.dc.html` lines 127-216, as ONE surface ═══════
@@ -3035,7 +3038,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool-label{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:500;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-tool:hover,.pnav-tool:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-tool:not([data-hue]):hover .pnav-tool-ico,.pnav-tool:not([data-hue]):focus-visible .pnav-tool-ico{color:var(--accent-soft)}
-.pnav-tool:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-tool:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 /* The page the visitor is on: the label at full ink and a heavier weight, and a
    check after it. No tile, bar or colour, so the grey tile stays hover and
    keyboard focus only and the two never read alike. An open menu draws no other
@@ -3117,7 +3120,6 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-editorial-title{margin:0}
 .pnav-editorial-cta{display:flex;align-items:center;font-family:var(--font);text-decoration:none;cursor:pointer}
 .pnav-editorial-cta:hover{background:var(--accent-fill-hover);color:var(--accent-ink);text-decoration:none}
-.pnav-editorial-cta:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 /* Create: the export-page preview — a picture of a white page,
    which is the artefact, not a panel. */
 .pnav-prev{padding:0 6px}
@@ -3147,7 +3149,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-reco--wait{min-height:76px}
 .pnav-reco-link{display:flex;align-items:center;gap:10px;text-decoration:none}
 .pnav-reco-link:hover,.pnav-reco-link:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
-.pnav-reco-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-reco-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .pnav-reco-prev{display:flex;flex:0 0 auto;box-sizing:border-box;overflow:hidden}
 .pnav-reco-prev--strip > span{flex:1}
 .pnav-reco-prev--type{align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:600;line-height:1}
@@ -3177,7 +3179,6 @@ html.lenis{scroll-behavior:auto!important}
 @media(max-width:1240px){.pnav-menu[data-menu="create"] .pnav-menu-readout{min-height:36px;-webkit-line-clamp:2;line-clamp:2}}
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;border-radius:6px;color:var(--accent-mid);font-size:12.5px;text-decoration:none}
 .pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
-.pnav-menu-foot-link:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 /* 768 to 900: Create's three columns are about 248px each, and the 3D Model Converter row
    (tile, name, Beta pill) needs about 8px more than the column holds at 768 with the
    desktop spacing. The list track is minmax(0,1fr) above, so a row can never run past its
@@ -3265,7 +3266,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:48px;margin:8px 0 0;padding:2px;border-radius:var(--radius-pill);background:rgba(var(--ink-rgb),.06)}
 .pnav-acc-trigger{display:grid;place-items:center;min-width:0;height:44px;padding:0 8px;border:0;border-radius:var(--radius-pill);background:none;color:rgba(var(--ink-rgb),.72);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .pnav-acc-trigger[aria-expanded="true"]{background:rgba(var(--ink-rgb),.14);color:rgb(var(--ink-rgb));cursor:default}
-.pnav-acc-trigger:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-acc-trigger:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .pnav-acc-panel{padding:0 0 14px}
 .pnav-acc-cta{display:flex;width:fit-content;align-items:center;gap:8px;min-height:44px;margin:18px 4px 0;padding:0 18px;border:0;border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);font-family:var(--font);font-size:14px;font-weight:560;text-decoration:none;cursor:pointer}
 .pnav-acc-cta:hover{color:var(--accent-ink);text-decoration:none}
@@ -3276,7 +3277,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-grid .pnav-acc-link:last-child:nth-child(odd){grid-column:1/-1}
 .pnav-acc-link{display:flex;align-items:center;gap:10px;min-width:0;min-height:56px;padding:8px 4px;border-radius:var(--radius);color:rgba(var(--ink-rgb),.86);font-size:14.5px;line-height:19px;text-decoration:none}
 .pnav-acc-link:active,.pnav-acc-link:hover{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
-.pnav-acc-link:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.pnav-acc-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .pnav-acc-ico{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;color:rgba(var(--ink-rgb),var(--ink-dim))}
 .pnav-acc-ico svg{width:18px;height:18px}
 .pnav-acc-link[data-hue] .pnav-acc-ico{color:var(--mm-s)}
@@ -3320,7 +3321,7 @@ html.lenis{scroll-behavior:auto!important}
      both read as current, and the bar is a cue that does not depend on colour. */
   .pnav-tab.is-current{color:rgb(var(--ink-rgb));font-weight:560}
   .pnav-tab.is-current::before{content:"";position:absolute;top:-6px;left:50%;width:24px;height:2px;margin-left:-12px;border-radius:0 0 2px 2px;background:currentColor}
-  .pnav-tab:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+  .pnav-tab:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
   html.has-tabbar body{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
   /* The bar is fixed over the bottom of the scrollport. Without this, a control
      that takes keyboard focus behind the bar counts as already in view, so the
@@ -3365,13 +3366,12 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-trigger:hover,.cpk-trigger[aria-expanded="true"]{border-color:var(--bh)}
 /* The open state has to be legible WITHOUT hover. A touch user never has one,
    and this trigger now stands on twelve surfaces rather than three. */
-.cpk-trigger[aria-expanded="true"]{box-shadow:0 0 0 3px var(--accent-bg)}
-.cpk-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cpk-trigger[aria-expanded="true"]{border-color:var(--sel-edge)}
 .cpk-trigger[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
 .cpk-trigger-chip{width:26px;height:26px;border-radius:var(--radius-xs);border:1px solid var(--border)}
 /* Width is set here because the shared `.pop` deliberately leaves layout to
    each popover; padding is overridden because the instrument bleeds through it. */
-.cpk-pop{display:flex;flex-direction:column;gap:var(--s-2);width:244px}
+.cpk-pop{--sel-gap:var(--bg-1);display:flex;flex-direction:column;gap:var(--s-2);width:244px}
 .pop.cpk-pop{padding:var(--s-3)}
 .pop.cpk-pop[data-pop-fixed="true"]{position:fixed;inset:auto;left:var(--select-left,8px);top:var(--select-top,0px);z-index:var(--cpk-layer,130)}
 /* Opened upward: pin the BOTTOM edge to the line above the trigger, so a panel
@@ -3388,7 +3388,7 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-instrument{margin:0 calc(var(--s-3) * -1);border-block:1px solid var(--border);background:var(--bg-2)}
 .cpk-pad{position:relative;width:100%;height:148px;border:0;background-image:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,rgba(255,255,255,0));cursor:crosshair;touch-action:none}
 /* Inset, because a bled pad has no margin to paint an outline into. */
-.cpk-pad:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cpk-pad:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 /* Big enough to find on a 148px pad, and legible over both ends of the value
    axis: a white ring for dark colours, a dark hairline outside it for light ones. */
 .cpk-pad-thumb{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.3);pointer-events:none}
@@ -3414,29 +3414,21 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-instrument .cpk-hue::-moz-range-track{height:24px;border-radius:0;background:transparent}
 .cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:5px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
 .cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
-.cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .cpk-row{display:flex;align-items:center;gap:var(--s-1)}
 /* The refusal under the value field: a live region that is empty, and so takes no room, until a typed value is refused. */
 .cpk-hint{margin:0;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong)}
 .cpk-hint:not(:empty){margin-top:var(--s-1)}
-/* The tools row under the value field: notation and eyedropper left, Copy right. It shrinks and never wraps. */
-.cpk-tools{display:flex;flex-wrap:nowrap;align-items:center;gap:var(--s-1);margin-top:var(--s-1);min-width:0}
-/* Copy. Both labels share one grid cell, so the button is always as wide as "Copied" and the row never moves. */
-.cpk-copy{flex:0 0 auto;display:inline-grid;place-items:center;margin-inline-start:auto;height:32px;min-width:44px;padding:0 var(--s-2);border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:0;text-transform:none;cursor:pointer}
-.cpk-copy:hover{color:var(--t0);border-color:var(--bh)}
-.cpk-copy-label{grid-area:1/1}
-.cpk-copy-label[aria-hidden="true"]{visibility:hidden}
-.cpk-hint-value{font-family:var(--mono)}
 /* Eyedropper. Present only where the browser has the API — see the component. */
 .cpk-dropper{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),border-color var(--dur-1) var(--ease-out)}
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
-.cpk-dropper:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cpk-dropper:focus-visible{outline:2px solid var(--focus-ink);outline-offset:1px}
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
 /* The notation select. Sized to its widest option (HEX/RGB/HSL/OKLCH) so switching
    never reflows the row under the pointer. It is a UI-face button, not a code
    value; the width comes from the option labels, not equal-width glyphs. */
 .cpk-format{flex:0 1 auto;min-width:0;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:0;text-transform:none;cursor:pointer}
-.cpk-format:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cpk-format:focus-visible{outline:2px solid var(--focus-ink);outline-offset:1px}
 .cpk-format .menu-select-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Each swatch group is headed. An unheaded second grid is indistinguishable
    from the first — to the eye, and to a screen reader, which is why the label
@@ -3451,8 +3443,7 @@ html.lenis{scroll-behavior:auto!important}
 @media(hover:hover){
   .cpk-swatch:hover{transform:scale(1.08)}
 }
-.cpk-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.cpk-swatch.is-active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
+.cpk-swatch.is-active{box-shadow:var(--sel-ring)}
 /* --border is a panel-level hairline in both themes (about 1.4:1 on the light
    panel, one step off it on the dark), so a near-white preset (#f4f4f5) vanished
    on light and a near-black one (#18181b) on dark. A hairline in the text colour
@@ -3467,8 +3458,8 @@ html.lenis{scroll-behavior:auto!important}
 .cpk-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(28px,1fr));gap:var(--s-1)}
 .cpk-preset{display:grid;place-items:center;min-width:0;height:28px;padding:0;border:0;border-radius:var(--radius-xs);background:none;cursor:pointer}
 .cpk-preset-chip{width:22px;height:22px;border-radius:var(--radius-xs);border:1px solid color-mix(in srgb,var(--t0) 50%,transparent);transition:box-shadow var(--dur-1) var(--ease-out)}
-.cpk-preset:focus-visible{outline:2px solid var(--accent);outline-offset:0}
-.cpk-preset[aria-pressed="true"] .cpk-preset-chip{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
+.cpk-preset:focus-visible{outline:2px solid var(--focus-ink);outline-offset:0}
+.cpk-preset[aria-pressed="true"] .cpk-preset-chip{box-shadow:var(--sel-ring)}
 @media(pointer:coarse),(max-width:767px){
   .cpk-presets{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
   .cpk-preset{height:44px}
@@ -3484,11 +3475,9 @@ html.lenis{scroll-behavior:auto!important}
    floor every other control on a touch screen meets. The hex field also takes
    the 16px floor, below which iOS zooms the page on focus. */
 @media(pointer:coarse){
-  .cpk-tools{gap:var(--s-2)}
   .cpk-dropper{width:44px;height:44px}
   .cpk-hex{height:44px;font-size:16px}
   .cpk-format{height:44px;padding:0 8px;font-size:var(--fs-caption)}
-  .cpk-copy{height:44px;padding:0 var(--s-3)}
   /* Swatches (presets and Recent alike) are tap targets too. Five 44px columns
      and four 4px gaps are 236px, and the longest OKLCH value at the 16px field
      size is about 248px, so the panel widens from 244px to 280px (256px inside
@@ -3522,7 +3511,6 @@ html.lenis{scroll-behavior:auto!important}
   .menu-select-scrim.cpk-scrim{z-index:calc(var(--cpk-layer,130) - 1)}
   /* The sheet's way out, in the header beside the colour chip. */
   .cpk-close{flex:0 0 auto;min-width:44px;min-height:44px;padding:0 var(--s-3);border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;letter-spacing:0;text-transform:none;cursor:pointer}
-  .cpk-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .cpk-close:active{background:var(--hvr)}
 }
 /* overflow / scrollbar / edge fade come from `.rail-overflow` (see the block by
@@ -3696,7 +3684,7 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
    the page, deliberately 60px (54px on a phone) so it reads as the one thing to
    do there. Every other search bar is 44px. */
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
-.hcmd-bar:focus-within{border-color:var(--accent)}
+.hcmd-bar:focus-within{outline:var(--focus-w) solid var(--focus-ink);outline-offset:var(--focus-offset)}
 /* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
    (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
 .hcmd-prompt{font-family:var(--font);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
@@ -3714,7 +3702,6 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hcmd-kbd{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .hcmd-kbd:hover{background:var(--hvr);border-color:var(--bh)}
 .hcmd-kbd:active{transform:scale(.96)}
-.hcmd-kbd:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hcmd-kbd kbd{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:normal;color:var(--t2)}
 
 .hcmd-results{margin-top:var(--s-3);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);overflow:hidden}
@@ -3722,7 +3709,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hcmd-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:13px 16px;border-top:1px solid var(--border);text-decoration:none;transition:background var(--dur-1) var(--ease-standard)}
 .hcmd-list li:first-child .hcmd-row{border-top:0}
 .hcmd-row:hover{background:var(--hvr);text-decoration:none}
-.hcmd-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.hcmd-row:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .hcmd-row-glyph{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--accent)}
 .hcmd-row-glyph svg{width:17px;height:17px}
 .hcmd-row-body{display:flex;min-width:0;flex-direction:column;gap:2px}
@@ -4106,7 +4093,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    TILE rather than off the viewport — see .fbd-sample for why that matters. */
 .fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;container-type:inline-size;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .fbd-tile:hover{border-color:var(--bh)}
-.fbd-card.is-selected .fbd-tile{border-color:var(--accent);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--accent)}
+.fbd-card.is-selected .fbd-tile{border-color:var(--sel-edge);background:var(--sel-wash);box-shadow:inset 0 0 0 1px var(--sel-edge)}
 
 @media(pointer:coarse){
   /* The shared Library controls take their coarse-pointer sizing in the .lbry-
@@ -4150,9 +4137,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* RETIRED (#surface-headers-read-as-ai): .dgh-eyebrow. A taxonomy path in
    mono caps restating the h1 underneath it. */
 .dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.95;letter-spacing:-.025em;overflow-wrap:break-word}
-.dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.68)}
+.dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.8)}
 .dgh-action .btn{display:inline-flex;align-items:center;gap:8px;color:#0a0a0b;background:#fff;border-color:#fff}
-.dgh-action .btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.dgh-action .btn:focus-visible{outline:2px solid var(--focus-ink);box-shadow:var(--focus-ring-media);outline-offset:3px}
 /* RETIRED (#surface-headers-read-as-ai): .dgh-mark, the 92px display numeral
    counting the catalogue. It is the one-up cousin of the Font Gallery's
    three-up figure strip and it failed the same test - it measured the
@@ -4275,7 +4262,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    colour each surface sets. (Not :focus-within, so the clear button, which has
    its own ring, does not get a second one around the field.) Forced colours
    swaps the colour for a system one below. */
-.lbry-search:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.lbry-search:has(input:focus-visible){outline:var(--focus-w) solid var(--focus-ink);outline-offset:var(--focus-offset)}
 @media (forced-colors:active){
   .lbry-search:has(input:focus-visible){outline-color:Highlight}
 }
@@ -4287,7 +4274,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* 24px is the WCAG 2.5.8 floor, not a visual choice — the glyph is 14px. */
 .lbry-search-clear{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px;height:24px;color:var(--t3);background:none;border:0;border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .lbry-search-clear:hover{color:var(--t0);background:var(--hvr)}
-.lbry-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.lbry-search-clear:focus-visible{outline:2px solid var(--focus-ink);outline-offset:1px}
 
 /* The tray WRAPS. It was `overflow-x:auto` with the scrollbar suppressed on
    both `scrollbar-width` and `::-webkit-scrollbar` — the seventh instance of the
@@ -4327,10 +4314,10 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    categories) scrolls inside the panel instead of running off the viewport. */
 .lbry-filtermenu{position:absolute;top:calc(100% + 6px);left:0;z-index:60;display:flex;flex-direction:column;gap:2px;min-width:200px;max-width:min(320px,calc(100vw - 32px));max-height:var(--pop-max-h,420px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-panel,var(--shadow-l))}
 @media (hover:hover){.lbry-filtermenu .lbry-filter:hover{background:var(--bg-2)}}
-.lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-2);color:var(--t0)}
+.lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--sel-wash);color:var(--sel-ink)}
 [data-theme="dark"] .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--bg-3)}
 @media (hover:hover){[data-theme="dark"] .lbry-filtermenu .lbry-filter:hover{background:var(--hvr)}}
-[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-3)}
+[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--sel-wash)}
 /* The count is the option's own metadata (1,655 emoji), so it belongs at the
    far end of the row rather than tucked against the label. */
 .lbry-filtermenu .lbry-filter-count{margin-left:auto}
@@ -4614,7 +4601,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 .cq-filter{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .cq-filter:hover{color:var(--t0);border-color:var(--bh)}
-.cq-filter.is-on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fg)}
+.cq-filter.is-on{background:var(--sel-solid);border-color:var(--sel-solid);color:var(--sel-on-solid)}
 
 /* Legal page section headings. Were <h3> with inline style={{}} under a single
    <h1>, so every section on /privacy and /terms sat two levels below the title
@@ -4700,7 +4687,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   from{opacity:0;transform:translateY(6px) scale(.985)}
   to{opacity:1;transform:translateY(0) scale(1)}
 }
-.pop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Shared row rhythm for anything built on .pop. The row is the V3 menu row
    (--menu-row-* in v3-menus.css), so dropdowns and menus read as one family. */
@@ -4712,7 +4698,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 /* Shared select triggers retain the field classes supplied by each surface. */
 :where(.menu-select-trigger){display:inline-flex;align-items:center;gap:var(--s-2);min-width:0;max-width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:13px;text-align:left;cursor:pointer}
 .menu-select-trigger:disabled{opacity:.55;cursor:not-allowed}
-.menu-select-trigger:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .menu-select-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-select-caret{flex:none;margin-left:auto}
 .menu-select-trigger.fb-select,.ui-field .menu-select-trigger{width:100%}
@@ -4773,7 +4758,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
   .menu-select-sheet-head{position:fixed;left:1px;right:1px;top:calc(var(--sheet-top,0px) + 1px);z-index:var(--select-layer,130);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(15px,env(safe-area-inset-right,0px)) 11px max(15px,env(safe-area-inset-left,0px));background:var(--bg-1);border-bottom:1px solid var(--border);border-radius:15px 15px 0 0;animation:menu-select-sheet-in var(--dur-2) var(--ease-entrance)}
   .menu-select-sheet-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font);font-size:15px;font-weight:560;color:var(--t0)}
   .menu-select-sheet-close{flex:none;margin-inline-start:auto;min-height:44px;padding:0 16px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-1);font-family:var(--font);font-size:13px;font-weight:560;cursor:pointer}
-  .menu-select-sheet-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   /* The sheet sits on the screen edge, over the tab bar: its scrim (layer - 1) and
      the sheet (layer) are both above the bar's z-index, so the bar is dimmed with
      the page and the whole list shows instead of a clipped, scrolled one. */
@@ -4834,7 +4818,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-plan.is-chosen{border-color:var(--accent);background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}
 /* The radio is the real control; the tile is its label. Focus has to be visible
    on the tile, because the input itself is screen-reader-only. */
-.ui-pro-plan:has(.ui-pro-plan-input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.ui-pro-plan:has(.ui-pro-plan-input:focus-visible){outline:2px solid var(--focus-ink);outline-offset:2px}
 /* Identity left, money right, on one baseline-aligned line. */
 .ui-pro-plan-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
 .ui-pro-plan-id{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
@@ -4964,7 +4948,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-cta{margin-top:16px;display:flex;flex-direction:column;gap:8px}
 .ui-pro-later{align-self:center;padding:8px 14px;border:none;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .ui-pro-later:hover{background:var(--hvr);color:var(--t0)}
-.ui-pro-later:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* A dialog container is a focus TARGET, not a control. useModalDialog focuses
    it on open so the label is announced before the contents, which made the
@@ -5179,7 +5162,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lidx-topics{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s-2) var(--s-4);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none}
 .lidx-topics a{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:var(--t1);text-decoration:none;border-bottom:1px solid transparent}
 .lidx-topics a:hover,.lidx-topics a:focus-visible{color:var(--t0);border-bottom-color:var(--t0);text-decoration:none}
-.lidx-topics a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .lidx-topic-n{color:var(--t2);font-family:var(--font);font-size:var(--fs-caption);font-weight:500;letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums}
 .lidx-status{min-height:1.5em;margin:var(--s-3) auto 0;max-width:560px;text-align:center;font-size:var(--fs-body-s);line-height:1.5;color:var(--t2)}
 .lidx-sections{display:flex;flex-direction:column;gap:var(--s-7);margin-top:var(--s-6)}
