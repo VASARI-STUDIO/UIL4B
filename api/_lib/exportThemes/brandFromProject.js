@@ -226,8 +226,15 @@ const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 // readDesign and the kit helpers expect objects and an array of colours; any other shape in the request counts as absent.
 const cleanDesign = (design) => { const d = plain(design), p = plain(d.palette); return { ...d, palette: { ...p, colors: Array.isArray(p.colors) ? p.colors : [] }, fonts: plain(d.fonts) }; };
 
+// What the project has said about itself (design.identity, the name and description the UI kit is personalised with), trimmed. Anything it
+// has not said stays the skeleton's example copy.
+const said = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+const ownWords = (design) => { const i = plain(design.identity); return { name: said(i.name, 120), description: said(i.description, 280) }; };
+// The project's name; its identity name when the project has none; the example name when there is neither.
+const ownName = (projectName, own) => { const w = wordmarkOf(projectName); return w === 'Your brand' ? wordmarkOf(own.name) : w; };
+
 function build({ design: rawDesign, projectName, date }) {
-  const design = cleanDesign(rawDesign), d = readDesign(design), word = wordmarkOf(projectName);
+  const design = cleanDesign(rawDesign), d = readDesign(design), own = ownWords(design), word = ownName(projectName, own);
   const palette = kitPalette(design || {}), slot = Object.fromEntries(palette.map((p) => [p.id, p]));
   const light = lightRoles(palette, slot, kitSemantic(design || {}), design), dark = darkRoles(design, slot.pine.hex);
   const faces = {
@@ -254,7 +261,7 @@ function build({ design: rawDesign, projectName, date }) {
   const a = actionStates(prim, [canvas, ink, '#FFFFFF', '#000000']);
   const cw = (name, ground, mark = name) => ({ name, ground, ...Object.fromEntries(DETAIL_KEYS.map((k) => [k, name])), sign: mark, tile: mark, tileInk: onGround(mark) });
   const brand = {
-    ...skeleton(word, date), slug: slugOf(word), colours, tones: [], pairs,
+    ...skeleton(word, date), ...(own.description ? { description: own.description, product: own.description } : null), slug: slugOf(word), colours, tones: [], pairs,
     fonts: faces, type: typeBlock(d, faces),
     logo: {
       idea: 'Write this in your own words.',
