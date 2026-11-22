@@ -137,7 +137,7 @@ for (const [name, colors] of Object.entries(PALETTES)) {
 
 // The route answers a contrast failure with its own code, not as a generic build failure. Break: take the code out of pair() in engine/color.js.
 test('pair() throws an error coded contrast on a pair that misses, and returns the ratio on one that passes', () => {
-  assert.throws(() => colour.pair('#777777', '#787878'), (e) => e.code === 'contrast' && /^Contrast #777777 on #787878 is 1.0d:1, needs 4.5:1/.test(e.message))
+  assert.throws(() => colour.pair('#777777', '#787878'), (e) => e.code === 'contrast' && /^Contrast #777777 on #787878 is 1[.]01:1, needs 4[.]5:1/.test(e.message))
   // #808080 on white is 3.95:1: under 4.5 at body size, enough at 24 px
   assert.throws(() => colour.pair('#808080', '#FFFFFF', { size: 13 }), (e) => e.code === 'contrast')
   assert.ok(colour.pair('#808080', '#FFFFFF', { size: 24 }) > 3.9)

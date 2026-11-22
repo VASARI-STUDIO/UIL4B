@@ -7,10 +7,10 @@ const PX = '<span class="hg-m">1:1</span>, sizes in px';
 const photoOf = (ctx) => { const sh = ctx.brand.imagery.shots; return sh.find((s) => s.photo) || sh[0]; };
 const ph = (ctx, s, pos) => ctx.photo(s.id, { cls: 'hg-photo', pos: pos || '50% 45%', slotNote: false });
 // the ink a field wants on it: the engine's best pair for that ground, else whichever of the roles' two texts reads better
-const inkOn = (ctx, hex) => {
+const inkOn = (ctx, hex, size = 24) => {
   const own = ctx.pairs.filter((p) => p.bgHex.toUpperCase() === hex.toUpperCase()).sort((a, b) => b.ratio - a.ratio)[0];
   if (own && own.ratio >= 4.5) return own.fgHex;
-  return ctx.textOn(hex, { size: 24, prefer: ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text });
+  return ctx.textOn(hex, { size, prefer: ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text });
 };
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const sw = (hex) => `<span class="hg-sw" style="background:${hex}" aria-hidden="true"></span>`;
@@ -138,7 +138,7 @@ ${sym ? `<div>${detail(2, 'The symbol')}<div class="hg-sym">${logoFilm(ctx, 'sym
     const B = ctx.brand, cols = ctx.colours;
     const sum = cols.reduce((a, c) => a + c.share, 0), wd = cols.map((c) => (c.share / sum) * 100);
     const fields = `<div class="hg-fields" role="list">${cols.map((c, i) => {
-      const t = inkOn(ctx, c.hex), pct = Math.round(c.share * 100);
+      const t = inkOn(ctx, c.hex, 13), pct = Math.round(c.share * 100);
       ctx.pair(t, c.hex, { size: 13, what: 'guide finishes field' });
       return `<div class="hg-field" role="listitem" style="--w:${wd[i].toFixed(3)}%;--h:${Math.max(64, Math.round(c.share * 640))}px"><div class="hg-field__f${c.share < 0.1 ? ' is-thin' : ''}" style="background:${c.hex};color:${t}"><span class="hg-field__n hg-m">${pad2(i + 1)}</span><span class="hg-field__k">${A(c.name)}</span><span class="hg-field__s hg-m hg-at-s">${pct}%</span></div>${dimH(`${pct}%`, { side: 'bottom' })}</div>`;
     }).join('')}</div>`;

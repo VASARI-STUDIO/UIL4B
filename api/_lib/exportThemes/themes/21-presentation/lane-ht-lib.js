@@ -30,7 +30,7 @@ export const panelF = (ctx) => L(ctx).sunken;
 const tokenOf = (ctx, hex) => { const c = ctx.colours.find((x) => lower(x.hex) === lower(hex)); return c ? `var(--palette-${cssIdent(c.id)})` : hex; };
 // a field's colours as custom properties, the ink checked against it at the size it is used
 export const fieldStyle = (ctx, hex, what, size = 15) => {
-  const ink = inkOn(ctx, hex), t = tokenOf(ctx, hex);
+  const ink = inkOn(ctx, hex, Math.max(size, 15)), t = tokenOf(ctx, hex);
   ctx.pair(ink, hex, { size: Math.max(size, 15), what });
   return `background:${t};color:${ink};--q:${chromeOn(ctx, hex)};--fi:${ink};--fb:${t}`;
 };
