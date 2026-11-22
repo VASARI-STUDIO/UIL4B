@@ -383,6 +383,8 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
 .iel-page .lbry-toolbar-quick{display:flex;flex-direction:column;gap:8px}
 .iel-page .lbry-toolbar-quick>.lbry-filters[aria-label]{width:100%;max-width:none}
 .iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter{flex:1 1 0;min-width:max-content;padding:0 10px;font-size:12.5px;font-weight:560}
+/* The max-content floor above beats the library's 44px touch floor, so a short label ("All") sat at its text plus padding (about 38px) when the row was tight. Longer labels are already well past 44. */
+.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:first-of-type{min-width:44px}
 @media(max-width:400px){.iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span{padding:0 10px}}
 /* At 340 and under the four category labels only fit with less padding and gap; every segment keeps a 44px touch width. */
 @media(max-width:340px){.iel-page .lbry-toolbar-quick>.lbry-filters[aria-label]{gap:2px}.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter{flex:1 0 auto;min-width:44px;padding:0 6px;font-size:12px}.iel-page .lbry-toolbar-quick>.lbry-filters .lbry-filter:has(.lbry-filter-lock){padding:0 17px 0 6px}}
