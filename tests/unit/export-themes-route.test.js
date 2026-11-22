@@ -210,12 +210,26 @@ test('an error with some other code, or none, is still the bare 500 build_failed
   }
 })
 
-test('the build-failed log carries the theme, row, format and a message cut to 200 characters, and none of the request', async () => {
+// The log names the theme, row and format. An uncoded throw logs its error name and the api/_lib line that threw, never its message, which can
+// quote the brand's own copy; a coded refusal logs its message (a hex pair or a font stem) cut to 200 characters. Neither carries the request.
+// Break: log e.message on the build-failed line again, and the first test fails on its keys.
+test('the build-failed log carries the theme, row, format, error name and code line, and neither the message nor the request', async () => {
   const seen = []; const orig = console.error; console.error = (...a) => seen.push(a)
   try { await ask('tok-pro', body({ projectName: 'Private Name Pty' }), { engine: { projectToBrand() { throw new Error('m'.repeat(500)) } } }) } finally { console.error = orig }
   const line = seen.find((a) => a[0] === 'export theme: build failed')
   assert.ok(line, 'logged')
-  assert.deepEqual(Object.keys(line[1]).sort(), ['format', 'message', 'name', 'row', 'theme'])
+  assert.deepEqual(Object.keys(line[1]).sort(), ['at', 'format', 'name', 'row', 'theme'])
+  assert.match(line[1].at, /^$|^[\w./-]+:\d+:\d+$/, 'a file:line:column under api/_lib, or nothing')
+  assert.ok(!/mmm|pro-1|Private Name|2F6F5E/.test(JSON.stringify(line)), JSON.stringify(line))
+})
+
+test('a coded refusal logs a warning with its code and a message cut to 200 characters, and none of the request', async () => {
+  const seen = []; const orig = console.warn; console.warn = (...a) => seen.push(a)
+  try { await ask('tok-pro', body({ projectName: 'Private Name Pty' }), { engine: { projectToBrand() { throw Object.assign(new Error('c'.repeat(500)), { code: 'contrast' }) } } }) } finally { console.warn = orig }
+  const line = seen.find((a) => a[0] === 'export theme: build refused')
+  assert.ok(line, 'logged')
+  assert.deepEqual(Object.keys(line[1]).sort(), ['code', 'format', 'message', 'row', 'theme'])
+  assert.equal(line[1].code, 'contrast')
   assert.equal(line[1].message.length, 200)
   assert.ok(!/pro-1|Private Name|2F6F5E/.test(JSON.stringify(line)))
 })

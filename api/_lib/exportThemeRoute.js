@@ -210,6 +210,16 @@ function declaredLength(req) {
 /**
  * @param ctx { body, decoded, plan, consume?, engine? }  the session and plan are already checked by the caller
  */
+// The first stack frame inside api/_lib, as a path relative to it with line and column, e.g. "exportThemes/engine/brand.js:95:11".
+// Code positions only, so it is safe to log.
+function thrownAt(e) {
+  for (const line of String(e?.stack ?? '').split('\n').slice(1)) {
+    const m = /api[\\/]_lib[\\/]([\w./\\-]+:\d+:\d+)/.exec(line)
+    if (m) return m[1].replace(/\\/g, '/')
+  }
+  return ''
+}
+
 export async function serveThemeExport(req, res, { body, decoded, plan, consume, engine }) {
   const { theme, row, format } = body
   const problem = themeRequestProblem(body)
@@ -262,11 +272,15 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
       const path = safePath(e.path)
       return res.status(400).json({ error: 'That project could not be exported', code: 'invalid_project', inputCode: 'brand_input', ...(path ? { path } : {}) })
     }
-    // Logged here and nowhere else: the theme, row and format, the error name and its message cut to 200 characters. Never the uid, the
-    // email, the project name or the design. The message of a coded error is only ever logged, never sent.
-    console.error('export theme: build failed', { theme, row, format, name: e?.name, message: String(e?.message ?? '').slice(0, 200) })
     // A palette the engine cannot read text on, or a font file the deploy lacks: a code the client can act on, with nothing else in the body.
-    if (e && (e.code === 'contrast' || e.code === 'font_missing')) return res.status(422).json({ code: e.code })
+    // Its message (a hex pair and a ratio, or a font file stem) is logged cut to 200 characters and never sent.
+    if (e && (e.code === 'contrast' || e.code === 'font_missing')) {
+      console.warn('export theme: build refused', { theme, row, format, code: e.code, message: String(e.message ?? '').slice(0, 200) })
+      return res.status(422).json({ code: e.code })
+    }
+    // Any other throw: the error name and the code line that threw. Not its message, which can quote the brand's own copy. Never the uid,
+    // the email, the project name or the design.
+    console.error('export theme: build failed', { theme, row, format, name: e?.name, at: thrownAt(e) })
     return res.status(500).json({ error: 'The document could not be created', code: 'build_failed' })
   }
 }
