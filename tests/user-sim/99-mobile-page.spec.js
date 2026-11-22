@@ -151,12 +151,12 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     const { ctx, page } = await ctxAt(browser, 390)
     watch(page, PERSONA)
     await go(page, '/')
-    // Up to 767px the quiet links are the menu's first three items.
+    // Up to 767px the quiet links are the menu's first three items, then Help.
     await expect(page.locator('.spnav-quiet')).toBeHidden()
     await page.locator('.spnav-burger').click()
     const menu = page.locator('.spnav-menu')
     await expect(menu).toHaveAttribute('data-menu', 'in')
-    await expect(menu.locator('.spnav-rail > a.spnav-mi')).toHaveText(['Tools', 'Plans', 'On mobile'])
+    await expect(menu.locator('.spnav-rail > a.spnav-mi')).toHaveText(['Tools', 'Plans', 'On mobile', 'Help'])
     await expect(menu.getByText('Open the toolkit'), 'the menu carries a call to action again').toHaveCount(0)
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)
@@ -236,11 +236,11 @@ test.describe('the back gesture and the menu', () => {
 })
 
 test.describe('the footers', () => {
-  test('/mobile keeps the home-style footer: Tools, Explore and Legal, no Project column, no Cookies', async ({ page }) => {
+  test('/mobile keeps the home-style footer: Tools, Explore, Support and Legal, no Project column, no Cookies', async ({ page }) => {
     await go(page, '/mobile')
     const footer = page.locator('footer.sp-footer')
     // Mutation: drop `home` or add `pageColumn` in SpectrumMobile.jsx → the headings change.
-    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Explore', 'Legal'])
+    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Explore', 'Support', 'Legal'])
     await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\.$/)
@@ -251,7 +251,7 @@ test.describe('the footers', () => {
   test('a page on the plain footer (/sitemap) keeps the Project column, and its anchors are real sales-page sections', async ({ page }) => {
     await go(page, '/sitemap')
     const footer = page.locator('footer.sp-footer')
-    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Legal'])
+    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Support', 'Legal'])
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
     // Off the sales page the PROJECT links carry the page with them…
     const project = await footer.locator('.sp-footer-col').nth(1).locator('a')
