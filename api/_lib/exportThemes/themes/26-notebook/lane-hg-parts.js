@@ -2,9 +2,9 @@
 import { plateImg } from '../../engine/plate.js';
 import { A, folios, nearPaper, sceneCrop, brandRoles } from './helpers.js';
 
-export const P = (text, cls = '') => `<p class="hg-p${cls ? ' ' + cls : ''}"><span class="hg-k">${A(text)}</span></p>`;
-export const H3 = (text, cls = '') => `<h3 class="hg-h3${cls ? ' ' + cls : ''}"><span class="hg-k">${A(text)}</span></h3>`;
-export const tag = (text, el = 'span', cls = '') => `<${el} class="hg-tag${cls ? ' ' + cls : ''}">${A(text)}</${el}>`;
+export const P = (text, cls = '') => (!text ? '' : `<p class="hg-p${cls ? ' ' + cls : ''}"><span class="hg-k">${A(text)}</span></p>`);
+export const H3 = (text, cls = '') => (!text ? '' : `<h3 class="hg-h3${cls ? ' ' + cls : ''}"><span class="hg-k">${A(text)}</span></h3>`);
+export const tag = (text, el = 'span', cls = '') => (!text ? '' : `<${el} class="hg-tag${cls ? ' ' + cls : ''}">${A(text)}</${el}>`);
 export const pageOf = (ctx, id) => ctx.pages.find((p) => p.id === id) || { id, title: id, section: null };
 
 // the title of the page: the one h1, in the brand's display face, on the dots
@@ -28,7 +28,7 @@ export const cwKey = (ctx, id) => { const c = ctx.brand.logo.colourways; return 
 // the logo (or the slot frame) at a width, scaled by its wrapper; the slot's label is dropped on a small frame so it can never spill
 export function logoAt(ctx, id, w, key, label) {
   const k = key || cwKey(ctx, id), cw = ctx.brand.logo.colourways[k], g = ctx.logo.geos[id];
-  const lab = w >= 168 ? (label === undefined ? 'Your logo goes here' : label) : '';
+  const lab = w >= 168 ? (label === undefined ? '' : label) : '';
   return `<span class="hg-logo" style="width:${w}px;--ar:${g.w}/${g.h}">${ctx.logo.html(id, { width: w, colourway: k, color: cw.name, label: lab })}</span>`;
 }
 // the logo on the ground of its own colourway

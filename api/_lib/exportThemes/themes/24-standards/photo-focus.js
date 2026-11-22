@@ -61,6 +61,8 @@ const SIGN_SHOT = /^(wharf|sign|board)/i;
 // per page and only under a caption that names it (see leadShot). Every other shot is a "To shoot" tile with its own brief.
 export const leadShot = (ctx) => { const sh = ctx.brand.imagery.shots; return sh[0].photo ? sh[0] : sh.find((x) => SIGN_SHOT.test(x.id)) || sh[0]; };
 // the caption of a lead frame that has no photo of its own, naming the sign scene and the row of the shot list that holds its brief
+// true when the lead frame has a real picture to show: a photo, or the sign scene standing in for the sign shot
+export const shotCovered = (s) => !!s.photo || SIGN_SHOT.test(s.id);
 export const leadCaption = (ctx, s) => s.caption || `The sign in place, standing in until this shot is taken. Its brief is the ${ctx.cap(s.id)} row of the shot list.`;
 export function shotHtml(ctx, s, { lead = false, compact = false, w = 3, h = 2, style = 'width:100%;height:100%' } = {}) {
   if (s.photo) return ctx.photo(s.id, { style: `${style};object-fit:cover`, pos: photoPos(s, w, h), slotNote: false });

@@ -2,7 +2,7 @@
 import { A, roles, xOf, pairName } from './helpers.js';
 import { CW, fig, ruler, lab, live, sv, reg, tri, logoOn, logoMode, dispStyle, fitSize, widest, dfont, dimH, map3, mono, X, cwOn } from './lane-hg-kit.js';
 import { top, sub, rowNo } from './lane-hg-meta.js';
-import { shotHtml, leadShot, leadCaption } from './photo-focus.js';
+import { shotHtml, leadShot, leadCaption, shotCovered } from './photo-focus.js';
 
 const foot = (ctx, uid, ext) => ruler(ctx, uid, ext);
 const nameOf = (ctx, k) => ctx.logo.labels[k] || k.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
@@ -53,14 +53,16 @@ function logoVersions(ctx, id) {
   const B = ctx.brand, R = roles(ctx), L = ctx.logo, cws = B.logo.colourways;
   const rows = L.versions.map((v, i) => {
     const gg = L.geos[v], ground = cws[v] ? cws[v].ground : R.ground, cw = cws[v] ? v : cwOn(ctx, ground), w = Math.min(136, (56 * gg.w) / gg.h);
-    const sw = `<span class="hg-sw" style="background:${ground}"><span class="hg-lg" style="width:${w.toFixed(2)}px;--ar:${gg.w}/${gg.h}">${L.html(v, { width: w, colourway: cw, color: cws[cw].name, label: 'Logo' })}</span></span>`;
+    const sw = `<span class="hg-sw" style="background:${ground}"><span class="hg-lg" style="width:${w.toFixed(2)}px;--ar:${gg.w}/${gg.h}">${L.html(v, { width: w, share: 1, colourway: cw, color: cws[cw].name, label: 'Logo' })}</span></span>`;
     return [rowNo(id, i), `${sw}<span class="hg-vn">${A(L.labels[v] || v)}</span>`, A(B.logo.when[v] || '')];
   });
   return top(ctx, id, 'Seven versions, each for a job. Pick the one the job names.') + reg(rows, 'hg-reg--logo') + foot(ctx, 'lv', null);
 }
 
 function clearSpace(ctx, id) {
-  const B = ctx.brand, L = ctx.logo, g = L.geos.colour, W = { w: 560, m: 448, n: 264 }, H = map3((k) => (W[k] * g.h) / g.w), cs = L.clearShare / 100, pad = map3((k) => H[k] * cs);
+  // the logo and its clear space together must fit the sheet at each drawn size, so the logo is drawn only as large as leaves room for the space
+  const B = ctx.brand, L = ctx.logo, g = L.geos.colour, cs = L.clearShare / 100, base = { w: 560, m: 448, n: 264 };
+  const W = map3((k) => Math.min(base[k], Math.floor(CW[k] / (1 + (2 * cs * g.h) / g.w)))), H = map3((k) => (W[k] * g.h) / g.w), pad = map3((k) => H[k] * cs);
   const box = `<div class="hg-clear" style="${sv('cs', pad)}"><div class="hg-hz" style="${sv('hz', W)}">${logoMode(ctx, 'colour', 560, B.name + ' logo')}</div></div>`;
   const hero = fig(box, { h: lab(ctx, map3((k) => W[k] + 2 * pad[k])), v: lab(ctx, map3((k) => H[k] + 2 * pad[k])), cls: 'hg-fig--clear', cap: `The dashed box is the clear space: ${L.clearShare}% of the logo's height on every side. Nothing enters it.` });
   return top(ctx, id, `Keep ${L.clearShare}% of the logo's height clear on every side.`) + hero + foot(ctx, 'cl', live(24, map3((k) => W[k] + 2 * pad[k])));
@@ -75,10 +77,10 @@ function minSize(ctx, id) {
 
 function logoGrounds(ctx, id) {
   const B = ctx.brand, L = ctx.logo, cws = B.logo.colourways, shot = leadShot(ctx), R = roles(ctx);
-  const rows = Object.keys(cws).map((k, i) => [rowNo(id, 0, i), `<span class="hg-gr" style="background:${cws[k].ground}"><span class="hg-lg" style="width:160px;--ar:${L.geos.colour.w}/${L.geos.colour.h}">${L.html('colour', { width: 160, colourway: k, color: cws[k].name, label: 'Logo' })}</span></span>`, `<span class="hg-vn">${A(nameOf(ctx, k))}</span>`, `${mono(cws[k].name)} ${mono(cws[k].ground)}`]);
+  const rows = Object.keys(cws).map((k, i) => [rowNo(id, 0, i), `<span class="hg-gr" style="background:${cws[k].ground}"><span class="hg-lg" style="width:160px;--ar:${L.geos.colour.w}/${L.geos.colour.h}">${L.html('colour', { width: 160, share: 1, colourway: k, color: cws[k].name, label: 'Logo' })}</span></span>`, `<span class="hg-vn">${A(nameOf(ctx, k))}</span>`, `${mono(cws[k].name)} ${mono(cws[k].ground)}`]);
   const photo = `<div class="hg-plate">${shotHtml(ctx, shot, { lead: true })}<span class="hg-plate__l" style="background:${R.field}">${logoOn(ctx, 'colour', R.field, 120, B.name + ' logo')}</span></div>`;
-  return top(ctx, id, 'Use the colourway drawn for the ground. On a photograph, set the logo on a plate of the brand field.')
-    + sub(rowNo(id, 0), 'On colour') + reg(rows, 'hg-reg--gr') + sub(rowNo(id, 1), 'On a photograph') + photo + foot(ctx, 'gr', null);
+  return top(ctx, id, shotCovered(shot) ? 'Use the colourway drawn for the ground. On a photograph, set the logo on a plate of the brand field.' : 'Use the colourway drawn for the ground.')
+    + sub(rowNo(id, 0), 'On colour') + reg(rows, 'hg-reg--gr') + (shotCovered(shot) ? sub(rowNo(id, 1), 'On a photograph') + photo : '') + foot(ctx, 'gr', null);
 }
 
 function logoMisuse(ctx, id) {

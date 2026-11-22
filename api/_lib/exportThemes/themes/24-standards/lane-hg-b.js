@@ -84,11 +84,11 @@ function grid(ctx, id) {
 
 function layouts(ctx, id) {
   const B = ctx.brand, R = roles(ctx), G = ctx.gridMeasures;
-  const page = `<div class="hg-hz hg-lay hg-on-field" style="${sv('hz', pageW)};${gridVars(ctx)}"><div class="hg-lay__g" aria-hidden="true">${gridCols(ctx)}</div><p class="hg-lay__l${ctx.placeholders ? ' ph-tight' : ''}" style="${dispStyle(ctx)}">${A(B.lines.primary)}</p><div class="hg-lay__lg">${logoOn(ctx, 'colour', R.field, 200, B.name + ' logo')}</div></div>`;
+  const page = `<div class="hg-hz hg-lay hg-on-field" style="${sv('hz', pageW)};${gridVars(ctx)}"><div class="hg-lay__g" aria-hidden="true">${gridCols(ctx)}</div>${B.lines.primary ? `<p class="hg-lay__l${ctx.placeholders ? ' ph-tight' : ''}" style="${dispStyle(ctx)}">${A(B.lines.primary)}</p>` : ''}<div class="hg-lay__lg">${logoOn(ctx, 'colour', R.field, 200, B.name + ' logo')}</div></div>`;
   const space = ctx.space.map((s, i) => [rowNo(id, 0, i), `<span class="hg-vn">${A(s.token)}</span>`, `<span class="hg-bar-s" style="width:${s.px}px"></span>`, mono(`${s.px} px, ${X(ctx, s.px)}`)]);
   const edges = [...ctx.radii.map((r) => [r.token, `${r.px === 9999 ? 'Round' : r.px + ' px'}`, r.use]), ['border-control', `${B.ui.border} px`, 'Control edges']].map(([t, v, u], i) => [rowNo(id, 1, i), `<span class="hg-vn">${A(t)}</span>`, A(u), mono(v)]);
-  return top(ctx, id, 'The line and the logo on the grid, then the spacing steps at their true size.')
-    + fig(page, { h: lab(ctx, pageW), cap: `The grid shows through; the line starts on the margin and the logo sits on the foot.` })
+  return top(ctx, id, (B.lines.primary ? 'The line and the logo' : 'The logo') + ' on the grid, then the spacing steps at their true size.')
+    + fig(page, { h: lab(ctx, pageW), cap: B.lines.primary ? `The grid shows through; the line starts on the margin and the logo sits on the foot.` : `The grid shows through; the logo sits on the foot.` })
     + sub(rowNo(id, 0), 'Spacing') + reg(space, 'hg-reg--space') + sub(rowNo(id, 1), 'Corners and edges') + reg(edges) + (B.ui.elevationNote ? `<p class="hg-body hg-note">${A(B.ui.elevationNote)}</p>` : '') + foot(ctx, 'ly', live(0, pageW));
 }
 
