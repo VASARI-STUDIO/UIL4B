@@ -41,8 +41,8 @@ const PAGES = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast'
 const drawnPages = (html) => [...html.matchAll(/<section class="pg" data-page="([a-z]+)"/g)].map((m) => m[1])
 
 test('the row is opt-in: only a theme that names it has it, and the others keep every other row', () => {
-  const plain = EXPORT_THEMES.find((t) => !t.rows)
-  assert.ok(plain, 'a theme with no rows list exists')
+  const plain = EXPORT_THEMES.find((t) => !t.rows && !t.extraRows)
+  assert.ok(plain, 'a theme with no rows list and no extraRows exists')
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
@@ -61,7 +61,7 @@ test('the picker offers the style guide only on Swiss Field, in the three format
 test('the style guide is free where the guidelines are free, and a theme without the row is refused', () => {
   assert.equal(isThemeExportPro('guide', THEME), false)
   assert.deepEqual(assertThemeAccess({ id: 'free' }, { theme: THEME, row: 'guide', format: 'md' }), { ok: true })
-  const plain = EXPORT_THEMES.find((t) => !t.rows).id
+  const plain = EXPORT_THEMES.find((t) => !t.rows && !t.extraRows).id
   assert.deepEqual(themeRequestProblem({ theme: plain, row: 'guide', format: 'pdf' }), { error: 'Unknown export row', code: 'unknown_row' })
   assert.equal(themeRequestProblem({ theme: THEME, row: 'guide', format: 'pdf' }), null)
   assert.equal(themeRequestProblem({ theme: THEME, row: 'guide', format: 'zip' }).code, 'unknown_format')
