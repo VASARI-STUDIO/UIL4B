@@ -41,6 +41,12 @@ export const UIKIT_PAGES = [
   g('tokens', 'Token reference', U.handoff), g('code', 'The code package', U.handoff),
 ];
 
+// The style guide: a short A4 portrait booklet (the `guide` row). A theme implements guide[id]; there are no sections. A theme may set the whole
+// order (guide.order(edition) gives every id) or add pages after the seven (guide.extra(edition)).
+export const STYLE_PAGES = [g('cover', 'Cover'), g('logo', 'Logo'), g('colour', 'Colour'), g('type', 'Type'), g('contrast', 'Contrast'), g('tokens', 'Tokens'), g('usage', 'Usage')];
+export const STYLE_PAGE_SIZE = { w: 794, h: 1123 };   // A4 portrait at 96 dpi
+export const guideOrder = (T, edition) => (typeof T.guide?.order === 'function' ? T.guide.order(edition) : [...STYLE_PAGES.map((p) => p.id), ...(typeof T.guide?.extra === 'function' ? T.guide.extra(edition) : [])]);
+
 // Pages whose output differs between the slot and showcase editions (get a `-slot` canvas board).
 export const LOGO_DEPENDENT = ['cover', 'logo', 'logo-versions', 'clear-space', 'min-size', 'logo-grounds', 'logo-misuse', 'social', 'signage', 'email-signature', 'digital', 'summary'];
 
@@ -86,12 +92,14 @@ export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].d
   ctx.edition = edition; ctx.theme = T.meta; ctx.kind = kind;
   ctx.logo = makeLogo(ctx); ctx.ui = makeUi(ctx);
   addMockups(ctx, T);
-  const list = kind === 'uikit' ? UIKIT_PAGES : GUIDE_PAGES;
+  const list = kind === 'uikit' ? UIKIT_PAGES : kind === 'guide' ? STYLE_PAGES : GUIDE_PAGES;
   const nos = numberPages(list, (T.meta.extraPages && T.meta.extraPages[kind]) || {});
-  ctx.size = kind === 'uikit' ? (T.meta.uikitPage || T.meta.guidelinesPage) : T.meta.guidelinesPage;
+  ctx.size = kind === 'uikit' ? (T.meta.uikitPage || T.meta.guidelinesPage) : kind === 'guide' ? (T.meta.guidePage || STYLE_PAGE_SIZE) : T.meta.guidelinesPage;
   // a page may have its own size (meta.pageSizes { id: [w, h] }): ctx.sizeOf(id) is that page's size, ctx.maxSize the viewport that fits them all
-  const own = pageSizeMap(T.meta);
+  const own = kind === 'guide' ? {} : pageSizeMap(T.meta);
   ctx.pageSizes = own; ctx.sizeOf = (id) => own[id] || ctx.size; ctx.maxSize = largestSize(ctx.size, own);
+  // a guide theme's own order numbers the pages by reading order; its extras follow the seven
+  if (kind === 'guide') { if (typeof T.guide?.order === 'function') guideOrder(T, edition).forEach((id, i) => { nos[id] = i + 1; }); else guideOrder(T, edition).slice(list.length).forEach((id, i) => { nos[id] = list.length + 1 + i; }); }
   ctx.pageNo = (id) => nos[id];
   fallbackShots(ctx, T);
   ctx.pages = list.map((p) => ({ ...p, no: nos[p.id] }));

@@ -54,7 +54,7 @@ const THEMES = Object.freeze({
 })
 
 async function loadEngine() {
-  const [brandMod, pages, doc, files, book, loaders, validate] = await Promise.all([
+  const [brandMod, pages, doc, files, book, loaders, validate, styleguide] = await Promise.all([
     import('./exportThemes/brandFromProject.js'),
     import('./exportThemes/engine/pages.js'),
     import('./exportThemes/engine/doc.js'),
@@ -62,8 +62,9 @@ async function loadEngine() {
     import('./exportThemes/engine/book.js'),
     import('./exportThemes/node-loaders.js'),
     import('./exportThemes/engine/validate.js'),
+    import('./exportThemes/engine/styleguide.js'),
   ])
-  return { ...brandMod, ...pages, ...doc, ...files, ...book, loaders: loaders.default, BrandInputError: validate.BrandInputError }
+  return { ...brandMod, ...pages, ...doc, ...files, ...book, loaders: loaders.default, BrandInputError: validate.BrandInputError, styleGuideMarkdown: styleguide.styleGuideMarkdown }
 }
 
 const dataUrl = (E) => (f) => `data:font/woff2;base64,${Buffer.from(E.loaders.fontFile(f.stem, 'woff2')).toString('base64')}`
@@ -96,6 +97,21 @@ function pagesDoc(E, T, ctx, kind, standalone, only) {
   if (!pages.length) throw new Error(`no ${kind} page could be drawn`)
   const title = `${ctx.brand.name} ${kind === 'uikit' ? 'UI kit' : 'brand guidelines'}`
   return E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+}
+
+// The themed style guide: one A4 page per id in the theme's own order, then style-guide.md (built last, because the pages set the
+// wording it reads). A page whose layout cannot hold this brand's words is left out; no page at all is a failed build.
+function styleGuide(E, T, ctx, standalone) {
+  if (typeof T.guide !== 'object' || !T.guide) throw new Error('theme has no style guide')
+  if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
+  const pages = []
+  for (const id of E.guideOrder(T, ctx.edition)) {
+    if (typeof T.guide[id] !== 'function') continue
+    try { pages.push({ id, html: T.guide[id](ctx) }) } catch (err) { console.warn(`[export] guide page ${id} left out (${err?.name || 'Error'})`) }
+  }
+  if (!pages.length) throw new Error('no guide page could be drawn')
+  const doc = (title, list, stack) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  return { pages, doc, ctx, md: E.styleGuideMarkdown(ctx) }
 }
 
 // The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
@@ -167,6 +183,17 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
     const site = T.guideSite ? await premiumSite('guide', ctx, T, dirs) : null
     const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
     return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
+  }
+  if (row === 'guide') {
+    // Free where the guidelines are free (a theme's rows list names it, src/data/exportThemes.js); the access check is unchanged.
+    const name = `${slug}-style-guide-${theme}`
+    const g = styleGuide(E, T, E.makeCtx(T, 'slot', 'guide', E.loaders, brand), format === 'pdf')
+    const title = `${brand.name} style guide`
+    if (format === 'pdf') return { html: withCsp(g.doc(title, g.pages.map((x) => x.html), true)) }
+    if (format === 'md') return { md: g.md, name: `${name}.md` }
+    const files = { ...E.fontFiles(g.ctx, T), 'index.html': g.doc(title, g.pages.map((x) => x.html), true), 'style-guide.md': g.md }
+    for (const x of g.pages) files[`${x.id}.html`] = g.doc(`${title}: ${x.id}`, [x.html], false)
+    return { name: `${name}.zip`, zip: await zipOf(E, files, name) }
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
   const { files } = await bookSite(E, T, brand, slug)
@@ -264,6 +291,11 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
       res.setHeader('Content-Type', 'application/zip')
       res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)
       return res.status(200).send(out.zip)
+    }
+    if (typeof out.md === 'string' && out.md) {
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)
+      return res.status(200).send(out.md)
     }
     if (typeof out.html !== 'string' || !out.html) throw new Error('empty document')
     return res.status(200).json({ ok: true, theme, row, format, html: out.html })

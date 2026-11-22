@@ -7,6 +7,13 @@ import { loadFont } from '../../engine/nodeFont.js';
 export const A = esc;
 // escaped text with a no-break space after a one-letter word ("A fill"), so that word never ends a line alone
 export const nb = (t) => esc(t).replace(/(^|\s)([AaI]) /g, '$1$2&nbsp;');
+// opt-in (nb stays as it is): a number is held to its unit, and a weekday, day and month to each other, so a line never breaks inside them
+const MONTHS = 'January|February|March|April|May|June|July|August|September|October|November|December';
+const UNIT_RE = /(\d) (kWh|kW|panels|panel|am|pm|mm|px|min)\b/g;
+const DAY_RE = new RegExp(`\\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (\\d{1,2}) (${MONTHS})\\b`, 'g');
+const DATE_RE = new RegExp(`\\b(\\d{1,2}) (${MONTHS})\\b`, 'g');
+export const joinUnits = (t) => String(t).replace(UNIT_RE, '$1 $2').replace(DAY_RE, '$1 $2 $3').replace(DATE_RE, '$1 $2');
+export const nbu = (t) => nb(joinUnits(t));
 export const PAGE_W = 1920, PAGE_H = 1080, M = 80, RULER_Y = 1024, RULER_H = 56, MIN_SEG = 84;
 
 // The chrome faces (meta.chrome and meta.fonts in index.js). Stems are the font file names in fonts/.
@@ -38,6 +45,18 @@ export function wrap(stem, text, size, maxW, track = 0) {
   }
   if (cur) lines.push(cur);
   return lines;
+}
+// wrap with the joins of joinUnits held together; only the number of lines is used, so the no-break spaces come back as spaces
+export function wrapU(stem, text, size, maxW, track = 0) {
+  const lines = []; let cur = '';
+  for (const w of joinUnits(text).split(/[ \t\r\n]+/).filter(Boolean)) {
+    const next = cur ? `${cur} ${w}` : w;
+// eslint-disable-next-line no-irregular-whitespace
+    if (cur && textWidth(stem, next.replace(/ /g, ' '), size, track) > maxW * 0.99) { lines.push(cur); cur = w; } else cur = next;
+  }
+  if (cur) lines.push(cur);
+// eslint-disable-next-line no-irregular-whitespace
+  return lines.map((l) => l.replace(/ /g, ' '));
 }
 export const faceStem = (ctx, role, weight) => (ctx.faces.find((f) => f.role === role && f.style !== 'italic' && f.weight === weight) || ctx.faces.find((f) => f.role === role)).stem;
 
