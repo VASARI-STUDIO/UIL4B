@@ -38,11 +38,11 @@ const ask = async (body) => {
 const BUILDS = []
 for (const t of EXPORT_THEMES) for (const row of Object.keys(THEME_ROW_FORMATS)) if (themeHasRow(t.id, row)) for (const format of THEME_ROW_FORMATS[row]) BUILDS.push({ theme: t.id, row, format })
 
-// Every href and src in a page, with the ones that leave it (a scheme, a data url) left out.
+// Every href, src and css url() in a page (a font the page asks for is a link too), with the ones that leave it (a scheme, a data url) left out.
 function refsOf(html) {
   const out = []
-  for (const m of html.matchAll(/\b(?:href|src)="([^"]*)"/g)) {
-    const v = m[1]
+  for (const m of html.matchAll(/\b(?:href|src)="([^"]*)"|url\(['"]?([^'")]+)['"]?\)/g)) {
+    const v = m[1] ?? m[2]
     if (!v || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(v)) continue
     out.push(v.replaceAll('&amp;', '&'))
   }
