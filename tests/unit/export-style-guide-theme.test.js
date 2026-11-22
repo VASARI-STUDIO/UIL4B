@@ -201,3 +201,25 @@ for (const THEME of IDS) {
     }
   })
 }
+
+// Label's guide spreads slack over its gaps (gapStretch 1.5) and fills each page's foot with flex.
+// A change to the gaps or a section height that strands space shows up as a "leaves N px at the foot" warning.
+test('25-label: no page leaves a gap at the foot, for any name or palette', async () => {
+  const NAMES = [undefined, 'Kerbside', 'Bright Harbour Studio', 'Northern Rivers Community Credit Union']
+  const PALETTES = [undefined, ['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#F96B76'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  const warned = []
+  const keep = console.warn
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    for (const colors of PALETTES) {
+      for (const projectName of NAMES) {
+        const design = colors ? { palette: { base: colors[0], harmony: 'auto', colors } } : undefined
+        const at = warned.length
+        await renderThemeExport({ theme: '25-label', row: 'guide', format: 'pdf', design, projectName })
+        assert.deepEqual(warned.slice(at).filter((w) => w.includes('at the foot') || w.includes('left out')), [], `${colors ? colors[0] : 'default'} "${projectName}"`)
+      }
+    }
+  } finally {
+    console.warn = keep
+  }
+})

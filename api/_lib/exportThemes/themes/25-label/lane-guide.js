@@ -90,7 +90,7 @@ function title(ctx, K, id, cands) {
     top: 92 + n * 22 + 28,
   };
 }
-const flow = stacker({ theme: 'Label', bottom: BOT, gapStretch: 3 });
+const flow = stacker({ theme: 'Label', bottom: BOT, gapStretch: 1.5 });
 const withFaces = (fn) => (ctx) => withHooks(ctx, () => fn(ctx));
 // the lines of a quiet sentence in a box, as text and height
 const para = (K, text, w, { size = 13, lh = 18, stem = K.S.body } = {}) => ({ n: nLines(stem, text, size, w), h: nLines(stem, text, size, w) * lh });
@@ -137,7 +137,6 @@ function logoDraw(ctx, maxTiles) {
   const K = kit(ctx), { R, S } = K, L = ctx.logo, G = L.geos.colour, unit = L.geo.unit, LF = logoFacts(ctx), slot = ctx.edition === 'slot';
   const art = (id, w, o = {}) => logoArt(ctx, id, w, o);
   const t = title(ctx, K, 'logo', [`Clear space is one x. Never set it under ${L.minSize.screenPx} px wide.`, 'One x clear on every side.']);
-  const wide = (45 * G.w) / G.h;
 
   // 1 clear space: the logo on its ground, one x clear on every side, drawn as solid squares; the rule in the first column
   const xw = G.w / unit, xh = G.h / unit, fwX = xw + 2, fhX = xh + 2, plateX = COL[1], plateW = XR - plateX;
@@ -156,7 +155,7 @@ function logoDraw(ctx, maxTiles) {
       + at(px0 + u, py + u, art('colour', lw))
       + sq(cx, py) + sq(cx, py + fh - u) + sq(px0, cy) + sq(px0 + fw - u, cy)
       + card(K, X0, py, COLW, gA.h - SUBH - 12, at(16, 14, `<div class="lg-n">${A(ruleText)}</div>`, { w: COLW - 32 })
-        + kv.map(([k, v], i) => at(16, 14 + ruleH + 14 + i * 38, `<div class="lg-c lg-ql" style="font-weight:400">${A(k)}</div><div class="lg-n">${A(v)}</div>`, { w: COLW - 32 })).join(''));
+        + kv.map(([k, v], i) => at(16, 14 + ruleH + 14 + i * 48, `<div class="lg-c lg-ql" style="font-weight:400">${A(k)}</div><div class="lg-n">${A(v)}</div>`, { w: COLW - 32 })).join(''));
   };
 
   // 2 colourways, each on the ground it is drawn for (one tile per drawing; the slot edition one per colourway, as it draws one frame whatever the drawing)
@@ -211,7 +210,7 @@ function logoDraw(ctx, maxTiles) {
 
   // the clear-space drawing takes what the other sections leave, as tall as the room, one x on every side
   const fixed = B_h + C_h + D_h + E_h + 4 * 16, room = BOT - t.top - fixed - SUBH - 12;
-  const textH = ruleH + 14 + kv.length * 38 + 14 + 16;
+  const textH = ruleH + 14 + kv.length * 48 + 14 + 16;
   const u = Math.floor(Math.min(plateW / fwX, room / fhX, 40));
   if (u < 12) {
     if (groups.length > perRow) return { fewer: perRow };
@@ -223,7 +222,6 @@ function logoDraw(ctx, maxTiles) {
   ctx.logoShown = groups.flatMap((g) => g.labels.map((label, i) => ({ key: i ? LF.grounds.find((o) => o.label === label).key : g.key, label })));
   hook(ctx, { lockups: LK.map(([id, name]) => [name, lkWhen(id)]) });
   if (slot) hookAdd(ctx, 'supply', [['Logo', 'Horizontal, stacked and symbol, SVG']]);
-  void wide;
   return shell(ctx, 'logo', t.html + flow('logo', t.top, [{ h: gA.h, draw: drawA }, { h: B_h, draw: drawB }, { h: C_h, draw: drawC }, { h: D_h, draw: drawD }, { h: E_h, draw: drawE }], { gap: 16, maxGap: 40 }));
 }
 
@@ -235,21 +233,21 @@ function colourPage(ctx) {
   const computed = F.some((f) => !f.cmyk);
   const foot = computed ? 'CMYK * is computed from the hex: proof before print.' : '';
   const cols = F.length > 1 ? 2 : 1, gx = 16, cw = Math.floor((CW - gx * (cols - 1)) / cols), nRows = Math.ceil(F.length / cols);
-  const textW = cw - 32 - 56;
+  const textW = cw - 32 - 76;
   const inkText = (f) => `${f.ink.name} ${f.ink.ratioText}:1 ${f.ink.grade}`;
   const cardH = 20 + 3 * 20 + Math.max(...F.map((f) => para(K, inkText(f), textW).h)) + 12;
   const minPlate = 64, gy = 14, footH = foot ? 18 : 0;
-  const gridH = nRows * (minPlate + cardH) + (nRows - 1) * gy;
+  const gridH = nRows * (minPlate + 8 + cardH) + (nRows - 1) * gy;
   const draw = (y, extra) => {
     const ph = minPlate + Math.floor(extra / nRows);
     return F.map((f, i) => {
-      const x = X0 + (i % cols) * (cw + gx), py = y + Math.floor(i / cols) * (ph + cardH + gy), [r, g, b] = f.rgb, ink = R.onColour(f.hex, 13, 500);
+      const x = X0 + (i % cols) * (cw + gx), py = y + Math.floor(i / cols) * (ph + 8 + cardH + gy), [r, g, b] = f.rgb, ink = R.onColour(f.hex, 13, 500);
       const cmyk = f.cmyk ? (Array.isArray(f.cmyk) ? f.cmyk.join(' ') : String(f.cmyk)) : `${cmykOf(f.rgb).join(' ')} *`;
       const kv = [['HEX', f.hex.replace('#', '').toUpperCase()], ['RGB', `${r} ${g} ${b}`], ['CMYK', cmyk]];
       return obj(K, x, py, cw, ph, f.hex, at(12, 12, `<div class="lg-c lg-wrap" style="color:${ink}">${A(f.name)}</div><div class="lg-c" style="font-weight:400;color:${ink}">${A(pct(f.share))}, ${A(f.role)}</div>`, { w: cw - 24 })
         + at(cw - 12 - 40, 12, A(catNo(ctx, 'colour', i + 1)), { w: 40, cls: 'lg-c', style: `text-align:right;font-weight:400;color:${ink}` }))
-        + card(K, x, py + ph, cw, cardH, kv.map(([k, v], j) => at(16, 14 + j * 20, A(k), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(72, 14 + j * 20, A(v), { cls: 'lg-m' })).join('')
-          + at(16, 14 + 60 + 2, A('Text'), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(72, 14 + 60 + 2, A(inkText(f)), { w: textW, cls: 'lg-n', style: 'line-height:18px' }));
+        + card(K, x, py + ph + 8, cw, cardH, kv.map(([k, v], j) => at(16, 14 + j * 20, A(k), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(72, 14 + j * 20, A(v), { cls: 'lg-m' })).join('')
+          + at(16, 14 + 60 + 2, A('Set text in'), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(92, 14 + 60 + 2, A(inkText(f)), { w: textW, cls: 'lg-n', style: 'line-height:18px' }));
     }).join('');
   };
   const secs = [{ h: gridH, flex: 400, draw }];
@@ -271,21 +269,26 @@ function rulerPage(ctx) {
   const base = raw.map(Math.floor);
   let left = inner - sum(base);
   raw.map((w, i) => ({ i, f: w - Math.floor(w) })).sort((a, b) => b.f - a.f || a.i - b.i).slice(0, left).forEach((o) => { base[o.i] += 1; });
-  const BAR = 56, barSec = { h: SUBH + 12 + BAR, flex: 200, draw: (y, extra = 0) => {
+  const BAR = 56, barSec = { h: SUBH + 12 + BAR, flex: 300, draw: (y, extra = 0) => {
     let x = 0;
     const by = y + SUBH + 12, bh = BAR + extra;
     // the segments tile the full width; the 1 px keyline is drawn over them, so a segment as pale as the wall still has a visible end
-    const segs = F.map((f, i) => { const s = rect(X0 + x, by, base[i], bh, `background:${f.hex}`); x += base[i]; return s; }).join('');
+    const segs = F.map((f, i) => {
+      const lab = pct(f.share), s = rect(X0 + x, by, base[i], bh, `background:${f.hex}`, tw(CHROME[500], lab, 12) + 16 <= base[i] ? at(8, 8, A(lab), { cls: 'lg-c', style: `color:${R.onColour(f.hex, 12, 500)}` }) : '');
+      x += base[i];
+      return s;
+    }).join('');
     return sec(K, X0, y, CW, catNo(ctx, 'ruler', 1), 'Proportion of a page', `${F.length} colour${F.length === 1 ? '' : 's'}, widest first`)
       + segs + rect(X0, by, CW, bh, `border:1px solid ${R.edge}`);
   } };
   // the table
   const rows = F.slice(0, 8), RH = 24;
-  const tabSec = { h: SUBH + 12 + 28 + rows.length * RH, flex: 8 * rows.length, draw: (y, extra = 0) => {
-    const rh = RH + Math.floor(extra / rows.length), tH = 28 + rows.length * rh;
+  const tabSec = { h: SUBH + 12 + 20 + rows.length * RH, flex: 8 * rows.length, draw: (y, extra = 0) => {
+    // the extra goes to the card as even padding above the first row and below the last
+    const tH = 20 + rows.length * RH + extra, padTop = 14 + Math.floor(extra / 2);
     return sec(K, X0, y, CW, catNo(ctx, 'ruler', 2), 'Share by colour')
     + card(K, X0, y + SUBH + 12, CW, tH, rows.map((f, i) => {
-      const yy = 14 + i * rh;
+      const yy = padTop + i * RH;
       // a swatch on the card gets the edge when it is close to the card's own colour
       return rect(16, yy + 1, 14, 14, `background:${f.hex}`, '', ctx.ratio(f.hex, R.labelFill) < 1.5 ? 'edge' : '')
         + at(44, yy, A(f.name), { w: 250, cls: 'lg-c lg-e' }) + at(310, yy, A(f.role), { w: 260, cls: 'lg-r lg-ql lg-e' })
@@ -322,10 +325,11 @@ function appliedPage(ctx) {
   const capH = Math.max(...caps.map((c) => c.h));
   const capCard = (x, y, c) => card(K, x, y, c.w, capH, at(12, 12, `<div class="lg-c">${A(c.name)}</div>${c.detail ? `<div class="lg-r lg-ql" style="margin-top:2px">${A(c.detail)}</div>` : ''}`, { w: c.w - 24 }));
   // the sign: a printed board, its line in the display face, as large as the board holds
-  const sInk = R.onColour(R.groundHex, 13, 500), lw0 = Math.min(sw - 32, ctx.edition === 'slot' ? slotW(ctx, 110) : 110), lh0 = (lw0 * G.h) / G.w;
+  // the sign is printed in the action colour, its logo in the colourway drawn for that ground
+  const sInk = R.onColour(R.action, 13, 500), swCw = R.colourwayOn(R.action), lw0 = Math.min(sw - 32, ctx.edition === 'slot' ? slotW(ctx, 110) : 110), lh0 = (lw0 * G.h) / G.w;
   const sRoom = OH - 32 - lh0 - 16;
   const sSize = [26, 22, 18, 16, 14].find((s) => nLines(S.disp, sg.line, s, sw - 32, st) * Math.round(s * 1.15) <= sRoom) || 14;
-  const sign = obj(K, so.x, 0, sw, OH, R.groundHex, at(16, 16, logoArt(ctx, 'colour', Math.min(sw - 32, lw0)), {}) + at(16, 16 + lh0 + 16, A(sg.line), { w: sw - 32, cls: 'lg-d', style: `font-size:${sSize}px;line-height:${Math.round(sSize * 1.15)}px;color:${sInk}` }), 'overflow:hidden');
+  const sign = (y0) => obj(K, so.x, y0, sw, OH, R.action, at(16, 16, logoArt(ctx, 'colour', Math.min(sw - 32, lw0), { colourway: swCw, color: sInk }), {}) + at(16, 16 + lh0 + 16, A(sg.line), { w: sw - 32, cls: 'lg-d', style: `font-size:${sSize}px;line-height:${Math.round(sSize * 1.15)}px;color:${sInk}` }), 'overflow:hidden');
   const cLw = Math.min(cdW - 32, ctx.edition === 'slot' ? slotW(ctx, 96) : 96);
   const cInk = R.onColour(R.groundHex, 13, 500);
   const bizcard = (y0) => obj(K, co.x, y0, cdW, cdH, R.groundHex,
@@ -333,30 +337,33 @@ function appliedPage(ctx) {
   const social = (app.social || []).slice(0, 3), sH = 16 + 16 + social.reduce((a, s) => a + para(K, s, soW - 32).h + 8, 0) + 8;
   const rowH = OH + 8 + capH;
   const rowSec = { h: SUBH + 12 + rowH, draw: (y) => {
-    const y0 = y + SUBH + 12, top = y0, cy = y0 + Math.round((OH - cdH) / 2);
-    return sec(K, X0, y, CW, catNo(ctx, 'applied', 1), 'Sign, card and social')
-      + sign.replace('top:0px', `top:${r1(top)}px`) + capCard(so.x, y0 + OH + 8, caps[0])
+    // the sign and the social card share a top line; the sign and the card share a foot, 8 px above their caption cards
+    const y0 = y + SUBH + 12, cy = y0 + OH - cdH;
+    return sec(K, X0, y, CW, catNo(ctx, 'applied', 1), 'Sign, card and social', 'each drawn to its own scale')
+      + sign(y0) + capCard(so.x, y0 + OH + 8, caps[0])
       + bizcard(cy) + capCard(co.x, y0 + OH + 8, caps[1])
       + (social.length && sH <= OH ? card(K, sx, y0, soW, sH, at(16, 16, `<div class="lg-c lg-ql">Social</div>` + social.map((s) => `<div class="lg-n" style="margin-top:8px">${A(s)}</div>`).join(''), { w: soW - 32 })) : '');
   } };
   // the order email, across the page
   const em = (B.guideB && B.guideB.email) || {}, emBody = (Array.isArray(em.body) ? em.body.join(' ') : em.body) || '', pad = 24, tW = CW - 2 * pad;
   const subject = em.subject || '', subjLines = nLines(S.disp, subject, 22, tW, st), bp = para(K, emBody, tW);
-  const EH = pad + 20 + 14 + subjLines * 26 + 12 + bp.h + pad;
-  const emSec = { h: SUBH + 12 + EH, flex: 160, draw: (y, extra = 0) => {
-    const ey = y + SUBH + 12, ink = R.onColour(R.groundHex, 13, 500);
+  const BK = buttonKit(ctx, K);
+  const EH = pad + 20 + 14 + subjLines * 26 + 12 + bp.h + 20 + BK.bh + pad;
+  const emSec = { h: SUBH + 12 + EH, flex: 40, draw: (y, extra = 0) => {
+    const ey = y + SUBH + 12, ink = R.onColour(R.groundHex, 13, 500), by = pad + 34 + subjLines * 26 + 12 + bp.h + 20;
     return sec(K, X0, y, CW, catNo(ctx, 'applied', 2), 'Order email')
       + obj(K, X0, ey, CW, EH + extra, R.groundHex, at(pad, pad, `<span class="lg-c">${A(em.to ? `To ${em.to}` : (card0.person || ''))}</span>`, { w: tW - 80, style: `color:${ink}` })
         + at(CW - pad - 80, pad, A(em.time || ''), { w: 80, cls: 'lg-m', style: `text-align:right;color:${ink}` })
         + at(pad, pad + 34, A(subject), { w: tW, cls: 'lg-d', style: `font-size:22px;line-height:26px;color:${ink}` })
-        + at(pad, pad + 34 + subjLines * 26 + 12, A(emBody), { w: tW, cls: 'lg-n', style: `color:${ink}` }));
+        + at(pad, pad + 34 + subjLines * 26 + 12, A(emBody), { w: tW, cls: 'lg-n', style: `color:${ink}` })
+        + rect(pad, by, BK.w1, BK.bh, `background:${BK.bt.fill};color:${BK.bt.label};${BK.bstyle}`, A(BK.vPrimary)));
   } };
   return shell(ctx, 'applied', t.html + flow('applied', t.top, [rowSec, emSec], { gap: 24, maxGap: 60 }));
 }
 
 // ---------------------------------------------------------------- type
 function typePage(ctx) {
-  const K = kit(ctx), { R, S } = K, B = ctx.brand, LAD = typeLadder(ctx), d = B.fonts.display, b = B.fonts.body, mo = B.fonts.mono;
+  const K = kit(ctx), B = ctx.brand, LAD = typeLadder(ctx), d = B.fonts.display, b = B.fonts.body, mo = B.fonts.mono;
   const fams = [...new Set([d.family, b.family])];
   const t = title(ctx, K, 'type', copyOf(ctx, 'type', [`${cap1(numberWord(LAD.length))} steps, set in ${listAnd(fams)}.`, 'The scale, step by step.']));
   const sp = copyRaw(ctx, 'typeSpecimens', {}), lines0 = [B.lines.primary, ...(B.lines.others || [])].filter(Boolean);
@@ -389,27 +396,25 @@ function typePage(ctx) {
     let yy = y + SUBH + 12;
     return sec(K, X0, y, CW, catNo(ctx, 'type', 2), 'Scale', `${LAD.length} steps`) + rowsD.map((r) => {
       const { s } = r, fam = s.face === 'display' ? 'var(--display)' : s.face === 'mono' ? 'var(--mono)' : 'var(--body)', h = r.h + add;
-      const out = at(X0, yy, `<div class="lg-c">${A(s.name)}</div><div class="lg-m lg-q" style="font-family:var(--chrome)">${s.size} / ${s.line}, ${A(weightName(s.weight))}</div>${r.shrunk ? `<div class="lg-m lg-q" style="font-family:var(--chrome)">shown at ${r.sz}</div>` : ''}`, { w: LW })
+      const out = at(X0, yy, `<div class="lg-c">${A(s.name)}</div><div class="lg-m lg-q" style="font-family:var(--chrome);font-variant-numeric:normal">${s.size} / ${s.line}, ${A(weightName(s.weight))}</div>${r.shrunk ? `<div class="lg-m lg-q" style="font-family:var(--chrome);font-variant-numeric:normal">shown at ${r.sz}</div>` : ''}`, { w: LW })
         + at(SX, yy + Math.floor((h - r.lh) / 2), A(specimen(s)), { w: SW, cls: 'lg-spec', style: `font-family:${fam};font-weight:${s.weight};font-size:${r.sz}px;line-height:${r.lh}px;${s.face === 'display' ? `font-stretch:${d.stretch || 100}%;` : ''}height:${r.lh}px` });
       yy += h + 14;
       return out;
     }).join('');
   } };
-  void R; void S;
   return shell(ctx, 'type', t.html + flow('type', t.top, [facesSec, ladSec], { gap: 24, maxGap: 48 }));
 }
 
 // ---------------------------------------------------------------- contrast
 function contrastPage(ctx) {
   const K = kit(ctx), { R } = K, F = contrastFacts(ctx), P = F.pairs;
-  const worst = P.filter((p) => !/^AA/.test(p.grade)).length;
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
   const RH = 36, AX = 360, AW = 170;
-  const pairs = { h: SUBH + 12 + P.length * RH, flex: P.length * 40, draw: (y, extra = 0) => {
-    const rh = RH + Math.floor(extra / Math.max(1, P.length));
+  const pairs = { h: SUBH + 12 + P.length * RH, flex: P.length * 72, draw: (y, extra = 0) => {
+    const rh = RH + Math.floor(extra / Math.max(1, P.length)), sh = Math.max(28, Math.min(56, rh - 12));
     return sec(K, X0, y, CW, catNo(ctx, 'contrast', 1), 'Pairs', 'ratio of text to ground, out of 21') + P.map((p, i) => {
       const yy = y + SUBH + 12 + i * rh, fam = p.sample && p.sample.face === 'display' ? 'var(--display)' : 'var(--body)', sz = Math.min((p.sample || {}).size || 15, 20);
-      return obj(K, X0, yy + Math.floor((rh - 28) / 2), 56, 28, p.bgHex, at(0, 0, `<div style="width:56px;height:28px;display:flex;align-items:center;justify-content:center;font-family:${fam};font-weight:${(p.sample || {}).weight || 400};font-size:${sz}px;line-height:1;color:${p.fgHex}">Aa</div>`))
+      return obj(K, X0, yy + Math.floor((rh - sh) / 2), 56, sh, p.bgHex, at(0, 0, `<div style="width:56px;height:${sh}px;display:flex;align-items:center;justify-content:center;font-family:${fam};font-weight:${(p.sample || {}).weight || 400};font-size:${sz}px;line-height:1;color:${p.fgHex}">Aa</div>`))
         + at(X0 + 72, yy + Math.floor((rh - 34) / 2), `<div class="lg-c lg-e" style="width:${AX - X0 - 88}px">${A(p.label)}</div><div class="lg-r lg-q lg-e" style="width:${AX - X0 - 88}px">${A(p.use || '')}</div>`)
         + rect(AX, yy + Math.floor(rh / 2) - 3, r1((Math.min(p.ratio, 21) / 21) * AW), 6, 'background:var(--ink)')
         + at(AX + AW + 16, yy + Math.floor((rh - 16) / 2), A(`${p.ratioText}:1`), { w: 60, cls: 'lg-m' })
@@ -425,11 +430,17 @@ function contrastPage(ctx) {
     const x = X0 + (i % tc) * (TWd + 12), yy = y + SUBH + 12 + Math.floor(i / tc) * (30 + Math.floor(extra / trows));
     return rect(x, yy + 2, 22, 22, `background:${tn.hex}`, '', R.nearWall(tn.hex) ? 'edge' : '') + at(x + 32, yy, `<div class="lg-c lg-e" style="width:${TWd - 40}px">${A(tn.name)}</div><div class="lg-m lg-q" style="font-size:11px;line-height:14px">${A(tn.hex.replace('#', '').toUpperCase())}</div>`);
   }).join('') } : null;
-  const note = `${GRADE_NOTE}${(ctx.unusedPairs || []).length ? ` Not used: ${ctx.unusedPairs.map((u) => `${u.fg} on ${u.bg} (${u.ratioText}:1)`).join(', ')}.` : ''}`;
+  // the pairs the interface leaves out, by the palette's own names, the six nearest to passing
+  const palName = (id) => { const c = ctx.byId[id]; return !c ? String(id) : ctx.tones.some((tn) => tn.id === id) && c.role.endsWith('text') ? ctx.cap(c.role) : c.name; };
+  const unused = (ctx.unusedPairs || []).slice().sort((a, b) => parseFloat(b.ratioText) - parseFloat(a.ratioText)).slice(0, 6);
+  const note = `${GRADE_NOTE}${unused.length ? ` Not used: ${unused.map((u) => `${palName(u.fg)} on ${palName(u.bg)} (${u.ratioText}:1)`).join(', ')}.` : ''}`;
   const noteH = para(K, note, CW - 32, { size: 12, lh: 16, stem: K.S.body }).h;
-  const noteSec = { h: noteH + 24, flex: 60, draw: (y, extra = 0) => card(K, X0, y, CW, noteH + 24 + extra, at(16, 12 + Math.floor(extra / 2), A(note), { w: CW - 32, cls: 'lg-r' })) };
-  void worst;
-  return shell(ctx, 'contrast', t.html + flow('contrast', t.top, [pairs, tonesSec, noteSec].filter(Boolean), { gap: 20, maxGap: 40 }));
+  const noteSec = { h: noteH + 24, draw: (y) => card(K, X0, y, CW, noteH + 24, at(16, 12, A(note), { w: CW - 32, cls: 'lg-r' })) };
+  // the grades: four cells, each the least ratio that earns it, drawn on the same bar as the pairs
+  const GR = [['Fail', 'under 3:1', 0], ['AA Large', '3:1 and over', 3], ['AA', '4.5:1 and over', 4.5], ['AAA', '7:1 and over', 7]], GW = Math.floor((CW - 12 * 3) / 4), GH = 76;
+  const gradesSec = { h: SUBH + 12 + GH, draw: (y) => sec(K, X0, y, CW, catNo(ctx, 'contrast', tones.length ? 3 : 2), 'Grades', 'least ratio for each, out of 21') + GR.map(([n, r, min], i) => card(K, X0 + i * (GW + 12), y + SUBH + 12, GW, GH,
+    at(16, 14, `<div class="lg-c">${A(n)}</div><div class="lg-r lg-ql">${A(r)}</div>`, { w: GW - 32 }) + rect(16, GH - 20, GW - 32, 6, 'background:var(--label-ink);opacity:.15') + rect(16 + r1((min / 21) * (GW - 32)), GH - 20, Math.max(3, r1(((i < 3 ? GR[i + 1][2] : 21) - min) / 21 * (GW - 32))), 6, 'background:var(--label-ink)'))).join('') };
+  return shell(ctx, 'contrast', t.html + flow('contrast', t.top, [pairs, tonesSec, gradesSec, noteSec].filter(Boolean), { gap: 20, maxGap: 40 }));
 }
 
 // ---------------------------------------------------------------- tokens
@@ -437,7 +448,7 @@ function tokensPage(ctx) {
   const K = kit(ctx), { R } = K, T = tokenGroups(ctx), L = ctx.roles.light;
   const t = title(ctx, K, 'tokens', copyOf(ctx, 'tokens', ['Spacing, corners and edges, as set.', 'The spacing, corners and edges.']));
   const maxPx = Math.max(...T.space.map((s) => s.px), 1), BW = 200;
-  const spRow = 22;
+  const spRow = 28;
   const spaceSec = { h: SUBH + 12 + T.space.length * spRow, flex: T.space.length * 10, draw: (y, extra = 0) => {
     const rh = spRow + Math.floor(extra / Math.max(1, T.space.length));
     return sec(K, X0, y, CW, catNo(ctx, 'tokens', 1), 'Spacing', `base ${Math.min(...T.space.map((s) => s.px)) || 4} px`) + T.space.map((s, i) => {
@@ -448,8 +459,8 @@ function tokensPage(ctx) {
     }).join('');
   } };
   // corners: drawn at the largest whole multiple that leaves the biggest one a true corner (the section says so)
-  const radii = T.radii, sq = 64, maxR = Math.max(...radii.filter((r) => r.px < 999).map((r) => r.px), 1), scale = Math.max(1, Math.min(4, Math.floor(sq / 2 / maxR)));
-  const rc = Math.max(1, Math.min(radii.length, 4)), RWd = Math.floor((CW - 12 * (rc - 1)) / rc), rrows = Math.ceil(radii.length / rc);
+  const radii = T.radii, sq = 96, maxR = Math.max(...radii.filter((r) => r.px < 999).map((r) => r.px), 1), scale = Math.max(1, Math.min(4, Math.floor((sq / 2 - 1) / maxR)));
+  const rc = Math.max(1, Math.min(radii.length, 3)), RWd = Math.floor((CW - 12 * (rc - 1)) / rc), rrows = Math.ceil(radii.length / rc);
   const radiiSec = radii.length ? { h: SUBH + 12 + rrows * (sq + 12) - 12, flex: 80, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 2), 'Corners', scale > 1 ? `drawn at ${scale}x` : '') + radii.map((r, i) => {
     const x = X0 + (i % rc) * (RWd + 12), yy = y + SUBH + 12 + Math.floor(i / rc) * (sq + 12 + Math.floor(extra / rrows)), rad = Math.min(r.px * scale, sq / 2);
     return rect(x, yy, sq, sq, `border:1px solid ${R.edge};background:var(--panel);border-radius:${rad}px`)
@@ -474,16 +485,21 @@ function tokensPage(ctx) {
 // ---------------------------------------------------------------- usage
 // the button as the engine reports it, its label set in the scale's own Label step
 const buttonOf = (ctx) => { const bt = usageFacts(ctx).button, lab = typeLadder(ctx).find((t) => t.token === 'label'); return lab && bt.type.token !== 'control' ? { ...bt, type: { ...bt.type, ...lab } } : bt; };
-function usagePage(ctx) {
-  const K = kit(ctx), { R, S } = K, B = ctx.brand, U = usageFacts(ctx), bt = buttonOf(ctx), cd = U.card, lk = U.link, d = B.fonts.display, L = ctx.roles.light, m = ctx.byId;
-  void m;
-  const t = title(ctx, K, 'usage', copyOf(ctx, 'usage', ['The button, the link and the card, built from the tokens.', 'Built from the tokens.']));
+// the brand's primary button: its measured size and the style that draws it (the usage page and the order email share it)
+function buttonKit(ctx, K) {
+  const bt = buttonOf(ctx), d = ctx.brand.fonts.display;
   const fam = (tk) => (tk.face === 'display' ? 'var(--display)' : 'var(--body)');
   const font = (tk) => `font:${tk.weight} ${tk.size}px/${tk.line}px ${fam(tk)};${tk.face === 'display' ? `font-stretch:${d.stretch || 100}%;` : ''}`;
   const V = copyRaw(ctx, 'verbs', {}), vPrimary = V.primary || bt.primary;
   const padY = bt.padY.px, padX = bt.padX.px, bh = padY * 2 + bt.type.line;
   const btnW = (s) => Math.ceil(tw(stemOf(ctx, bt.type.face, bt.type.weight), s, bt.type.size) * (bt.type.face === 'display' ? K.st : 1)) + 2 * padX;
   const w1 = btnW(vPrimary), bstyle = `display:flex;align-items:center;justify-content:center;height:${bh}px;box-sizing:border-box;border-radius:${bt.radius.px}px;${font(bt.type)}white-space:nowrap`;
+  return { bt, font, vPrimary, bh, btnW, w1, bstyle };
+}
+function usagePage(ctx) {
+  const K = kit(ctx), { R, S } = K, B = ctx.brand, U = usageFacts(ctx), cd = U.card, lk = U.link, L = ctx.roles.light;
+  const { bt, font, vPrimary, bh, w1, bstyle } = buttonKit(ctx, K);
+  const t = title(ctx, K, 'usage', copyOf(ctx, 'usage', ['The button, the link and the card, built from the tokens.', 'Built from the tokens.']));
   const SPW = 346, PLX = X0 + SPW + 16, PLW = XR - PLX;
   // a spec card: key, value rows
   // mono values are measured in the mono face at 12px, the rest in the body face at 13px
@@ -506,7 +522,10 @@ function usagePage(ctx) {
     return rect(x, by, w1, bh, `${css};${bstyle}`, A(vPrimary)) + at(x, by + bh + 8, A(n), { cls: 'lg-c lg-q', style: 'font-weight:400' });
   }).join('')) };
   // the link
-  const lkCol = ctx.colours.find((c) => c.role === 'link') || { name: R.wallName, hex: R.ink };
+  // the link's colour is the foreground of the contrast pair the interface labels "Links"; failing that, the ink, named by its own name
+  const lkPair = contrastFacts(ctx).pairs.find((p) => /^links?$/i.test(String(p.label).trim()) || /^links?$/i.test(String(p.use).trim()));
+  const lkHexName = (hex) => ([...ctx.colours, ...ctx.tones].find((c) => c.hex.toLowerCase() === hex.toLowerCase()) || {}).name;
+  const lkCol = lkPair ? { hex: lkPair.fgHex, name: lkPair.fgName } : { hex: R.ink, name: lkHexName(R.ink) || R.ink.replace('#', '').toUpperCase() };
   const lspec = [['Type', `${lk.type.name}, ${lk.type.size} / ${lk.type.line}`, 1], ['Colour', lkCol.name], ['Line', lk.border ? `${lk.border.token}, ${lk.border.px} px` : 'none', 1]];
   const lH = Math.max(specH(lspec), lk.type.line + 48);
   const linkSec = { h: SUBH + 12 + lH, draw: (y) => {
@@ -525,8 +544,9 @@ function usagePage(ctx) {
   const ctH = nLines(tStem, cd.titleText, cd.title.size, tx, tSt) * cd.title.line, cbH = nLines(bStem, cd.bodyText, cd.body.size, tx) * cd.body.line, cardH = 2 * edgePx + 2 * pad + ctH + 8 + cbH;
   const cH = Math.max(specH(cspec), cardH + 48);
   const cardSec = { h: SUBH + 12 + cH, flex: 80, draw: (y, extra = 0) => {
+    // the spec card keeps its own height; the extra goes to the preview frame
     const by = y + SUBH + 12, hh = cH + extra;
-    return sec(K, X0, y, CW, catNo(ctx, 'usage', 4), 'Card') + specCard(X0, by, cspec, hh)
+    return sec(K, X0, y, CW, catNo(ctx, 'usage', 4), 'Card') + specCard(X0, by, cspec, specH(cspec))
       + obj(K, PLX, by, PLW, hh, R.groundHex, rect(Math.floor((PLW - cardW) / 2), Math.floor((hh - cardH) / 2), cardW, cardH, `background:${cd.fill};border:${edgePx}px solid ${cd.edgeColour};padding:${pad}px;border-radius:${cd.radius.px}px`,
         `<div style="${font(cd.title)}color:${L.text}">${A(cd.titleText)}</div><div style="margin-top:8px;${font(cd.body)}color:${L.text}">${A(cd.bodyText)}</div>`));
   } };
