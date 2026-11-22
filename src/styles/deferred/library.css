@@ -893,7 +893,10 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
 /* At the default the row shows only the sort icon (the name stays "Sort: Recommended"); the panel and a phone keep the word. */
 .lib-surface .lbry-toolbar-sort .lbry-sort--default{width:40px;padding:0;justify-content:center}
 @media(pointer:coarse){.lib-surface .lbry-toolbar-sort .lbry-sort--default{width:44px}}
-.lib-surface .lbry-toolbar-sort .lbry-sort--default .menu-select-text{display:none}
+.lbry-sort .lbry-sort-icon{display:none}
+.lib-surface .lbry-toolbar-sort .lbry-sort--default .menu-select-text{flex:none;display:inline-flex;align-items:center;justify-content:center}
+.lib-surface .lbry-toolbar-sort .lbry-sort--default .lbry-sort-icon{display:block;flex:none}
+.lib-surface .lbry-toolbar-sort .lbry-sort--default :is(.lbry-sort-word,.menu-select-caret){display:none}
 
 /* The one control the groups collapse into. The same resting affordance as a
    collapsed group trigger (a hairline pill), because it is the same kind of
