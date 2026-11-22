@@ -91,7 +91,7 @@ test('every relative link in every build lands on a file or an id in the same zi
 // Ids minted while a page is drawn (SVG ids, gradient ids) come from a counter per build, so two builds are the same bytes.
 test('two builds of the same project are byte-identical (04 and 26 mint ids as they draw)', { timeout: 300_000 }, async () => {
   const same = []
-  for (const [theme, row, format] of [['04-standards', 'slides', 'html'], ['04-standards', 'slides', 'pdf'], ['04-standards', 'ui-kit', 'html'], ['26-notebook', 'ui-kit', 'html'], ['26-notebook', 'ui-kit', 'pdf']]) {
+  for (const [theme, row, format] of [['04-standards', 'slides', 'html'], ['04-standards', 'slides', 'pdf'], ['04-standards', 'ui-kit', 'zip'], ['26-notebook', 'ui-kit', 'zip'], ['26-notebook', 'book', 'pdf']]) {
     const a = await ask({ theme, row, format, design, projectName: 'Kerbside' }), b = await ask({ theme, row, format, design, projectName: 'Kerbside' })
     const x = format === 'pdf' ? a.body?.html : a.buffer, y = format === 'pdf' ? b.body?.html : b.buffer
     if (!x || !y || !(format === 'pdf' ? x === y : x.equals(y))) same.push(`${theme} ${row} ${format}`)
@@ -109,7 +109,7 @@ test('the 27 guidelines build with the fonts the checkout carries', async () => 
 // The responsive files that ran wider than a phone. Fixed-page (@page) documents are not in this list.
 const NARROW = [
   ['08-monograph', 'book', 'pdf', null], ['08-monograph', 'book', 'html', 'index.html'], ['24-standards', 'book', 'pdf', null],
-  ['24-standards', 'book', 'html', 'index.html'], ['24-standards', 'slides', 'html', 'clear-space.html'], ['24-standards', 'ui-kit', 'html', 'navigation.html'],
+  ['24-standards', 'book', 'html', 'index.html'], ['24-standards', 'slides', 'html', 'clear-space.html'], ['24-standards', 'ui-kit', 'zip', 'navigation.html'],
 ]
 test('the responsive pages that overflowed are no wider than a 390 px screen', { timeout: 300_000 }, async (t) => {
   let chromium
