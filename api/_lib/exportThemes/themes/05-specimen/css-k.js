@@ -54,9 +54,9 @@ export function cssK(ctx) {
 .k-drawer{position:relative;isolation:isolate}
 .k-drawer--pal{flex:1;margin:0 0 60px;padding:34px 13px 0;border-left:1.5px solid var(--rod);border-right:1.5px solid var(--rod);overflow:hidden}
 .k-gcs{display:flex;flex-direction:column;height:100%}
-.k-gc{position:relative;flex:none;height:116px;background:var(--c);color:var(--i);box-shadow:inset 1px 0 0 var(--rod),inset -1px 0 0 var(--rod),inset 0 1px 0 var(--rod)}
-.k-gc--tall{height:300px}
-.k-gc:last-child{flex:1 1 auto;height:auto}
+.k-gc{position:relative;flex:0 1 116px;background:var(--c);color:var(--i);box-shadow:inset 1px 0 0 var(--rod),inset -1px 0 0 var(--rod),inset 0 1px 0 var(--rod)}
+.k-gc--tall{flex:0 8 300px}
+.k-gc:last-child{flex:1 1 116px;padding-bottom:22px}
 .k-gtab{position:absolute;bottom:100%;height:28px;display:flex;align-items:center;padding:0 8px;background:var(--c);border-radius:7px 7px 0 0;box-shadow:inset 1px 0 0 var(--rod),inset -1px 0 0 var(--rod),inset 0 1px 0 var(--rod);font-size:12px;line-height:16px;overflow:hidden}
 .k-gface{padding:16px 22px 0}
 .k-gname{display:flex;align-items:baseline;gap:14px}
@@ -66,6 +66,15 @@ export function cssK(ctx) {
 .k-ghex{font-size:13px;line-height:18px}
 .k-glands{font-family:var(--body);font-size:15px;line-height:22px;max-width:470px;margin-top:4px}
 .k-gc--tall .k-glands{font-size:17px;line-height:26px;margin-top:14px}
+.k-gcs--many .k-gc{flex-basis:84px}
+.k-gcs--many .k-gc--tall{flex:0 1 150px}
+.k-gcs--many .k-gc:last-child{padding-bottom:26px}
+.k-gcs--many .k-gface{padding-top:10px}
+.k-gcs--many .k-gname b{font-size:26px}
+.k-gcs--many .k-glands{font-size:13px;line-height:18px;margin-top:2px}
+.k-gcs--many .k-gc--tall .k-gface{padding-top:20px}
+.k-gcs--many .k-gc--tall .k-gname b{font-size:76px}
+.k-gcs--many .k-gc--tall .k-glands{font-size:15px;line-height:22px;margin-top:8px}
 .k-lip{position:absolute;left:0;right:0;bottom:0;height:22px;z-index:40;background:var(--ground);border-top:1.5px solid var(--rod)}
 
 /* colour values: per colour, the card lifted out beside its drawer of ten edges */

@@ -21,7 +21,7 @@ const cwOn = (ctx, bg) => {
 };
 // the better of the page's ink and ground on a fill, asserted at the size it is set
 const inkOn = (ctx, T, bg, size, weight) => {
-  const fg = ctx.ratio(T.ink, bg) >= ctx.ratio(T.ground, bg) ? T.ink : T.ground;
+  const fg = ctx.textOn(bg, { size, weight, prefer: ctx.ratio(T.ink, bg) >= ctx.ratio(T.ground, bg) ? T.ink : T.ground });
   ctx.pair(fg, bg, { size, weight, what: '(Line on an application ground)' });
   return fg;
 };

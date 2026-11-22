@@ -7,6 +7,7 @@
 //   over the per-account limit                            429 { code: 'rate_limited' } + Retry-After
 //   body over MAX_THEME_BODY_CHARS (Content-Length first)  413 { code: 'design_too_large' }
 //   project the engine refuses                            400 { code: 'invalid_project', inputCode, path? }
+//   a text pair that cannot reach its contrast, or a font file the deploy lacks   422 { code: 'contrast' | 'font_missing' }, logged here only
 //   anything else that throws                             500 { code: 'build_failed' }, logged here only
 //   zip rows                                              200, application/zip, name from the brand slug and theme id
 //   print rows                                            200 { ok: true, theme, row, format, html }
@@ -209,6 +210,16 @@ function declaredLength(req) {
 /**
  * @param ctx { body, decoded, plan, consume?, engine? }  the session and plan are already checked by the caller
  */
+// The first stack frame inside api/_lib, as a path relative to it with line and column, e.g. "exportThemes/engine/brand.js:95:11".
+// Code positions only, so it is safe to log.
+function thrownAt(e) {
+  for (const line of String(e?.stack ?? '').split('\n').slice(1)) {
+    const m = /api[\\/]_lib[\\/]([\w./\\-]+:\d+:\d+)/.exec(line)
+    if (m) return m[1].replace(/\\/g, '/')
+  }
+  return ''
+}
+
 export async function serveThemeExport(req, res, { body, decoded, plan, consume, engine }) {
   const { theme, row, format } = body
   const problem = themeRequestProblem(body)
@@ -261,8 +272,15 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
       const path = safePath(e.path)
       return res.status(400).json({ error: 'That project could not be exported', code: 'invalid_project', inputCode: 'brand_input', ...(path ? { path } : {}) })
     }
-    // Logged here and nowhere else, by error name only: the message, cause and stack can quote the project's own text.
-    console.error('export theme: build failed', { theme, row, format, name: e?.name })
+    // A palette the engine cannot read text on, or a font file the deploy lacks: a code the client can act on, with nothing else in the body.
+    // Its message (a hex pair and a ratio, or a font file stem) is logged cut to 200 characters and never sent.
+    if (e && (e.code === 'contrast' || e.code === 'font_missing')) {
+      console.warn('export theme: build refused', { theme, row, format, code: e.code, message: String(e.message ?? '').slice(0, 200) })
+      return res.status(422).json({ code: e.code })
+    }
+    // Any other throw: the error name and the code line that threw. Not its message, which can quote the brand's own copy. Never the uid,
+    // the email, the project name or the design.
+    console.error('export theme: build failed', { theme, row, format, name: e?.name, at: thrownAt(e) })
     return res.status(500).json({ error: 'The document could not be created', code: 'build_failed' })
   }
 }

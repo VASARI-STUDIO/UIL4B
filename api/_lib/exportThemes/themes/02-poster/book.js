@@ -12,7 +12,7 @@ const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb
 // a ground that is the page in either mode (Stock in light, Night in dark) needs a drawn edge
 const edge = (ctx, hex) => [ctx.roles.light.surface, ctx.roles.dark.surface].some((g) => same(g, hex)) ? ' tb-edge' : '';
 // the readable print ink on a fixed ground, registered with the contrast check
-const ink = (ctx, hex, what, size = 13) => { const f = inkOn(ctx, hex); ctx.pair(f, hex, { size, what: `book ${what}` }); return f; };
+const ink = (ctx, hex, what, size = 13) => { const f = inkOn(ctx, hex, size); ctx.pair(f, hex, { size, what: `book ${what}` }); return f; };
 
 // the perforation as a rule: 3 px holes at a 9 px pitch, in the colour the CSS gives (currentColor), vertical or horizontal
 const pv = (cls = '') => `<span class="tb-pv ${cls}" aria-hidden="true">${perf('currentColor', { d: 3, p: 9, cls: 'tb-perf' })}</span>`;
@@ -223,10 +223,12 @@ function applications(ctx) {
   const B = ctx.brand, L = ctx.logo, ap = B.applications, S = B.ui.screen.content, cw = B.logo.colourways;
   const R = ctx.roles.light, N = ctx.roles.dark, onStage = cw['on-stage'] ? 'on-stage' : 'mono-light', os = cw[onStage];
   const night = byRole(ctx, 'ink', 1).hex, stock = byRole(ctx, 'ground', 3).hex;
-  ctx.pair(R.surface, night, { size: 13, what: 'book card front' }); ctx.pair(N.quiet, night, { size: 12, what: 'book card line' });
+  // text on Night: the theme's own colours where they read, else the nearest that does (Night is the user's colour)
+  const nightInk = ctx.textOn(night, { prefer: R.surface }), nightQuiet = ctx.textOn(night, { size: 12, prefer: N.quiet }), nightSoft = ctx.textOn(night, { size: 12, prefer: N.textSoft });
+  ctx.pair(nightInk, night, { size: 13, what: 'book card front' }); ctx.pair(nightQuiet, night, { size: 12, what: 'book card line' });
   // a logo on Night takes the on-stage colourway: Stock name, Door red repeat mark
   const onNight = (id, width, label = 'Logo') => L.html(id, { width, colourway: onStage, color: os.name, label });
-  const front = `<div class="tb-card tb-card--front ph-tight" style="background:${night};color:${R.surface}"><div class="tb-card__logo">${onNight('colour', fit(ctx, 'colour', 200, 80), 'Your logo goes here')}</div><p class="tb-card__line" style="color:${N.quiet}">${A(B.lines.primary)}</p></div>`;
+  const front = `<div class="tb-card tb-card--front ph-tight" style="background:${night};color:${nightInk}"><div class="tb-card__logo">${onNight('colour', fit(ctx, 'colour', 200, 80), 'Your logo goes here')}</div><p class="tb-card__line" style="color:${nightQuiet}">${A(B.lines.primary)}</p></div>`;
   const back = `<div class="tb-card tb-card--back tb-edge ph-tight" style="background:${stock};color:${R.text}"><div class="tb-card__mark">${L.html('symbol', { width: fit(ctx, 'symbol', 40, 46), label: 'Logo' })}</div><div class="tb-card__who"><p class="nm tb-disp">${A(ap.card.person)}</p><p class="rl" style="color:${R.textSoft}">${A(ap.card.role)}</p><p class="ct">${A(ap.card.contact)}<br>${A(ap.site.url)}</p></div></div>`;
   const red = byRole(ctx, 'action').hex, redInk = ink(ctx, red, 'social post'), stageG = os.ground;
   ctx.pair(os.name, stageG, { size: 24, what: 'book story post' });
@@ -236,8 +238,8 @@ function applications(ctx) {
 <div class="tb-post tb-post--st ph-tight" style="background:${stageG};color:${os.name}"><p class="tb-disp">${A(ap.social[2])}</p><span class="tb-post__lg">${L.html('colour', { width: 72, colourway: onStage, color: os.name, label: 'Logo' })}</span></div>
 </div>`;
   // the street poster, drawn: Night, the line as big as it goes, the night's two times and the venue from the product's own copy, the logo
-  ctx.pair(N.textSoft, night, { size: 12, what: 'book poster facts' });
-  const sign = `<div class="tb-poster" style="background:${night};color:${R.surface}"><p class="tb-disp tb-poster__h">${A(B.lines.primary)}</p><ul class="tb-poster__f" style="color:${N.textSoft}"><li>${A(S.from)}</li><li>${A(S.to)}</li><li>${A(S.deliverTo)}</li></ul><div class="tb-poster__logo">${onNight('colour', 220)}</div></div>`;
+  ctx.pair(nightSoft, night, { size: 12, what: 'book poster facts' });
+  const sign = `<div class="tb-poster" style="background:${night};color:${nightInk}"><p class="tb-disp tb-poster__h">${A(B.lines.primary)}</p><ul class="tb-poster__f" style="color:${nightSoft}"><li>${A(S.from)}</li><li>${A(S.to)}</li><li>${A(S.deliverTo)}</li></ul><div class="tb-poster__logo">${onNight('colour', 220)}</div></div>`;
   const email = `<div class="tb-email tb-edge" style="background:${R.raised};color:${R.text}"><p class="tb-email__n">${A(ap.email.person)}</p><p class="tb-email__r" style="color:${R.textSoft}">${A(ap.email.role)}, ${A(B.name)}</p><p class="tb-email__c">${A(ap.card.contact)}<br>${A(ap.site.url)}</p><div class="tb-email__l" style="border-color:${R.divider}">${L.html('horizontal', { width: 168, color: R.text, colourway: 'mono-dark', label: 'Logo' })}</div></div>`;
   const rows = S.deliveries.slice(0, 3);
   const screen = `<div class="tb-device"><div class="ui tb-screen" role="img" aria-label="${A(B.name)} product screen: ${A(B.ui.screen.title)}. ${A(S.eta)}. ${A(S.rider)}, ${A(S.riderNote)}." inert>

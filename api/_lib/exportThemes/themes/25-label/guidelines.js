@@ -56,16 +56,30 @@ function palette(ctx) {
   const R = roles(ctx);
   const tinted = R.wall.toLowerCase() !== R.groundHex.toLowerCase();
   const hungC = ctx.colours.filter((c) => tinted || c.hex.toLowerCase() !== R.groundHex.toLowerCase()).sort((a, b) => b.share - a.share);
-  const n = hungC.length, gap = 24, total = HANG.x1 - HANG.x0, sum = hungC.reduce((s, c) => s + c.share, 0), avail = total - gap * (n - 1), minW = 112;
-  const widths = hungC.map((c) => Math.max(minW, Math.round(avail * c.share / sum)));
+  const n = hungC.length, gap = 24, total = HANG.x1 - HANG.x0, sum = hungC.reduce((s, c) => s + c.share, 0), avail = total - gap * (n - 1);
+  // each panel is as wide as its share, never narrower than 112 px (or an even split when the group cannot give every panel 112 px): panels lifted to
+  // the floor are held there and the rest share what is left by their shares, so no panel is squeezed below the floor and the group is exactly 616 wide
+  const minW = Math.min(112, Math.floor(avail / n)), floored = new Set();
+  let widths;
+  for (;;) {
+    const free = hungC.filter((_, i) => !floored.has(i)), freeSum = free.reduce((s, c) => s + c.share, 0) || 1, left = avail - minW * floored.size;
+    widths = hungC.map((c, i) => (floored.has(i) ? minW : left * c.share / freeSum));
+    const under = widths.findIndex((w, i) => !floored.has(i) && w < minW);
+    if (under < 0) break;
+    floored.add(under);
+  }
+  widths = widths.map((w) => Math.floor(w));
   const big = widths.indexOf(Math.max(...widths));
-  widths[big] -= widths.reduce((s, w) => s + w, 0) - avail;   // the widest panel gives up what the narrow ones were lifted by, so the group is exactly 616 wide
+  widths[big] += avail - widths.reduce((s, w) => s + w, 0);   // the widest panel takes the rounding, so the group is exactly 616 wide
   const top = Math.max(...hungC.map((c) => c.share));
   let x = HANG.x0;
   const panels = hungC.map((c, i) => {
     const w = widths[i], H = Math.round((280 + (H_PANELS - 280) * c.share / top) / 8) * 8, y = hung(H), tc = R.onColour(c.hex, 13), [r, g, b] = ctx.C.hexToRgb(c.hex);
     const cm = Array.isArray(c.cmyk) ? ['C', 'M', 'Y', 'K'].map((k, j) => `<span class="sw-v mono">${k} ${c.cmyk[j]}</span>`).join('') : '';
-    const inner = `<div style="left:24px;top:24px;color:${tc}"><span class="sw-n">${A(c.name)}</span><span class="sw-v mono" style="margin-top:4px">${A(c.hex)}</span>`
+    const inner = w < 112
+      ? `<div class="sw-spine" style="left:16px;top:24px;width:${w - 32}px;height:${H - 80}px;color:${tc}"><span class="sw-n">${A(c.name)}</span><span class="sw-v mono">${A(c.hex)}</span></div>`
+        + `<div class="sw-s" style="left:16px;bottom:24px;color:${tc}">${Math.round(c.share * 100)}%</div>`
+      : `<div style="left:24px;top:24px;color:${tc}"><span class="sw-n">${A(c.name)}</span><span class="sw-v mono" style="margin-top:4px">${A(c.hex)}</span>`
       + `<span class="sw-v mono" style="margin-top:8px">R ${r}</span><span class="sw-v mono">G ${g}</span><span class="sw-v mono">B ${b}</span>`
       + (cm ? `<div style="margin-top:8px">${cm}</div>` : '') + `</div>`
       + `<div class="sw-s" style="left:24px;bottom:24px;color:${tc}">${Math.round(c.share * 100)}%</div>`;

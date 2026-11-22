@@ -120,15 +120,19 @@ export function roles(ctx) {
   // the one edge in the theme: one opaque colour per brand (the wall drawn toward the ink), 1 px, on an object whose fill is close to the wall
   R.edge = mixHex(ctx, R.wall, R.ink, EDGE_MIX);
   R.nearWall = (fill) => ctx.ratio(fill, R.wall) < EDGE_BELOW;
-  // The label card is the brand's panel colour, the same as the plates beside it. A brand with no panel gets the wall drawn 6% toward the ink.
-  R.labelFill = panel ? panel.hex : mixHex(ctx, R.wall, R.ink, 0.06);
+  // The label card is the brand's panel colour, the same as the plates beside it, when the ink reads on it. A brand with no panel, or a panel the ink
+  // does not read on (a dark panel), gets the wall drawn 6% toward the ink, so the card stays a pale card and never a dark slab with dark text.
+  R.labelFill = panel && ctx.ratio(R.ink, panel.hex) >= 4.5 ? panel.hex : mixHex(ctx, R.wall, R.ink, 0.06);
+  // the card's text colour: the ink when it reads, else the engine's fallback
+  R.labelInk = ctx.textOn(R.labelFill, { prefer: R.ink });
   // quiet text on a given ground: the brand's quiet colour when it passes 4.5:1, else the quiet colour made for a sunken surface, else ink
-  R.quietOn = (bg) => [R.quiet, L.quiet, L.quietOnSunken, R.ink].find((c) => ctx.ratio(c, bg) >= 4.5);
+  R.quietOn = (bg) => [R.quiet, L.quiet, L.quietOnSunken, R.ink].find((c) => ctx.ratio(c, bg) >= 4.5) || ctx.textOn(bg, { prefer: R.ink });
   // text on a coloured object: ink, the panel colour or the wall, whichever has the higher ratio (and passes)
   R.onColour = (bg, size = 13, weight = 400) => {
     const best = [R.ink, R.panel, R.wall].reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
-    ctx.pair(best, bg, { size, weight, what: '(Label text on an object)' });
-    return best;
+    const pick = ctx.textOn(bg, { size, weight, prefer: best });
+    ctx.pair(pick, bg, { size, weight, what: '(Label text on an object)' });
+    return pick;
   };
   // the logo colourway to use on a ground: one drawn on that ground, else the colourway whose name colour reads best on it
   R.colourwayOn = (bg) => {
@@ -226,12 +230,20 @@ export function labelCard(ctx, id, { title, detail, paragraph, items = [], mode 
   const rowLines = (k) => wrapLines(ctx, 'body', W.regular, 13, k.text, colW - 18).length;
   if (cols === 2) for (const k of keyed) if (rowLines(k) > 1) throw new Error(`${id}: key "${k.text}" does not fit one line in a half-width column`);
   const rows = keyed.length ? (cols === 2 ? Math.ceil(keyed.length / 2) : keyed.reduce((s, k) => s + rowLines(k), 0)) : 0;
-  // items: a term never leaves its text; in a table every text must fit one line beside its term
+  // items: a term never leaves its text. In a table the term column is as wide as the longest term (at least ${TERM_COL} px, at most 45% of the card),
+  // so a brand's long colour names never print over the text beside them; a term or text too long for its column wraps, and the card counts the lines
   const itemed = items.map((k) => (mode === 'table' ? { term: k.term, text: tie(k.text, { names }) } : { term: '', text: tie(`${k.term} ${k.text}`, { names }) }));
-  const itemLines = itemed.map((k) => wrapLines(ctx, 'body', W.regular, 13, k.text, mode === 'table' ? inner - TERM_COL : inner).length);
-  if (mode === 'table') itemed.forEach((k, i) => { if (itemLines[i] > 1) throw new Error(`${id}: "${k.text}" does not fit one line beside its term`); });
-  // a value set in the mono face before its text (a hex): the pair must fit one line beside the term
-  if (mode === 'table') items.forEach((k) => { if (k.mono) { const f = ctx.brand.fonts.mono, w = advance(ctx, 'mono', f.weights[0], k.mono, 13) + advance(ctx, 'body', W.regular, ` ${k.text}`, 13); if (w * 1.04 > inner - TERM_COL) throw new Error(`${id}: "${k.mono} ${k.text}" is ${Math.round(w)} px and the column holds ${inner - TERM_COL}`); } });
+  const termW = mode === 'table' && items.length
+    ? Math.min(Math.max(TERM_COL, Math.min(Math.ceil(Math.max(...items.map((k) => advance(ctx, 'body', W.medium, k.term, 13))) * 1.04) + 12, Math.floor(inner * 0.45)),
+      Math.ceil(Math.max(...items.flatMap((k) => k.term.split(/s+/).map((w) => advance(ctx, 'body', W.medium, w, 13)))) * 1.08) + 14), Math.floor(inner * 0.6))
+    : TERM_COL;
+  const linesIn = (weight, s, width) => { try { return wrapLines(ctx, 'body', weight, 13, s, width).length; } catch { return Math.max(1, Math.ceil(advance(ctx, 'body', weight, s, 13) * 1.04 / width)); } };
+  const itemLines = itemed.map((k, i) => {
+    if (mode !== 'table') return linesIn(W.regular, k.text, inner);
+    const m = items[i].mono, mf = ctx.brand.fonts.mono;
+    const textLines = m ? Math.max(1, Math.ceil((advance(ctx, 'mono', mf.weights[0], m, 13) + advance(ctx, 'body', W.regular, ` ${k.text}`, 13)) * 1.04 / (inner - termW))) : linesIn(W.regular, k.text, inner - termW);
+    return Math.max(linesIn(W.medium, k.term, termW - 12), textLines);
+  });
   const itemH = itemLines.reduce((s, n) => s + n * 18, 0) + (mode === 'inline' ? 4 * Math.max(0, items.length - 1) : 0);
   const body = np || rows || items.length;
   const h = nt * 18 + (nd ? 4 + nd * 17 : 0) + (body ? 12 : 0) + np * 18 + rows * 17 + itemH;
@@ -241,7 +253,7 @@ export function labelCard(ctx, id, { title, detail, paragraph, items = [], mode 
   if (extra > maxExtra) throw new Error(`${id}: label text is ${h} px tall and the card holds ${room + maxExtra} (title ${nt}, detail ${nd}, paragraph ${np}, key rows ${rows}, items ${itemH})`);
   const list = keyed.length ? `<ol class="lb-k c${cols}">${keyed.map((k) => `<li><b class="num">${A(k.n)}</b><span>${A(k.text)}</span></li>`).join('')}</ol>` : '';
   const parts = !items.length ? '' : mode === 'table'
-    ? `<dl class="lb-tb">${items.map((k, i) => `<dt>${A(k.term)}</dt><dd>${k.mono ? `<span class="mono">${A(k.mono)}</span> ` : ''}${A(itemed[i].text)}</dd>`).join('')}</dl>`
+    ? `<dl class="lb-tb" style="grid-template-columns:${termW}px minmax(0,1fr)">${items.map((k, i) => `<dt>${A(k.term)}</dt><dd>${k.mono ? `<span class="mono">${A(k.mono)}</span> ` : ''}${A(itemed[i].text)}</dd>`).join('')}</dl>`
     : `<div class="lb-it">${items.map((k, i) => { const m = /^([^:]+:)(\s)(.*)$/s.exec(itemed[i].text); return m ? `<p><b>${A(m[1])}</b>${A(m[2] + m[3])}</p>` : `<p>${A(itemed[i].text)}</p>`; }).join('')}</div>`;
   const tall = extra ? ` style="top:${LABEL.y - extra}px;height:${LABEL.h + extra}px;--grow:${extra}px"` : '';
   return `<div class="lb${R.nearWall(R.labelFill) ? ' edge' : ''}"${tall} data-label><h2 class="lb-t">${A(t)}</h2>${dl.length ? `<p class="lb-d">${dl.map(A).join('<br>')}</p>` : ''}`

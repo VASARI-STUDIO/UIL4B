@@ -9,7 +9,7 @@ import { perf, fields, serial, inkOn, holeOn, edgeOn, bySize, NUM } from './gate
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // text printed on a colour takes the ink that reads on it; the pair is logged with the build's contrast list
-const inkFor = (ctx, hex, what) => { const fg = inkOn(ctx, hex); ctx.pair(fg, hex, { size: 12, what: `kit ${what} ${hex}` }); return fg; };
+const inkFor = (ctx, hex, what) => { const fg = inkOn(ctx, hex, 12); ctx.pair(fg, hex, { size: 12, what: `kit ${what} ${hex}` }); return fg; };
 // the open page's perforated rules: holes in the quiet tone of the ground they sit on
 const holes = (ctx, night) => (night ? ctx.roles.dark : ctx.roles.light).quiet;
 const hr = (ctx, night = false, cls = '') => `<div class="tk2-hr ${cls}" aria-hidden="true">${perf(holes(ctx, night), { d: 3, p: 9, dir: 'h' })}</div>`;
