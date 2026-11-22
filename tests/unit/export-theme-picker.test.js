@@ -74,11 +74,15 @@ test('each refusal is fixed copy, never the server\'s words', async () => {
     [refuse(400, { code: 'invalid_project', error: 'LEAK' }), 'invalid-project'],
     [refuse(400, { code: 'unknown_theme', error: 'LEAK' }), 'unknown'],
     [refuse(500, { code: 'build_failed', error: 'LEAK' }), 'build-failed'],
+    [refuse(422, { code: 'contrast', error: 'LEAK' }), 'low-contrast'],
+    [refuse(422, { code: 'font_missing', error: 'LEAK' }), 'font-missing'],
+    [refuse(422, { error: 'LEAK' }), 'build-failed'],
   ]
   for (const [res, code] of cases) {
     const out = await ask(res)
     assert.equal(out.code, code)
     assert.ok(!out.line.includes('LEAK'))
+    if (res.status === 422 && code !== 'build-failed') assert.ok(!/try again/i.test(out.line), `${code} does not say try again`)
   }
   // With a valid Retry-After the line carries no time (the button counts it); without one the fixed "in a minute" line stays.
   for (const wait of ['1', '30', '90', '600']) {

@@ -6,7 +6,7 @@
 //   { status: 'ok', html }                a print row: a script-free document for the print window
 //   { status: 'error', code, line }       a refusal; `line` is fixed copy (ERROR_LINES), never the server's words
 //                                         code: signed-out | unknown | invalid-project | pro-required | too-large | rate-limited
-//                                         | build-failed | network
+//                                         | low-contrast | font-missing | build-failed | network
 //                                         a rate-limited refusal also carries `retryAfter`: the whole seconds (1..600) the server
 //                                         asked us to wait, when it said so; the dialog counts them down on its button
 // `loadAuth` and `fetchImpl` are injected so a test runs this without Firebase or a network.
@@ -20,6 +20,9 @@ export const ERROR_LINES = Object.freeze({
   'pro-required': 'We couldn’t find a Pro plan on this account, so this file wasn’t made.',
   'too-large': 'This design is too large to export. Try a smaller logo.',
   'rate-limited': 'Too many exports just now. Try again in a minute.',
+  // 422s: trying again gives the same answer, so these lines say what to change instead.
+  'low-contrast': 'Some text in this theme would be too hard to read in these colours. Change a colour or pick another theme.',
+  'font-missing': 'This theme couldn’t load one of the project’s fonts. Pick another font or theme.',
   'build-failed': 'That file didn’t build. Try again.',
   network: 'The file couldn’t be made. Check your connection and try again.',
 })
@@ -27,7 +30,7 @@ export const ERROR_LINES = Object.freeze({
 const CODE_STATUS = Object.freeze({
   unknown_theme: 'unknown', unknown_row: 'unknown', unknown_format: 'unknown', invalid_project: 'invalid-project',
   pro_required: 'pro-required', design_too_large: 'too-large', rate_limited: 'rate-limited', build_failed: 'build-failed',
-  auth_required: 'signed-out',
+  auth_required: 'signed-out', contrast: 'low-contrast', font_missing: 'font-missing',
 })
 
 // Retry-After in whole seconds only: digits and nothing else (not 1e1, 0x10, a sign, a fraction or an HTTP date), else NaN.
