@@ -9,10 +9,10 @@ import { accentSplit, accentOf, symbolOf } from '../21-presentation/lane-ht-clea
 import { story, SPECIMEN, SCREEN_TITLE } from './story.js';
 
 const FILLER = new RegExp('^(?:'
-  + 'Your (?:brand|city|name|title|headline here|screen|subject line)|Customer name|Brand team|brand\.example|you@brand\.example|brand@brand\.example'
-  + '|Your main line goes here\.|A (?:second|third) line\.|Write this in your own words\.|Say where this version goes\.'
-  + '|(?:Trait|Writing rule|Write this|Not this|Brand rule|Social line|Left out of this document|Photo habit|Photo mistake|Type habit|Type mistake) \d+\.?'
-  + '|Example \d+, (?:do|not) this\.|Sign, \d+ x \d+ mm: your line here\.|A short (?:paragraph of ordinary copy|caption)\.|Hi there,|10:44'
+  + 'Your (?:brand|city|name|title|headline here|screen|subject line)|Customer name|Brand team|brand\\.example|you@brand\\.example|brand@brand\\.example'
+  + '|Your main line goes here\\.|A (?:second|third) line\\.|Write this in your own words\\.|Say where this version goes\\.'
+  + '|(?:Trait|Writing rule|Write this|Not this|Brand rule|Social line|Left out of this document|Photo habit|Photo mistake|Type habit|Type mistake) \\d+\\.?'
+  + '|Example \\d+, (?:do|not) this\\.|Sign, \\d+ x \\d+ mm: your line here\\.|A short (?:paragraph of ordinary copy|caption)\\.|Hi there,|10:44'
   + ')$');
 /** true where a string is the engine's stand-in for something the project has not written */
 export const isFiller = (s) => typeof s === 'string' && FILLER.test(s.trim());
