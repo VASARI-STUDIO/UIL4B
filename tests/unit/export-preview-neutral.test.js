@@ -27,6 +27,31 @@ test('the stage shows a plain tile, not the stock picture, while a live page is 
   assert.match(stage, /\{image\.src && !expect && \(/)
 })
 
+test('the plan check draws plain tiles too: no sample picture shows before the live page', () => {
+  // A signed-in person whose plan is still being read is waiting for their own page, like one whose page is being drawn.
+  assert.match(preview, /const waiting = checking && Boolean\(user\) && !stock/)
+  assert.match(preview, /const sample = \(proTemplate \|\| refused\) && !waiting/)
+  assert.match(preview, /const showStock = stock \|\| \(noLive && !waiting\)/)
+  assert.match(preview, /expectLive=\{!showStock && \(drawing \|\| waiting\)\}/)
+  assert.match(preview, /loading=\{\(drawing \|\| waiting\) && !showStock\}/)
+})
+
+test('the stage status stays rendered, with its row reserved, for assistive tech to announce into', () => {
+  assert.doesNotMatch(css, /\.xd-stage-status:empty/)
+  assert.match(css, /^\.xd-stage-status\{[^}]*min-height:20px/m)
+})
+
+test('Open full size is a ghost pill at rest: a border, no underline', () => {
+  const rule = css.match(/^\.xd-full\{[^}]*\}/m)[0]
+  assert.match(rule, /border:1px solid var\(--border\)/)
+  assert.match(rule, /text-decoration:none/)
+})
+
+test('a rail tile has one frame: the thumb\'s border, not an outline of its own', () => {
+  const rule = css.match(/^\.xd-thumb \.xd-tile\{[^}]*\}/m)[0]
+  assert.doesNotMatch(rule, /outline/)
+})
+
 test('the stage status line is not the dock status line', () => {
   assert.match(preview, /className="xd-stage-status"/)
   assert.doesNotMatch(preview, /className="xd-status"/)

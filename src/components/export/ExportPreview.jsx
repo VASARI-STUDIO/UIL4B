@@ -73,9 +73,12 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   // The server's 403 is the account's real plan. When it disagrees with the plan this screen holds, the page is treated as a Pro
   // template: the sample with the Pro mark, and the default template one click away.
   const refused = live.status === 'upgrade'
-  const sample = proTemplate || refused
+  // A signed-in person whose plan is still being read is waiting for their own page, as one whose page is being drawn is: plain tiles,
+  // never the sample brand's pictures. Whether the template is Pro is not known yet, so no sample mark either.
+  const waiting = checking && Boolean(user) && !stock
+  const sample = (proTemplate || refused) && !waiting
   const noLive = !user || proTemplate || checking || live.status === 'unavailable' || refused
-  const showStock = stock || noLive
+  const showStock = stock || (noLive && !waiting)
   const shownLive = !showStock && live.status === 'ok'
   const drawing = live.status === 'loading'
   // Why the stock picture is showing, or that the live page is on its way: one line under the stage, and the reason the box below it is disabled.
@@ -100,7 +103,7 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
         onBlur={() => hold(false)}
       >
         {themed
-          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={shownLive ? live.html : ''} expectLive={!showStock && drawing} loading={drawing && !showStock} />
+          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={shownLive ? live.html : ''} expectLive={!showStock && (drawing || waiting)} loading={(drawing || waiting) && !showStock} />
           : <ExportStage plain={<PlainPreview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} design={design} chosen={chosen} />} />}
         {themed && (
           <div className="xd-meta">
