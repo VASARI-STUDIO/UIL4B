@@ -5,6 +5,7 @@ import { kitCss } from './lane-hk-css.js';
 import { pagesA } from './lane-hk-pages-a.js';
 import { pagesB } from './lane-hk-pages-b.js';
 import { pagesC } from './lane-hk-pages-c.js';
+import { prepareSite, wordmarkCss } from './site-clean.js';
 
 const sectionOf = (ctx, id) => ctx.sections.find((s) => s.pages.some((q) => q.id === id));
 
@@ -21,7 +22,8 @@ function bar(ctx, K) {
 const link = (p, dir) => (p ? `<a href="${A(p.href)}" rel="${dir}"><small>${dir === 'prev' ? 'Previous' : 'Next'}</small><b>${A(p.title)}</b></a>` : '<span></span>');
 
 export const kitSite = {
-  css(ctx) { return kitCss(ctx); },
+  prepare: prepareSite,
+  css(ctx) { return kitCss(ctx) + wordmarkCss(ctx); },
   shell(ctx, K, body) {
     const sec = sectionOf(ctx, K.page.id), isCover = K.page.id === 'cover';
     const rh = `<div class="hk-rh"><span>${A(ctx.brand.name)} UI kit</span><span>${sec ? `${sec.n} ${A(sec.title)}` : ''}</span><span>${A(K.page.title)}</span><span>${pad3(ctx.pageNo(K.page.id))}</span></div>`;

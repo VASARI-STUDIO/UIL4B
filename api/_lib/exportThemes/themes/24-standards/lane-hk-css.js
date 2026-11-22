@@ -270,7 +270,7 @@ html:not([data-theme=dark]) .hk-mode [data-mode=light],[data-theme=dark] .hk-mod
   .hk-t{font-size:28px;line-height:32px}
   .hk-stage,.hk-split>.hk-ttl{padding-top:0}
   .hk-zoom{zoom:var(--km,1)}
-  .hk-dh{width:calc(var(--w) * var(--km,1) * 1px)}
+  .hk-dh{width:calc(var(--w) * var(--km,1) * 1px);max-width:100%}
   .hk-dv{height:calc(var(--h) * var(--km,1) * 1px)}
   .hk-step .hk-bx{width:calc(var(--p) * var(--km) * 1px);height:calc(var(--p) * var(--km) * 1px)}
   .hk-cover{grid-template-columns:minmax(0,1fr);gap:32px;margin:16px -24px 0 -16px;padding:32px 24px 32px 16px}
@@ -303,6 +303,6 @@ html:not([data-theme=dark]) .hk-mode [data-mode=light],[data-theme=dark] .hk-mod
 @media (max-width:480px){.hk-nm{display:none}}
 @media (prefers-reduced-motion:no-preference){.hk-nav{animation:hk-in 180ms cubic-bezier(.23,1,.32,1)}}
 @keyframes hk-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-.ph-b>.ph-l{font-weight:600}
+
 `;
 }

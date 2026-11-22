@@ -5,10 +5,15 @@ import { guidelines } from './guidelines.js';
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { roles } from './helpers.js';
+// The sample story: theme 21's orders (one set of customers, totals and statuses) is the product this manual measures, so every list, card,
+// dialog and screen of the site reads it. Read-only imports; nothing in theme 21 changes.
+import { realCopy } from '../21-presentation/real-copy.js';
+import { screenContent, exampleDemo } from '../21-presentation/once.js';
 
 export const meta = {
   id: '24-standards', name: 'Standards Plate', tier: 'Pro', brand: 'two-shores',
   guidelinesPage: { w: 1123, h: 794 }, uikitPage: { w: 1123, h: 794 },
+  realCopy, screenContent, exampleDemo,
   chrome: { family: 'Public Sans', q: 'Public+Sans:wght@400;600', faces: [{ weight: 400, stem: 'PublicSans-400' }, { weight: 600, stem: 'PublicSans-600' }] },
 };
 

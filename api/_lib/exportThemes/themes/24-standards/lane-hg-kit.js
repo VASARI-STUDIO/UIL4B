@@ -51,7 +51,7 @@ export function ruler(ctx, uid, liveExt, { draw = false } = {}) {
 // ---- logo on a ground: the colourway drawn for that ground; --ar keeps the slot frame at the logo's proportion ----
 export function logoOn(ctx, id, hex, w, label = 'Logo') {
   const k = cwOn(ctx, hex), cw = ctx.brand.logo.colourways[k], g = ctx.logo.geos[id];
-  return `<span class="hg-lg" style="--ar:${f2(g.w)}/${f2(g.h)}">${ctx.logo.html(id, { width: w, colourway: k, color: cw.name, label })}</span>`;
+  return `<span class="hg-lg" style="--ar:${f2(g.w)}/${f2(g.h)}">${ctx.logo.html(id, { width: w, share: 1, colourway: k, color: cw.name, label })}</span>`;
 }
 export const logoMode = (ctx, id, w, label) => `<span class="hg-ml">${logoOn(ctx, id, roles(ctx).ground, w, label)}</span><span class="hg-md">${logoOn(ctx, id, ctx.roles.dark.surface, w, label)}</span>`;
 

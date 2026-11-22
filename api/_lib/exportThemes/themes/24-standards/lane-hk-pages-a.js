@@ -39,7 +39,7 @@ export const pagesA = {
   // ---- contents: the whole kit as one bar of cells, a cell a page, each part's run dimensioned with its page count; the parts as rows ----
   contents(ctx, K) {
     const N = ctx.pages.length, secs = ctx.sections, front = ctx.pages.filter((q) => !q.section).length, x = xOf(ctx);
-    const cells = ctx.pages.map((q) => `<i class="${q.section ? '' : 'is-sp'}${q.id === 'contents' ? ' is-here' : ''}"></i>`).join('');
+    const cells = ctx.pages.map((q) => `<i${q.section && q.id !== 'contents' ? '' : ` class="${[q.section ? '' : 'is-sp', q.id === 'contents' ? 'is-here' : ''].filter(Boolean).join(' ')}"`}></i>`).join('');
     const runs = `<div class="hk-runs" aria-hidden="true"><div style="flex:${front}"></div>${secs.map((s) => `<div style="flex:${s.pages.length}"><span class="hk-dh" style="--w:1"><b>${s.pages.length}<span class="hk-w"> ${s.pages.length === 1 ? 'page' : 'pages'}</span></b><i><u></u></i></span></div>`).join('')}</div>`;
     const toc = secs.map((s) => `<li><span class="hk-t" style="font-size:20px;line-height:24px">${s.n}</span><h2>${A(s.title)}</h2><ul>${s.pages.map((q) => `<li><a href="${K.href(q.id)}"${q.id === K.page.id ? ' aria-current="page"' : ''}><b>${A(q.title)}</b><span class="hk-v">${pad3(ctx.pageNo(q.id))}</span></a></li>`).join('')}</ul></li>`).join('');
     return split(title(ctx, K, `${Word(N)} pages in ${WORD[secs.length] || secs.length} parts. The bar is the kit at one cell a page, each run a part; the shaded cell is this page.`),

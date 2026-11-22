@@ -9,6 +9,7 @@ import { hgCss } from './lane-hg-css.js';
 import { PAGES_A } from './lane-hg-a.js';
 import { PAGES_B } from './lane-hg-b.js';
 import { meta } from './lane-hg-meta.js';
+import { prepareSite, rawOf, hasPh, wordmarkCss } from './site-clean.js';
 
 const BUILD = { ...PAGES_A, ...PAGES_B };
 const FALLBACK = (ctx, id) => { const m = meta(id); return `<div class="hg-rh"><span>${A(ctx.brand.name)} brand guidelines</span><span>${m.ref} ${A(m.title)}</span></div><h1 class="hg-h1">${A(m.title)}</h1>`; };
@@ -32,8 +33,20 @@ function pn(S) {
 
 const credit = (ctx) => `<footer class="hg-end"><span>${A(ctx.brand.name)} brand guidelines, ${A(ctx.versionLine)}</span><span>Made with UIL4B</span></footer>`;
 
+// A page is kept when the project has written something for it. The pages that are the user's own words (the voice, the rules, the briefs, the
+// applications) go when any of their text is unwritten; the logo and layout pages are drawn from the cleaned context, which leaves out the lines
+// nobody wrote, so they stay while there is something real to draw.
+const FROM_CLEAN = new Set(['logo', 'logo-versions', 'logo-grounds', 'layouts']);
+const draw = (ctx, id) => { try { return (BUILD[id] || FALLBACK)(ctx, id) || ''; } catch (e) { return ''; } };
+
 export const guideSite = {
-  css(ctx) { return hgCss(ctx); },
+  prepare: prepareSite,
+  keep(ctx, id) {
+    if (FROM_CLEAN.has(id)) return !!draw(ctx, id);
+    const html = draw(rawOf(ctx), id);
+    return !!html && !hasPh(html);
+  },
+  css(ctx) { return hgCss(ctx) + wordmarkCss(ctx); },
   shell(ctx, S) {
     const n = S.isFront ? 0 : sectionOf(S, S.unit);
     return `<div class="hg" data-gs-root>${bar(ctx, S)}<main id="main" class="hg-main"><div class="hg-pg${S.isFront ? ' hg-pg--cover' : ''}"><article class="hg-sheet">${S.body}${S.isFront ? '' : pn(S)}</article>${n ? tabOf(n) : ''}</div>${credit(ctx)}</main></div>`;

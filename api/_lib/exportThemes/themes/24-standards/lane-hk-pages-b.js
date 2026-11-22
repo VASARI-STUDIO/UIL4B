@@ -82,7 +82,7 @@ export const pagesB = {
     return title(ctx, K, `The current place is marked by a 3&nbsp;px bar in ${hv('--action')} and the text going to ${hv('--text')}, never by colour alone. Every target is at least 44&nbsp;px tall.`)
       + sec('Top bar', `<div style="--k:1;display:flex;gap:8px">${dimV(56, fx(ctx, 56))}<div style="flex:1;min-width:0">${ui(top, { cls: 'hk-ui--bare' })}<p class="hk-cap">Links, left to right: current, hover, focus.</p></div></div>`)
       + `<div class="hk-dg">${sec('Sidebar', ui(side, { cls: 'hk-ui--tight' }))}${sec('Tabs and breadcrumbs', ui(`${nth(u.tabs(E.tabs || [], 0), 'button', { 1: 'is-hover' })}<p class="hk-cap" style="margin:8px 0 24px">Selected, then hover.</p>${u.crumbs(E.crumbs || [])}`, { cls: 'hk-ui--tight' }))}</div>`
-      + sec('Mobile tab bar, at its 390 px', `<div style="--k:1;max-width:390px">${dimH(390, fx(ctx, 390))}${ui(tabbar, { cls: 'hk-ui--bare' })}</div>`);
+      + sec('Mobile tab bar, at its 390 px', `<div style="--k:1;--km:1;max-width:390px">${dimH(390, fx(ctx, 390))}${ui(tabbar, { cls: 'hk-ui--bare' })}</div>`);
   },
 
   // ---- lists: one row drawn at 2:1, its leading, gaps, text and trailing chained along the top; the list at 1:1 with a row in hover and one in focus ----
@@ -117,7 +117,8 @@ export const pagesB = {
   feedback(ctx, K) {
     const u = ctx.ui, S = sc(ctx), F = S.form || {}, W = ctx.weights, l = T(ctx, 'label', { size: 14 }), b = T(ctx, 'body', { size: 16, line: 24 });
     const msg = S.toast || S.status, tw = adv(bodyFace(ctx, W.regular), msg, b.size), uw = adv(bodyFace(ctx, W.strong), 'Undo', l.size), TW = 16 + tw + 26 + uw + 22;
-    const draw = drawing({ k: 2, km: 1, w: Math.ceil(TW + 4), html: `<div class="hk-inl">${u.toast(msg)}</div>`, hdims: chainH(ctx, [[16], [tw], [26], [uw], [22]]), vdims: dimV(24 + b.line, fx(ctx, 24 + b.line)), cap: 'Toast, drawn at 2:1' });
+    // at the narrow column the drawing is held to the room it has (the type stays at 12 px or more)
+    const draw = drawing({ k: 2, km: Math.max(0.75, Math.min(1, 290 / (TW + 4))), w: Math.ceil(TW + 4), html: `<div class="hk-inl">${u.toast(msg)}</div>`, hdims: chainH(ctx, [[16], [tw], [26], [uw], [22]]), vdims: dimV(24 + b.line, fx(ctx, 24 + b.line)), cap: 'Toast, drawn at 2:1' });
     const tones = [['Info', 'info', S.inline], ['Success', 'success', S.toast], ['Warning', 'warning', S.alert], ['Danger', 'danger', F.readyError]].filter((t) => t[2]);
     const alerts = `<div class="hk-stk">${tones.map(([n, t, s]) => `<p class="hk-lab" style="margin:8px 0 0">${n}</p>${u.alert(t, s)}`).join('')}</div>`;
     const p = Math.round((S.progress || 0) * 100);
