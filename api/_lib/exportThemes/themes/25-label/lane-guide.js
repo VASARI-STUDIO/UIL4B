@@ -245,9 +245,9 @@ function colourPage(ctx) {
       const cmyk = f.cmyk ? (Array.isArray(f.cmyk) ? f.cmyk.join(' ') : String(f.cmyk)) : `${cmykOf(f.rgb).join(' ')} *`;
       const kv = [['HEX', f.hex.replace('#', '').toUpperCase()], ['RGB', `${r} ${g} ${b}`], ['CMYK', cmyk]];
       return obj(K, x, py, cw, ph, f.hex, at(12, 12, `<div class="lg-c lg-wrap" style="color:${ink}">${A(f.name)}</div><div class="lg-c" style="font-weight:400;color:${ink}">${A(pct(f.share))}, ${A(f.role)}</div>`, { w: cw - 24 })
-        + at(cw - 12 - 40, 12, A(catNo(ctx, 'colour', i + 1)), { w: 40, cls: 'lg-c', style: `text-align:right;font-weight:400;color:${ink}` }))
-        + card(K, x, py + ph + 8, cw, cardH, kv.map(([k, v], j) => at(16, 14 + j * 20, A(k), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(72, 14 + j * 20, A(v), { cls: 'lg-m' })).join('')
-          + at(16, 14 + 60 + 2, A('Set text in'), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(92, 14 + 60 + 2, A(inkText(f)), { w: textW, cls: 'lg-n', style: 'line-height:18px' }));
+        + at(cw - 12 - 40, 12, A(catNo(ctx, 'colour', i + 1)), { w: 40, cls: 'lg-c', style: `text-align:right;font-weight:400;color:${ink}` }), ctx.ratio(f.hex, R.labelFill) < 1.5 ? `border:1px solid ${R.edge}` : '')
+        + card(K, x, py + ph + 8, cw, cardH, kv.map(([k, v], j) => at(16, 14 + j * 20, A(k), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(92, 14 + j * 20, A(v), { cls: 'lg-m' })).join('')
+          + at(16, 14 + 60 + 4, A('Set text in'), { cls: 'lg-c lg-ql', style: 'font-weight:400' }) + at(92, 14 + 60 + 2, A(inkText(f)), { w: textW, cls: 'lg-n', style: 'line-height:18px' }));
     }).join('');
   };
   const secs = [{ h: gridH, flex: 400, draw }];
@@ -290,7 +290,7 @@ function rulerPage(ctx) {
     + card(K, X0, y + SUBH + 12, CW, tH, rows.map((f, i) => {
       const yy = padTop + i * RH;
       // a swatch on the card gets the edge when it is close to the card's own colour
-      return rect(16, yy + 1, 14, 14, `background:${f.hex}`, '', ctx.ratio(f.hex, R.labelFill) < 1.5 ? 'edge' : '')
+      return rect(16, yy + 1, 14, 14, `background:${f.hex};${ctx.ratio(f.hex, R.labelFill) < 1.5 ? `border:1px solid ${R.edge}` : ''}`)
         + at(44, yy, A(f.name), { w: 250, cls: 'lg-c lg-e' }) + at(310, yy, A(f.role), { w: 260, cls: 'lg-r lg-ql lg-e' })
         + at(CW - 16 - 80, yy, A(pct(f.share)), { w: 80, cls: 'lg-m', style: 'text-align:right' });
     }).join(''));
@@ -345,7 +345,7 @@ function appliedPage(ctx) {
       + (social.length && sH <= OH ? card(K, sx, y0, soW, sH, at(16, 16, `<div class="lg-c lg-ql">Social</div>` + social.map((s) => `<div class="lg-n" style="margin-top:8px">${A(s)}</div>`).join(''), { w: soW - 32 })) : '');
   } };
   // the order email, across the page
-  const em = (B.guideB && B.guideB.email) || {}, emBody = (Array.isArray(em.body) ? em.body.join(' ') : em.body) || '', pad = 24, tW = CW - 2 * pad;
+  const em = (B.guideB && B.guideB.email) || {}, emBody = (Array.isArray(em.body) ? em.body.reduce((s, p) => (s && /,$/.test(s) ? s + ' ' + p.charAt(0).toLowerCase() + p.slice(1) : s ? s + ' ' + p : p), '') : em.body) || '', pad = 24, tW = CW - 2 * pad;
   const subject = em.subject || '', subjLines = nLines(S.disp, subject, 22, tW, st), bp = para(K, emBody, tW);
   const BK = buttonKit(ctx, K);
   const EH = pad + 20 + 14 + subjLines * 26 + 12 + bp.h + 20 + BK.bh + pad;
@@ -449,19 +449,19 @@ function tokensPage(ctx) {
   const t = title(ctx, K, 'tokens', copyOf(ctx, 'tokens', ['Spacing, corners and edges, as set.', 'The spacing, corners and edges.']));
   const maxPx = Math.max(...T.space.map((s) => s.px), 1), BW = 200;
   const spRow = 28;
-  const spaceSec = { h: SUBH + 12 + T.space.length * spRow, flex: T.space.length * 10, draw: (y, extra = 0) => {
+  const spaceSec = { h: SUBH + 12 + T.space.length * spRow, flex: T.space.length * 20, draw: (y, extra = 0) => {
     const rh = spRow + Math.floor(extra / Math.max(1, T.space.length));
     return sec(K, X0, y, CW, catNo(ctx, 'tokens', 1), 'Spacing', `base ${Math.min(...T.space.map((s) => s.px)) || 4} px`) + T.space.map((s, i) => {
       const yy = y + SUBH + 12 + i * rh;
-      return at(X0, yy + 2, A(s.token), { w: 90, cls: 'lg-m lg-e' }) + at(X0 + 96, yy + 2, `${s.px} px`, { w: 52, cls: 'lg-m' })
+      return at(X0, yy + Math.floor((rh - 16) / 2), A(s.token), { w: 90, cls: 'lg-m lg-e' }) + at(X0 + 96, yy + Math.floor((rh - 16) / 2), `${s.px} px`, { w: 52, cls: 'lg-m' })
         + rect(X0 + 160, yy + Math.floor((rh - 12) / 2), Math.max(1, Math.round((s.px / maxPx) * BW)), 12, 'background:var(--ink)')
-        + at(X0 + 160 + BW + 16, yy + 2, A(s.use || ''), { w: XR - (X0 + 160 + BW + 16), cls: 'lg-r lg-q lg-e' });
+        + at(X0 + 160 + BW + 16, yy + Math.floor((rh - 16) / 2), A(s.use || ''), { w: XR - (X0 + 160 + BW + 16), cls: 'lg-r lg-q lg-e' });
     }).join('');
   } };
   // corners: drawn at the largest whole multiple that leaves the biggest one a true corner (the section says so)
   const radii = T.radii, sq = 96, maxR = Math.max(...radii.filter((r) => r.px < 999).map((r) => r.px), 1), scale = Math.max(1, Math.min(4, Math.floor((sq / 2 - 1) / maxR)));
   const rc = Math.max(1, Math.min(radii.length, 3)), RWd = Math.floor((CW - 12 * (rc - 1)) / rc), rrows = Math.ceil(radii.length / rc);
-  const radiiSec = radii.length ? { h: SUBH + 12 + rrows * (sq + 12) - 12, flex: 80, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 2), 'Corners', scale > 1 ? `drawn at ${scale}x` : '') + radii.map((r, i) => {
+  const radiiSec = radii.length ? { h: SUBH + 12 + rrows * (sq + 12) - 12, flex: 0, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 2), 'Corners', scale > 1 ? `drawn at ${scale}x` : '') + radii.map((r, i) => {
     const x = X0 + (i % rc) * (RWd + 12), yy = y + SUBH + 12 + Math.floor(i / rc) * (sq + 12 + Math.floor(extra / rrows)), rad = Math.min(r.px * scale, sq / 2);
     return rect(x, yy, sq, sq, `border:1px solid ${R.edge};background:var(--panel);border-radius:${rad}px`)
       + at(x + sq + 12, yy, `<div class="lg-c">${r.px >= 999 ? 'Round' : `${r.px} px`}</div>` + r.tokens.map((tk) => `<div class="lg-m lg-q" style="font-size:11px;line-height:14px">${A(tk)}</div>`).join(''), { w: RWd - sq - 12 });
@@ -472,7 +472,7 @@ function tokensPage(ctx) {
   const bordCol = (b) => (b.focus ? L.focus : b.tokens.includes('border-control') ? L.border : L.divider);
   const bordText = (b) => [...(b.uses || []), ...(b.focus ? [`${fcName ? `${fcName} ` : ''}${fc.replace('#', '').toUpperCase()} at border-control`] : [])].join(', ');
   const BR = 44, uW = XR - (X0 + 402);
-  const bordSec = { h: SUBH + 12 + bord.length * BR, flex: bord.length * 20, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 3), 'Borders', 'at their real width and colour') + bord.map((b, i) => {
+  const bordSec = { h: SUBH + 12 + bord.length * BR, flex: bord.length * 40, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 3), 'Borders', 'at their real width and colour') + bord.map((b, i) => {
     const br = BR + Math.floor(extra / bord.length), yy = y + SUBH + 12 + i * br;
     return at(X0, yy + Math.floor((br - 16 * b.tokens.length) / 2), b.tokens.map((tk) => `<div class="lg-m lg-e">${A(tk)}</div>`).join(''), { w: 130 }) + at(X0 + 136, yy + Math.floor((br - 16) / 2), `${b.px} px`, { w: 44, cls: 'lg-m' })
       + rect(X0 + 186, yy + Math.floor(br / 2) - b.px / 2, 200, b.px, `background:${bordCol(b)}`)
