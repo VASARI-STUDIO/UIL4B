@@ -53,7 +53,8 @@ test('every ported theme is in the table as a Pro theme with all three rows', ()
     const t = EXPORT_THEMES.find((x) => x.id === id)
     assert.ok(t, `${id} is not in EXPORT_THEMES`)
     assert.ok(!t.free, `${id} must be Pro`)
-    for (const row of Object.keys(THEME_ROW_FORMATS)) {
+    // the style guide is opt in, drawn only by a theme with a guide lane of its own
+    for (const row of Object.keys(THEME_ROW_FORMATS).filter((r) => r !== 'guide')) {
       assert.ok(themeHasRow(id, row), `${id} lacks ${row}`)
       assert.equal(isThemeExportPro(row, id), true, `${id} ${row} must need Pro`)
     }

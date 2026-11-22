@@ -44,11 +44,16 @@ const FREE_SLIDES_THEMES = ['25-label', '27-swissfield']
 const FREE_UI_KIT_THEME = '04-standards'
 const GUIDELINES_ONLY = new Set(FREE_SLIDES_THEMES)
 
-// What a Free account may have, by hand: slides in a free theme, the UI kit of Standards, nothing else. A 400 where the theme lacks the row.
+// The themes with a style guide of their own, by hand. The guide is gated like the guidelines, so Swiss Field's is free.
+const GUIDE_THEMES = new Set(['27-swissfield'])
+
+// What a Free account may have, by hand: slides in a free theme and its style guide, the UI kit of Standards, nothing else. A 400 where
+// the theme lacks the row.
 function expectedFor(plan, theme, row) {
-  if (GUIDELINES_ONLY.has(theme) && row !== 'slides') return 'unknown_row'
+  if (row === 'guide' && !GUIDE_THEMES.has(theme)) return 'unknown_row'
+  if (GUIDELINES_ONLY.has(theme) && row !== 'slides' && row !== 'guide') return 'unknown_row'
   if (plan === 'pro') return 'allow'
-  if (row === 'slides' && FREE_SLIDES_THEMES.includes(theme)) return 'allow'
+  if ((row === 'slides' || row === 'guide') && FREE_SLIDES_THEMES.includes(theme)) return 'allow'
   if (row === 'ui-kit' && theme === FREE_UI_KIT_THEME) return 'allow'
   return 'pro_required'
 }
@@ -98,7 +103,7 @@ const THEME_IDS = EXPORT_THEMES.map((t) => t.id)
 
 test('the table is the size this test expects, so a new theme or row is walked on purpose', () => {
   assert.equal(THEME_IDS.length, 22)
-  assert.deepEqual(Object.keys(THEME_ROW_FORMATS), ['ui-kit', 'book', 'slides'])
+  assert.deepEqual(Object.keys(THEME_ROW_FORMATS), ['ui-kit', 'book', 'slides', 'guide'])
   assert.deepEqual(EXPORT_THEMES.filter((t) => t.free).map((t) => t.id), FREE_SLIDES_THEMES)
 })
 

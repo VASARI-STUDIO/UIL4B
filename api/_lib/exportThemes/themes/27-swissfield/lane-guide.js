@@ -202,7 +202,7 @@ function cover(ctx) {
   const facts = [['Date', longDate(B.version.date)], ['Display', `${dispFace(d)}, ${dispNames(ctx)}`], ['Text', `${b.family}, ${weightName(400)} and ${weightName(500)}`]];
   if (mo) facts.push(['Mono', mo.family]);
   // the hatch is on the strip from this page on: say once what it is
-  facts.push(['Hatched', `${m.action.name}, kept for the one action`]);
+  facts.push(['Hatched', [`${m.action.name}, kept for the one action`, `${m.action.name}, the one action`, m.action.name]]);
   for (const s of R.segs.slice(1)) {
     if (!fieldFits(ctx, s, true)) facts.push([s.c.name, `${fig(fmtShare(s.c.share ?? 0))}<span style="margin-inline-start:12px">${fig(hexOf(s.c))}</span>`, true]);
   }
@@ -210,7 +210,8 @@ function cover(ctx) {
   const rowH = 30, fy = 1010 - facts.length * rowH - 1;
   // the key column is as wide as the longest name needs (never under 80 px), so a brand's own colour names fit
   const kw = Math.min(160, Math.max(80, Math.ceil(Math.max(...facts.map(([k]) => textWidth(CHROME[500], k, 13)))) + 8));
-  const rows = facts.map(([k, v, raw], i) => {
+  const rows = facts.map(([k, v0, raw], i) => {
+    const v = Array.isArray(v0) ? (v0.find((o) => textWidth(CHROME[400], o, 13) <= cw - kw) ?? v0[v0.length - 1]) : v0;
     if (textWidth(CHROME[500], k, 13) > kw - 8) throw new Error(`Swiss Field guide: the cover fact name "${k}" does not fit`);
     if (!raw && textWidth(CHROME[400], v, 13) > cw - kw) throw new Error(`Swiss Field guide: the cover fact "${v}" does not fit`);
     return hl(X0, fy + i * rowH, cw, i === 0 ? 'var(--ink)' : 'var(--hair)') + at(X0, fy + i * rowH + 7, A(k), { cls: 'sg-n', style: 'color:var(--quiet)' }) + at(X0 + kw, fy + i * rowH + 7, raw ? v : A(v), { cls: 'sg-n' });
@@ -257,7 +258,7 @@ function xScale(x0, y, len, u, color, bare = false) {
   }
   return h + at(endX - 44, y - 20, `${len.toFixed(1)} x`, { cls: 'sg-s', w: 44, style: `text-align:right;color:${color}` });
 }
-function logoPage(ctx) {
+function logoPage(ctx, maxTiles = 6) {
   const L = ctx.logo, G = L.geos.colour, unit = L.geo.unit, LF = logoFacts(ctx), m = model(ctx);
   const slot = ctx.edition === 'slot';
   const t = title(ctx, 'logo', [`One x clear on every side. Never under ${L.minSize.screenPx} px wide.`, 'One x clear on every side.'], CW);
@@ -297,7 +298,7 @@ function logoPage(ctx) {
     if (f) f.labels.push(g.label); else groups.push({ ...g, key2: key, labels: [g.label] });
   }
   // a brand can carry many colourways: the page draws the first six (two rows) so the clear-space drawing keeps its room, and says so for the markdown
-  if (groups.length > 6) groups.length = 6;
+  if (groups.length > maxTiles) groups.length = maxTiles;
   ctx.logoShown = groups.flatMap((g) => g.labels.map((label, i) => ({ key: i ? LF.grounds.find((o) => o.label === label).key : g.key, label })));
   // the ground is named once, in the section's note (its hex in mono, no #); each tile carries only its colourway
   const groundNote = { html: [...new Map(LF.grounds.map((g) => [g.groundHex.toLowerCase(), `${A(g.ground)} ${fig(g.groundHex.replace('#', '').toUpperCase())}`])).values()].join(', ') };
@@ -399,6 +400,8 @@ function logoPage(ctx) {
     const u = Math.max(12, Math.floor(Math.min((CW - COLW - 25) / fwX, room / fhX, 60)));
     Object.assign(gA, { u, fw: fwX * u, fh: fhX * u, lw: xw * u, lh: xh * u, h: SUBH + 28 + Math.max(fhX * u, textH) });
   }
+  // checked before the hooks are written, so the one-row retry leaves no second copy
+  if (gA.h + B_h + E_h + C_h + D_h + 4 * 18 > BOT - t.top && groups.length > perRow) return logoPage(ctx, perRow);
   hook(ctx, { lockups: LK.map(([id, name]) => [name, lkWhen(id)]) });
   if (slot) hookAdd(ctx, 'supply', [['Logo', 'Horizontal, stacked and symbol, SVG']]);
   const body = t.html + flow('logo', t.top, [
