@@ -70,7 +70,7 @@
    `outline:none` plus a 3px 8%-alpha halo, which composited to about 1.1:1 on
    the card. */
 .typ-picker .typ-picker-trigger:focus-visible {
-  outline: 2px solid var(--v3-ink);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 2px;
   border-color: var(--v3-hl20);
   box-shadow: none;
@@ -161,7 +161,7 @@
 .fbd-overlay .fg-more-btn:focus-visible,
 .fbd-overlay .fbd-tile:focus-visible,
 .fbd-overlay .fbd-use:focus-visible {
-  outline: 2px solid var(--v3-ink);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 2px;
 }
 
@@ -181,10 +181,6 @@
 
 .fbd-overlay .lbry-search {
   padding: 0 13px;
-}
-
-.fbd-overlay .lbry-search:focus-within {
-  border-color: var(--v3-ink);
 }
 
 .fbd-overlay .lbry-search input { font-size: 14px; }
@@ -279,7 +275,7 @@
   border-color: var(--v3-hair);
 }
 
-.fbd-overlay .lbry-filters .lbry-filter:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
+.fbd-overlay .lbry-filters .lbry-filter:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 
 /* ── K8: the phone's category row is ONE scrolling line ──────────────────────
    LibraryToolbar keeps the first filter group on a phone as `.lbry-toolbar-quick`
@@ -362,7 +358,7 @@
 
 .fbd-overlay .fdx-tab--on { font-weight: 560; }
 
-.fbd-overlay .fdx-tab:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: -2px; }
+.fbd-overlay .fdx-tab:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: -2px; }
 
 /* ── Touch floors, restated at this specificity ──────────────────────────── */
 

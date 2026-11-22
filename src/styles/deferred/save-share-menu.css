@@ -107,7 +107,7 @@
   color: var(--t2);
 }
 .grd .plb-savemenu .plb-menu-item:focus-visible,
-.grd .plb-savemenu .plb-pop-x:focus-visible { outline: 2px solid var(--tl-link, var(--accent)); outline-offset: 2px; }
+.grd .plb-savemenu .plb-pop-x:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 @media (forced-colors: active) {
   .plb-savemenu .plb-menu-item[aria-disabled="true"] { color: GrayText; }
 }

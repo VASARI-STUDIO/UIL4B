@@ -13,8 +13,8 @@ export function inkOn(ctx, bg) {
   const p = ctx.pairs.filter((x) => same(x.bgHex, bg)).sort((a, b) => b.ratio - a.ratio)[0];
   if (p) return p.fgHex;
   const best = ctx.colours.map((c) => c.hex).filter((h) => !same(h, bg)).sort((a, b) => ctx.ratio(b, bg) - ctx.ratio(a, bg))[0];
-  if (ctx.ratio(best, bg) < 4.5) throw new Error(`no brand colour reads at 4.5 : 1 on ${bg}`);
-  return best;
+  // no brand colour reads on a mid-tone ground: the engine's fallback ink, never a throw
+  return ctx.textOn(bg, { prefer: best });
 }
 // the step number on a ramp edge: Type or White, whichever holds the step better
 export const stepInk = (ctx, hex) => { const t = ctx.roles.light.text, w = ctx.roles.light.raised; return ctx.ratio(t, hex) >= ctx.ratio(w, hex) ? t : w; };
@@ -66,11 +66,11 @@ ${hole(24, 'k-hole--card')}
       const ink = inkOn(ctx, c.hex), big = i === 0;
       const tabInk = ink;
       return `<li class="k-gc ${big ? 'k-gc--tall' : ''} ph-tight" style="--c:${c.hex};--i:${ink};z-index:${i + 1}">
-<span class="k-gtab" style="left:${left}px;width:${w}px;color:${tabInk}"><span class="num">${Math.round(c.share * 100)}%</span></span>
+<span class="k-gtab" style="left:${Math.min(left, W - Math.max(w, 48))}px;width:${Math.max(w, 48)}px;color:${tabInk}"><span class="num">${Math.round(c.share * 100)}%</span></span>
 <div class="k-gface"><p class="k-gname"><b class="k-disp">${A(c.name)}</b><span class="k-mono k-ghex">${A(c.hex)}</span></p><p class="k-glands">${A(c.lands)}</p></div></li>`;
     }).join('');
     const inner = `<p class="k-lead">${cs.length} colours, each named for where it lands. ${A(action.name)} is the colour people know ${A(ctx.brand.name)} by, and ${A(ground.name)} is the page. Each tab is as wide as the colour's share of a typical page.</p>
-<div class="k-drawer k-drawer--pal"><ol class="k-gcs">${cards}</ol><span class="k-lip"></span></div>`;
+<div class="k-drawer k-drawer--pal"><ol class="k-gcs${cs.length > 6 ? ' k-gcs--many' : ''}">${cards}</ol><span class="k-lip"></span></div>`;
     return sheet(ctx, 'palette', inner, 'k-pg-pal');
   },
 

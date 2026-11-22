@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { defaultTemplate } from '../../config/exportTemplates'
 import { pickerTheme, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
@@ -20,6 +20,13 @@ import { brandOf, syncPreviewOwner } from './exportPreviewClient'
 // and disabled when only the stock picture exists (signed out, a Pro template on a free plan, or no live preview yet). A template
 // the account cannot export is drawn as a sample in every document, the UI kit included: its 1x picture under a tiled mark, with no retina version.
 // A file with no templates shows its own preview in the stage, and has no gallery.
+// The page opened at its own size in a tab of its own. The document carries its own policy (no script, nothing fetched), so it may be a blob.
+function openFullSize(html) {
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
 function PlainPreview({ cat, file, name, fileProject, isPro, design, chosen }) {
   const kind = cat.preview
   if (kind === 'book' || kind === 'guidelines') {
@@ -52,7 +59,9 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   // Whether the viewer may export this template. A template they cannot export is drawn as a 1x sample under the mark, in every document.
   const proTemplate = themed && !isPro && themedFileIsPro(file, themeId)
   const [stock, setStock] = useState(false)
-  const brand = useMemo(() => brandOf(design, name), [design, name])
+  // The project's own name, as typed; the 'Design System' stand-in is for the unnamed and must not stand in the brand, where it would
+  // print on a project that has a name (the server has its own wording for none).
+  const brand = useMemo(() => brandOf(design, fileProject), [design, fileProject])
   const live = useLivePage({ enabled: Boolean(user) && !proTemplate && !checking && themed && !stock, theme: themeId, page: page?.id, brand })
   // The server's 403 is the account's real plan. When it disagrees with the plan this screen holds, the page is treated as a Pro
   // template: the sample with the Pro mark, and the default template one click away.
@@ -60,6 +69,18 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   const sample = proTemplate || refused
   const noLive = !user || proTemplate || checking || live.status === 'unavailable' || refused
   const showStock = stock || noLive
+  const shownLive = !showStock && live.status === 'ok'
+  const drawing = live.status === 'loading'
+  // Why the stock picture is showing, or that the live page is on its way: one line under the stage, and the reason the box below it is disabled.
+  const statusId = useId()
+  let status = ''
+  if (themed) {
+    if (checking) status = 'Checking your plan…'
+    else if (!user) status = 'Sign in to see this page with your brand. Showing the sample.'
+    else if (sample) status = 'Pro template: showing the sample.'
+    else if (live.status === 'unavailable') status = 'Showing the sample — live preview unavailable'
+    else if (drawing) status = 'Drawing your brand…'
+  }
 
   const hold = (on) => dispatch({ type: 'hover', on })
   return (
@@ -72,12 +93,18 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
         onBlur={() => hold(false)}
       >
         {themed
-          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={!showStock && live.status === 'ok' ? live.html : ''} />
+          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={shownLive ? live.html : ''} expectLive={!showStock && drawing} loading={drawing && !showStock} />
           : <ExportStage plain={<PlainPreview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} design={design} chosen={chosen} />} />}
+        {themed && (
+          <div className="xd-meta">
+            <p className="xd-status" id={statusId} aria-live="polite">{status}</p>
+            {shownLive && <button type="button" className="xd-full" onClick={() => openFullSize(live.html)} aria-label="Open full size, in a new tab">Open full size</button>}
+          </div>
+        )}
         <div className="xd-under">
           {themed && (
             <label className="xd-stock">
-              <input type="checkbox" checked={showStock} disabled={noLive} onChange={(e) => setStock(e.target.checked)} />
+              <input type="checkbox" checked={showStock} disabled={noLive} aria-describedby={noLive ? statusId : undefined} onChange={(e) => setStock(e.target.checked)} />
               <span>Show the default template</span>
             </label>
           )}

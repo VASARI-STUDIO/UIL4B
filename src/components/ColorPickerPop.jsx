@@ -10,6 +10,7 @@ import { buildPickerPresets } from '../utils/pickerPresets'
 import { addRecentColor, getRecentColors } from '../utils/recentColors'
 import { useProject } from '../contexts/ProjectContext'
 import { lockScroll } from '../utils/scrollLock'
+import '../styles/deferred/colour-picker.css'
 
 // ── ColorPickerPop ────────────────────────────────────────────────────────────
 // THE colour input for this app. Not "a shared component available to surfaces

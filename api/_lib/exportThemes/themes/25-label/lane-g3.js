@@ -52,7 +52,7 @@ function proportion(ctx) {
 function contrast(ctx) {
   const R = roles(ctx), B = ctx.brand, W = ctx.weights;
   const bgs = [...new Set(ctx.pairs.map((p) => p.bg))];
-  const cellW = 176, gapX = 16, pad = 20, gapY = 12;
+  const cellW = 176, gapX = 16;
   const bodyRole = 'body', disp = 'display';
   // a cell: the colour's name and the ratio on one line (on two if they do not fit), then what the pair is for. A pair that passes only large is set at its size in the display face, name and ratio, and says no more.
   const cells = (bg) => ctx.pairs.filter((p) => p.bg === bg).map((p) => {
@@ -70,14 +70,23 @@ function contrast(ctx) {
     return { p, h: (one ? 20 : 38) + 4 + ul * 18,
       html: `<div style="color:${p.fgHex}"><p class="g3-cn">${A(nm)}${one ? ' ' : '<br>'}<span class="g3-mono">${A(ratio)}</span></p><p class="g3-cu">${A(use)}</p></div>` };
   });
-    const bands = bgs.map((bg) => { const cl = cells(bg); return { bg, hex: ctx.hex(bg), cl, w: cl.length * cellW + (cl.length - 1) * gapX + 2 * pad, h: even(Math.max(...cl.map((c) => c.h)) + 2 * pad) }; });
+  const lettered = bgs.map((bg) => [bg, cells(bg)]);
   // the pairs that fail: a square of the ground with a square of the text colour inside it, its ratio under it on the wall; never lettered
   // as many failing pairs as fit one row of the hang (eleven); a brand with more shows the first eleven
-  const chip = 32, chipGap = 24, fails = ctx.unusedPairs.slice(0, Math.floor((MAX_W + chipGap) / (chip + chipGap))), failsW = fails.length ? fails.length * chip + (fails.length - 1) * chipGap : 0;
-  const failsH = fails.length ? 24 + chip + 4 + 16 : 0;
-  const H = even(bands.reduce((s, b) => s + b.h, 0) + gapY * (bands.length - 1) + failsH);
-  if (H > MAX_H) throw new Error(`contrast: the canvases run to ${H} px and the hang holds ${MAX_H}`);
+  const chip = 32, chipGap = 24, failing = ctx.unusedPairs.slice(0, Math.floor((MAX_W + chipGap) / (chip + chipGap)));
+  const layout = (pad, gapY, withFails, nb) => {
+    const bands = lettered.slice(0, nb).map(([bg, cl]) => ({ bg, hex: ctx.hex(bg), cl, w: cl.length * cellW + (cl.length - 1) * gapX + 2 * pad, h: even(Math.max(...cl.map((c) => c.h)) + 2 * pad) }));
+    const fails = withFails ? failing : [], failsH = fails.length ? 24 + chip + 4 + 16 : 0;
+    return { pad, gapY, bands, fails, H: even(bands.reduce((t, b) => t + b.h, 0) + gapY * (bands.length - 1) + failsH) };
+  };
+  // the hang holds 576 px whatever the palette: a brand with many grounds first gets tighter canvases, then loses the row of failing squares,
+  // then its last grounds (the card names the grounds shown and counts the rest), so the page is never left out
+  let L = [[20, 12, true], [12, 8, true], [12, 8, false]].map(([p, g, w]) => layout(p, g, w, lettered.length)).find((l) => l.H <= MAX_H);
+  for (let nb = lettered.length - 1; !L && nb >= 1; nb--) { const l = layout(12, 8, false, nb); if (l.H <= MAX_H) L = l; }
+  if (!L) throw new Error(`contrast: one canvas runs past the ${MAX_H} px hang`);
+  const { pad, gapY, bands, fails, H } = L, failsW = fails.length ? fails.length * chip + (fails.length - 1) * chipGap : 0;
   if (failsW > MAX_W) throw new Error(`contrast: ${fails.length} failing pairs run to ${failsW} px`);
+  const shown = bands.map((b) => b.bg), more = bgs.length - shown.length;
   let y = hung(H);
   const canvases = bands.map((b) => {
     const x = hungX(even(b.w));
@@ -100,7 +109,7 @@ function contrast(ctx) {
     label: {
       title: 'Text on colour', detail: `${numberWord(ctx.pairs.length)} pairs in use, each lettered on its ground.`,
       // the bands run top to bottom; two light grounds can look alike, so the card names them in order (a head on each band would not fit the hang for a brand with five)
-      paragraph: `The grounds, top to bottom: ${listAnd(bgs.map((bg) => named(ctx, bg).name))}. The small squares are pairs that fail and never carry text.${largeLine ? ' ' : ''}${largeLine}`,
+      paragraph: `The grounds, top to bottom: ${listAnd(shown.map((bg) => named(ctx, bg).name))}.${more ? ` ${numberWord(more)} more ${more === 1 ? 'ground is' : 'grounds are'} left off to fit the hang.` : ''}${fails.length ? ' The small squares are pairs that fail and never carry text.' : ''}${largeLine ? ' ' : ''}${largeLine}`,
       grow: true, credit: seeAlso(ctx, 'palette', 'Colour'),
     },
   });

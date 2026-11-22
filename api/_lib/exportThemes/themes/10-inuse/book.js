@@ -7,7 +7,7 @@
 import { A, fit, wordsHex } from './helpers.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
-const hairlineOn = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const hairlineOn = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 
 // a copy button: visible text is the action, the accessible name says what it copies
 const copyBtn = (text, value, what, cls = '') => `<button type="button" class="bk-btn ${cls}" data-copy="${A(value)}" data-copy-label="${A(what)}" aria-label="${A(text + ' ' + what)}"><span class="bk-btn__t">${A(text)}</span></button>`;

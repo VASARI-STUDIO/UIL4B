@@ -121,8 +121,8 @@ html[data-reduced-motion="true"] .ttn-link:active { transform: none; }
 }
 .ttb-seg > button::after { content: ""; position: absolute; inset: -6px 0; }
 .ttb-seg > button:active { transform: scale(.97); }
-.ttb-seg > button[aria-pressed="true"] { background: var(--ttb-sel); color: var(--v3-ink); }
-.ttb-seg > button:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
+.ttb-seg > button[aria-pressed="true"] { background: var(--sel-solid); color: var(--sel-on-solid); }
+.ttb-seg > button:focus-visible { outline: 2px solid var(--focus-ink); outline-offset: 2px; }
 .ttb-sq { width: 12px; height: 12px; border-radius: 2px; flex: none; }
 .ttb-sq--dark { background: #060607; box-shadow: inset 0 0 0 1px rgba(239, 238, 234, .4); }
 .ttb-sq--light { background: #EFEEEA; box-shadow: inset 0 0 0 1px rgba(11, 12, 14, .2); }

@@ -102,7 +102,7 @@ async function pickPack(page, select, pack) {
 /** Pack switches that revisit packs: the second time round must be free. */
 const SWITCHES = ['tabler', 'mdi', 'lucide', 'tabler', 'all']
 async function switchPacks(page) {
-  const select = page.locator('.lbry-select')
+  const select = page.locator('.lbry-select:not(.lbry-sort)')
   for (const pack of SWITCHES) {
     await pickPack(page, select, pack)
     await page.waitForTimeout(1000)
@@ -200,7 +200,7 @@ test('a 429 starts a cool-down: cached packs stay up, nothing is sent, and a tot
   const page = await ctx.newPage()
   watch(page, REFUSED)
   const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
-  const select = page.locator('.lbry-select')
+  const select = page.locator('.lbry-select:not(.lbry-sort)')
 
   // The site's pack lists are taken away for the whole test, so the catalogue
   // goes through iconifyFetch (its cache and its cool-down) and not around it.

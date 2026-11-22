@@ -27,7 +27,6 @@
    narrowest panel that hosts this, which is enough for a real word. */
 .typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;container-type:inline-size;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .typ-picker-trigger:hover:not(:disabled){border-color:var(--bh);background:var(--hvr)}
-.typ-picker-trigger:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
 .typ-picker-trigger:disabled{opacity:.55;cursor:not-allowed}
 /* Fixed height: the specimen changes family on every pick, and letting it size
    the row would bounce the whole panel each time you chose something.
@@ -49,7 +48,7 @@
 /* Kept: Font Pair's "reload the catalogue" recovery button still uses it. */
 .typ-picker-clear{margin-top:6px;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
 .typ-picker-clear:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.typ-picker-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.typ-picker-clear:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* Browse dialog */
 .fbd-overlay{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:max(clamp(12px,4vw,40px),env(safe-area-inset-top,0px)) max(clamp(12px,4vw,40px),env(safe-area-inset-right,0px)) max(clamp(12px,4vw,40px),env(safe-area-inset-bottom,0px)) max(clamp(12px,4vw,40px),env(safe-area-inset-left,0px));background:rgba(8,8,12,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
@@ -59,14 +58,14 @@
 .fbd-head h2{margin:0;font-size:clamp(19px,2.4vw,24px);font-weight:650;letter-spacing:-.02em;color:var(--t0)}
 .fbd-close{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .fbd-close:hover{color:var(--t0);border-color:var(--bh)}
-.fbd-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fbd-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 /* Not sticky inside the dialog: the dialog's own body is the scroll container,
    and a sticky bar inside a scrolling flex child pins to the wrong box. */
 .fbd-toolbar{position:static;margin-bottom:12px}
 .fbd-count{margin:0 0 14px;font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2)}
 .fbd-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-grid{--lbry-col-min:190px}
-.fbd-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fbd-tile:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 /* THE SPECIMEN IS THE CONTROL, SO IT MUST NEVER BE TRUNCATED.
    At 390px this read "Hand...", "Handgl...", "Handg..." - a different amount of
    a different word per family, so the tiles stopped being comparable at exactly
@@ -141,19 +140,19 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
    .fbd-dialog, so a longer panel scrolls the panel, not the dialog. */
 .fbd-info{display:flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .fbd-info:hover{color:var(--t0);border-color:var(--bh)}
-.fbd-info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fbd-info:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .fbd-detail{display:flex;flex-direction:column;flex:1;min-height:0}
 .fbd-detail-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
 .fbd-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;font:inherit;font-size:12px;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .fbd-back:hover{color:var(--t0);border-color:var(--bh)}
-.fbd-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fbd-back:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 /* The name is the specimen — it is set in the family it names, which is the
    same contract the tiles keep. */
 .fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
 .fdx-tabs{position:relative;display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
 .fdx-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .fdx-tab:hover{color:var(--t0)}
-.fdx-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.fdx-tab:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .fdx-tab--on{color:var(--t0)}
 /* Sits ON the 1px border rather than above it, so the pair reads as one edge
    and not as a rule with a second rule stacked on it. */
@@ -174,7 +173,7 @@ html[data-reduced-motion="true"] .fdx-tabs[data-slide]::after{transition:none}
 .fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:560;color:var(--accent-ink);background:var(--accent-fill);border:1px solid var(--accent-fill);border-radius:var(--btn-radius);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .fbd-use:hover{background:var(--accent-fill-hover);border-color:var(--accent-fill-hover)}
-.fbd-use:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fbd-use:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .fbd-cuts{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
 .fbd-cuts li{display:flex;flex-direction:column;gap:3px;padding-bottom:13px;border-bottom:1px solid var(--border)}
 .fbd-cuts li:last-child{border-bottom:0;padding-bottom:0}
@@ -198,7 +197,7 @@ html[data-reduced-motion="true"] .fdx-tabs[data-slide]::after{transition:none}
 .fdx-licence h4{margin:0 0 4px;font-size:15px;font-weight:560;line-height:1.3;color:var(--t0)}
 .fdx-licence p{max-width:60ch;margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--t1)}
 .fdx-licence-link{display:flex;align-items:center;box-sizing:border-box;width:100%;min-height:44px;padding:0;font-size:14px;font-weight:560;line-height:1.3;color:var(--link);text-decoration:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);transition:background-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.fdx-licence-link:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.fdx-licence-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .fdx-licence-link:active{background:var(--hvr)}
 @media(hover:hover){.fdx-licence-link:hover{color:var(--link-hover);background:var(--hvr)}}
 html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
@@ -354,7 +353,7 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
    so 2px is inert here and exists only so the ring has a shape to trace. */
 .fdx-fiu{border-radius:2px;color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .fdx-fiu:hover{color:var(--t0)}
-.fdx-fiu:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fdx-fiu:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* ── The "In use" tab ────────────────────────────────────────────────────────
    Photographs of real work set in the family. It ships EMPTY for every family
@@ -537,5 +536,5 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
    rule however the chunk CSS happens to be ordered. */
 :is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry{min-height:36px;border-color:var(--bh);border-radius:var(--btn-radius);background:var(--card);color:var(--t0);font-weight:560}
 :is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry:hover:not(:disabled){background:var(--hvr);border-color:color-mix(in srgb,var(--t0) 34%,transparent);color:var(--t0)}
-:is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 @media(pointer:coarse){:is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry{min-height:44px}}

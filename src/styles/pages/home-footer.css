@@ -163,8 +163,8 @@
   opacity: .5;
   background: linear-gradient(90deg, #EC6A51 6%, #F0B94D 44%, #A2BC81 56%, #59B193 66%, #6CA0C6 78%, #9B84C2 96%);
   background: linear-gradient(90deg in oklch, oklch(.678 .166 33) 6%, oklch(.817 .138 82) 44%, oklch(.76 .085 128) 56%, oklch(.696 .097 169) 66%, oklch(.685 .079 240) 78%, oklch(.658 .094 301) 96%);
-  -webkit-mask-image: radial-gradient(78% 100% at 30% 100%, #000 0%, rgba(0, 0, 0, .93) 10%, rgba(0, 0, 0, .8) 20%, rgba(0, 0, 0, .64) 30%, rgba(0, 0, 0, .48) 40%, rgba(0, 0, 0, .33) 50%, rgba(0, 0, 0, .2) 60%, rgba(0, 0, 0, .11) 70%, rgba(0, 0, 0, .05) 80%, rgba(0, 0, 0, .015) 90%, rgba(0, 0, 0, 0) 100%);
-  mask-image: radial-gradient(78% 100% at 30% 100%, #000 0%, rgba(0, 0, 0, .93) 10%, rgba(0, 0, 0, .8) 20%, rgba(0, 0, 0, .64) 30%, rgba(0, 0, 0, .48) 40%, rgba(0, 0, 0, .33) 50%, rgba(0, 0, 0, .2) 60%, rgba(0, 0, 0, .11) 70%, rgba(0, 0, 0, .05) 80%, rgba(0, 0, 0, .015) 90%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: radial-gradient(78% 100% at 30% 100%, var(--horizon-fade));
+  mask-image: radial-gradient(78% 100% at 30% 100%, var(--horizon-fade));
 }
 .sp-footer--home .sp-footer-core {
   opacity: .13;
@@ -178,7 +178,7 @@
   padding: 0 max(var(--gutter-x), env(safe-area-inset-right, 0px)) 0 max(var(--gutter-x), env(safe-area-inset-left, 0px));
 }
 .sp-footer--home .sp-footer-grid {
-  grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr));
+  grid-template-columns: 1.6fr repeat(5, minmax(0, 1fr));
   gap: 32px;
   padding-top: 40px;
   border-top: 1px solid rgba(239, 238, 234, .1);
@@ -256,13 +256,13 @@
   transform: translateY(18%);
 }
 
-/* Under 1024px the headline line takes its own row and the four columns hold one line each.
+/* Under 1024px the headline line takes its own row and the five columns sit three then two.
    The columns also sit nearer the amber end of the light, so the horizon dims to keep
    the bottom line under the 0.05 luminance ceiling. */
 @media (max-width: 1023px) {
   .sp-footer--home .sp-footer-horizon { opacity: .36; }
   .sp-footer--home .sp-footer-grid {
-    grid-template-columns: repeat(4, minmax(max-content, 1fr));
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
     gap: 32px 24px;
   }
   .sp-footer--home .sp-footer-brand { grid-column: 1 / -1; }
@@ -306,8 +306,8 @@
     opacity: .54;
     background: linear-gradient(90deg, #EC6A51 10%, #F0B94D 28%, #A2BC81 42%, #59B193 54%, #6CA0C6 70%, #9B84C2 80%);
     background: linear-gradient(90deg in oklch, oklch(.678 .166 33) 10%, oklch(.817 .138 82) 28%, oklch(.76 .085 128) 42%, oklch(.696 .097 169) 54%, oklch(.685 .079 240) 70%, oklch(.658 .094 301) 80%);
-    -webkit-mask-image: radial-gradient(80% 100% at 72% 100%, #000 0%, rgba(0, 0, 0, .93) 10%, rgba(0, 0, 0, .8) 20%, rgba(0, 0, 0, .64) 30%, rgba(0, 0, 0, .48) 40%, rgba(0, 0, 0, .33) 50%, rgba(0, 0, 0, .2) 60%, rgba(0, 0, 0, .11) 70%, rgba(0, 0, 0, .05) 80%, rgba(0, 0, 0, .015) 90%, rgba(0, 0, 0, 0) 100%);
-    mask-image: radial-gradient(80% 100% at 72% 100%, #000 0%, rgba(0, 0, 0, .93) 10%, rgba(0, 0, 0, .8) 20%, rgba(0, 0, 0, .64) 30%, rgba(0, 0, 0, .48) 40%, rgba(0, 0, 0, .33) 50%, rgba(0, 0, 0, .2) 60%, rgba(0, 0, 0, .11) 70%, rgba(0, 0, 0, .05) 80%, rgba(0, 0, 0, .015) 90%, rgba(0, 0, 0, 0) 100%);
+    -webkit-mask-image: radial-gradient(80% 100% at 72% 100%, var(--horizon-fade));
+    mask-image: radial-gradient(80% 100% at 72% 100%, var(--horizon-fade));
   }
   .sp-footer--home .sp-footer-core {
     opacity: .16;
@@ -323,16 +323,17 @@
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost):active { transform: none; }
 
-/* /plans drops the "This page" column, so the headline line has four columns
-   instead of five. Phones keep the one-column grid above. */
+/* /plans and /mobile drop the "This page" column, so the headline line has
+   four columns instead of five, four across on a tablet. Phones keep the
+   single-column stack above. */
 @media (min-width: 1024px) {
-  .pricing .sp-footer--no-page .sp-footer-grid {
-    grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  .sp-footer--home.sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr));
   }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
-  .pricing .sp-footer--no-page .sp-footer-grid {
-    grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  .sp-footer--home.sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: repeat(4, minmax(max-content, 1fr));
   }
 }
 

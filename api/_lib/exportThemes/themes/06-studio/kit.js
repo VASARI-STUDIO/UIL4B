@@ -5,7 +5,7 @@ import { A } from './helpers.js';
 import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
-const onColour = (ctx, hex) => { const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface; ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
+const onColour = (ctx, hex) => { const L = ctx.roles.light, first = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface, pick = ctx.textOn(hex, { size: 13, prefer: first }); ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
 const hair = (ctx, hex) => (hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? ';box-shadow:inset 0 0 0 1px var(--hair2)' : '');
 const firstSentence = (s) => (s.match(/^.*?[.!?](?=\s|$)/) || [s])[0];
 

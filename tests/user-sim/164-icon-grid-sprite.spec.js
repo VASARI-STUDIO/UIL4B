@@ -194,7 +194,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
       const missing = uses.filter((u) => !document.querySelector(`#ig-sprite ${u.getAttribute('href')}`)).map((u) => u.getAttribute('href'))
       const cells = [...document.querySelectorAll('.ig .ic')]
       // A far-above cell is windowed to a bare name at its measured height; anything else holds art.
-      const blank = cells.filter((c) => !c.style.height && !c.querySelector('svg:not(.ic-edit), img')).map((c) => c.getAttribute('aria-label'))
+      const blank = cells.filter((c) => !c.style.height && !c.querySelector('svg, img')).map((c) => c.getAttribute('aria-label'))
       return {
         cells: cells.length,
         uses: uses.length,

@@ -241,7 +241,9 @@ test('the export panel offers the kit as a free format, and the plan lines say s
   assert.match(panel, /const kitName = themed\.row === 'ui-kit' && proNow \? readIdentity\(design\)\.name : ''/, 'the identity name is read only for the kit row, on the live entitlement')
   assert.match(panel, /requestThemeExport\(\{[^}]*projectName: kitName \|\| projectName \}/, 'the themed request is not handed the identity name, then the project name')
   assert.match(panel, /themedZipName\(kitName \|\| fileProject, format, theme\)/, 'the zip is not named from the identity name')
-  assert.match(panel, /projects\.find\(\(p\) => String\(p\.id\) === String\(projectId\)\)\?\.name/, 'the name comes from the open project, not from a design that holds none')
+  // The name is read from the project record (never from a design that holds none), through the one shared helper, which is tested
+  // by behaviour in tests/unit/export-project-name.test.js and end to end in tests/user-sim/441-export-project-name.spec.js.
+  assert.match(panel, /exportProjectName\(\{ projects, projectId, design, working \}\)/, 'the runner does not read the name through exportProjectName')
 })
 
 test('the font requests name each selected family once, with the weights the kit sets', () => {

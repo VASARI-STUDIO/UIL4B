@@ -23,10 +23,10 @@
    The current tab is ink over an ink underline. Blue said "next action" about
    the tab the visitor is already standing in. */
 .plib-page .pl-tab{min-height:44px;border-radius:0}
-.plib-page .pl-tab.active{color:var(--t0);border-bottom-color:var(--t0);font-weight:600}
+.plib-page .pl-tab.active{color:var(--sel-ink);border-bottom-color:var(--sel-edge);font-weight:600}
 .plib-page .pl-tab-count{border-radius:var(--radius-xs)}
 .plib-page .pl-tab.active .pl-tab-count{background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
-.plib-page .pl-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.plib-page .pl-tab:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 
 
 /* ── The gallery ───────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@
   transform:none;box-shadow:none;border-color:var(--bh);
   background:color-mix(in srgb,var(--t0) 4.5%,var(--card));
 }
-.plib-page .pl-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-card:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .plib-page .pl-card.no-img:hover .pl-card-title{color:var(--t0)}
 /* Tags are the design's value chip (the hex chips on the palette card):
    a 5.5% ink ground, 78% ink, a small rectangle. Sentence case — they are
@@ -118,7 +118,7 @@
   width:40px;height:40px;border-radius:var(--btn-radius);
   background:transparent;border-color:var(--border);
 }
-.plib-page .pl-modal-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-modal-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 @media(pointer:coarse){.plib-page .pl-modal-close{width:44px;height:44px}}
 .plib-page .pl-modal-header h2{font-weight:600;letter-spacing:-.02em}
 .plib-page .pl-modal-tags{margin-top:8px}
@@ -163,7 +163,7 @@
 .plib-page .pl-modal.is-live .pl-modal-stage{flex:1;aspect-ratio:auto}
 .plib-page .pl-modal-stage-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
 .plib-page .pl-modal-frame{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;background:transparent}
-.plib-page .pl-modal-frame:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.plib-page .pl-modal-frame:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 .plib-page .pl-modal-stage-note{
   position:absolute;left:12px;bottom:12px;margin:0;padding:6px 12px;
   border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--card);
@@ -216,7 +216,7 @@
   color:var(--t2);font-size:16px;line-height:1;cursor:pointer;
 }
 .plib-page .pl-drop-remove:hover{background:var(--hvr);color:var(--t0)}
-.plib-page .pl-drop-remove:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.plib-page .pl-drop-remove:focus-visible{outline:2px solid var(--focus-ink);outline-offset:1px}
 @media(pointer:coarse){.plib-page .pl-drop-remove{min-width:44px;min-height:44px}}
 .plib-page .pl-add-note{margin-top:8px;font-size:12px;line-height:1.5;color:var(--t2)}
 .plib-page .pl-add-note strong{font-weight:600;color:var(--t0)}
@@ -462,13 +462,13 @@
 }
 .plib-page .pl-search input::placeholder{color:var(--t3);opacity:1}
 .plib-page .pl-search input::-webkit-search-cancel-button{display:none}
-.plib-page .pl-search input:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.plib-page .pl-search input:focus-visible{outline:2px solid var(--focus-ink);outline-offset:0;border-color:var(--accent)}
 .plib-page .pl-search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--t2);pointer-events:none}
 .plib-page .pl-search-clear{
   position:absolute;right:2px;top:2px;width:44px;height:44px;display:grid;place-items:center;
   border:0;border-radius:var(--btn-radius);background:none;color:var(--t2);cursor:pointer;
 }
-.plib-page .pl-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.plib-page .pl-search-clear:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 @media(hover:hover){.plib-page .pl-search-clear:hover{color:var(--t0);background:var(--hvr)}}
 
 .plib-page .pl-filters-btn{display:none;min-height:48px;padding:0 16px;gap:8px;white-space:nowrap;font-size:14px;font-weight:600}
@@ -482,7 +482,7 @@
    one line. It leaves the row under 360px, where the search field needs the width
    and a second window is no use; the way back never leaves. */
 .plib-page .pl-win-btn{flex:0 0 auto;align-self:flex-start;justify-content:center;width:44px;min-height:44px;padding:0;color:var(--t1)}
-.plib-page .pl-win-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-win-btn:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 @media(hover:hover){.plib-page .pl-win-btn:hover{color:var(--t0)}}
 @media(max-width:359px){.plib-page .pl-win-btn:not(.pl-win-btn--back){display:none}}
 
@@ -507,7 +507,7 @@
   transition:background-color var(--dur-1) ease,border-color var(--dur-1) ease,color var(--dur-1) ease;
 }
 .plib-page .pl-opt input:checked+span{background:var(--t0);border-color:var(--t0);color:var(--card);font-weight:600}
-.plib-page .pl-opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-opt input:focus-visible+span{outline:2px solid var(--focus-ink);outline-offset:2px}
 @media(hover:hover){.plib-page .pl-opt input:not(:checked):hover+span{border-color:var(--bh);color:var(--t0)}}
 /* A category chip carries the number it returns. */
 .plib-page .pl-opt-n{margin-left:6px;color:var(--t2);font-weight:500;font-variant-numeric:tabular-nums}
@@ -542,7 +542,7 @@
 /* Back to overview: a quiet button, pulled left so its label lines up with the heading. */
 .plib-page .pl-back{padding:0 12px 0 8px;margin-left:-8px;gap:6px;border-color:transparent;background:transparent}
 @media(hover:hover){.plib-page .pl-back:hover{border-color:transparent;background:color-mix(in srgb,var(--t0) 5%,transparent)}}
-.plib-page .pl-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-back:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .plib-page .pl-results-head+.pl-gallery{margin-top:0}
 .plib-page .pl-empty.lbry-empty{align-items:flex-start;text-align:left;padding:48px 0}
 

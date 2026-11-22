@@ -23,9 +23,10 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 import {
-  ANON_ICON_CAP, ICON_GATE_COPY, ICON_PACK_TIERS, TIER_ORDER,
+  ANIMATED_PACKS, ANON_ICON_CAP, ICON_GATE_COPY, ICON_PACK_TIERS, TIER_ORDER,
   anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
 } from '../../src/data/iconPackTiers.js'
+import { STROKE_PACKS } from '../../src/utils/iconEditable.js'
 import { ANON_ICON_CEILING, anonCapForCols, anonListMax, capAnonList } from '../../src/data/iconGridRows.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -37,8 +38,11 @@ function groupPacks() {
   const src = read(PAGE)
   const groups = src.match(/const ICON_GROUPS = \{[\s\S]*?\n\}/)?.[0]
   assert.ok(groups, 'ICON_GROUPS is gone from IconLibrary.jsx — the tier table no longer knows what the page offers')
+  // The Animated and Editable categories spread their packs from the two lists the page imports.
+  const spreads = { '...ANIMATED_PACKS': ANIMATED_PACKS, '...STROKE_PACKS': STROKE_PACKS }
   return [...new Set([...groups.matchAll(/packs:\s*\[([^\]]*)\]/g)]
-    .flatMap((m) => m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)))]
+    .flatMap((m) => m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
+      .flatMap((entry) => (entry.startsWith('...') ? ([...(spreads[entry] || [entry])]) : [entry]))))]
 }
 
 /** The prefixes the pack menu offers as individual packs, PACK_MENU's first column. */
@@ -271,7 +275,7 @@ test('IconLibrary consults the table — it does not carry a second copy of the 
   // No pack name may appear in a gate decision. The table is the only place a
   // prefix and an entitlement are allowed to meet.
   for (const brand of ['simple-icons', 'twemoji', 'circle-flags', 'flat-color-icons']) {
-    const inCondition = new RegExp(`(?:if|\\?|&&|\\|\\|)[^\\n]{0,80}['"\`]${brand}['"\`]`)
+    const inCondition = new RegExp(`(?:\\bif\\b|\\?|&&|\\|\\|)[^\\n]{0,80}['"\`]${brand}['"\`]`)
     assert.doesNotMatch(page, inCondition,
       `"${brand}" appears inside a condition in ${PAGE}. Tiering is a table, not a conditional — `
       + 'a pack must be movable by editing one line of src/data/iconPackTiers.js.')

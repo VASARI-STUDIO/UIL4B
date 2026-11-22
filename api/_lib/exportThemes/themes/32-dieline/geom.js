@@ -29,8 +29,8 @@ export function roles(ctx) {
     let rows = ctx.pairs.filter((p) => p.bgHex.toLowerCase() === k && p.ratio >= 4.5 && !p.large).sort((a, b) => b.ratio - a.ratio).map((p) => p.fgHex).filter((h) => !seen.has(h) && seen.add(h));
     if (!rows.length) {
       const all = [...B.colours, ...(B.tones || [])].map((c) => c.hex).filter((h) => ctx.ratio(h, hex) >= 4.5).sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex));
-      if (!all.length) throw new Error(`no brand colour reads at 4.5:1 on ${hex}`);
-      rows = all;
+      // no brand colour reads on this one: the nearest colour that does
+      rows = all.length ? all : [ctx.textOn(hex, { prefer: ctx.roles.light.text })];
     }
     return (cache[k] = { ink: rows[0], mid: rows[Math.floor((rows.length - 1) / 2)], quiet: rows[rows.length - 1] });
   };

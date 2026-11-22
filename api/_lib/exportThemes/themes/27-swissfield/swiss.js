@@ -85,8 +85,7 @@ export function model(ctx) {
   const label = {}, tone2On = {}, quietOn = {};
   for (const c of cols) {
     const ink = C.ratio(L.text, c.hex), gr = C.ratio(L.surface, c.hex);
-    const l = ink >= gr ? L.text : L.surface;
-    if (Math.max(ink, gr) < 4.5) throw new Error(`Swiss Field: no label colour reaches 4.5 : 1 on ${c.name} (${c.hex})`);
+    const l = Math.max(ink, gr) >= 4.5 ? (ink >= gr ? L.text : L.surface) : ctx.textOn(c.hex, { prefer: ink >= gr ? L.text : L.surface });
     label[c.id] = l;
     tone2On[c.id] = mixAtLeast(C, l, c.hex, c.hex, 3.1);
     quietOn[c.id] = mixAtLeast(C, l, c.hex, c.hex, 4.6);

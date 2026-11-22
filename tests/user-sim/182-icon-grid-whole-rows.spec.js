@@ -191,11 +191,9 @@ test.describe('the pack name shows on hover only', () => {
       label: el.getAttribute('aria-label'),
       name: el.querySelector('.ic-name')?.textContent.trim(),
       pack: el.querySelector('.ic-pack')?.textContent.trim(),
-      editable: !!el.querySelector('.ic-edit'),
     })))
     expect(cells.length).toBe(65)
-    // An icon whose line style can be edited carries the mark and says so at the end of its name.
-    const labelOf = ({ name, pack, editable }) => `Customise ${name}, ${pack}${editable ? ', line style editable' : ''}`
+    const labelOf = ({ name, pack }) => `Customise ${name}, ${pack}`
     for (const cell of cells) {
       expect(cell.pack, `${cell.name} has a pack name`).toBeTruthy()
       expect(cell.label, `${cell.name}'s accessible name`).toBe(labelOf(cell))

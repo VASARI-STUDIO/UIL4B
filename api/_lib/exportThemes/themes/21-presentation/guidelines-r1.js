@@ -14,7 +14,8 @@ const dispW = (ctx) => ctx.brand.fonts.display.weights[ctx.brand.fonts.display.w
 // width of one line of text in px, from the font file (letter-spacing in em)
 const textW = (ctx, role, weight, text, size, track = 0) => { const o = outline(loadFont(face(ctx, role, weight).stem), text, size, track); return (o.x2 - Math.min(0, o.x1)) * 1.02; };
 // greedy wrap: how many lines a text takes at a size and width
-const lineCount = (ctx, role, weight, text, size, maxW, track = 0) => { let n = 1, cur = ''; for (const w of text.split(' ')) { const t = cur ? `${cur} ${w}` : w; if (cur && textW(ctx, role, weight, t, size, track) > maxW) { n++; cur = w; } else cur = t; } return n; };
+const splitLines = (ctx, role, weight, text, size, maxW, track = 0) => { const out = []; let cur = ''; for (const w of text.split(' ')) { const t = cur ? `${cur} ${w}` : w; if (cur && textW(ctx, role, weight, t, size, track) > maxW) { out.push(cur); cur = w; } else cur = t; } out.push(cur); return out; };
+const lineCount = (ctx, role, weight, text, size, maxW, track = 0) => splitLines(ctx, role, weight, text, size, maxW, track).length;
 // the largest size from hi down to lo at which every text fits in maxLines lines of maxW
 const fitSize = (ctx, role, weight, texts, hi, lo, maxW, maxLines = 1, track = -0.01) => { for (let s = hi; s > lo; s--) if (texts.every((t) => lineCount(ctx, role, weight, t, s, maxW, track) <= maxLines)) return s; return lo; };
 // top of a text box so that its first baseline lands on y
@@ -24,13 +25,13 @@ const topForBaseline = (ctx, role, weight, size, lh, y) => { const f = loadFont(
 const L = (ctx) => ctx.roles.light;
 const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
 const nameOfHex = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
-const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
+const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // chrome rule: the brand's quiet tone that reaches 4.5:1 on the ground; else the best of the text colour, the page ground and the dark soft text
 const chromeOn = (ctx, hex) => {
   const soft = softOnDark(ctx, hex);
   if (soft) return soft;
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
-  return q || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
+  return q || ctx.textOn(hex, { size: 12, prefer: [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0] });
 };
 const px = (n) => +(+n).toFixed(2);
 // the print and screen values under a hex: RGB from the hex; CMYK only when the brand supplies it (c.cmyk as [c, m, y, k] or "c m y k"), never worked out here
@@ -304,18 +305,25 @@ export const r1 = {
     const cs = [lead0, ...rest], onAct = ctx.pairs.filter((p) => p.bgHex === act.hex), fgs = onAct.filter((p) => !p.large).map((p) => nameOfHex(ctx, p.fgHex)), big = onAct.find((p) => p.large);
     const lead = `${cs.length} colours, each named for where it lands. ${act.name} is the one people see us by.${fgs.length ? ` ${fgs[0]} type goes on it${big ? `, and ${nameOfHex(ctx, big.fgHex)} type only from ${big.minSize} px` : ''}.` : ''}`;
     const sentences = [null, V[0].example, V[1].example, V[3 % V.length].example];
-    const leadW = W * 0.4, otherW = (W - leadW) / (cs.length - 1), hlLine = lineMap(ctx).palHead;
+    const leadW = W * 0.4, hlLine = lineMap(ctx).palHead;
+    // up to six colours the others stand as full-height columns; above that they take two rows, the bottom row widening to fill, and drop the voice line
+    const nO = cs.length - 1, rows = nO > 5 ? 2 : 1, perRow = Math.ceil(nO / rows), cellH = 592 / rows;
+    const cell = (j) => { const r = Math.floor(j / perRow), inRow = r < rows - 1 ? perRow : nO - perRow * (rows - 1), w = (W - leadW) / inRow; return { x: leadW + (j - r * perRow) * w, y: 128 + r * cellH, w, h: cellH }; };
+    const otherW = Math.min(...cs.slice(1).map((_, j) => cell(j).w));
     const hl = fitSet(ctx, 'display', dispW(ctx), hlLine, 54, 36, leadW - 80, 2, -0.01), hlSize = hl.size;
-    let x = 0;
+    const dw = dispW(ctx), otherTw = otherW - 48, otherNames = cs.slice(1).map((c) => c.name);
+    const fitName = (names, hi, maxW) => { const one = fitSize(ctx, 'display', dw, names, hi, 17, maxW, 1, 0); return names.every((n) => lineCount(ctx, 'display', dw, n, one, maxW) <= 1) ? one : fitSize(ctx, 'display', dw, names, Math.min(hi, 22), 15, maxW, 2, 0); };
+    const leadSize = fitName([cs[0].name], 40, 400), otherSize = otherNames.length ? fitName(otherNames, 26, otherTw) : 26;
     const fieldsHtml = cs.map((c, i) => {
-      const w = i === 0 ? leadW : otherW, tx = i === 0 ? 56 : x + 24, tw = i === 0 ? 400 : w - 48, ink = inkOn(ctx, c.hex), ch = chromeOn(ctx, c.hex);
-      const nameSize = i === 0 ? 40 : 26, edge = c.role === 'ground' ? 'box-shadow:inset 1px 0 0 ' + L(ctx).divider : '';
-      const html = box(x, 128, w, 592, `background:${c.hex};${edge}`) +
-        (i === 0 ? box(tx, 160, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : box(tx, 160, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${slot ? `The ${A(c.roleText || c.role)} colour.` : A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
-        box(tx, topForBaseline(ctx, 'display', dispW(ctx), nameSize, 1.05, 580), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${A(c.name)}</p>`) +
-        box(tx, 592, tw, 48, `color:${ch}`, `<p class="r-t12">${A(c.lands)}</p>`) + box(tx, 656, tw, 16, `color:${ink}`, `<p class="r-mono num">${A(c.hex)}</p>`) +
-        box(tx, 676, tw, 16, `color:${ch}`, `<p class="r-t12 r-nw num">${values(c)}</p>`);
-      x += w; return html;
+      const g = i === 0 ? { x: 0, y: 128, w: leadW, h: 592 } : cell(i - 1), x = g.x, w = g.w, bot = g.y + g.h;
+      const tx = i === 0 ? 56 : x + 24, tw = i === 0 ? 400 : w - 48, ink = inkOn(ctx, c.hex), ch = chromeOn(ctx, c.hex);
+      const nameSize = i === 0 ? leadSize : otherSize, nameLines = splitLines(ctx, 'display', dw, c.name, nameSize, tw), nLines = nameLines.length, edge = c.role === 'ground' ? 'box-shadow:inset 1px 0 0 ' + L(ctx).divider : '';
+      const html = box(x, g.y, w, g.h, `background:${c.hex};${edge}`) +
+        (i === 0 ? box(tx, g.y + 32, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : rows > 1 ? '' : box(tx, g.y + 32, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${slot ? `The ${A(c.roleText || c.role)} colour.` : A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
+        box(tx, topForBaseline(ctx, 'display', dw, nameSize, 1.05, bot - 140 - (nLines - 1) * nameSize * 1.05), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${lineHtml(nameLines)}</p>`) +
+        box(tx, bot - 128, tw, 48, `color:${ch}`, `<p class="r-t12">${A(c.lands)}</p>`) + box(tx, bot - 64, tw, 16, `color:${ink}`, `<p class="r-mono num">${A(c.hex)}</p>`) +
+        box(tx, bot - 44, tw, 16, `color:${ch}`, `<p class="r-t12 r-nw num">${values(c)}</p>`);
+      return html;
     }).join('');
     return page('palette', '', `${box(56, 72, 760, 48, `color:${L(ctx).textSoft}`, `<p class="r-t15">${lineHtml(wrapLines(ctx, 'body', 400, lead, 15, 760, 0, false))}</p>`)}${fieldsHtml}${head(ctx, 'palette')}`, gr);
   },

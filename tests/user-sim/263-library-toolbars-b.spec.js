@@ -23,6 +23,7 @@
 //   - make the heading `tabindex="0"`: "a heading is not focusable" and the Tab test fail.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
+import { chooseFlags } from './icon-category.js'
 import { ICON_PACK_CREDITS } from '../../src/data/iconPackCredits.js'
 
 const SHOTS = '.claude/scratch/libb1'
@@ -190,30 +191,7 @@ test.describe('Faded cards behind the Pro gate', () => {
 const FLAG_PACKS = ['circle-flags', 'flag', 'flagpack', 'cif']
 
 const openFlagsGroup = async (page) => {
-  const filters = page.getByRole('button', { name: /^Filters\b/ })
-  const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const flags = page.getByRole('button', { name: 'Flags', exact: true })
-  const groupMenu = page.getByRole('button', { name: /^Group\b/ })
-  // The toolbar steps through its layouts (all controls inline, then a Group menu, then
-  // a Filters panel) in the first moments after paint, and on a slow runner the page
-  // can be caught between two of them: the control a one-off look found is gone by the
-  // time it is clicked (CI: "waiting for Group" until the 30 s timeout). So each way in
-  // is looked at and used inside one retried step, the way a person would click again
-  // on the layout in front of them. Once the Flags click has gone through, no later
-  // step may repeat it: a second click on the active group would switch it off.
-  const open = async (loc) => (await loc.isVisible()) && (await loc.getAttribute('aria-expanded')) === 'true'
-  let picked = false
-  await expect(async () => {
-    if (!picked) {
-      if (await filters.isVisible() && !await open(filters)) await filters.click({ timeout: 2000 })
-      if (!await flags.isVisible()) await groupMenu.click({ timeout: 2000 })
-      await flags.click({ timeout: 2000 })
-      picked = true
-    }
-    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click({ timeout: 2000 })
-    else if (await open(filters)) await filters.click({ timeout: 2000 })
-    expect(await sheet.isVisible() || await open(filters), 'the Filters panel is closed again').toBe(false)
-  }, { message: 'Flags chosen from whichever layout the toolbar settled on' }).toPass({ timeout: 25_000 })
+  await chooseFlags(page)
   const listed = async () => Number(((await page.locator('#ig-result-count').textContent()) || '').replace(/\D/g, ''))
   await expect.poll(listed, { timeout: 20_000, message: 'the Flags group replaced the full listing' }).toBeLessThan(1000)
   await expect(page.locator('.ig .ig-pack-head').first()).toBeVisible({ timeout: 20_000 })

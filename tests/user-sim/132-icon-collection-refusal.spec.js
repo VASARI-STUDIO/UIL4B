@@ -18,6 +18,7 @@
 //   - drop the setSoftNotice('partial') in browseGroup -> the third test.
 import { test, expect } from './base.js'
 import { go, signIn, watch, chooseMenuOption } from './helpers.js'
+import { chooseFlags } from './icon-category.js'
 import { isLiveIconify, refuseIconifyCollections, withholdSnapshots } from './iconify-stub.js'
 
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
@@ -78,11 +79,7 @@ test('a group with three of its four listings refused shows what loaded and says
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
 
-  const flags = page.getByRole('button', { name: 'Flags', exact: true })
-  const groupMenu = page.getByRole('button', { name: /^Group\b/ })
-  await expect(flags.or(groupMenu).first()).toBeVisible()
-  if (!await flags.isVisible()) await groupMenu.click()
-  await flags.click()
+  await chooseFlags(page)
 
   const quiet = page.getByRole('status').filter({ hasText: /Some icon sets couldn.t load/ })
   await expect(quiet).toBeVisible({ timeout: 15_000 })
@@ -110,16 +107,12 @@ test('with /collection refused, a picked pack and a group still list in full fro
   await expect.poll(() => page.locator('.ig .ic :is(img, svg.ig-sym)').count(), { timeout: 20_000, message: 'every cell of the list is drawn' }).toBe(18)
   await expect(page.locator('.ig-notice')).toHaveCount(0)
 
-  // A group chip with a pack picked only narrows that pack (tabler has no flags, so nothing would move), so
+  // A Coloured type with a pack picked only narrows that pack (tabler has no flags, so nothing would move), so
   // go back to every pack before asking for the group.
   const listed = async () => Number((await page.locator('#ig-result-count').textContent()).replace(/\D/g, ''))
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'all')
   await expect.poll(listed, { timeout: 20_000, message: 'every pack is listed again' }).toBeGreaterThan(1000)
-  const flags = page.getByRole('button', { name: 'Flags', exact: true })
-  const groupMenu = page.getByRole('button', { name: /^Group\b/ })
-  await expect(flags.or(groupMenu).first()).toBeVisible()
-  if (!await flags.isVisible()) await groupMenu.click()
-  await flags.click()
+  await chooseFlags(page)
   // The "All packs" list is still on screen until the four flag lists land, so wait for the figure to drop.
   await expect.poll(listed, { timeout: 20_000, message: 'the Flags group replaced the full listing' }).toBeLessThan(1000)
   expect(await listed(), 'the group lists more than the one pack picked before it').toBeGreaterThan(18)

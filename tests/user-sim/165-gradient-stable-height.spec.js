@@ -601,7 +601,8 @@ test.describe('the stop list is a fixed window', () => {
         })
         expect(edges.topW).toBe('1px')
         expect(edges.top, 'the top edge shows a line').not.toBe('rgba(0, 0, 0, 0)')
-        expect(edges.bottom, 'the bottom edge is clear').toBe('rgba(0, 0, 0, 0)')
+        // The bottom line fades out over the test-mode transition once is-below drops.
+        await expect.poll(() => page.locator('.grd-stops').evaluate((el) => getComputedStyle(el).borderBottomColor), { message: 'the bottom edge is clear' }).toBe('rgba(0, 0, 0, 0)')
       })
 
       test('a stop picked on the rail is scrolled into the window, and the page stays where it was', async ({ page }) => {

@@ -3,7 +3,7 @@
 // MUTATIONS (each turns the named test red):
 //   - drop `|| !holding` from browseAll's reveal             -> 'a late reveal cannot empty the built-in grid'
 //   - have recentIsFilled return `!!entry.filled` only        -> 'a recent outline glyph is never filled'
-//   - drop the logodev line from handleGroupToggle             -> 'a collection chip leaves the Logo.dev pack'
+//   - drop the allowed.includes(pack) test from handleCategory -> 'a category leaves the Logo.dev pack'
 //   - drop the fitsUrl check from fetchSvgText                 -> 'an answer that is not SVG is not cached'
 //   - drop evictSvgText from the retry or the sanitiser branch -> 'Try again on the stage evicts what is held'
 import test from 'node:test'
@@ -52,12 +52,17 @@ test('a late reveal cannot empty the built-in grid', () => {
   assert.match(settle, /renderLocal\('', ''\)/)
 })
 
-test('a collection chip leaves the Logo.dev pack, which belongs to no collection', () => {
-  const toggle = between('const handleGroupToggle = (key) => {', 'const handleIconClick')
-  assert.match(toggle, /nextGroup && pack === 'logodev' \? '' : pack/)
-  assert.match(toggle, /setPack\(scopePack\)/)
-  assert.match(toggle, /doSearch\(query, \{ pack: scopePack, group: nextGroup \}\)/)
-  assert.match(toggle, /browsePack\(scopePack, nextGroup, 'chip'\)/)
+test('a category leaves the Logo.dev pack, which belongs to no category', () => {
+  // The scope keeps the current pack only when the new category can hold it; Logo.dev is in no category's pack list.
+  const category = between('const handleCategory = (next) => {', 'const handleFacet')
+  assert.match(category, /const allowed = categoryPacks\(next\)/)
+  assert.match(category, /pack && pack !== 'custom' && \(!allowed \|\| allowed\.includes\(pack\)\) \? pack : ''/)
+  assert.match(category, /setPack\(nextPack\)/)
+  assert.match(category, /runScope\(nextPack, nextGroup\)/)
+  const groups = between('const ICON_GROUPS = {', 'const CATEGORY_LABELS')
+  assert.ok(!/logodev/.test(groups.replace(/\/\/[^\n]*/g, '')), 'no category lists logodev, so any category drops that pack')
+  // POSITIVE CONTROL: the groups text does name real packs, so the check above can see a pack if one were added.
+  assert.match(groups, /'circle-flags'/)
 })
 
 test('an answer that is not SVG is not cached', () => {

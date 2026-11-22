@@ -9,7 +9,7 @@ const sameHex = (a, b) => a.toLowerCase() === b.toLowerCase();
 const hexName = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) => sameHex(c.hex, hex))?.name || hex;
 // the brand colour that plays a role, else the nth colour
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
-const isGround = (ctx, hex) => sameHex(hex, ctx.roles.light.surface);
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 // text colour for a field: the brand's own listed pair for that ground, else whichever of text and surface reads better
 const inkFor = (ctx, hex) => {
   const p = ctx.pairs.find((x) => sameHex(x.bgHex, hex) && !x.large);
@@ -194,7 +194,7 @@ ${dim('a-dim--v', `left:50%;top:0;height:${r(X)}px`)}${dim('a-dim--v', `left:50%
     const sq = (hex) => `<i class="a-sq ${isGround(ctx, hex) ? 'hairline' : ''}" style="background:${hex}"></i>`;
     const head = `<div class="a-mrow a-mhead"><span>Colour</span><span>HEX</span><span>RGB</span><span>OKLCH</span><span>Use</span></div>`;
     const strip = (c) => c.rampBase === 50
-      ? `<div class="a-mnote">The ground. No tints.</div>`
+      ? `<div class="a-mnote">${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</div>`
       : `<div class="a-mramp">${steps.map((k) => `<div class="a-mstep ${+k === c.rampBase ? 'a-mstep--base' : ''}"><em class="num">${k}</em><i class="a-chip ${isGround(ctx, c.ramp[k]) ? 'hairline' : ''}" style="background:${c.ramp[k]}"></i><span class="a-mono num">${A(c.ramp[k])}</span></div>`).join('')}</div>`;
     const row = (c) => `<div class="a-mblock"><div class="a-mrow"><span class="a-vname">${sq(c.hex)}<b>${A(c.name)}</b></span><span class="a-mono">${A(c.hex)}</span><span class="a-mono">${A(c.rgb.replace(/R(\d+) G(\d+) B(\d+)/, 'R $1 G $2 B $3'))}</span><span class="a-mono">${A(c.oklch)}</span><span class="a-muse">${A(c.lands)}</span></div>${strip(c)}</div>`;
     const tones = ctx.tones.map((t) => `<li>${sq(t.hex)}<b>${A(t.name)}</b><span class="a-mono">${A(t.hex)}</span></li>`).join('');

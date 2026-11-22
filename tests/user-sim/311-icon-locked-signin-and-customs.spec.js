@@ -42,10 +42,10 @@ test.describe('(a) a Pro pack for a signed-out visitor', () => {
     await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
 
     // A Pro pack: the wall says it is Pro, its primary button is Log in, its second link is the plans.
-    await chooseMenuOption(page, page.locator('.lbry-select'), 'simple-icons')
+    await chooseMenuOption(page, page.locator('.lbry-select:not(.lbry-sort)'), 'simple-icons')
     const wall = page.locator('.ig-gate')
     await expect(wall).toBeVisible()
-    await expect(wall).toContainText('Simple Icons is a Pro pack')
+    await expect(wall).toContainText('Simple Icons is Pro')
     await expect(wall.getByRole('link', { name: 'See Pro plans' })).toHaveAttribute('href', '/plans')
     await expect(wall.getByRole('link', { name: 'See what Pro includes' }), 'no straight-to-plans primary').toHaveCount(0)
 
@@ -63,7 +63,7 @@ test.describe('(a) a Pro pack for a signed-out visitor', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, ROUTE)
     await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
-    await chooseMenuOption(page, page.locator('.lbry-select'), 'solar')
+    await chooseMenuOption(page, page.locator('.lbry-select:not(.lbry-sort)'), 'solar')
     const wall = page.locator('.ig-gate')
     await expect(wall).toContainText('needs a free account')
     await expect(wall.getByRole('link', { name: 'See Pro plans' }), 'the free wall has no plans link').toHaveCount(0)

@@ -4,10 +4,10 @@
 // derivePreviewRoles (colors.js) picks its primary and accent by chroma, so a
 // palette whose PRIMARY slot is a deep navy still got its orange SUBTLE slot on
 // every button. The CSS export writes the five slots by position, so this
-// module paints the same five by position and then adds what an export does not
-// carry: a neutral ramp and success, warning, error and info colours, all
-// derived from the palette's own hue and lightness band and labelled
-// "Suggested" wherever they are shown.
+// module paints the same five by position and then adds a neutral ramp and
+// success, warning, error and info colours, all derived from the palette's own
+// hue and lightness band. paletteCss() writes those derived roles into
+// the CSS export too, for light and dark.
 //
 // Pure and DOM-free. Never throws: junk input falls back to the engine's brand
 // blue the same way derivePreviewRoles does.
@@ -371,4 +371,53 @@ export function pairRoles(fg, bg) {
     fails: [],
     inkGrounds: [bg],
   }
+}
+
+// The derived roles as CSS custom properties, in the export's naming. Light
+// goes on :root beside the brand slots; dark goes in a prefers-color-scheme
+// block. An empty palette derives nothing worth exporting, so it writes none.
+const NEUTRAL_VARS = [
+  ['canvas', 'canvas'], ['surface', 'surface'], ['surface-2', 'raised'],
+  ['border', 'border'], ['border-strong', 'borderStrong'],
+  ['text', 'text'], ['text-muted', 'muted'], ['text-disabled', 'disabled'],
+]
+
+export function derivedCssVars(colors, mode = 'light') {
+  const r = derivePaletteRoles(colors, { mode })
+  if (r.empty) return []
+  const vars = NEUTRAL_VARS.map(([name, key]) => [`--color-${name}`, r[key]])
+  for (const role of SEMANTIC_ROLES) {
+    vars.push([`--color-${role}`, r[role].fill])
+    vars.push([`--color-${role}-ink`, r[role].ink])
+    vars.push([`--color-${role}-tint`, r[role].tint])
+  }
+  return vars
+}
+
+/**
+ * The palette's CSS export: the slot lines the caller names, then the derived
+ * neutrals and status colours for light on :root and for dark in a
+ * prefers-color-scheme block.
+ * @param {string[]} slotLines e.g. ['  --color-primary: #123456;']
+ * @param {string[]} colors the palette, in slot order
+ */
+export function paletteCss(slotLines, colors) {
+  const light = derivedCssVars(colors, 'light')
+  if (!light.length) return [':root {', ...slotLines, '}'].join('\n')
+  const dark = derivedCssVars(colors, 'dark')
+  const body = (vars, pad) => vars.map(([k, v]) => `${pad}${k}: ${v};`).join('\n')
+  return [
+    ':root {',
+    ...slotLines,
+    '',
+    '  /* Derived from your palette: neutrals and status colours */',
+    body(light, '  '),
+    '}',
+    '',
+    '@media (prefers-color-scheme: dark) {',
+    '  :root {',
+    body(dark, '    '),
+    '  }',
+    '}',
+  ].join('\n')
 }

@@ -28,14 +28,14 @@ test('the ring draws the colour band\'s chromatic hues, in order, closed', () =>
 test('nothing loops: the old spin is gone and the ring turns once', () => {
   assert.doesNotMatch(css, /chroma-spin/, 'the infinite chroma-spin is still declared or used')
   assert.doesNotMatch(css, /::before\{[^}]*animation:[^}]*infinite/, 'a ring rule still loops')
-  assert.match(css, /::before\{opacity:\.92;--chroma-w:1\.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier\(\.25,1,\.5,1\),--chroma-w 360ms cubic-bezier\(\.25,1,\.5,1\),--chroma-angle 560ms cubic-bezier\(\.45,\.05,\.3,1\)\}/,
-    'keyboard focus no longer fades in, thickens and turns once')
+  assert.match(css, /:hover:not\(:disabled\):not\(\[aria-disabled="true"\]\)::before\{opacity:\.92;--chroma-w:1\.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier\(\.25,1,\.5,1\) 40ms,--chroma-w 360ms cubic-bezier\(\.25,1,\.5,1\) 40ms,--chroma-angle 560ms cubic-bezier\(\.45,\.05,\.3,1\) 40ms\}/,
+    'hover no longer fades in, thickens and turns once')
   assert.match(css, /@property --chroma-w\{syntax:'<length>';inherits:false;initial-value:\.5px\}/, 'the ring does not start at .5px')
   // Leaving: the width and angle reset only after the 280ms fade-out.
   assert.match(css, /opacity 280ms cubic-bezier\(\.25,1,\.5,1\),--chroma-w 0s linear 280ms,--chroma-angle 0s linear 280ms/)
 })
 
-test('hover shows the ring only where the pointer can hover; focus shows it everywhere', () => {
+test('hover shows the ring only where the pointer can hover; focus wears only the ink outline', () => {
   const hoverRules = [...css.matchAll(/([^{}]*):hover[^{}]*::before\{[^}]*--chroma-w:1\.5px[^}]*\}/g)]
   assert.ok(hoverRules.length >= 1, 'no hover rule thickens the ring')
   for (const m of hoverRules) {
@@ -48,7 +48,8 @@ test('hover shows the ring only where the pointer can hover; focus shows it ever
     // The 40ms intent delay on all three properties.
     assert.equal((m[0].match(/ 40ms/g) || []).length, 3, 'hover does not wait 40ms on opacity, width and angle')
   }
-  assert.match(css, /\):focus-visible::before\{opacity:\.92;/, 'keyboard focus no longer shows the ring')
+  // One focus indicator: keyboard focus is the global ink outline, never the conic ring as well.
+  assert.doesNotMatch(css, /:focus-visible[^{},]*::before\{[^}]*opacity:/, 'keyboard focus shows the chromatic ring on top of the outline')
   assert.match(css, /@media \(hover:none\)\{[^@]*:active[^@]*::before\{opacity:\.92;[^}]*transition:none\}/, 'touch has no press flash')
 })
 

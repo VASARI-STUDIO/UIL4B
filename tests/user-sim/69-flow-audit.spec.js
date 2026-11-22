@@ -564,7 +564,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
       // dialog), and a second file is one click on Export another file.
       await expect(cta, `${fmt.name}: the button finishes with Done`).toHaveText('Done')
       await expect(panel.getByRole('button', { name: 'Export another file' }), `${fmt.name}: and offers another go`).toBeVisible()
-      await expect(panel.locator('.xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
+      await expect(panel.locator('.xd-dock .xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
       await page.keyboard.press('Escape')
       await expect(panel).toHaveCount(0)
     }

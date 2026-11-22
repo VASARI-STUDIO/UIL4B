@@ -10,7 +10,7 @@ const sentences = (s) => s.split(/(?<=\.)\s+/);
 const lc = (s) => s.toLowerCase();
 const hexName = (ctx, hex) => ctx.colours.find((c) => lc(c.hex) === lc(hex))?.name || hex;
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
-const isGround = (ctx, hex) => lc(hex) === lc(ctx.roles.light.surface);
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const list = (a) => (a.length > 1 ? `${a.slice(0, -1).join(', ')} and ${a.at(-1)}` : a[0] || '');
 const wordCount = (s) => s.trim().split(/\s+/).length;
 
@@ -264,7 +264,7 @@ ${insp}
     // the inspector: a dev-tools pane. One row per colour (caret, swatch, name, token, HEX, RGB, OKLCH); a colour with a ramp is expanded to its stepped scale bar.
     const head = (c, open, tokens) => `<div class="a-irow">${CARET(open)}<i class="a-sw ${isGround(ctx, c.hex) ? 'a-hair' : ''}" style="background:${c.hex}"></i><b>${A(c.name)}</b><span class="a-itk">${tokens}</span><code class="a-mono">${A(c.hex)}</code>${c.rgb ? `<code class="a-mono">${A(c.rgb.replace(/R(\d+) G(\d+) B(\d+)/, 'R $1 G $2 B $3'))}</code><code class="a-mono">${A(c.oklch)}</code>` : ''}</div>`;
     const scale = (c) => `<div class="a-scale">${steps.map((k) => `<div class="${+k === c.rampBase ? 'a-base' : ''}"><i class="${lc(c.ramp[k]) === surface ? 'a-hair' : ''}" style="background:${c.ramp[k]}"></i><span>${k}</span></div>`).join('')}</div>`;
-    const row = (c) => `<div class="a-ic">${head(c, c.rampBase !== 50, `<code class="a-mono">--palette-${A(c.id)}</code>`)}${c.rampBase === 50 ? `<p class="a-rampnote">The ground. No tints.</p>` : scale(c)}</div>`;
+    const row = (c) => `<div class="a-ic">${head(c, c.rampBase !== 50, `<code class="a-mono">--palette-${A(c.id)}</code>`)}${c.rampBase === 50 ? `<p class="a-rampnote">${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</p>` : scale(c)}</div>`;
     const tone = (t) => `<div class="a-irow a-irow--t">${CARET(false)}<i class="a-sw ${isGround(ctx, t.hex) ? 'a-hair' : ''}" style="background:${t.hex}"></i><b>${A(t.name)}</b><span class="a-itk"><code class="a-mono">${A(tokenOf(ctx, t.hex))}</code></span><code class="a-mono">${A(t.hex)}</code></div>`;
     const cols = `<div class="a-icols"><span></span><span></span><span>Colour</span><span>Token</span><span>HEX</span><span>RGB</span><span>OKLCH</span></div>`;
     const inner = `<div class="a-panel a-insp">${cols}${ctx.colours.map(row).join('')}<div class="a-ic a-ic--t"><h3 class="h3">Tones</h3>${ctx.tones.map(tone).join('')}</div></div>

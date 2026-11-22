@@ -20,10 +20,24 @@ const REAL_CELL = '.ig .ic:not(.ig-skel)'
 const cellNames = (page) => page.evaluate((sel) =>
   [...document.querySelectorAll(sel)].map((c) => c.getAttribute('aria-label').replace(/^Customise /, '').replace(/, [^,]+$/, '')), REAL_CELL)
 
+/** Bring a control into view: if the toolbar has folded it into the Filters panel, open the panel (waits for the toolbar to settle). */
+async function reveal(page, target) {
+  await expect(page.locator('.ig-toolbar')).toBeVisible({ timeout: 20000 })
+  await page.evaluate(() => document.fonts.ready)
+  // The toolbar re-measures as the grid and fonts land; a panel opened mid-measure is closed again, so wait for a steady stage.
+  const stage = () => page.locator('.ig-toolbar').getAttribute('data-stage')
+  let seen = await stage()
+  await expect.poll(async () => { await page.waitForTimeout(400); const now = await stage(); const steady = now === seen; seen = now; return steady }, { timeout: 15000 }).toBe(true)
+  if (await target.isVisible()) return
+  const filters = page.getByRole('button', { name: /^Filters\b/ })
+  if (await filters.isVisible() && await filters.getAttribute('aria-expanded') !== 'true') await filters.click()
+  await expect(target).toBeVisible({ timeout: 20000 })
+}
+
 test.describe('the icon weight segment', () => {
   for (const width of [390, 768, 1440]) {
-    test(`Flags shows its single style as text and restores the stored weight at ${width}px`, async ({ page }) => {
-      watch(page, 'someone browsing Flags then returning to their chosen weight')
+    test(`Coloured swaps the weight bar for its type bar and All restores the stored weight at ${width}px`, async ({ page }) => {
+      watch(page, 'someone browsing Coloured icons then returning to their chosen weight')
       await page.setViewportSize({ width, height: 900 })
       await signIn(page, { plan: 'pro' })
       await go(page, '/create/icons')
@@ -39,58 +53,56 @@ test.describe('the icon weight segment', () => {
         if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
         else if (inPanel && await filters.getAttribute('aria-expanded') === 'true') await filters.click()
       }
-      if (width !== 390) await showFilters()
-      const seg = page.locator('.ig-weight')
-      await seg.getByRole('button', { name: /^Bold/ }).click()
-      await expect(seg.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
-      const trackWidth = (await seg.boundingBox()).width
-      // The reason's live region is already in place, empty, so it is announced
-      // when a group change fills it.
-      await expect(seg.getByRole('status')).toHaveText('')
+      // The style bar and the category control sit in the Filters panel when the row folds.
+      const weights = page.getByRole('group', { name: 'Icon weight' })
+      await reveal(page, weights)
+      await weights.getByRole('button', { name: /^Bold/ }).click()
+      await expect(weights.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
+      const trackWidth = (await weights.boundingBox()).width
+      // The reason's live region is already in place, empty, so it is announced when a hint fills it.
+      await expect(weights.getByRole('status')).toHaveText('')
 
-      await showFilters()
-      const flags = page.getByRole('button', { name: 'Flags', exact: true })
-      if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
-      await flags.click()
-      await expect(seg.locator('.ig-weight-btn')).toHaveCount(0)
-      const status = seg.getByRole('status')
-      await expect(status).toHaveText('These icons come in one style')
-      await expect(status).toHaveAttribute('title', 'These icons come in one style')
-      expect((await seg.boundingBox()).width).toBeCloseTo(trackWidth, 0)
-      // Plain text, not a control: no pill ground behind it, normal weight, and
-      // it starts where the first segment's label starts.
-      await expect(seg).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-      await expect(status).toHaveCSS('font-weight', '400')
-      await expect(status).toHaveCSS('text-align', 'left')
-      await expect(status).not.toHaveAttribute('tabindex', /.*/)
+      // MUTATION: render the Icon weight options in every category -> no 'Coloured icon type' group.
+      const category = page.getByRole('group', { name: 'Icon category' }).first()
+      await reveal(page, category)
+      await category.getByRole('button', { name: /^Coloured/ }).click()
+      const types = page.getByRole('group', { name: 'Coloured icon type' })
+      await expect(types).toBeVisible()
+      await expect(page.getByRole('group', { name: 'Icon weight' })).toHaveCount(0)
+      await expect(types.locator('.ig-weight-btn')).toHaveText(['Brands', 'Flags', 'Flat'])
+      // None pressed until one is chosen, and the track is the width of the weight bar's, so nothing beside it moves.
+      await expect(types.locator('.ig-weight-btn[aria-pressed="true"]')).toHaveCount(0)
+      expect((await types.boundingBox()).width).toBeCloseTo(trackWidth, 0)
+      await expect(types.getByRole('status')).toHaveText('')
+      // A control, not plain text: the track keeps its pill ground.
+      await expect(types).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await types.getByRole('button', { name: 'Flags', exact: true }).click()
+      await expect(types.getByRole('button', { name: 'Flags', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await hideFilters()
       await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
 
       if (inPanel) {
+        // The panel takes focus when it opens, and no segment shows a focus ring it did not earn.
         await showFilters()
-        const panel = page.locator(width === 390 ? '.lbry-sheet' : '.lbry-filterpop-panel')
+        const panel = sheet.or(page.locator('.lbry-filterpop-panel')).first()
         await expect(panel).toBeFocused()
         await expect(page.locator('.ig-weight-btn:focus')).toHaveCount(0)
         await expect(panel).toHaveCSS('outline-style', 'none')
-        await expect(status).toBeVisible()
         await hideFilters()
-        await filters.focus()
-        await filters.press('Enter')
-        const firstControl = panel.locator('button:not([disabled]):not([aria-disabled="true"])').first()
-        await expect(firstControl).toBeFocused()
       }
 
-      if (!await flags.isVisible()) await page.getByRole('button', { name: /^Group\b/ }).click()
-      await expect(flags).toHaveAttribute('aria-pressed', 'true')
-      await flags.click()
-      await expect(seg.locator('.ig-weight-btn')).toHaveCount(4)
-      await expect(seg.getByRole('status')).toHaveText('')
-      await expect(seg.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
+      // MUTATION: reset weightRef when the category changes -> Bold is not pressed again here.
+      await reveal(page, category)
+      await category.getByRole('button', { name: /^All/ }).click()
+      await expect(weights.locator('.ig-weight-btn')).toHaveCount(4)
+      await expect(weights.getByRole('status')).toHaveText('')
+      await expect(weights.getByRole('button', { name: /^Bold/ })).toHaveAttribute('aria-pressed', 'true')
       await hideFilters()
       await expect.poll(async () => (await cellNames(page)).length, { timeout: 15000 }).toBeGreaterThan(0)
       await expect.poll(async () => (await cellNames(page)).filter((n) => !/-bold$/.test(n)), { timeout: 15000 }).toEqual([])
     })
   }
+
 
   test('Bold, Fill and Duo each show only the glyphs a pack drew at that weight', async ({ page }) => {
     watch(page, 'someone switching the icon library to Bold')
@@ -98,6 +110,7 @@ test.describe('the icon weight segment', () => {
     await go(page, '/create/icons')
     await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
     const seg = page.getByRole('group', { name: 'Icon weight' })
+    await reveal(page, seg)
     await expect(seg.getByRole('button', { name: 'Regular', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
     const regular = await cellNames(page)
@@ -119,8 +132,11 @@ test.describe('the icon weight segment', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/icons')
     await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
+    const packMenu = page.getByRole('button', { name: 'Icon pack' })
+    await reveal(page, packMenu)
+    await chooseMenuOption(page, packMenu, 'lucide')
     const seg = page.getByRole('group', { name: 'Icon weight' })
+    await reveal(page, seg)
     const bold = seg.getByRole('button', { name: /^Bold/ })
     await expect(bold).toHaveAttribute('aria-disabled', 'true')
     await expect(bold).toHaveAttribute('aria-pressed', 'false')

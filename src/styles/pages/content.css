@@ -236,7 +236,7 @@
    Every control here carries its radius at rest, so the ring is the right
    shape for free. */
 .cpg :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ink);
   outline-offset: 3px;
 }
 

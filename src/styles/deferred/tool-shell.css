@@ -81,11 +81,11 @@
    three are the shared Library language now (.lbry-filters / .lbry-empty).
    This page ran outlined pills for category beside a filled segment for sort —
    the same two-idioms-in-one-row fault the Gradient Library had. */
-.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .fg-more-btn:disabled{opacity:.5;cursor:not-allowed}
 .fg-compare{position:relative;width:100%;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);animation:fg-rise var(--dur-3) var(--ease-entrance)}
-.fg-compare:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-compare:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
+.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* Close button and label shared by the Compare dialog and the AI prompt page. */
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
@@ -115,8 +115,7 @@
 .aipg-scanned{margin-top:12px;padding:12px;background:var(--bg-1);border-radius:var(--radius);border:1px solid var(--border)}
 .aipg-field{display:flex;flex-direction:column;gap:6px}
 .aipg-field label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
-.aipg-field textarea{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--t0);font-family:var(--font);font-size:14px;line-height:1.5;outline:none;resize:vertical;transition:border-color var(--t),box-shadow var(--t)}
-.aipg-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.aipg-field textarea{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--t0);font-family:var(--font);font-size:14px;line-height:1.5;resize:vertical;transition:border-color var(--t),box-shadow var(--t)}
 .aipg-options{display:flex;flex-wrap:wrap;gap:18px}
 .aipg-option-group{display:flex;flex-direction:column;gap:6px}
 .aipg-option-label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
@@ -138,8 +137,7 @@
 .aipg-mode-btn svg{flex-shrink:0}
 .aipg-builder{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
 .aipg-builder-main{min-width:0}
-.aipg-field input{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;color:var(--t0);font-family:var(--font);font-size:14px;outline:none;transition:border-color var(--t),box-shadow var(--t)}
-.aipg-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.aipg-field input{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;color:var(--t0);font-family:var(--font);font-size:14px;transition:border-color var(--t),box-shadow var(--t)}
 
 /* Presets */
 .aipg-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
@@ -484,7 +482,7 @@
 .bkit-card-title{margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:normal;color:var(--t0)}
 .bkit-card-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;margin:-6px -6px 0 0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease,cubic-bezier(.23,1,.32,1))}
 .bkit-card-close:active{transform:scale(.97)}
-.bkit-card-close:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.bkit-card-close:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 @media(hover:hover){
   .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 }
@@ -507,14 +505,13 @@
 .bkit-card-go{width:100%;height:44px;margin-top:var(--s-4);padding:0 var(--s-4);justify-content:center;font-size:15px;font-weight:560}
 /* Straight after the one sentence the body's own margin is the gap. */
 .bkit-card-body + .bkit-card-go{margin-top:0}
-.bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* The closing step: a name field in the same panel. */
 .bkit-name-form{display:flex;flex-direction:column;gap:var(--s-2)}
 .bkit-name-label{font-size:var(--fs-caption);font-weight:540;line-height:1.2;color:var(--t1)}
 .bkit-name-row{display:flex;flex-direction:column;gap:var(--s-2)}
-.bkit-name-input{box-sizing:border-box;min-width:0;width:100%;height:48px;padding:0 var(--s-3);font-family:var(--font);font-size:16px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);outline:none;transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
-.bkit-name-input:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.bkit-name-input{box-sizing:border-box;min-width:0;width:100%;height:48px;padding:0 var(--s-3);font-family:var(--font);font-size:16px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .bkit-name-input[aria-invalid="true"]{border-color:var(--err-strong)}
 .bkit-name-input[aria-invalid="true"]:focus-visible{border-color:var(--err-strong);box-shadow:0 0 0 3px color-mix(in srgb,var(--err-strong) 18%,transparent)}
 .bkit-name-save{width:100%;height:44px;padding:0 var(--s-4);justify-content:center;white-space:nowrap;font-size:15px;font-weight:560}
@@ -657,7 +654,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
    swatch (Palette Builder, the home workbench): the swatch colour is chosen by
    the user, so no single outline colour can be guaranteed to clear 3:1 against
    it — a white inner and a near-black outer means one of the two always does. */
-.snapv input[type="range"]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.snapv input[type="range"]:focus-visible{outline:2px solid var(--focus-ink);outline-offset:3px}
 .snapv--grad input[type="range"]:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 .snapv-value:disabled{cursor:not-allowed;opacity:.6}
 .snapv-input::-webkit-outer-spin-button,.snapv-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -705,9 +702,8 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 /* Focus: a ring outside the track so it never competes with the gradient, plus
    an accent ring on the thumb itself sitting OUTSIDE the near-black ring, so
    which handle has focus stays readable over any track colour. */
-.snapv--grad input[type="range"]:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-.snapv--grad input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
-.snapv--grad input[type="range"]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
+.snapv--grad input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--focus-ink),0 1px 3px rgba(0,0,0,.45)}
+.snapv--grad input[type="range"]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--focus-ink),0 1px 3px rgba(0,0,0,.45)}
 .snapv--grad input[type="range"]:disabled{opacity:.5;cursor:not-allowed}
 .plb-pop-x{display:flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:all var(--t)}
 .plb-pop-x:hover{color:var(--t0);background:var(--bg-2)}
@@ -752,7 +748,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uname--bold .uname-text{font-weight:700;letter-spacing:-.01em}
 .uname-owner{position:relative;display:inline-flex;align-items:center;gap:4px;min-width:0;border-radius:var(--radius-s);outline:none}
-.uname-owner:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.uname-owner:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .uname-crown{font-size:.85em;line-height:1;filter:saturate(1.1)}
 /* Owner tooltip — hidden until the name is hovered or keyboard-focused. */
 .uname-tip{position:absolute;bottom:calc(100% + 7px);left:0;z-index:60;padding:4px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-1);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;white-space:nowrap;box-shadow:var(--shadow-m);opacity:0;transform:translateY(3px);pointer-events:none;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
@@ -1166,8 +1162,48 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    has, instead of the ring's own declaration changing the shape to match
    itself. */
 .fdx-panel{border-radius:var(--radius-s)}
-.fdx-panel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
+.fdx-panel:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
+/* The slab's light is the footer's horizon (pages/home-footer.css,
+   .sp-footer--home .sp-footer-horizon), so the gallery headers and the footer
+   read as one brand: the same six hues in one oklch gradient, faded by the
+   same eased mask (--horizon-fade, global.css). The stops start at 34% and
+   the mask is centred right of the title, so the light rises from the slab's
+   bottom edge and the h1 sits on the dark ground. Nothing is blurred and
+   nothing moves; inset:0 keeps the light inside the slab's own box.
+   The blurb is lifted from .68 to .8 white (global.css, .dgh-hero p) because
+   at 901-1100px its last line runs over the amber stop: measured 3.96:1 at
+   .68, 4.5:1 is needed. */
+.dgh-hero{isolation:isolate}
+.dgh-hero::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  opacity:.5;
+  background:linear-gradient(90deg,#EC6A51 34%,#F0B94D 58%,#A2BC81 68%,#59B193 77%,#6CA0C6 87%,#9B84C2 100%);
+  background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 34%,oklch(.817 .138 82) 58%,oklch(.76 .085 128) 68%,oklch(.696 .097 169) 77%,oklch(.685 .079 240) 87%,oklch(.658 .094 301) 100%);
+  -webkit-mask-image:radial-gradient(60% 150% at 64% 100%,var(--horizon-fade));
+  mask-image:radial-gradient(60% 150% at 64% 100%,var(--horizon-fade));
+}
+/* 641-900px: the slab is shorter relative to its width and the library
+   controls sit over the light's right half, so the light is lower and fainter. */
+@media(min-width:641px) and (max-width:900px){
+  .dgh-hero::before{
+    opacity:.42;
+    -webkit-mask-image:radial-gradient(70% 120% at 66% 100%,var(--horizon-fade));
+    mask-image:radial-gradient(70% 120% at 66% 100%,var(--horizon-fade));
+  }
+}
+/* A phone slab is tall and narrow: the footer's phone opacity (.54) and a
+   mask that climbs higher, so the light reads as the horizon rather than a
+   strip along the bottom edge. The blue and violet stops sit 8 points left of
+   the footer's so they land under the copy, not in the slab's corner. */
+@media(max-width:640px){
+  .dgh-hero::before{
+    opacity:.54;
+    background:linear-gradient(90deg,#EC6A51 10%,#F0B94D 28%,#A2BC81 42%,#59B193 54%,#6CA0C6 62%,#9B84C2 72%);
+    background:linear-gradient(90deg in oklch,oklch(.678 .166 33) 10%,oklch(.817 .138 82) 28%,oklch(.76 .085 128) 42%,oklch(.696 .097 169) 54%,oklch(.685 .079 240) 62%,oklch(.658 .094 301) 72%);
+    -webkit-mask-image:radial-gradient(100% 90% at 72% 100%,var(--horizon-fade));
+    mask-image:radial-gradient(100% 90% at 72% 100%,var(--horizon-fade));
+  }
+}
 .dgh-copy{position:relative;z-index:1;min-width:0}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
    Restated here because the hero is a fixed dark surface in BOTH themes, so the
@@ -1212,13 +1248,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
      hole; the dark slab, the radius and the padding are what carry it, and they
      are the same at every width. Measured after: /discover/palettes is 92px at
      320 and 227px at 1440 - the box now
-     varies because its contents do.
-     NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
-     reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling
-     with the viewport. That is ::before, whose `inset:auto -10% -65% 42%` puts
-     the glow 10% past the right edge ON PURPOSE, where `overflow:hidden` on the
-     same element clips it. Suppress ::before and the figure is exactly 0 at
-     every width; the document itself never scrolls horizontally. */
+     varies because its contents do. */
   .dgh-hero{grid-template-columns:1fr;border-radius:20px}
 }
 @media(max-width:480px){
@@ -1261,7 +1291,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    things floating beside it. It clears the WCAG 2.5.8 44px floor on its own,
    which the 38px tray option only does inside the `pointer:coarse` block. */
 .lbry-filterpop{position:relative;display:flex;flex-shrink:0}
-.lbry-filtertrig:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-filtertrig:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 .lbry-filtertrig[aria-expanded="true"]>svg{transform:rotate(180deg)}
 .lbry-filtermenu[data-pop-align="end"]{left:auto;right:0}
 .lbry-filtermenu[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
@@ -1286,7 +1316,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    trigger still reports a multi-selection ("3 selected"), so nothing about the
    state is hidden — only the instruction for a gesture that is not offered. */
 .lbry-filtermenu .lbry-filter-hint{padding:6px 10px 4px;white-space:normal}
-.lbry-filter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lbry-filter:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
 /* An option glyph (the Emoji Library's category emoji) and an option count
    (its "All 1,636"). Both aria-hidden — the accessible name is the label. */
 .lbry-filter-icon{font-size:13px;line-height:1;flex-shrink:0}
@@ -1375,7 +1405,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .lbry-empty-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
 .lbry-empty-actions .lbry-empty-clear{margin-top:0}
 .lbry-empty-clear:hover{background:var(--brand-soft)}
-.lbry-empty-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-empty-clear:focus-visible{outline:2px solid var(--focus-ink);outline-offset:2px}
 
 /* 38px is deliberate density for a segmented tray on a fine pointer; on touch
    every one of these has to clear the WCAG 2.5.8 44px floor. min-WIDTH as well

@@ -150,10 +150,16 @@ export function bookCss(ctx) {
 .pz-ramp li.is-base i{box-shadow:inset 0 0 0 2px var(--ink)}
 .pz-ramp__k{font:400 12px/16px var(--chrome);color:var(--q)}
 .pz-col{min-height:560px}
+.pz-split--5,.pz-split--6{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}
+.pz-split--7,.pz-split--8,.pz-split--9,.pz-split--10,.pz-split--11{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr))}
 .pz-col__l{margin:16px 0 32px;max-width:36ch}
 .pz-col .pz-vals{margin-top:auto}
 .pz-col .pz-ramp{margin-top:24px}
 .pz-col .pz-ramp i{height:48px}
+.pz-col .pz-ramp__k{visibility:hidden}
+.pz-col .pz-ramp li:first-child .pz-ramp__k,.pz-col .pz-ramp li:last-child .pz-ramp__k{visibility:visible}
+.pz-col .pz-ramp li:last-child .pz-ramp__k{text-align:right}
+.pz-col .pz-val{display:flex;flex-direction:column;align-items:flex-start;gap:2px;max-width:100%;min-width:0;overflow-wrap:anywhere;text-align:left}
 .pz-tones__i{margin-bottom:32px}
 .pz-tones li{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 0;border-top:1px solid var(--divider)}
 .pz-tones__sw{width:48px;height:48px;box-shadow:inset 0 0 0 1px var(--divider)}

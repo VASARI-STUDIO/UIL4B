@@ -3,7 +3,7 @@
 //   1. With Iconify refused, the built-in grid stays filled: the notice shows, and the grid is
 //      still there well after the 2.5 s first-page timer has fired (on the first visit and on a
 //      reload inside the stored cool-down).
-//   2. With Logo.dev picked, the Flags chip leaves the pack and shows flags (it used to light
+//   2. With Logo.dev picked, choosing Coloured then Flags leaves the pack and shows flags (the old Flags chip used to light
 //      and change nothing).
 //   3. An outline-only built-in in the Recent rail is drawn as its outline, not a filled wedge,
 //      even when the entry was saved with a stale `filled` flag.
@@ -13,7 +13,7 @@
 //
 // SEEN TO FAIL (src restored byte for byte after each; see the report for the runs):
 //   - IconLibrary.jsx at HEAD (none of the fixes)                  -> tests 2, 3 and all four of 4 red.
-//   - drop the logodev line from handleGroupToggle (scopePack = pack) -> test 2 (the pack stays Logo.dev).
+//   - let handleCategory keep a pack the category cannot hold (drop the allowed.includes(pack) check) -> test 2 (the pack stays Logo.dev).
 //   - make recentIsFilled return `!!entry.filled` only                -> test 3 (the tick has a fill).
 //   - drop `setLoadTry(n => n + 1)` from retryLoad                    -> all four of test 4 (nothing asks again).
 //   - return `text` unchecked in fetchSvgText, drop the evict in the fetch effect AND in retryLoad
@@ -27,6 +27,7 @@
 // sees; the guard itself is held only by tests/unit/icon-library-reliability.test.js, which reads source.
 import { test, expect } from './base.js'
 import { go, watch, chooseMenuOption, signIn } from './helpers.js'
+import { chooseFlags } from './icon-category.js'
 import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify, refuseIconify } from './iconify-stub.js'
 
 // A real cell, not the loading skeleton.
@@ -58,8 +59,8 @@ test('with the icon service refused, the built-in grid stays filled after the fi
   }
 })
 
-test('the Flags chip leaves the Logo.dev pack and shows flags', async ({ page }) => {
-  watch(page, 'a Pro designer on the Logo.dev pack who taps Flags')
+test('choosing Coloured then Flags leaves the Logo.dev pack and shows flags', async ({ page }) => {
+  watch(page, 'a Pro designer on the Logo.dev pack who picks Coloured, then Flags')
   await page.setViewportSize({ width: 1440, height: 900 })
   // Logo.dev is a Pro pack, and so is the Flags group.
   await signIn(page, { plan: 'pro' })
@@ -75,11 +76,7 @@ test('the Flags chip leaves the Logo.dev pack and shows flags', async ({ page })
   await expect(pack).toContainText(/Logo\.dev/)
   await expect(page.locator('.ig .ic img[src*="img.logo.dev"]').first(), 'POSITIVE CONTROL: Logo.dev logos are in the grid').toBeVisible({ timeout: 20_000 })
 
-  const flags = page.getByRole('button', { name: 'Flags', exact: true })
-  const groupMenu = page.getByRole('button', { name: /^Group\b/ })
-  await expect(flags.or(groupMenu).first()).toBeVisible()
-  if (!await flags.isVisible()) await groupMenu.click()
-  await flags.click()
+  await chooseFlags(page)
 
   await expect(pack, 'the pack menu went back to All packs').not.toContainText(/Logo\.dev/)
   await expect(page.locator('.ig .ic img[src*="img.logo.dev"]'), 'no Logo.dev logos are left in the grid').toHaveCount(0, { timeout: 20_000 })

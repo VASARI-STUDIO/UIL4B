@@ -54,7 +54,7 @@ test('390px: the footer links sit in two columns, and there is no curtain on a c
   await footer.scrollIntoViewIfNeeded()
   const m = await footerColumns(page)
   // Legal is a column here: the homepage's baseline row does not repeat it.
-  expect(m.groups, 'the footer link groups changed').toEqual(['Tools', 'This page', 'Explore', 'Legal'])
+  expect(m.groups, 'the footer link groups changed').toEqual(['Tools', 'This page', 'Explore', 'Support', 'Legal'])
   expect(m.columns, 'the footer links are not in two columns').toBe(2)
   await expect(footer.locator('.sp-footer-legal-links'), 'the legal links are repeated in the baseline row').toHaveCount(0)
   for (const name of ['Privacy', 'Terms', 'Credits']) {
@@ -66,13 +66,13 @@ test('390px: the footer links sit in two columns, and there is no curtain on a c
   await ctx.close()
 })
 
-test('800px: the footer links sit in four columns', async ({ browser }) => {
+test('800px: the footer links sit in three columns, three then two', async ({ browser }) => {
   const { ctx, page } = await touchPage(browser, 800, 1000, 'a tablet visitor at the foot of the page')
   await go(page, '/')
   await page.locator('footer.sp-footer').scrollIntoViewIfNeeded()
   const m = await footerColumns(page)
-  expect(m.groups.length, 'the footer lost link groups').toBeGreaterThanOrEqual(4)
-  expect(m.columns, 'the footer links are not in four columns').toBe(4)
+  expect(m.groups.length, 'the footer lost link groups').toBeGreaterThanOrEqual(5)
+  expect(m.columns, 'the footer links are not in three columns').toBe(3)
   await ctx.close()
 })
 
