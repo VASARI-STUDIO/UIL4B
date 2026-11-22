@@ -16,6 +16,11 @@
 //  7. NO PAGE IS LEFT OUT for long brand names or a one-colour palette: every page id is drawn, in order, with no warning,
 //     and the markdown carries all six sections.
 //     Break: put the head's left label back to the full `${name} style guide`, or drop the one-row retry on the logo page.
+//  8. A PAGE LEFT OUT IS LEFT OUT OF THE MARKDOWN: a 30-letter one-word name drops the logo page, and the md then numbers
+//     Colour to Usage 01 to 05 with no Logo section.
+//     Break: drop the drawn(k) check in styleGuideMarkdown, or the ctx.pagesDrawn line in styleGuide.
+//  9. A TABLE CELL NEVER BREAKS THE TABLE: a pipe is escaped and a line break becomes a space.
+//     Break: remove either replace in mdCell (api/_lib/exportThemes/engine/styleguide.js).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
@@ -23,6 +28,7 @@ import { renderThemeExport, themeRequestProblem, serveThemeExport } from '../../
 import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow, isThemeExportPro } from '../../src/data/exportThemes.js'
 import { pickerThemesFor, themedFile, themedZipName } from '../../src/config/exportThemePicker.js'
 import { assertThemeAccess } from '../../api/_lib/themeAccess.js'
+import { mdCell } from '../../api/_lib/exportThemes/engine/styleguide.js'
 
 const THEME = '27-swissfield'
 const out = {}
@@ -137,4 +143,26 @@ test('long names and small palettes draw every page, and the markdown keeps ever
   } finally {
     console.warn = keep
   }
+})
+
+test('a page left out is left out of the markdown too', async () => {
+  const projectName = 'A'.repeat(30)
+  const warned = []
+  const keep = console.warn
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    const { html } = await renderThemeExport({ theme: THEME, row: 'guide', format: 'pdf', projectName })
+    const { md } = await renderThemeExport({ theme: THEME, row: 'guide', format: 'md', projectName })
+    assert.ok(!drawnPages(html).includes('logo'), 'the logo page is left out for this name')
+    assert.ok(warned.some((w) => w.includes('guide page logo left out')), 'the warning names the page')
+    assert.deepEqual(md.match(/^## \d\d · .+$/gm), ['## 01 · Colour', '## 02 · Typography', '## 03 · Contrast', '## 04 · Tokens', '## 05 · Usage'])
+  } finally {
+    console.warn = keep
+  }
+})
+
+test('a markdown table cell escapes pipes and flattens line breaks', () => {
+  assert.equal(mdCell('a|b\nc'), 'a\\|b c')
+  assert.equal(mdCell('x\r\ny'), 'x y')
+  assert.equal(mdCell(42), '42')
 })

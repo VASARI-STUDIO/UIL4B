@@ -107,7 +107,12 @@ function styleGuide(E, T, ctx, standalone) {
   const pages = []
   for (const id of E.guideOrder(T, ctx.edition)) {
     if (typeof T.guide[id] !== 'function') continue
-    try { pages.push({ id, html: T.guide[id](ctx) }) } catch (err) { console.warn(`[export] guide page ${id} left out (${err?.name || 'Error'})`) }
+    // a page that throws may have written its markdown hooks already: put them back so the md never describes a page left out
+    const hooks = ctx.mdHooks
+    try { pages.push({ id, html: T.guide[id](ctx) }) } catch (err) {
+      ctx.mdHooks = hooks
+      console.warn(`[export] guide page ${id} left out (${err?.name || 'Error'})`)
+    }
   }
   if (!pages.length) throw new Error('no guide page could be drawn')
   // the markdown describes only the pages that were drawn

@@ -231,12 +231,13 @@ export const GRADE_NOTE = 'Ratios follow WCAG 2.2 1.4.3. AA needs 4.5:1 for norm
 //   states {Pressed: name}: a state's fill by another name   contrast [[pair, ratio, grade, use]]: the contrast rows as the page draws them   borders [[tokens, value]]: the border rows
 //   usage {button, card, link}: the words for a part   displayNote (a string, or null for none)   logoIntro: the Logo section's first sentence
 //   sections [{after: 'Logo'|'Colour'|'Typography'|'Contrast'|'Tokens'|'Usage', title, lines}]: a section the theme's pages have and the facts do not (the sections are numbered after they are placed)
+// a cell never breaks the table: a pipe in a brand's own words is escaped, a line break becomes a space
+export const mdCell = (c) => String(c).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+
 export function styleGuideMarkdown(ctx) {
   const H = ctx.mdHooks || {};
   const B = ctx.brand, pc = primaryColour(ctx), cs = colourFacts(ctx), ladder = typeLadder(ctx), ct = contrastFacts(ctx), lg = logoFacts(ctx), tg = tokenGroups(ctx), us = usageFacts(ctx), sf = stateFacts(ctx), tones = H.tones || listedTones(ctx);
-  // a cell never breaks the table: a pipe in a brand's own words is escaped, a line break becomes a space
-  const cell = (c) => String(c).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
-  const row = (...c) => `| ${c.map(cell).join(' | ')} |`;
+  const row = (...c) => `| ${c.map(mdCell).join(' | ')} |`;
   const dnote = 'displayNote' in H ? H.displayNote : displayWeightNote(ctx);
   const table = (head, rows) => [row(...head), row(...head.map(() => '---')), ...rows.map((r) => row(...r)), ''];
   // each section is its own list of lines, so a theme's own can go in after the one it follows; the heading numbers are put on last
