@@ -5,6 +5,7 @@ import { templateThumb } from '../../utils/exportTemplateThumb'
 import { STYLE_GUIDE_SCALE, bundleTreeLines, freePreviewKey, previewLines } from '../../utils/exportFreePreview'
 import { buildCodeFile, codeFileName, isCodeFile } from '../../utils/codeFiles'
 import { formatFileName } from '../../utils/exportFileName'
+import { documentProjectName, exportProjectName } from '../../utils/projectFileName'
 import '../../styles/pages/export-preview.css'
 
 // A real render of a free export, drawn from the person's own design: the UI kit's
@@ -33,7 +34,8 @@ const FAILED_LINE = 'The preview didn’t draw. Your file isn’t affected.'
 export default function ExportFreePreview({ kind, file = 'css', watermark = true, project }) {
   const labelId = useId()
   const design = useExportDesign()
-  const projectName = design?.name || 'Design System'
+  // The name the download prints: the dialog's project (a tool's design has none of its own), else the design's, else the stand-in.
+  const projectName = documentProjectName(project || exportProjectName({ design }))
   // The name the file will download under, which heads the code. The dialog passes the
   // open project's name; with none, it is the design's own.
   const savedAs = kind === 'code' && isCodeFile(file)
