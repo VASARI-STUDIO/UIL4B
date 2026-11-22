@@ -405,7 +405,7 @@ function contrastPage(ctx) {
   const worst = P.filter((p) => !/^AA/.test(p.grade)).length;
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
   const RH = 36, AX = 360, AW = 170;
-  const pairs = { h: SUBH + 12 + P.length * RH, flex: P.length * 6, draw: (y, extra = 0) => {
+  const pairs = { h: SUBH + 12 + P.length * RH, flex: P.length * 30, draw: (y, extra = 0) => {
     const rh = RH + Math.floor(extra / Math.max(1, P.length));
     return sec(K, X0, y, CW, catNo(ctx, 'contrast', 1), 'Pairs', 'ratio of text to ground, out of 21') + P.map((p, i) => {
       const yy = y + SUBH + 12 + i * rh, fam = p.sample && p.sample.face === 'display' ? 'var(--display)' : 'var(--body)', sz = Math.min((p.sample || {}).size || 15, 20);
@@ -421,13 +421,13 @@ function contrastPage(ctx) {
   const tones = [...F.tones, ...F.interfaceTones].map((tn) => ({ ...tn, name: (brandTone(tn.hex) || {}).name || tn.name }));
   hook(ctx, { tones: tones.map((tn) => ({ name: tn.name, hex: tn.hex.toUpperCase(), use: cap1(tn.role) })) });
   const tc = tones.length <= 3 ? 1 : 3, TWd = Math.floor((CW - 12 * (tc - 1)) / tc), trows = Math.ceil(tones.length / tc);
-  const tonesSec = tones.length ? { h: SUBH + 12 + trows * 30, draw: (y) => sec(K, X0, y, CW, catNo(ctx, 'contrast', 2), 'Tones', 'in use, not on the palette') + tones.map((tn, i) => {
-    const x = X0 + (i % tc) * (TWd + 12), yy = y + SUBH + 12 + Math.floor(i / tc) * 30;
+  const tonesSec = tones.length ? { h: SUBH + 12 + trows * 30, flex: trows * 24, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'contrast', 2), 'Tones', 'in use, not on the palette') + tones.map((tn, i) => {
+    const x = X0 + (i % tc) * (TWd + 12), yy = y + SUBH + 12 + Math.floor(i / tc) * (30 + Math.floor(extra / trows));
     return rect(x, yy + 2, 22, 22, `background:${tn.hex}`, '', R.nearWall(tn.hex) ? 'edge' : '') + at(x + 32, yy, `<div class="lg-c lg-e" style="width:${TWd - 40}px">${A(tn.name)}</div><div class="lg-m lg-q" style="font-size:11px;line-height:14px">${A(tn.hex.replace('#', '').toUpperCase())}</div>`);
   }).join('') } : null;
   const note = `${GRADE_NOTE}${(ctx.unusedPairs || []).length ? ` Not used: ${ctx.unusedPairs.map((u) => `${u.fg} on ${u.bg} (${u.ratioText}:1)`).join(', ')}.` : ''}`;
   const noteH = para(K, note, CW - 32, { size: 12, lh: 16, stem: K.S.body }).h;
-  const noteSec = { h: noteH + 24, draw: (y) => card(K, X0, y, CW, noteH + 24, at(16, 12, A(note), { w: CW - 32, cls: 'lg-r' })) };
+  const noteSec = { h: noteH + 24, flex: 24, draw: (y, extra = 0) => card(K, X0, y, CW, noteH + 24 + extra, at(16, 12 + Math.floor(extra / 2), A(note), { w: CW - 32, cls: 'lg-r' })) };
   void worst;
   return shell(ctx, 'contrast', t.html + flow('contrast', t.top, [pairs, tonesSec, noteSec].filter(Boolean), { gap: 20, maxGap: 40 }));
 }
@@ -438,7 +438,7 @@ function tokensPage(ctx) {
   const t = title(ctx, K, 'tokens', copyOf(ctx, 'tokens', ['Spacing, corners and edges, as set.', 'The spacing, corners and edges.']));
   const maxPx = Math.max(...T.space.map((s) => s.px), 1), BW = 200;
   const spRow = 22;
-  const spaceSec = { h: SUBH + 12 + T.space.length * spRow, flex: T.space.length * 4, draw: (y, extra = 0) => {
+  const spaceSec = { h: SUBH + 12 + T.space.length * spRow, flex: T.space.length * 10, draw: (y, extra = 0) => {
     const rh = spRow + Math.floor(extra / Math.max(1, T.space.length));
     return sec(K, X0, y, CW, catNo(ctx, 'tokens', 1), 'Spacing', `base ${Math.min(...T.space.map((s) => s.px)) || 4} px`) + T.space.map((s, i) => {
       const yy = y + SUBH + 12 + i * rh;
@@ -450,8 +450,8 @@ function tokensPage(ctx) {
   // corners: drawn at the largest whole multiple that leaves the biggest one a true corner (the section says so)
   const radii = T.radii, sq = 64, maxR = Math.max(...radii.filter((r) => r.px < 999).map((r) => r.px), 1), scale = Math.max(1, Math.min(4, Math.floor(sq / 2 / maxR)));
   const rc = Math.max(1, Math.min(radii.length, 4)), RWd = Math.floor((CW - 12 * (rc - 1)) / rc), rrows = Math.ceil(radii.length / rc);
-  const radiiSec = radii.length ? { h: SUBH + 12 + rrows * (sq + 12) - 12, draw: (y) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 2), 'Corners', scale > 1 ? `drawn at ${scale}x` : '') + radii.map((r, i) => {
-    const x = X0 + (i % rc) * (RWd + 12), yy = y + SUBH + 12 + Math.floor(i / rc) * (sq + 12), rad = Math.min(r.px * scale, sq / 2);
+  const radiiSec = radii.length ? { h: SUBH + 12 + rrows * (sq + 12) - 12, flex: 80, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 2), 'Corners', scale > 1 ? `drawn at ${scale}x` : '') + radii.map((r, i) => {
+    const x = X0 + (i % rc) * (RWd + 12), yy = y + SUBH + 12 + Math.floor(i / rc) * (sq + 12 + Math.floor(extra / rrows)), rad = Math.min(r.px * scale, sq / 2);
     return rect(x, yy, sq, sq, `border:1px solid ${R.edge};background:var(--panel);border-radius:${rad}px`)
       + at(x + sq + 12, yy, `<div class="lg-c">${r.px >= 999 ? 'Round' : `${r.px} px`}</div>` + r.tokens.map((tk) => `<div class="lg-m lg-q" style="font-size:11px;line-height:14px">${A(tk)}</div>`).join(''), { w: RWd - sq - 12 });
   }).join('') } : null;
@@ -460,12 +460,12 @@ function tokensPage(ctx) {
   const bord = [...T.borders.map((b) => ({ ...b, tokens: b.tokens.filter((tk) => tk !== 'border-focus') })).filter((b) => b.tokens.length), ...(ctl0 ? [{ tokens: ['Focus ring'], px: ctl0.px, focus: true }] : [])];
   const bordCol = (b) => (b.focus ? L.focus : b.tokens.includes('border-control') ? L.border : L.divider);
   const bordText = (b) => [...(b.uses || []), ...(b.focus ? [`${fcName ? `${fcName} ` : ''}${fc.replace('#', '').toUpperCase()} at border-control`] : [])].join(', ');
-  const BR = 30, uW = XR - (X0 + 150 + 200 + 16);
-  const bordSec = { h: SUBH + 12 + bord.length * BR, draw: (y) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 3), 'Borders', 'at their real width and colour') + bord.map((b, i) => {
-    const yy = y + SUBH + 12 + i * BR;
-    return at(X0, yy + 7, A(b.tokens.join(', ')), { w: 100, cls: 'lg-m lg-e' }) + at(X0 + 104, yy + 7, `${b.px} px`, { w: 44, cls: 'lg-m' })
-      + rect(X0 + 150, yy + Math.floor(BR / 2) - b.px / 2, 200, b.px, `background:${bordCol(b)}`)
-      + at(X0 + 366, yy + 7, A(bordText(b)), { w: uW, cls: 'lg-r lg-q lg-e' });
+  const BR = 44, uW = XR - (X0 + 402);
+  const bordSec = { h: SUBH + 12 + bord.length * BR, flex: bord.length * 20, draw: (y, extra = 0) => sec(K, X0, y, CW, catNo(ctx, 'tokens', 3), 'Borders', 'at their real width and colour') + bord.map((b, i) => {
+    const br = BR + Math.floor(extra / bord.length), yy = y + SUBH + 12 + i * br;
+    return at(X0, yy + Math.floor((br - 16 * b.tokens.length) / 2), b.tokens.map((tk) => `<div class="lg-m lg-e">${A(tk)}</div>`).join(''), { w: 130 }) + at(X0 + 136, yy + Math.floor((br - 16) / 2), `${b.px} px`, { w: 44, cls: 'lg-m' })
+      + rect(X0 + 186, yy + Math.floor(br / 2) - b.px / 2, 200, b.px, `background:${bordCol(b)}`)
+      + at(X0 + 402, yy + Math.floor((br - 16) / 2), A(bordText(b)), { w: uW, cls: 'lg-r lg-q lg-e' });
   }).join('') };
   hook(ctx, { borders: bord.map((b) => (b.focus ? ['Focus ring', `${fcName ? `${fcName} ` : ''}\`#${fc.replace('#', '').toUpperCase()}\` at \`border-control\` ${b.px} px`] : [b.tokens.map((tk) => `\`${tk}\``).join(', '), `${b.px} px`])) });
   return shell(ctx, 'tokens', t.html + flow('tokens', t.top, [spaceSec, radiiSec, bordSec].filter(Boolean), { gap: 24, maxGap: 48 }));
@@ -486,8 +486,10 @@ function usagePage(ctx) {
   const w1 = btnW(vPrimary), bstyle = `display:flex;align-items:center;justify-content:center;height:${bh}px;box-sizing:border-box;border-radius:${bt.radius.px}px;${font(bt.type)}white-space:nowrap`;
   const SPW = 346, PLX = X0 + SPW + 16, PLW = XR - PLX;
   // a spec card: key, value rows
-  const specH = (rows) => 28 + sum(rows.map(([, v]) => Math.max(1, nLines(S.body, v, 13, SPW - 32 - 72)) * 18 + 4));
-  const specCard = (x, y, rows, h) => { let yy = 14; return card(K, x, y, SPW, h, rows.map(([k, v, mono]) => { const n = Math.max(1, nLines(S.body, v, 13, SPW - 32 - 72)), out = at(16, yy, A(k), { cls: 'lg-c lg-ql', style: 'font-weight:400;line-height:18px' }) + at(88, yy, A(v), { w: SPW - 104, cls: mono ? 'lg-m' : 'lg-n', style: mono ? 'white-space:normal;line-height:18px' : '' }); yy += n * 18 + 4; return out; }).join('')); };
+  // mono values are measured in the mono face at 12px, the rest in the body face at 13px
+  const rowN = (v, mono) => Math.max(1, mono ? nLines(S.mono, v, 12, SPW - 104) : nLines(S.body, v, 13, SPW - 104));
+  const specH = (rows) => 28 + sum(rows.map(([, v, mono]) => rowN(v, mono) * 18 + 4));
+  const specCard = (x, y, rows, h) => { let yy = 14; return card(K, x, y, SPW, h, rows.map(([k, v, mono]) => { const n = rowN(v, mono), out = at(16, yy, A(k), { cls: 'lg-c lg-ql', style: 'font-weight:400;line-height:18px' }) + at(88, yy, A(v), { w: SPW - 104, cls: mono ? 'lg-m' : 'lg-n', style: mono ? 'white-space:normal;line-height:18px' : '' }); yy += n * 18 + 4; return out; }).join('')); };
   const bspec = [['Fill', bt.fillName], ['Label', bt.labelName], ['Radius', `${bt.radius.token}, ${bt.radius.px} px`, 1], ['Type', `${bt.type.name}, ${bt.type.size} / ${bt.type.line}`, 1], ['Padding', `${bt.padY.token} by ${bt.padX.token}`, 1]];
   const bH = Math.max(specH(bspec), bh + 48);
   const buttonSec = { h: SUBH + 12 + bH, draw: (y) => {
@@ -522,7 +524,7 @@ function usagePage(ctx) {
   const tSt = cd.title.face === 'display' ? K.st : 1, tStem = stemOf(ctx, cd.title.face, cd.title.weight), bStem = stemOf(ctx, cd.body.face, cd.body.weight);
   const ctH = nLines(tStem, cd.titleText, cd.title.size, tx, tSt) * cd.title.line, cbH = nLines(bStem, cd.bodyText, cd.body.size, tx) * cd.body.line, cardH = 2 * edgePx + 2 * pad + ctH + 8 + cbH;
   const cH = Math.max(specH(cspec), cardH + 48);
-  const cardSec = { h: SUBH + 12 + cH, flex: 40, draw: (y, extra = 0) => {
+  const cardSec = { h: SUBH + 12 + cH, flex: 80, draw: (y, extra = 0) => {
     const by = y + SUBH + 12, hh = cH + extra;
     return sec(K, X0, y, CW, catNo(ctx, 'usage', 4), 'Card') + specCard(X0, by, cspec, hh)
       + obj(K, PLX, by, PLW, hh, R.groundHex, rect(Math.floor((PLW - cardW) / 2), Math.floor((hh - cardH) / 2), cardW, cardH, `background:${cd.fill};border:${edgePx}px solid ${cd.edgeColour};padding:${pad}px;border-radius:${cd.radius.px}px`,
