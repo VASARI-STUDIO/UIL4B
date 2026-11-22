@@ -14,7 +14,8 @@ const dispW = (ctx) => ctx.brand.fonts.display.weights[ctx.brand.fonts.display.w
 // width of one line of text in px, from the font file (letter-spacing in em)
 const textW = (ctx, role, weight, text, size, track = 0) => { const o = outline(loadFont(face(ctx, role, weight).stem), text, size, track); return (o.x2 - Math.min(0, o.x1)) * 1.02; };
 // greedy wrap: how many lines a text takes at a size and width
-const lineCount = (ctx, role, weight, text, size, maxW, track = 0) => { let n = 1, cur = ''; for (const w of text.split(' ')) { const t = cur ? `${cur} ${w}` : w; if (cur && textW(ctx, role, weight, t, size, track) > maxW) { n++; cur = w; } else cur = t; } return n; };
+const splitLines = (ctx, role, weight, text, size, maxW, track = 0) => { const out = []; let cur = ''; for (const w of text.split(' ')) { const t = cur ? `${cur} ${w}` : w; if (cur && textW(ctx, role, weight, t, size, track) > maxW) { out.push(cur); cur = w; } else cur = t; } out.push(cur); return out; };
+const lineCount = (ctx, role, weight, text, size, maxW, track = 0) => splitLines(ctx, role, weight, text, size, maxW, track).length;
 // the largest size from hi down to lo at which every text fits in maxLines lines of maxW
 const fitSize = (ctx, role, weight, texts, hi, lo, maxW, maxLines = 1, track = -0.01) => { for (let s = hi; s > lo; s--) if (texts.every((t) => lineCount(ctx, role, weight, t, s, maxW, track) <= maxLines)) return s; return lo; };
 // top of a text box so that its first baseline lands on y
@@ -306,13 +307,16 @@ export const r1 = {
     const sentences = [null, V[0].example, V[1].example, V[3 % V.length].example];
     const leadW = W * 0.4, otherW = (W - leadW) / (cs.length - 1), hlLine = lineMap(ctx).palHead;
     const hl = fitSet(ctx, 'display', dispW(ctx), hlLine, 54, 36, leadW - 80, 2, -0.01), hlSize = hl.size;
+    const dw = dispW(ctx), otherTw = otherW - 48, otherNames = cs.slice(1).map((c) => c.name);
+    const fitName = (names, hi, maxW) => { const one = fitSize(ctx, 'display', dw, names, hi, 17, maxW, 1, 0); return names.every((n) => lineCount(ctx, 'display', dw, n, one, maxW) <= 1) ? one : fitSize(ctx, 'display', dw, names, Math.min(hi, 22), 15, maxW, 2, 0); };
+    const leadSize = fitName([cs[0].name], 40, 400), otherSize = otherNames.length ? fitName(otherNames, 26, otherTw) : 26;
     let x = 0;
     const fieldsHtml = cs.map((c, i) => {
       const w = i === 0 ? leadW : otherW, tx = i === 0 ? 56 : x + 24, tw = i === 0 ? 400 : w - 48, ink = inkOn(ctx, c.hex), ch = chromeOn(ctx, c.hex);
-      const nameSize = i === 0 ? 40 : 26, edge = c.role === 'ground' ? 'box-shadow:inset 1px 0 0 ' + L(ctx).divider : '';
+      const nameSize = i === 0 ? leadSize : otherSize, nameLines = splitLines(ctx, 'display', dw, c.name, nameSize, tw), nLines = nameLines.length, edge = c.role === 'ground' ? 'box-shadow:inset 1px 0 0 ' + L(ctx).divider : '';
       const html = box(x, 128, w, 592, `background:${c.hex};${edge}`) +
         (i === 0 ? box(tx, 160, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : box(tx, 160, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${slot ? `The ${A(c.roleText || c.role)} colour.` : A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
-        box(tx, topForBaseline(ctx, 'display', dispW(ctx), nameSize, 1.05, 580), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${A(c.name)}</p>`) +
+        box(tx, topForBaseline(ctx, 'display', dw, nameSize, 1.05, 580 - (nLines - 1) * nameSize * 1.05), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${lineHtml(nameLines)}</p>`) +
         box(tx, 592, tw, 48, `color:${ch}`, `<p class="r-t12">${A(c.lands)}</p>`) + box(tx, 656, tw, 16, `color:${ink}`, `<p class="r-mono num">${A(c.hex)}</p>`) +
         box(tx, 676, tw, 16, `color:${ch}`, `<p class="r-t12 r-nw num">${values(c)}</p>`);
       x += w; return html;

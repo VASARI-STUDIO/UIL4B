@@ -117,6 +117,7 @@ export function loadBrand(data, loaders) {
   unused.sort((a, b) => b.ratio - a.ratio);
 
   // colour data per brand colour: formats and a ramp
+  for (const c of B.colours) if (typeof c.lands === 'string' && c.lands.trim()) { const t = c.lands.trim(); c.lands = (t[0].toUpperCase() + t.slice(1)).replace(/([^.!?])$/, '$1.'); }
   const colours = B.colours.map((c) => ({ ...c, rgb: C.rgbString(c.hex), oklch: C.oklchString(c.hex), ramp: C.ramp(c.hex), rampBase: C.rampBase(c.hex) }));
   const neutralRamp = (() => { const { H } = C.toOklch(B.ui.light.sunken); const L = { 50: 0.98, 100: 0.925, 200: 0.86, 300: 0.78, 400: 0.68, 500: 0.58, 600: 0.5, 700: 0.42, 800: 0.32, 900: 0.21 }; const o = {}; for (const k in L) o[k] = C.fromOklch(L[k], 0.007, H); return o; })();
 
