@@ -10,7 +10,7 @@ export const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === r
 export const hexName = (ctx, hex) => ctx.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
 export const NUM = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 // the print ink that reads better on a stock: Night (the light text) or Stock (the light surface)
-export const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };
+export const inkOn = (ctx, hex, size = 24) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
 export const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 // a serial: the number in a run, zero-padded ("No. 004")
 export const serial = (n, w = 3) => `No. ${String(n).padStart(w, '0')}`;

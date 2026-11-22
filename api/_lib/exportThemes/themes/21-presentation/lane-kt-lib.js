@@ -42,7 +42,7 @@ export const para = (ctx, text, size, maxW, weight = 400) => wrap(ctx, 'body', w
 // ---- colour roles and the chrome rule (as in guidelines-r1.js) ----------------------------------------------------------------
 export const L = (ctx) => ctx.roles.light;
 export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
-export const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
+export const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // the brand's quiet tone that reaches 4.5:1 on the ground; else the best of the text colour, the page ground and the dark soft text
 export const chromeOn = (ctx, hex) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => ctx.ratio(c, hex) >= 4.5);

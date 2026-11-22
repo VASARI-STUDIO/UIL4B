@@ -9,7 +9,7 @@ const hexName = (ctx, hex) => COLOUR_ID_OF_HEX(ctx, hex)?.name || hex;
 // the brand colour that plays a role (action, text, panel, ground), else the nth colour
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
 // whichever of the page's text and ground colours reads better on a hex
-const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };
+const inkOn = (ctx, hex, size = 24) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
 const isGround = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
 const sentences = (s) => s.split(/(?<=\.)\s+/);
 // the cross that marks a wrong example

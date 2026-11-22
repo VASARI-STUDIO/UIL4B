@@ -30,7 +30,7 @@ export function roles(ctx) {
   const field = (byRole('highlight') || byRole('action')).hex, dark = (byRole('text') || { hex: ink }).hex;
   const hexOf = (id) => (ctx.byId && ctx.byId[id] ? ctx.byId[id].hex : null);
   const pass = (a, b) => ratio(a, b) >= 4.5;
-  const better = (bg) => (ratio(ink, bg) >= ratio(ground, bg) ? ink : ground);
+  const better = (bg) => ctx.textOn(bg, { size: 24, prefer: ratio(ink, bg) >= ratio(ground, bg) ? ink : ground });
   // the brand's own pair for this background if it passes at 11 px, else whichever of ink and ground reads better
   const inkOn = (bg) => {
     for (const p of B.pairs || []) { if (p.minSize) continue; if (hexOf(p.bg)?.toLowerCase() !== bg.toLowerCase()) continue; const fg = hexOf(p.fg); if (fg && pass(fg, bg)) return fg; }

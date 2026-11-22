@@ -13,8 +13,8 @@ export function inkOn(ctx, bg) {
   const p = ctx.pairs.filter((x) => same(x.bgHex, bg)).sort((a, b) => b.ratio - a.ratio)[0];
   if (p) return p.fgHex;
   const best = ctx.colours.map((c) => c.hex).filter((h) => !same(h, bg)).sort((a, b) => ctx.ratio(b, bg) - ctx.ratio(a, bg))[0];
-  if (ctx.ratio(best, bg) < 4.5) throw new Error(`no brand colour reads at 4.5 : 1 on ${bg}`);
-  return best;
+  // no brand colour reads on a mid-tone ground: the engine's fallback ink, never a throw
+  return ctx.textOn(bg, { prefer: best });
 }
 // the step number on a ramp edge: Type or White, whichever holds the step better
 export const stepInk = (ctx, hex) => { const t = ctx.roles.light.text, w = ctx.roles.light.raised; return ctx.ratio(t, hex) >= ctx.ratio(w, hex) ? t : w; };

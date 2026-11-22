@@ -20,7 +20,7 @@ const refOf = (ctx, id) => ctx.pages.find((p) => p.id === id)?.ref || '';
 const inkOn = (ctx, hex) => {
   const p = ctx.pairs.find((q) => q.bgHex.toLowerCase() === hex.toLowerCase());
   if (p) return p.fgHex;
-  const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g;
+  const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size: 24, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
 };
 // a caption with its clause number in the left column
 const fc = (no, b, t, cls = '') => `<figcaption class="cap a-fc ${cls}"><span class="num">${no}</span><span><b>${b}</b>${t}</span></figcaption>`;

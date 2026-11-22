@@ -155,8 +155,8 @@ export function roles(ctx) {
   const same = (a, b) => a.toLowerCase() === b.toLowerCase();
   // the ink on the field: the foreground of the brand pair printed on it with the best ratio, else the better of the table and the paper
   const onField = ctx.pairs.filter((p) => same(p.bgHex, field)).sort((a, b) => b.ratio - a.ratio)[0];
-  const fieldInk = onField ? onField.fgHex : (ctx.ratio(table, field) >= ctx.ratio(paper, field) ? table : paper);
-  if (ctx.ratio(fieldInk, field) < 4.5) throw new Error(`ticket: ink ${fieldInk} on field ${field} is under 4.5:1`);
+  // the field is often the user's own colour: when neither reads, the nearest ink that does (never a throw)
+  const fieldInk = ctx.textOn(field, { prefer: onField ? onField.fgHex : (ctx.ratio(table, field) >= ctx.ratio(paper, field) ? table : paper) });
   // quiet text on the bar top: the tone the brand pairs with it, else the paper mixed into the table until it reaches 4.6:1
   const toneOn = ctx.pairs.find((p) => same(p.bgHex, table) && ctx.tones.some((t) => t.id === p.fg));
   let quiet;
@@ -165,12 +165,14 @@ export function roles(ctx) {
     const a = C.toOklch(table), b = C.toOklch(paper);
     for (let k = 0.05; k <= 1.0001; k += 0.01) { quiet = C.fromOklch(a.L + (b.L - a.L) * k, a.C + (b.C - a.C) * k, a.H); if (ctx.ratio(quiet, table) >= 4.6) break; }
   }
+  if (ctx.ratio(quiet, table) < 4.5) quiet = ctx.textOn(table, { prefer: quiet });
   const R = { table, field, fieldInk, paper, quiet, hole: table, edge: quiet };
   // text on a given plate: the brand colour with the best ratio that passes
   R.inkOn = (bg, size = 13, weight = 400, what = '(Ticket text on a plate)') => {
     const best = cols.filter((c) => !same(c.hex, bg)).map((c) => c.hex).reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
-    ctx.pair(best, bg, { size, weight, what });
-    return best;
+    const pick = ctx.textOn(bg, { size, weight, prefer: best });
+    ctx.pair(pick, bg, { size, weight, what });
+    return pick;
   };
   R.nearTable = (hex) => ctx.ratio(hex, table) < 1.3;
   // the logo colourway drawn on a ground: the one whose ground equals it (colour first, then mono-dark), else the one whose name reads best

@@ -37,7 +37,7 @@ export const lineHtml = (lines) => lines.map((l) => `<span class="r-ln">${A(l)}<
 // colour roles
 export const L = (ctx) => ctx.roles.light;
 export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
-export const inkOn = (ctx, hex) => (ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface);
+export const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // chrome rule (spec 2.3): the brand's quiet tone that reaches 4.5:1 on every ground the text crosses; else the best of the text colour, the page ground and the dark soft text
 export const chromeOn = (ctx, ...hexes) => {
   const ok = (c) => hexes.every((h) => ctx.ratio(c, h) >= 4.5), worst = (c) => Math.min(...hexes.map((h) => ctx.ratio(c, h)));

@@ -8,9 +8,10 @@ import { A, fit } from './helpers.js';
 import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
-// the readable text colour on a brand colour: the better of the light-mode text and surface colours, checked
+// the readable text colour on a brand colour: the better of the light-mode text and surface colours, else the engine's fallback (ctx.textOn), checked
 const onColour = (ctx, hex) => {
-  const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface;
+  const L = ctx.roles.light, first = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface;
+  const pick = ctx.textOn(hex, { size: 13, prefer: first });
   ctx.pair(pick, hex, { size: 13, what: `book swatch ${hex}` }); return pick;
 };
 // a colour that matches the page ground or a card needs an edge

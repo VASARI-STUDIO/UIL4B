@@ -123,12 +123,13 @@ export function roles(ctx) {
   // The label card is the brand's panel colour, the same as the plates beside it. A brand with no panel gets the wall drawn 6% toward the ink.
   R.labelFill = panel ? panel.hex : mixHex(ctx, R.wall, R.ink, 0.06);
   // quiet text on a given ground: the brand's quiet colour when it passes 4.5:1, else the quiet colour made for a sunken surface, else ink
-  R.quietOn = (bg) => [R.quiet, L.quiet, L.quietOnSunken, R.ink].find((c) => ctx.ratio(c, bg) >= 4.5);
+  R.quietOn = (bg) => [R.quiet, L.quiet, L.quietOnSunken, R.ink].find((c) => ctx.ratio(c, bg) >= 4.5) || ctx.textOn(bg, { prefer: R.ink });
   // text on a coloured object: ink, the panel colour or the wall, whichever has the higher ratio (and passes)
   R.onColour = (bg, size = 13, weight = 400) => {
     const best = [R.ink, R.panel, R.wall].reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
-    ctx.pair(best, bg, { size, weight, what: '(Label text on an object)' });
-    return best;
+    const pick = ctx.textOn(bg, { size, weight, prefer: best });
+    ctx.pair(pick, bg, { size, weight, what: '(Label text on an object)' });
+    return pick;
   };
   // the logo colourway to use on a ground: one drawn on that ground, else the colourway whose name colour reads best on it
   R.colourwayOn = (bg) => {

@@ -10,7 +10,7 @@ const ph = (ctx, s, pos) => ctx.photo(s.id, { cls: 'hg-photo', pos: pos || '50% 
 const inkOn = (ctx, hex) => {
   const own = ctx.pairs.filter((p) => p.bgHex.toUpperCase() === hex.toUpperCase()).sort((a, b) => b.ratio - a.ratio)[0];
   if (own && own.ratio >= 4.5) return own.fgHex;
-  return ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text;
+  return ctx.textOn(hex, { size: 24, prefer: ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text });
 };
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const sw = (hex) => `<span class="hg-sw" style="background:${hex}" aria-hidden="true"></span>`;

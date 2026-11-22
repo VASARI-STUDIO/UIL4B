@@ -40,8 +40,8 @@ export function brandRoles(ctx) {
 // the first colour in the list that passes 4.5:1 on bg; the build stops when none does
 export function readable(ctx, bg, list, what) {
   const hit = list.find((c) => c && ctx.ratio(c, bg) >= 4.5);
-  if (!hit) throw new Error(`${what}: none of ${list.join(', ')} passes 4.5:1 on ${bg}`);
-  return hit;
+  // none of the theme's colours reads: the nearest colour that does (the ground is often the user's own colour)
+  return hit || ctx.textOn(bg, { prefer: list.find(Boolean) });
 }
 // does a fill sit this close to the paper that it needs a 1 px edge (spec: within 1.15:1)
 export const nearPaper = (ctx, fill) => ctx.ratio(fill, nb(ctx).paper) < 1.15;

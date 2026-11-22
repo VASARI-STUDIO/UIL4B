@@ -205,5 +205,21 @@ export function loadBrand(data, loaders) {
   };
   ctx.shot = (id) => B.imagery.shots.find((x) => x.id === id);
   ctx.themeHex = (mode) => roles[mode];
+  // Text on a colour that came from the user's palette, which no design could have vetted: it always reaches the contrast the size needs and
+  // never throws (a mid-tone brand colour can fail both the text and the surface role). `prefer` is the theme's own first choice, kept when
+  // it passes so a brand that worked before is drawn the same. Then, in order: the light text and surface roles, the palette's darkest and
+  // lightest colours, the darkest and lightest of the theme's own role inks, near-black and near-white, black or white (C.readableOn).
+  // Of each dark/light pair the one nearer the first choice in lightness is tried first. Fixed pairs a theme designed stay on ctx.pair.
+  const extremes = (hexes, near) => {
+    const hs = hexes.filter(C.isHex).sort((a, b) => C.luminance(a) - C.luminance(b));
+    const ends = hs.length ? [...new Set([hs[0], hs[hs.length - 1]])] : [];
+    return ends.sort((a, b) => Math.abs(C.luminance(a) - C.luminance(near)) - Math.abs(C.luminance(b) - C.luminance(near)));
+  };
+  ctx.textOn = (bg, { size = 13, weight = 400, prefer } = {}) => {
+    const L = roles.light;
+    const first = C.isHex(prefer) ? prefer : (C.isHex(bg) && C.ratio(L.text, bg) < C.ratio(L.surface, bg) ? L.surface : L.text);
+    const roleInks = ['light', 'dark'].flatMap((m) => Object.values(roles[m]).filter((v) => typeof v === 'string'));
+    return C.readableOn(bg, [first, L.text, L.surface, ...extremes(B.colours.map((c) => c.hex), first), ...extremes(roleInks, first)], { size, weight });
+  };
   return ctx;
 }

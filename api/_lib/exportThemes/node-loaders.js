@@ -16,7 +16,7 @@ export const nodeLoaders = {
     if (!/^[A-Za-z0-9_-]+$/.test(stem) || (ext !== 'woff2' && ext !== 'ttf')) throw new Error(`fontFile: bad request ${stem}.${ext}`);
     const name = `${stem}.${ext}`;
     if (!cache.has(name)) {
-      try { cache.set(name, fs.readFileSync(FONT_DIR + name)); } catch { throw new Error(`fontFile: no file ${name} in fonts/`); }
+      try { cache.set(name, fs.readFileSync(FONT_DIR + name)); } catch { throw Object.assign(new Error(`fontFile: no file ${name} in fonts/`), { code: 'font_missing' }); }
     }
     return cache.get(name);
   },

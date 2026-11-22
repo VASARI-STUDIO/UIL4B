@@ -8,7 +8,7 @@ import { A, nameOf, fit, std, hline, vline } from './helpers.js';
 const hexName = (ctx, hex) => ctx.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
 // whichever of the page's text and card colours reads better on a hex
-const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };
+const inkOn = (ctx, hex, size = 24) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
 // a colour that needs a hairline edge on the sheet: White, or Plaster (the sheet's own ground)
 const isCard = (ctx, hex) => [ctx.roles.light.surface, ctx.roles.light.raised].some((c) => c.toLowerCase() === hex.toLowerCase());
 const sentences = (s) => s.split(/(?<=\.)\s+/);

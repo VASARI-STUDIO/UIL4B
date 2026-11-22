@@ -99,7 +99,8 @@ export function press(ctx) {
     paper: P.hex, dark, offset, key: keyText, keyDrum: K, plate: plateHex, plateScreen: aScreen, plateDrum: A,
     pass: passInk, passPlate, passScreen: bScreen, passDrum: B, hit: H.hex, hitDrum: H, drums, spots, paperTints, num,
     passOnPlate, passOnPaper, hitOnPlate, onPlate, keyShort: ratio(K.hex, P.hex) < 4.5,
-    textOnPlate: onPlate === 'key' ? keyText : onPlate === 'knock' ? P.hex : keyText,
+    // neither the key nor the paper reads on the plate: the nearest colour that does, so type on the plate never fails the build
+    textOnPlate: onPlate === 'key' ? keyText : onPlate === 'knock' ? P.hex : ctx.textOn(plateHex, { prefer: keyText }),
   };
 }
 
