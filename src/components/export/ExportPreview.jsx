@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { defaultTemplate } from '../../config/exportTemplates'
 import { pickerTheme, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
@@ -20,6 +20,13 @@ import { brandOf, syncPreviewOwner } from './exportPreviewClient'
 // and disabled when only the stock picture exists (signed out, a Pro template on a free plan, or no live preview yet). A template
 // the account cannot export is drawn as a sample in every document, the UI kit included: its 1x picture under a tiled mark, with no retina version.
 // A file with no templates shows its own preview in the stage, and has no gallery.
+// The page opened at its own size in a tab of its own. The document carries its own policy (no script, nothing fetched), so it may be a blob.
+function openFullSize(html) {
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
 function PlainPreview({ cat, file, name, fileProject, isPro, design, chosen }) {
   const kind = cat.preview
   if (kind === 'book' || kind === 'guidelines') {
@@ -62,6 +69,18 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   const sample = proTemplate || refused
   const noLive = !user || proTemplate || checking || live.status === 'unavailable' || refused
   const showStock = stock || noLive
+  const shownLive = !showStock && live.status === 'ok'
+  const drawing = live.status === 'loading'
+  // Why the stock picture is showing, or that the live page is on its way: one line under the stage, and the reason the box below it is disabled.
+  const statusId = useId()
+  let status = ''
+  if (themed) {
+    if (checking) status = 'Checking your plan…'
+    else if (!user) status = 'Sign in to see this page with your brand. Showing the sample.'
+    else if (sample) status = 'Pro template: showing the sample.'
+    else if (live.status === 'unavailable') status = 'Showing the sample — live preview unavailable'
+    else if (drawing) status = 'Drawing your brand…'
+  }
 
   const hold = (on) => dispatch({ type: 'hover', on })
   return (
@@ -74,12 +93,18 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
         onBlur={() => hold(false)}
       >
         {themed
-          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={!showStock && live.status === 'ok' ? live.html : ''} />
+          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={shownLive ? live.html : ''} expectLive={!showStock && drawing} loading={drawing && !showStock} />
           : <ExportStage plain={<PlainPreview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} design={design} chosen={chosen} />} />}
+        {themed && (
+          <div className="xd-meta">
+            <p className="xd-status" id={statusId} aria-live="polite">{status}</p>
+            {shownLive && <button type="button" className="xd-full" onClick={() => openFullSize(live.html)} aria-label="Open full size, in a new tab">Open full size</button>}
+          </div>
+        )}
         <div className="xd-under">
           {themed && (
             <label className="xd-stock">
-              <input type="checkbox" checked={showStock} disabled={noLive} onChange={(e) => setStock(e.target.checked)} />
+              <input type="checkbox" checked={showStock} disabled={noLive} aria-describedby={noLive ? statusId : undefined} onChange={(e) => setStock(e.target.checked)} />
               <span>Show the default template</span>
             </label>
           )}
