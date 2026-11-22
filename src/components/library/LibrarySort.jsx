@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import MenuSelect from '../tool/MenuSelect'
+import ToolIcon from '../tool/ToolIcon'
 import { sortOptions, useLibrarySort } from '../../utils/librarySort'
 
 // The sort menu the Icon and Emoji libraries share (see utils/librarySort.js for
@@ -7,8 +8,8 @@ import { sortOptions, useLibrarySort } from '../../utils/librarySort'
 // `lbry-select` skin: a keyboard path (Enter or arrows to open, arrows and
 // typeahead to move, Escape to close), a bottom sheet under 768px, and the
 // toolbar's 44px touch height. At the default the trigger reads just "Sort", and
-// on the filter row it shows only its icon (library.css, `lbry-sort--default`), so
-// the 1024 row keeps its groups; once changed it reads "Sort: Name A–Z". The
+// on the filter row it shows only a centred sort icon, the word and caret hidden
+// (library.css, `lbry-sort--default`), so the 1024 row keeps its groups; once changed it reads "Sort: Name A–Z". The
 // accessible name always carries the current choice ("Sort: Recommended").
 export default function LibrarySort({ searching = false, packLabel = 'Pack' }) {
   const [sort, setSort] = useLibrarySort()
@@ -21,7 +22,9 @@ export default function LibrarySort({ searching = false, packLabel = 'Pack' }) {
       onChange={setSort}
       ariaLabel="Sort"
       options={options}
-      triggerLabel={sort === 'recommended' ? 'Sort' : `Sort: ${label}`}
+      triggerLabel={sort === 'recommended'
+        ? <><ToolIcon name="arrows-down-up" size={16} className="lbry-sort-icon" /><span className="lbry-sort-word">Sort</span></>
+        : `Sort: ${label}`}
     />
   )
 }
