@@ -67,7 +67,7 @@ test('the menu has moments to check', () => {
 const CYCLES = new Set(['icons'])
 for (const id of CSS_IDS) {
   test(`${id}: plays while the row is live, on a fine pointer only${CYCLES.has(id) ? ' (a cycle)' : ' (once, then holds)'}`, () => {
-    const plays = rules.filter((r) => has(r.selector, id) && r.selector.includes('[data-live]') && (/\btransition\s*:/.test(r.body) || animationOf(r.body)))
+    const plays = rules.filter((r) => has(r.selector, id) && r.selector.includes('[data-live]') && (/\btransition\s*:/.test(r.body) || !/^(none)?$/.test(animationOf(r.body).trim())))
     assert.ok(plays.length, `no rule under [data-live] gives ${id} a transition or an animation`)
     for (const r of plays) {
       assert.ok(r.atRules.some((a) => a.includes('hover:hover') && a.includes('pointer:fine')), `${r.selector} is outside the hover media query`)
