@@ -107,8 +107,12 @@ for (const [width, height] of SIZES) {
           expect(r.pg, `${card} ${which}: the page is at the corner and fills the frame`).toEqual({ x: 0, y: 0, w: pw, h: ph })
           // The box on the stage is the page's shape, and the scaled frame fills it.
           expect(r.box.w / r.box.h, `${card} ${which}: the box's shape`).toBeCloseTo(pw / ph, 1)
-          expect(r.frame.w, `${card} ${which}: scaled frame fills the box width`).toBeCloseTo(r.box.w, 0)
-          expect(r.frame.h, `${card} ${which}: scaled frame fills the box height`).toBeCloseTo(r.box.h, 0)
+          // The scale is the smaller of the box's two fits (ExportStage LiveFrame), so the frame is never bigger than the box. It is short of it
+          // by the pixel or two the document's own size can differ from the stock shape by (exportLiveSize), not more.
+          expect(r.frame.w, `${card} ${which}: scaled frame is not wider than the box`).toBeLessThanOrEqual(r.box.w + 0.5)
+          expect(r.frame.h, `${card} ${which}: scaled frame is not taller than the box`).toBeLessThanOrEqual(r.box.h + 0.5)
+          expect(r.box.w - r.frame.w, `${card} ${which}: scaled frame fills the box width`).toBeLessThanOrEqual(2)
+          expect(r.box.h - r.frame.h, `${card} ${which}: scaled frame fills the box height`).toBeLessThanOrEqual(2)
           expect(r.frame.w, `${card} ${which}: the picture is not wider than the dialog`).toBeLessThanOrEqual(width)
           // The biggest type on the page is inside the frame, so no headline is cut at the right or the bottom.
           expect(r.big, `${card} ${which}: the page has type`).not.toBeNull()

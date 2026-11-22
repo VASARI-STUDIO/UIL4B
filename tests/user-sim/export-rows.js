@@ -75,7 +75,8 @@ export const fileGroup = (panelOrPage, categoryName) => rootOf(panelOrPage)
 
 /** The dock's primary button, the status line and the error line. */
 export const primaryButton = (panelOrPage) => rootOf(panelOrPage).locator('.xd-primary')
-export const dockStatus = (panelOrPage) => rootOf(panelOrPage).locator('.xd-status')
+// Under .xd-dock: the stage has its own one-line status (.xd-meta .xd-status, "Showing the sample..."), so the bare class names two lines.
+export const dockStatus = (panelOrPage) => rootOf(panelOrPage).locator('.xd-dock .xd-status')
 export const dockError = (panelOrPage) => rootOf(panelOrPage).locator('.xd-error')
 
 /** Choose a file: its type, then its category (Brand book only), then its pill where the category has a switch. */
