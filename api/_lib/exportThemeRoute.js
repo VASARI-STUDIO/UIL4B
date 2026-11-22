@@ -53,7 +53,7 @@ const THEMES = Object.freeze({
   '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
 })
 
-async function loadEngine() {
+export async function loadEngine() {
   const [brandMod, pages, doc, files, book, loaders, validate, styleguide, guideLayout] = await Promise.all([
     import('./exportThemes/brandFromProject.js'),
     import('./exportThemes/engine/pages.js'),
@@ -81,6 +81,13 @@ function withCsp(html) {
   return `${html.slice(0, end)}<meta http-equiv="Content-Security-Policy" content="${PRINT_CSP}">${html.slice(end)}`
 }
 
+// A page that throws because its layout cannot hold this brand's words is left out. A font file the deploy lacks is not a fit problem: left out
+// quietly it would hollow the document out and end as a bare 500, so it goes on up as font_missing (a 422 with that code, serveThemeExport).
+function leaveOut(err, what) {
+  if (err && err.code === 'font_missing') throw err
+  console.warn(`[export] ${what} left out (${err?.name || 'Error'})`)
+}
+
 // One document of every page, for printing (fonts embedded) or for a zip (fonts beside it).
 function pagesDoc(E, T, ctx, kind, standalone, only) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
@@ -93,7 +100,7 @@ function pagesDoc(E, T, ctx, kind, standalone, only) {
   const pages = []
   for (const p of list) {
     if (typeof T[kind]?.[p.id] !== 'function') continue
-    try { pages.push(T[kind][p.id](ctx)) } catch (err) { console.warn(`[export] ${kind} page ${p.id} left out (${err?.name || 'Error'})`) }
+    try { pages.push(T[kind][p.id](ctx)) } catch (err) { leaveOut(err, `${kind} page ${p.id}`) }
   }
   if (!pages.length) throw new Error(`no ${kind} page could be drawn`)
   const title = `${ctx.brand.name} ${kind === 'uikit' ? 'UI kit' : 'brand guidelines'}`
@@ -112,7 +119,7 @@ function styleGuide(E, T, ctx, standalone) {
     const hooks = ctx.mdHooks
     try { pages.push({ id, html: T.guide[id](ctx) }) } catch (err) {
       ctx.mdHooks = hooks
-      console.warn(`[export] guide page ${id} left out (${err?.name || 'Error'})`)
+      leaveOut(err, `guide page ${id}`)
     }
   }
   if (!pages.length) throw new Error('no guide page could be drawn')
