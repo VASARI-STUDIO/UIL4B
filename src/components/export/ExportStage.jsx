@@ -11,8 +11,8 @@ import { liveHtml, liveSize } from './exportLiveSize'
 //     the page's own size and scaled down to the stage with a transform.
 //
 // The box keeps one shape from the moment a live page is on its way (`expectLive`): the shape the live page will have, which is the
-// stock page's but for the brand book (see exportLiveSize). The stock picture stays under the live frame and the frame fades in over it
-// (opacity only), so nothing moves when the page arrives. `loading` marks the stage aria-busy while the page is being drawn.
+// stock page's but for the brand book (see exportLiveSize). Until it lands the box holds a plain tile, never the stock picture, which is
+// another brand's; the frame fades in over the tile (opacity only), so nothing moves when the page arrives. `loading` marks the stage aria-busy while the page is being drawn.
 //
 // A page the viewer cannot export (`sample`) is drawn sharp but as a sample: the 1x picture only, with no retina version, under a
 // tiled "Pro sample" mark that takes no clicks and is hidden from assistive tech; `locked` adds the Pro mark over it. A document
@@ -58,7 +58,8 @@ export default function ExportStage({ page, theme, sample = false, locked = fals
   return (
     <div className="xd-stage" aria-busy={loading || undefined}>
       <div className={`xd-box${sample ? ' is-locked' : ''}`} style={{ '--xd-w': shape.w, '--xd-h': shape.h }}>
-        {image.src && (
+        {expect && <span className="xd-tile" aria-hidden="true" />}
+        {image.src && !expect && (
           <img
             key={image.src}
             className="xd-img"
@@ -66,8 +67,7 @@ export default function ExportStage({ page, theme, sample = false, locked = fals
             srcSet={image.srcSet}
             width={page.w}
             height={page.h}
-            alt={live ? '' : pageAlt(theme, page)}
-            aria-hidden={live || undefined}
+            alt={pageAlt(theme, page)}
             data-pin-nopin="true"
             decoding="async"
           />

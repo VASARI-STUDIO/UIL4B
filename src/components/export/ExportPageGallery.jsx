@@ -7,6 +7,9 @@ import { pageImage } from './exportPages'
 // A click on a thumbnail, an arrow, or Pause stops the auto-advance for good (pageCarousel); hovering or focusing the gallery
 // only holds it while the pointer or focus is there (the parent wires that). Up and Down page through (Left and Right too, for the
 // phone layout where the strip lies on its side). Every control is a button, so Tab reaches them all. One page needs no gallery.
+//
+// `neutral` is set while a live page is on offer: the stock pictures are another brand's, so each thumbnail is a plain page-shaped tile
+// with its label, never a picture of the sample brand.
 const Chevron = ({ up }) => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
     <path d={up ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -21,7 +24,7 @@ const PlayIcon = ({ playing }) => (
   </svg>
 )
 
-export default function ExportPageGallery({ pages, state, dispatch, sample = false }) {
+export default function ExportPageGallery({ pages, state, dispatch, sample = false, neutral = false }) {
   if (pages.length < 2) return null
   const shown = windowIndexes(state.index, pages.length)
   const playing = state.auto && !state.reduced
@@ -40,7 +43,7 @@ export default function ExportPageGallery({ pages, state, dispatch, sample = fal
       <div className="xd-gal-list">
         {shown.map((i) => {
           const page = pages[i]
-          const image = pageImage(page, sample)
+          const image = neutral ? { src: '' } : pageImage(page, sample)
           const on = i === state.index
           return (
             <button
@@ -51,6 +54,7 @@ export default function ExportPageGallery({ pages, state, dispatch, sample = fal
               aria-current={on ? 'true' : undefined}
               onClick={() => dispatch({ type: 'select', index: i })}
             >
+              {neutral && <span className="xd-tile" aria-hidden="true">{page.label}</span>}
               {image.src && <img src={image.src} width={page.w} height={page.h} alt="" data-pin-nopin="true" decoding="async" loading="lazy" />}
               {sample && <span className="xd-mark xd-mark--thumb" aria-hidden="true" />}
             </button>

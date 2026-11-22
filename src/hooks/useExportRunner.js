@@ -24,7 +24,7 @@ import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
 import { themedFile, themedFileIsPro, themedZipName } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
-import { exportProjectName } from '../utils/projectFileName'
+import { documentProjectName, exportProjectName } from '../utils/projectFileName'
 import { readIdentity } from '../utils/kitIdentity'
 
 // Everything that happens between a click on Export and a file in the downloads
@@ -187,7 +187,7 @@ const showDocument = (html, filename, win, title) => {
  * The export engine behind the dialog.
  *   run(formatId, { projectId, theme, signIn })  make the file; see the statuses above. `signIn(reason)` is an
  *                                 optional async gate for a signed-out visitor: true once signed in, false if dismissed
- *   copy(formatId)                put a Code file on the clipboard: { ok, count } (count is the
+ *   copy(formatId, { projectId })  put a Code file on the clipboard: { ok, count } (count is the
  *                                 number of tokens). Never asks for an account. Raises no toast.
  *   upgradeTarget(formatId, projectId)  where a Pro pick goes for this account: { to, checkout, pick, gate }
  *   reset()                       clear the notice, the error and the success line (a new pick)
@@ -309,7 +309,7 @@ export default function useExportRunner() {
     // `fileProject` is that name as typed ('' for an unnamed project), which the file
     // names are made from; `projectName` is what the documents print, with a stand-in.
     const fileProject = exportProjectName({ projects, projectId, design, working })
-    const projectName = fileProject || 'Design System'
+    const projectName = documentProjectName(fileProject)
     const fmt = EXPORT_FORMATS.find((f) => f.id === format)
     if (!fmt?.live) { stop(FAILED_LINE); return { status: 'failed' } }
 
@@ -588,11 +588,11 @@ export default function useExportRunner() {
   // comment on a free account), straight to the clipboard. A copy is free forever and
   // needs no account (useExportGate.js), so none of the gates above run. It waits for
   // the plan like the file does, so a Pro account is never handed the credit.
-  const copy = async (formatId) => {
+  const copy = async (formatId, { projectId } = {}) => {
     const none = { ok: false, count: 0 }
     if (!isCodeFile(formatId) || !design || live.current.planKnown === false) return none
     try {
-      const projectName = design.name || 'Design System'
+      const projectName = documentProjectName(exportProjectName({ projects, projectId, design, working }))
       const watermark = !live.current.isPro
       const text = await buildCodeFile(formatId, design, { projectName, watermark })
       await navigator.clipboard.writeText(text)

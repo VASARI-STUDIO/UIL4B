@@ -27,6 +27,13 @@ function openFullSize(html) {
   setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
+// A 12px arrow out of a box, after the words: the page opens in a tab of its own.
+const ExternalGlyph = () => (
+  <svg className="xd-full-glyph" viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true" focusable="false">
+    <path d="M5 2.5H3.5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V7M7 2.5h2.5V5M9.5 2.5L5.5 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
 function PlainPreview({ cat, file, name, fileProject, isPro, design, chosen }) {
   const kind = cat.preview
   if (kind === 'book' || kind === 'guidelines') {
@@ -66,9 +73,12 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   // The server's 403 is the account's real plan. When it disagrees with the plan this screen holds, the page is treated as a Pro
   // template: the sample with the Pro mark, and the default template one click away.
   const refused = live.status === 'upgrade'
-  const sample = proTemplate || refused
+  // A signed-in person whose plan is still being read is waiting for their own page, as one whose page is being drawn is: plain tiles,
+  // never the sample brand's pictures. Whether the template is Pro is not known yet, so no sample mark either.
+  const waiting = checking && Boolean(user) && !stock
+  const sample = (proTemplate || refused) && !waiting
   const noLive = !user || proTemplate || checking || live.status === 'unavailable' || refused
-  const showStock = stock || noLive
+  const showStock = stock || (noLive && !waiting)
   const shownLive = !showStock && live.status === 'ok'
   const drawing = live.status === 'loading'
   // Why the stock picture is showing, or that the live page is on its way: one line under the stage, and the reason the box below it is disabled.
@@ -78,7 +88,7 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
     if (checking) status = 'Checking your plan…'
     else if (!user) status = 'Sign in to see this page with your brand. Showing the sample.'
     else if (sample) status = 'Pro template: showing the sample.'
-    else if (live.status === 'unavailable') status = 'Showing the sample — live preview unavailable'
+    else if (live.status === 'unavailable') status = 'Live preview unavailable. Showing the sample.'
     else if (drawing) status = 'Drawing your brand…'
   }
 
@@ -93,12 +103,12 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
         onBlur={() => hold(false)}
       >
         {themed
-          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={shownLive ? live.html : ''} expectLive={!showStock && drawing} loading={drawing && !showStock} />
+          ? <ExportStage page={page} theme={shown} sample={sample} locked={(proTemplate && !checking) || refused} html={shownLive ? live.html : ''} expectLive={!showStock && (drawing || waiting)} loading={(drawing || waiting) && !showStock} />
           : <ExportStage plain={<PlainPreview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} design={design} chosen={chosen} />} />}
         {themed && (
           <div className="xd-meta">
-            <p className="xd-status" id={statusId} aria-live="polite">{status}</p>
-            {shownLive && <button type="button" className="xd-full" onClick={() => openFullSize(live.html)} aria-label="Open full size, in a new tab">Open full size</button>}
+            <p className="xd-stage-status" id={statusId} aria-live="polite">{status}</p>
+            {shownLive && <button type="button" className="xd-full" onClick={() => openFullSize(live.html)} aria-label="Open full size, in a new tab">Open full size<ExternalGlyph /></button>}
           </div>
         )}
         <div className="xd-under">
@@ -126,7 +136,7 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
           onFocus={() => hold(true)}
           onBlur={() => hold(false)}
         >
-          <ExportPageGallery pages={pages} state={carousel} dispatch={dispatch} sample={sample} />
+          <ExportPageGallery pages={pages} state={carousel} dispatch={dispatch} sample={sample} neutral={!showStock} />
         </div>
       )}
     </div>

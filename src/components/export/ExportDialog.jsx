@@ -7,7 +7,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import useExportRunner from '../../hooks/useExportRunner'
-import { exportProjectName } from '../../utils/projectFileName'
+import { documentProjectName, exportProjectName } from '../../utils/projectFileName'
 import { DEFAULT_PRESET, EXPORT_TYPES, freeWayOut, readLastPick, readLastTheme, resolvePreset, startFor, storeLastPick } from '../../config/dialogExport'
 import { readExportTemplates } from '../../config/exportTemplates'
 import { defaultThemeId, themeFitsFile, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
@@ -225,7 +225,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     ;(first || dialogRef.current)?.focus({ preventScroll: true })
   }
   const onCopy = async () => {
-    const result = await runner.copy(pick.file)
+    const result = await runner.copy(pick.file, { projectId })
     const message = result?.ok ? (result.count ? `Copied ${result.count} tokens` : 'Copied') : 'That didn’t copy. Select the text and copy it instead.'
     window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message, type: result?.ok ? 'success' : 'error' } }))
   }
@@ -333,7 +333,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                       files={fileOptions(cat)}
                       onFile={onFile}
                       themeId={theme}
-                      name={name || 'Design System'}
+                      name={documentProjectName(name)}
                       fileProject={name}
                       isPro={isPro}
                       checking={checking}
@@ -345,7 +345,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                       <ExportSteps
                         cat={cat}
                         file={pick.file}
-                        name={name || 'Design System'}
+                        name={documentProjectName(name)}
                         fileProject={name}
                         project={project}
                         strip={strip}
