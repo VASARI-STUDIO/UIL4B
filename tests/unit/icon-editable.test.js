@@ -1,5 +1,5 @@
-// Which gallery tiles get the "line style editable" mark. The rule is the one the customiser
-// starts from before an icon's artwork has loaded (IconLibrary.jsx `isStroke`).
+// Which gallery icons count as editable: the rule the customiser starts from before an icon's artwork
+// has loaded (IconLibrary.jsx `isStroke`).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'

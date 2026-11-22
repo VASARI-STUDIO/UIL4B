@@ -532,7 +532,7 @@ test('choosing a Pro pack costs nothing, and says so in its own words', async ({
 
   // Counted from the moment of the click, so the default browse is not in the way.
   const after = iconifyUrlLog(page)
-  await chooseMenuOption(page, page.locator('.lbry-select'), 'simple-icons')
+  await chooseMenuOption(page, page.locator('.lbry-select:not(.lbry-sort)'), 'simple-icons')
   await page.waitForTimeout(2500)
 
   expect(after, `picking a Pro pack made ${after.length} request(s): ${after.slice(0, 3).join(' ')}`).toEqual([])
@@ -599,7 +599,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   // one left open.
   const logos = []
   page.on('request', (r) => { if (r.url().includes('img.logo.dev')) logos.push(r.url()) })
-  await chooseMenuOption(page, page.locator('.lbry-select'), 'logodev')
+  await chooseMenuOption(page, page.locator('.lbry-select:not(.lbry-sort)'), 'logodev')
   await page.waitForTimeout(2500)
   expect(logos, 'a gated Logo.dev must not resolve a single brand image').toEqual([])
   await expect(page.locator('.ig-gate')).toBeVisible()

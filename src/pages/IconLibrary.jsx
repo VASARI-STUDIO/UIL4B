@@ -15,6 +15,8 @@ import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibrarySort from '../components/library/LibrarySort'
+import { sortLibraryList, useLibrarySort } from '../utils/librarySort'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useInViewPlayback, { allowsAnimatedPreview } from '../hooks/useInViewPlayback'
@@ -34,7 +36,7 @@ import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
-import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
+import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
@@ -953,11 +955,9 @@ const gridShowsPack = (list) => {
 
 // What a cell is called to assistive tech: the action, the icon, and the pack
 // when the grid mixes packs (the visible label only appears on hover).
-// An icon whose line style the customiser can change says so as well.
-const cellLabel = (icon, packName, editable) => {
+const cellLabel = (icon, packName) => {
   const base = icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`
-  const named = packName ? `${base}, ${packName}` : base
-  return editable ? `${named}, line style editable` : named
+  return packName ? `${base}, ${packName}` : base
 }
 
 // Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
@@ -1155,16 +1155,6 @@ function cellGlyph(icon, src, onGlyphError, gone, cellRef, idx) {
   )
 }
 
-// Corner mark on a tile whose line style can be edited. The tile's accessible name says it.
-function EditMark() {
-  return (
-    <svg className="ic-edit" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  )
-}
-
 // Memoised so a grid change re-renders only the cells it touches. Appending a
 // page, a tranche of markup landing or the customizer opening used to re-run
 // every mounted cell; every prop here is a primitive, a stable callback or the
@@ -1181,7 +1171,7 @@ const findIconCell = (icon) => (icon
   ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
   : null)
 
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, hideEdit = false, idx = 0, onPick, onWarm, onGlyphError }) {
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, idx = 0, onPick, onWarm, onGlyphError }) {
   const cellRef = useRef(null)
   const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
@@ -1191,7 +1181,6 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
   // focused cell still has to say which pack it is from.
   const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
   const drawnPack = showPack ? packName : null
-  const editable = isGalleryEditable(icon)
   return (
     <div
       ref={cellRef}
@@ -1200,7 +1189,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
-      aria-label={cellLabel(icon, packName, editable)}
+      aria-label={cellLabel(icon, packName)}
       onClick={() => onPick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(icon) } }}
       onMouseEnter={() => onWarm(icon, false)}
@@ -1208,7 +1197,6 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       onFocus={() => onWarm(icon, true)}
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone, cellRef, idx)}</Fragment>}
-      {!ghost && editable && !hideEdit && <EditMark key="e" />}
       <span key="n" className="ic-name">{icon.name}</span>
       {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
@@ -3387,6 +3375,11 @@ const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
 const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
 const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
+// The pack an icon is sorted under for the "Pack" sort: the label the grid's pack headings use ('' for a custom icon, sorted last).
+const iconPackSortKey = (icon) => {
+  const p = packOf(icon)
+  return p ? (icon.logo ? 'Logo.dev' : gridPackLabel(p)) : ''
+}
 
 /* ── THE CREDIT FOR THE GRID ─────────────────────────────────────────────────
 
@@ -3793,11 +3786,28 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // What the grid shows. Signed out, the fetched set trimmed to whole rows of the
   // measured columns; everyone else sees it all. Memoised so the list keeps its
   // identity until the set or the column count changes.
+  //
+  // THE SORT (utils/librarySort.js, shared with the Emoji library). It orders the WHOLE filtered set here,
+  // before `shown` slices a page off it, so scrolling and "show more" carry on in the same order, and it runs
+  // AFTER the signed-out trim so the sample keeps its five-pack spread. Recommended hands back the very same
+  // array, so today's order (and the identity this memo had) is untouched.
+  const [sort] = useLibrarySort()
   const icons = useMemo(
-    () => (capped ? capAnonList(fetchedIcons, anonCap) : fetchedIcons),
-    [capped, fetchedIcons, anonCap],
+    () => sortLibraryList(
+      capped ? capAnonList(fetchedIcons, anonCap) : fetchedIcons,
+      sort,
+      { nameOf: (icon) => icon.name, packOf: iconPackSortKey },
+    ),
+    [capped, fetchedIcons, anonCap, sort],
   )
   const [visible, setVisible] = useState(PAGE_SIZE)
+  // A new order starts from its first page, like any other change to the list.
+  const sortSeen = useRef(sort)
+  useEffect(() => {
+    if (sortSeen.current === sort) return
+    sortSeen.current = sort
+    setVisible(PAGE_SIZE)
+  }, [sort])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   /* The catalogue is on screen but not all of it, and the notice says which:
@@ -5197,9 +5207,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const gateSample = gated ? gateSampleKind({ category, group, pack }) : null
   // The Filters badge counts what the Filters panel holds. From 641px up the category and style fold into it
   // (see LibraryToolbar), so all three count; on a phone both sit in the quick row and the sheet holds only the
-  // pack menu, so only that counts and the badge never points at a sheet that does not explain it.
+  // pack menu, so only that counts and the badge never points at a sheet that does not explain it. A changed
+  // sort counts at every width: whenever the badge shows, the Sort menu is in the panel with it.
   const phone = useMediaQuery('(max-width: 640px)')
-  const filtersCount = (selectValue !== 'all' ? 1 : 0) + (phone ? 0
+  const filtersCount = (selectValue !== 'all' ? 1 : 0) + (sort !== 'recommended' ? 1 : 0) + (phone ? 0
     : (category !== 'all' ? 1 : 0) + (category === 'all' ? (weight !== 'regular' && weightState(weight).ok ? 1 : 0) : (facet ? 1 : 0)))
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
@@ -5482,7 +5493,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // A GROUPED GRID STATES EACH PACK ONCE, in a full-width heading row, and its cells
   // draw no pack label (the label vanished at 980px and below, which left phones and
   // tablets with no sign of where one pack ends and the next begins).
-  const groupHeads = source === 'group'
+  //
+  // A NAME SORT (A-Z or Z-A) DRAWS NO HEADINGS: it interleaves the packs, so a heading would repeat on every
+  // change of pack. Each cell then states its own pack, as it does in a search.
+  const groupHeads = source === 'group' && sort !== 'az' && sort !== 'za'
   // Icons per pack across the whole result, not just the revealed page, so a
   // heading's count never changes as more of the list scrolls in.
   const packCounts = useMemo(() => {
@@ -5574,7 +5588,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       packInName={groupHeads}
       picked={isPicked(icon)}
       ghost={ghost}
-      hideEdit={category === 'editable'}
       idx={idx}
       onPick={onPick}
       onWarm={onWarm}
@@ -5641,6 +5654,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             placeholder: 'Search icons…',
             label: 'Search icons',
           }}
+          /* The sort sits after the pack menu on the row, and in the Filters
+             sheet's foot on a phone and a narrow desktop. */
+          sort={<LibrarySort searching={!!query.trim()} />}
           /* The pack menu is a scope, not a filter, so it sits at the right end
              of the row (and in the Filters sheet on a phone). */
           action={(

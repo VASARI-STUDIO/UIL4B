@@ -676,7 +676,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
 
     // A tile whose own cell is on the grid, so there is a cell to land on.
     const names = await tiles.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label').replace(/^Open /, '')))
-    const cells = await page.evaluate((list) => list.map((n) => [...document.querySelectorAll('.ig .ic[data-ic]')].some((el) => ['Customise ' + n, 'Customise ' + n + ', line style editable'].includes(el.getAttribute('aria-label')))), names)
+    const cells = await page.evaluate((list) => list.map((n) => [...document.querySelectorAll('.ig .ic[data-ic]')].some((el) => el.getAttribute('aria-label') === 'Customise ' + n)), names)
     const at = cells.indexOf(true)
     expect(at, `POSITIVE CONTROL: one of ${names.join(', ')} has a cell on the grid`).toBeGreaterThanOrEqual(0)
     const picked = names[at]
@@ -972,7 +972,7 @@ for (const width of [390, 1440]) {
           const skeletonHeight = await cellHeight()
           releaseSearch()
           await expect(page.locator('.ig-skel')).toHaveCount(0)
-          await expect(page.locator('.ig .ic img, .ig .ic svg:not(.ic-edit)').first()).toBeVisible()
+          await expect(page.locator('.ig .ic img, .ig .ic svg').first()).toBeVisible()
           const labelled = await page.locator('.ig .ic-pack').count()
           expect(labelled > 0).toBe(query === 'arrow')
           expect(Math.abs(await cellHeight() - skeletonHeight)).toBeLessThanOrEqual(2)

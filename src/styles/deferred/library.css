@@ -884,6 +884,16 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
 .lib-surface .lbry-toolbar-row:has(>.lbry-toolbar-pinned)>.lbry-toolbar-action{display:flex;align-items:center;gap:12px}
 .lib-surface .lbry-toolbar-row:has(>.lbry-toolbar-pinned)>.lbry-toolbar-action::before{content:"";flex:0 0 1px;height:24px;margin-left:2px;background:var(--v3-hair)}
 .lib-surface .lbry-toolbar-row .lbry-select{width:auto}
+/* The sort menu (LibraryToolbar `sort`): on the row it follows the action at the right end. With no action before it
+   it carries the free space itself; a pinned control after it sits flush against it, as after an action. */
+.lib-surface .lbry-toolbar-sort{flex:0 0 auto;display:flex;align-items:center;margin-left:auto}
+.lib-surface .lbry-toolbar-action+.lbry-toolbar-sort{margin-left:0}
+.lib-surface .lbry-toolbar-sort+.lbry-toolbar-pinned{margin-left:0}
+.lib-surface .lbry-toolbar-sort .lbry-select{white-space:nowrap}
+/* At the default the row shows only the sort icon (the name stays "Sort: Recommended"); the panel and a phone keep the word. */
+.lib-surface .lbry-toolbar-sort .lbry-sort--default{width:40px;padding:0;justify-content:center}
+@media(pointer:coarse){.lib-surface .lbry-toolbar-sort .lbry-sort--default{width:44px}}
+.lib-surface .lbry-toolbar-sort .lbry-sort--default .menu-select-text{display:none}
 
 /* The one control the groups collapse into. The same resting affordance as a
    collapsed group trigger (a hairline pill), because it is the same kind of
@@ -935,7 +945,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
 .lib-surface .lbry-panel-groups>.lbry-filters{flex-wrap:wrap;width:auto}
 .lib-surface .lbry-panel-groups .lbry-select,
 .lib-surface .lbry-panel-action .lbry-select{width:100%;max-width:none}
-.lib-surface .lbry-panel-action{padding-top:14px;border-top:1px solid var(--v3-hair)}
+.lib-surface .lbry-panel-action{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--v3-hair)}
 .lib-surface .lbry-panel-action>*{width:100%;justify-content:center}
 
 /* Phone: the bottom sheet. Portalled to <body> inside its own `.lib-surface`
@@ -1146,16 +1156,6 @@ html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
 .lib-surface .ig .ic:focus-visible{background:var(--v3-rowh);border-color:var(--v3-hair);outline:2px solid var(--v3-ink);outline-offset:-2px}
 .lib-surface .ig .ic:active{background:var(--v3-rowh);border-color:var(--v3-hair);transform:scale(.97)}
 .lib-surface .ig .ic.is-picked{background:var(--v3-rowc);border-color:var(--v3-hl20)}
-/* Mark on a tile whose line style can be edited: a small pen in the top-right corner, out of
-   the flow so the glyph and the label stay where they were. It follows the muted label ink. */
-.lib-surface .ig .ic svg.ic-edit{
-  position:absolute;top:6px;right:6px;width:12px;height:12px;margin:0;
-  stroke:var(--v3-sec);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
-  pointer-events:none;
-}
-@media (forced-colors:active){
-  .lib-surface .ig .ic svg.ic-edit{stroke:CanvasText}
-}
 /* A grouped grid opens each pack with a full-width heading row: the pack's name and its
    icon count, in place of a label on every cell. Its height is fixed (the box includes
    the hairline and the air above it), so the windowed grid, which swaps cells for

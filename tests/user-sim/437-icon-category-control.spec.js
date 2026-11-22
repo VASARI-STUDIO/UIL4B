@@ -171,7 +171,6 @@ test('Coloured holds no Simple Icons, and Brands and Flags narrow it', async ({ 
 test('Editable draws line packs, and the cells carry no editable mark', async ({ page }) => {
   watch(page, 'someone browsing editable icons')
   await open(page)
-  await expect.poll(() => page.locator('.ic-edit').count(), { timeout: 15000, message: 'POSITIVE CONTROL: All shows the mark on stroke-pack cells' }).toBeGreaterThan(0)
   await (await option(page, 'Editable')).click()
   await expect(bar(page, 'Editable icon pack')).toBeVisible({ timeout: 20000 })
   await expect(page.locator(REAL_CELL).first()).toBeVisible({ timeout: 20000 })
