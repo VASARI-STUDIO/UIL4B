@@ -12,7 +12,7 @@ const CHROME = { 400: '', 500: '' };
 let MONO = '';
 const useFaces = (ctx) => { CHROME[400] = faceStem(ctx, 'body', 400); CHROME[500] = faceStem(ctx, 'body', 500); MONO = faceStem(ctx, 'mono', 400); };
 
-const W = 794, H = 1123, X0 = 48, XR = 746, CW = 698, SY = 1075, SH = 48, BOT = 1035, SUBH = 32;
+const W = 794, H = 1123, X0 = 48, XR = 746, CW = 698, SY = 1075, SH = 48, BOT = 1022, SUBH = 32;
 const COL = [48, 289, 530], COLW = 216;
 // the logo at a width; the slot edition draws a frame, and every frame carries the one word Logo. A frame under 22 px tall cannot hold the word inside its dashed edge, so no page draws one:
 // each width is chosen so the frame is tall enough (a frame that is not says so here, and the page is changed)
@@ -304,7 +304,8 @@ function logoPage(ctx, maxTiles = 6) {
   // a brand can carry many colourways: the page draws the first six (two rows) so the clear-space drawing keeps its room, and says so for the markdown
   if (groups.length > maxTiles) groups.length = maxTiles;
   // the ground is named once, in the section's note (its hex in mono, no #); each tile carries only its colourway
-  const groundNote = { html: [...new Map(LF.grounds.map((g) => [g.groundHex.toLowerCase(), `${A(g.ground)} ${fig(g.groundHex.replace('#', '').toUpperCase())}`])).values()].join(', ') };
+  const groundList = [...new Map(LF.grounds.map((g) => [g.groundHex.toLowerCase(), g])).values()];
+  const groundNote = { html: groundList.map((g) => (groundList.length > 1 ? A(g.ground) : `${A(g.ground)} ${fig(g.groundHex.replace('#', '').toUpperCase())}`)).join(', ') };
   const five = groups.length === 5 && (slot ? slotW(ctx, 100) : 100) + 30 <= Math.floor((CW - 48) / 5), lgw0 = five ? 100 : Math.min(180, Math.max(116, Math.round((44 * G.w) / G.h))), lgw = slot ? slotW(ctx, lgw0) : lgw0;
   // four tiles go in one row when the logo frame fits a quarter of the page: the room it saves goes to the clear-space drawing
   const four = groups.length === 4 && lgw + 30 <= Math.floor((CW - 48) / 4);
@@ -365,10 +366,10 @@ function logoPage(ctx, maxTiles = 6) {
     const y0 = geoM.cap + geoM.gap, T = geoM.T, total = geoM.W + geoM.tail, step = geoM.W * 0.42;
     const f = (n) => n.toFixed(2);
     brandCases.push(['Moved step', 'The step falls after the last letter, not under the name.', (w) => redraw(w, swap('kerb', () => ({ d: `M0 ${f(y0)} H${f(step)} V${f(y0 + T)} H${f(total)} V${f(y0 + 2 * T)} H${f(step - T)} V${f(y0 + T)} H0 Z`, tf: '' })))]);
-    brandCases.push(['Flat line', 'The kerb always steps down. Never draw it flat.', (w) => redraw(w, swap('kerb', () => ({ d: `M0 ${f(y0)} H${f(total)} V${f(y0 + T)} H0 Z`, tf: '' })))]);
+    brandCases.push(['Flat line', 'The kerb drawn flat. It always steps down.', (w) => redraw(w, swap('kerb', () => ({ d: `M0 ${f(y0)} H${f(total)} V${f(y0 + T)} H0 Z`, tf: '' })))]);
   } else {
-    brandCases.push(['Stretch', 'Never stretch it.', (w) => L.forMisuse(w, { fill: 'var(--ink)' })]);
-    brandCases.push(['Squash', 'Never squash it.', (w) => L.forMisuse(w, { fill: 'var(--ink)' })]);
+    brandCases.push(['Stretch', 'Pulled wider than drawn.', (w) => L.forMisuse(w, { fill: 'var(--ink)' })]);
+    brandCases.push(['Squash', 'Pressed shorter than drawn.', (w) => L.forMisuse(w, { fill: 'var(--ink)' })]);
   }
   const cases = [
     ...brandCases.map(([n, why, draw]) => ({ n, why, draw: (cx, cy) => at(cx - mw / 2, cy - mh / 2, draw(mw), { style: n === 'Squash' ? 'transform:scaleY(0.6)' : n === 'Stretch' ? `transform:scaleX(${mw * 1.4 <= dw - 8 ? 1.4 : 1})` : '' }) })),
@@ -554,8 +555,8 @@ function typePage(ctx) {
     { fam: 'var(--body)', name: b.family, role: `Text, ${weightName(ctx.weights.regular)}`, w: ctx.weights.regular, extra: '' },
     ...(mo ? [{ fam: 'var(--bmono)', name: mo.family, role: 'Mono, Regular', w: 400, extra: '' }] : []),
   ];
-  const glyphs = ['ABCDEFGHIJKLM', 'abcdefghijklm', '0123456789 &?!'].slice(0, 2);
-  const facesSec = { h: SUBH + 20 + 104 + glyphs.length * 20 + 4, flex: 40, draw: (y, extra) => {
+  const glyphs = ['ABCDEFGHIJKLM', 'abcdefghijklm', '0123456789 &?!'];
+  const facesSec = { h: SUBH + 20 + 104 + glyphs.length * 20 + 4, flex: 100, draw: (y, extra) => {
     let h = sub(X0, y, CW, 'Faces');
     faces.forEach((f, i) => {
       const x = COL[i], fy = y + SUBH + 20 + Math.floor(extra / 2);
@@ -902,13 +903,14 @@ function appliedPage(ctx) {
     const hoardInner = hoardInnerAt(1), hoardUrl = slot ? '' : ctx.mockup('hoarding-site', [{ html: ctx.artPage(hoardInner, { w: aw, h: HH, css: guideCss() }), w: aw, h: HH }]);
     // the slot edition holds no photograph to caption, so the flat artwork carries the sign's spec in rows
     const sz = /([\d.]+) x ([\d.]+) mm/.exec(sign.size || '');
-    const hoardSpec = [['Sign', sign.object], ['Size', sign.size && sizeFig(sign.size), true], ...(sz ? [['Proportion', fig(`${(sz[1] / sz[2]).toFixed(2)} to 1`), true]] : []), ['Ground', m.ground.name], ['Type', m.text.name]].filter((r) => r[1]);
+    const szR = sz ? sz[1] / sz[2] : 0, drawnR = aw / HH;
+    const hoardSpec = [['Sign', String(sign.object || '').trim().toLowerCase() === 'sign' ? '' : sign.object], ['Size', sign.size && sizeFig(sign.size), true], ...(sz && Math.abs(szR - drawnR) / drawnR < 0.05 ? [['Proportion', fig(`${(sz[1] / sz[2]).toFixed(2)} to 1`), true]] : []), ['Ground', m.ground.name], ['Type', m.text.name]].filter((r) => r[1]);
     const hoardSec = { h: SUBH + 16 + HB, draw: (y, more = 0) => {
       const py = y + SUBH + 16, HBd = HB + more;
       // slot: the artwork flat, at the sign's own proportion, its spec in rows beside it; showcase: the same artwork placed in a mockup scene, and said to be
       return sub(X0, y, CW, 'Hoarding', slot ? `${m.ground.name} first` : { html: `${A(m.ground.name)} first, ${A(sign.object)}${sign.size ? `, ${sizeFig(sign.size)}` : ''}` })
         + (slot ? frame(X0, py, FW, HB, box(`left:0;top:0;width:${aw}px;height:${HH}px;transform:scale(${((FW - 2) / aw).toFixed(4)});transform-origin:0 0`, hoardInnerAt((FW - 2) / aw)), 'background:var(--ground)') : box(`left:${X0}px;top:${py}px;width:${CW}px;height:${HBd}px;overflow:hidden`, scene(CW, HBd, hoardUrl, 1, 0.5, 0.45)))
-        + (slot ? hoardSpec.map(([k, v, raw], i) => at(X0 + FW + 24, py + i * 20, A(k), { cls: 'sg-n', style: 'color:var(--quiet)' }) + at(X0 + FW + 24 + 70, py + i * 20, raw ? v : A(v), { cls: 'sg-n', w: CW - FW - 24 - 70 })).join('') : '');
+        + (slot ? hoardSpec.map(([k, v, raw], i) => at(X0 + FW + 24, py + i * 20, A(k), { cls: 'sg-n', style: 'color:var(--quiet)' }) + at(X0 + FW + 24 + 88, py + i * 20, raw ? v : A(v), { cls: 'sg-n', w: CW - FW - 24 - 88 })).join('') : '');
     } };
 
     // the photographs the brand commissions: the data holds the briefs and no files, so each is a dashed frame at its crop (both of these are wide), the shot's name under it
@@ -952,7 +954,7 @@ function appliedPage(ctx) {
     if (over() > 0) setHB(Math.max(100, HB - over()));
     // the hoarding takes the room that is left, up to its own height in the scene
     if (!slot && over() < 0) hoardSec.flex = Math.min(HH - HB, -over());
-    if (slot && over() < 0) setHB(Math.min(HB - over(), Math.floor(((CW - 24 - 70 - 160 - 2) / aw) * HH) + 2));
+    if (slot && over() < 0) setHB(Math.min(HB - over(), Math.floor(((CW - 24 - 88 - 160 - 2) / aw) * HH) + 2));
   }
   return shell(ctx, 'applied', { body: t.html + flow('applied', t.top, secs, { gap: photographed && !slot ? 26 : photographed || !slot ? 28 : 20, maxGap: 72 }) });
 }
