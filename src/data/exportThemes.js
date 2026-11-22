@@ -14,7 +14,7 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '09-blueprint', name: 'Blueprint' }),
   Object.freeze({ id: '10-inuse', name: 'In use' }),
   // Pro themes with all three rows. Named apart from 04 Standards so the picker shows two different names.
-  Object.freeze({ id: '21-presentation', name: 'Keynote' }),
+  Object.freeze({ id: '21-presentation', name: 'Keynote', extraRows: Object.freeze(['guide']) }),
   Object.freeze({ id: '22-ticket', name: 'Stub' }),
   Object.freeze({ id: '23-broadsheet', name: 'Front Page' }),
   Object.freeze({ id: '24-standards', name: 'Standards Plate' }),
@@ -40,7 +40,7 @@ export const THEME_ROW_FORMATS = Object.freeze({
 
 // Rows a theme has only when it opts in: by a rows list that names them, or by `extraRows` on a theme with no rows list (which keeps every
 // other row). The style guide is drawn by a theme's own lane (lane-guide.js), so a theme without one must not be offered it. Gating follows
-// the guidelines: free where they are free. Swiss Field (27) stays on a rows list because it is guidelines-only (no UI kit, no book).
+// the guidelines: free where they are free. Keynote (21) opts in by extraRows and is Pro only. Swiss Field (27) stays on a rows list because it is guidelines-only (no UI kit, no book).
 const OPT_IN_ROWS = Object.freeze(['guide'])
 
 // The themes whose UI kit a free account can download. Interim: Standards, until the Free pair (Label and Swiss Field) has UI kits
