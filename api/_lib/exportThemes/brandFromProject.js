@@ -9,7 +9,6 @@ import { toOklch, fromOklch, ratio, luminance } from './engine/color.js';
 import { loadBrand } from './engine/brand.js';
 import { BrandInputError } from './engine/validate.js';
 import { TTF_FAMILIES, CATEGORIES, standInFor, isKnownFamily, catalogueEntry } from './fontCatalogue.js';
-import { BRANDS } from './brands/index.js';
 
 const HEX = /^#[0-9A-F]{6}$/;
 const up = (h) => String(h).toUpperCase();
@@ -120,17 +119,16 @@ const slugOf = (word) => {
 const T = (token, face, size, line, weight, use) => ({ token, face, size, line, weight, use });
 const rule = (a, b) => ({ do: a, dont: b });
 
-// The generic copy; shapes and counts follow the sample brands, wording is the user's to write. The prose is empty: the slot edition fills every
-// empty string with its own descriptor box, so a placeholder is never drawn as a sentence. A theme's sample copy (sampleCopy) replaces it.
+// The generic copy; shapes and counts follow the sample brands, wording is the user's to write.
 function skeleton(word, date) {
-  const w = '';
+  const w = 'Write this in your own words.';
   return {
     name: word, theme: '04-standards', edition: 'slot', version: { number: '1.0', date },
-    description: w, product: w, audience: w, city: w,
-    lines: { primary: w, others: [w, w] },
+    description: w, product: w, audience: w, city: 'Your city',
+    lines: { primary: 'Your main line goes here.', others: ['A second line.', 'A third line.'] },
     personality: [1, 2, 3].map((i) => ({ trait: `Trait ${i}`, means: w })),
     voice: {
-      principles: [1, 2, 3, 4].map(() => ({ title: w, example: w })),
+      principles: [1, 2, 3, 4].map((i) => ({ title: `Writing rule ${i}`, example: w })),
       writeThis: [1, 2, 3, 4, 5].map((i) => ({ write: `Write this ${i}`, not: `Not this ${i}`, because: w })),
       boilerplate25: w, boilerplate50: w, nameRules: w,
     },
@@ -150,45 +148,6 @@ function skeleton(word, date) {
       notIn: [1, 2, 3].map((i) => `Left out of this document ${i}.`),
     },
     contact: { owner: 'Brand team', email: 'brand@brand.example' },
-  };
-}
-
-// ---- a theme's sample copy ----
-// The sections of a sample brand that are words (not colours, fonts, sizes or layout). The project's own fields are laid over them.
-const COPY_KEYS = ['description', 'product', 'audience', 'city', 'lines', 'personality', 'voice', 'imagery', 'applications', 'guideB', 'contact'];
-const dom = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
-
-// The sample's name written as the project's: in any capitals ("Kerbside", "KERBSIDE", "OffCut"), and in lower case inside an address
-// ("hi@name.example"). A lower-case word on its own ("margin") is left: it is a word there, not the brand.
-function swapName(text, from, to) {
-  // from is a sample brand's name: letters and spaces, so it needs no escaping in a pattern
-  const lower = dom(from), caps = new RegExp(from, 'gi'), address = new RegExp(`(?<=[@/])${lower}(?=[.])|(?<![A-Za-z0-9])${lower}(?=[.][a-z])`, 'g');
-  return text.replace(address, dom(to) || 'brand').replace(caps, (m) => (m === m.toLowerCase() ? m : m === m.toUpperCase() ? to.toUpperCase() : to));
-}
-const swapDeep = (v, from, to) => (typeof v === 'string' ? swapName(v, from, to)
-  : Array.isArray(v) ? v.map((x) => swapDeep(x, from, to))
-    : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swapDeep(x, from, to)])) : v);
-
-// The sample brand each theme is drawn from (src/config/exportThemePicker.js names the same; tests/unit/brand-from-project-sample-copy.test.js
-// keeps the two in step). Kept here because the picker file is not one the API bundle carries.
-export const THEME_SAMPLE = Object.freeze({
-  '01-presentation': 'kerbside', '02-poster': 'encore', '03-broadsheet': 'saltbush', '04-standards': 'two-shores', '05-specimen': 'margin',
-  '06-studio': 'offcut', '07-spec': 'northern-current', '08-monograph': 'long-room', '09-blueprint': 'plumbline', '10-inuse': 'shallow-end',
-  '21-presentation': 'kerbside', '22-ticket': 'encore', '23-broadsheet': 'saltbush', '24-standards': 'two-shores', '26-notebook': 'offcut',
-  '28-riso': 'long-room', '25-label': 'margin', '27-swissfield': 'northern-current', '29-blueprint': 'plumbline', '30-fluted': 'northern-current',
-  '31-contact': 'plumbline', '32-dieline': 'kerbside',
-});
-
-// The words of the theme's sample brand with its name swapped for the project's; null for no theme or one without a sample.
-function sampleCopy(themeId, word) {
-  const key = typeof themeId === 'string' && Object.hasOwn(THEME_SAMPLE, themeId) ? THEME_SAMPLE[themeId] : '';
-  const data = Object.hasOwn(BRANDS, key) ? BRANDS[key].data : null;
-  if (!data) return null;
-  const swap = (v) => swapDeep(structuredClone(v ?? null), data.name, word);
-  return {
-    copy: Object.fromEntries(COPY_KEYS.filter((k) => data[k] !== undefined).map((k) => [k, swap(data[k])])),
-    type: { sample: swap(data.type?.sample), rules: swap(data.type?.rules) },
-    logo: { idea: swap(data.logo?.idea), symbolNote: swap(data.logo?.showcase?.symbolNote), when: swap(data.logo?.when) },
   };
 }
 
@@ -225,7 +184,7 @@ function uiBlock(light, dark) {
   };
 }
 
-function typeBlock(d, faces, sample) {
+function typeBlock(d, faces) {
   const lad = typeLadder(d).map((x) => x.px);
   const fw = (face, want) => nearest(faces[face].weights, want);
   const body = clamp(d.lineHeight, 1.2, 1.8);
@@ -240,8 +199,8 @@ function typeBlock(d, faces, sample) {
       T('label', 'body', s(lad[6], 12, 18), 1.3, fw('body', 500), 'Labels and small text'),
       T('caption', 'body', s(lad[7], 12, 16), 1.4, fw('body', 400), 'Notes and folios'),
     ],
-    sample: sample?.sample ?? { headline: '', paragraph: '', caption: '' },
-    rules: sample?.rules ?? [1, 2, 3, 4, 5, 6].map((i) => rule(`Type habit ${i}.`, `Type mistake ${i}.`)),
+    sample: { headline: 'Your headline here', paragraph: 'A short paragraph of ordinary copy.', caption: 'A short caption.' },
+    rules: [1, 2, 3, 4, 5, 6].map((i) => rule(`Type habit ${i}.`, `Type mistake ${i}.`)),
   };
 }
 
@@ -274,8 +233,8 @@ const ownWords = (design) => { const i = plain(design.identity); return { name: 
 // The project's name; its identity name when the project has none; the example name when there is neither.
 const ownName = (projectName, own) => { const w = wordmarkOf(projectName); return w === 'Your brand' ? wordmarkOf(own.name) : w; };
 
-function build({ design: rawDesign, projectName, date }, themeId) {
-  const design = cleanDesign(rawDesign), d = readDesign(design), own = ownWords(design), word = ownName(projectName, own), sample = sampleCopy(themeId, word);
+function build({ design: rawDesign, projectName, date }) {
+  const design = cleanDesign(rawDesign), d = readDesign(design), own = ownWords(design), word = ownName(projectName, own);
   const palette = kitPalette(design || {}), slot = Object.fromEntries(palette.map((p) => [p.id, p]));
   const light = lightRoles(palette, slot, kitSemantic(design || {}), design), dark = darkRoles(design, slot.pine.hex);
   const faces = {
@@ -302,17 +261,16 @@ function build({ design: rawDesign, projectName, date }, themeId) {
   const a = actionStates(prim, [canvas, ink, '#FFFFFF', '#000000']);
   const cw = (name, ground, mark = name) => ({ name, ground, ...Object.fromEntries(DETAIL_KEYS.map((k) => [k, name])), sign: mark, tile: mark, tileInk: onGround(mark) });
   const brand = {
-    // The sample's words stand where the skeleton has none; what the project has said (its name, its description) is laid over both.
-    ...skeleton(word, date), ...sample?.copy, ...(own.description ? { description: own.description, product: own.description } : null), slug: slugOf(word), colours, tones: [], pairs,
-    fonts: faces, type: typeBlock(d, faces, sample?.type),
+    ...skeleton(word, date), ...(own.description ? { description: own.description, product: own.description } : null), slug: slugOf(word), colours, tones: [], pairs,
+    fonts: faces, type: typeBlock(d, faces),
     logo: {
-      idea: sample?.logo.idea ?? '',
-      showcase: { wordmark: word, symbolNote: sample?.logo.symbolNote ?? '', minScreenPx: 96, minPrintMm: 24 },
+      idea: 'Write this in your own words.',
+      showcase: { wordmark: word, symbolNote: 'Write this in your own words.', minScreenPx: 96, minPrintMm: 24 },
       colourways: {
         colour: cw(ink, canvas, prim), 'mono-dark': cw(ink, canvas), 'mono-light': cw(canvas, ink), reversed: cw(a.actionLabel, prim, a.actionLabel),
         'on-stage': cw(canvas, ink, prim), ...onColourways(cw, onGround, a.actionLabel, prim, slot.citron.hex, slot.lilac.hex),
       },
-      when: sample?.logo.when ?? Object.fromEntries(['colour', 'mono-dark', 'mono-light', 'reversed', 'horizontal', 'stacked', 'symbol'].map((k) => [k, ''])),
+      when: Object.fromEntries(['colour', 'mono-dark', 'mono-light', 'reversed', 'horizontal', 'stacked', 'symbol'].map((k) => [k, 'Say where this version goes.'])),
     },
     // infoOwn: the design picked its own information colour, so a theme's house info tone (meta.statusTones) must not replace it
     ui: { ...uiBlock(light, dark), infoOwn: !!ownInfo(design) },
@@ -320,12 +278,11 @@ function build({ design: rawDesign, projectName, date }, themeId) {
   return brand;
 }
 
-// design and projectName are the body of an export request; both are untrusted. themeId (optional, one of the export themes' ids) names the
-// theme the brand is for: where the project has said nothing, the words come from that theme's sample brand, not from a blank.
-export function projectToBrand(input, themeId) {
+// design and projectName are the body of an export request; both are untrusted.
+export function projectToBrand(input) {
   const { design, projectName, date = new Date().toISOString().slice(0, 10) } = input && typeof input === 'object' ? input : {};
   try {
-    const brand = build({ design, projectName, date }, themeId);
+    const brand = build({ design, projectName, date });
     loadBrand(brand, null);  // contrast, ids and shape: throws if any rule is missed
     return brand;
   } catch (e) {
