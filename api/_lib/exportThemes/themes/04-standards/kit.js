@@ -5,6 +5,8 @@ import { A, clauses } from './helpers.js';
 import { drawing, drawKind, SHOT_KEY } from './book.js';
 import { cssNum } from '../../engine/escape.js';
 
+const NUMW = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+const countOf = (n, one, many) => `${NUMW[n] || n} ${n === 1 ? one : many}`;
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `${r}, ${g}, ${b}`; };
 const onColour = (ctx, hex) => { const L = ctx.roles.light, first = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface, pick = ctx.textOn(hex, { size: 13, prefer: first }); ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
 const hair = (ctx, hex) => (hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? ';box-shadow:inset 0 0 0 1px var(--hair)' : '');
@@ -53,7 +55,7 @@ export function sheets(ctx) {
     return `<li style="flex:${Math.max(c.share * 100, 1)} 1 56px;background:${c.hex};color:${fg}${hair(ctx, c.hex)}"><span class="num k-sw__k">1.${B.tones.length + 2 + i}</span><div class="k-sw__t"><p class="k-sw__n disp">${A(c.name)}</p><p class="k-sw__l">${A(c.lands)}</p></div><p class="k-sw__v"><span>${A(c.hex)}</span><span>${A(rgbOf(ctx, c.hex))}</span><span>${A(ok)}</span></p></li>`;
   };
   const tone = (t) => `<li><i style="background:${t.hex};box-shadow:inset 0 0 0 1px var(--hair)"></i><p class="cap"><b>${A(t.name)}</b>${A(t.hex)}. ${A(t.lands)}</p></li>`;
-  const palette = page(ctx, 'palette', { section: '1 Colour', title: `${B.name} palette`, lead: 'Five colours, each in proportion to its share of a page. Two tones carry the quiet text and the rules.', rules: [...B.tones.map((t) => `<b>${A(t.name)}</b> ${A(t.hex)}. ${A(t.lands)}`), 'HEX, RGB and OKLCH for each colour. Ask your printer for a proof; no print values are given here.'], work: `<ul class="k-bands">${ctx.colours.map(band).join('')}</ul>`, no: 1, of: 1 });
+  const palette = page(ctx, 'palette', { section: '1 Colour', title: `${B.name} palette`, lead: `${countOf(ctx.colours.length, 'colour', 'colours')}, each in proportion to its share of a page.${B.tones.length ? ` ${countOf(B.tones.length, 'tone carries', 'tones carry')} the quiet text and the rules.` : ''}`, rules: [...B.tones.map((t) => `<b>${A(t.name)}</b> ${A(t.hex)}. ${A(t.lands)}`), 'HEX, RGB and OKLCH for each colour. Ask your printer for a proof; no print values are given here.'], work: `<ul class="k-bands">${ctx.colours.map(band).join('')}</ul>`, no: 1, of: 1 });
 
   // type specimen
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789';

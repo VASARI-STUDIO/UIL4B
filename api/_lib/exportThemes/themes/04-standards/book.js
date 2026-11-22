@@ -5,6 +5,8 @@
 import { A } from './helpers.js';
 import { nearestWeight } from '../../engine/brand.js';
 
+const NUMW = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+const countOf = (n, one, many) => `${NUMW[n] || n} ${n === 1 ? one : many}`;
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the readable text colour on a brand colour: the better of the light-mode text and surface colours, else the engine's fallback (ctx.textOn), checked
 const onColour = (ctx, hex) => {
@@ -155,7 +157,9 @@ function colour(ctx) {
 ${ctx.tones.length ? `<div class="bk-block">${sub('Text tones')}<ol class="bk-chips bk-chips--tones">${ctx.tones.map(toneCell).join('')}</ol></div>` : ''}
 <div class="bk-block">${sub('Contrast, pair by pair')}<p class="bk-body bk-measure">Every text pair ${A(B.name)} uses, with its WCAG ratio. Text needs 4.5 : 1. Type at 24 px and over needs 3 : 1. Sizes are given in x, which is ${x} px on screen.</p><ol class="bk-pairs">${ctx.pairs.map(pair).join('')}</ol></div>
 <div class="bk-block">${sub('Interface roles')}<p class="bk-body bk-measure">The same roles in the light and dark previews. Use the switch to see the other set.</p>${roles('light')}${roles('dark')}</div>`;
-  return page(ctx, 4, 'colour', 'Colour', 'Five colours and two tones. Deck and Hull do most of the work.', clauses, work, 'bk-sec--colour');
+  const lead2 = ctx.colours.slice(0, 2).map((c) => c.name);
+  const colourLead = `${countOf(ctx.colours.length, 'colour', 'colours')}${ctx.tones.length ? ` and ${countOf(ctx.tones.length, 'tone', 'tones').toLowerCase()}` : ''}. ${lead2.length > 1 ? `${lead2[0]} and ${lead2[1]} do` : `${lead2[0]} does`} most of the work.`;
+  return page(ctx, 4, 'colour', 'Colour', colourLead, clauses, work, 'bk-sec--colour');
 }
 
 function typography(ctx) {

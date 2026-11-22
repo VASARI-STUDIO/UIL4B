@@ -305,21 +305,25 @@ export const r1 = {
     const cs = [lead0, ...rest], onAct = ctx.pairs.filter((p) => p.bgHex === act.hex), fgs = onAct.filter((p) => !p.large).map((p) => nameOfHex(ctx, p.fgHex)), big = onAct.find((p) => p.large);
     const lead = `${cs.length} colours, each named for where it lands. ${act.name} is the one people see us by.${fgs.length ? ` ${fgs[0]} type goes on it${big ? `, and ${nameOfHex(ctx, big.fgHex)} type only from ${big.minSize} px` : ''}.` : ''}`;
     const sentences = [null, V[0].example, V[1].example, V[3 % V.length].example];
-    const leadW = W * 0.4, otherW = (W - leadW) / (cs.length - 1), hlLine = lineMap(ctx).palHead;
+    const leadW = W * 0.4, hlLine = lineMap(ctx).palHead;
+    // up to six colours the others stand as full-height columns; above that they take two rows, the bottom row widening to fill, and drop the voice line
+    const nO = cs.length - 1, rows = nO > 5 ? 2 : 1, perRow = Math.ceil(nO / rows), cellH = 592 / rows;
+    const cell = (j) => { const r = Math.floor(j / perRow), inRow = r < rows - 1 ? perRow : nO - perRow * (rows - 1), w = (W - leadW) / inRow; return { x: leadW + (j - r * perRow) * w, y: 128 + r * cellH, w, h: cellH }; };
+    const otherW = Math.min(...cs.slice(1).map((_, j) => cell(j).w));
     const hl = fitSet(ctx, 'display', dispW(ctx), hlLine, 54, 36, leadW - 80, 2, -0.01), hlSize = hl.size;
     const dw = dispW(ctx), otherTw = otherW - 48, otherNames = cs.slice(1).map((c) => c.name);
     const fitName = (names, hi, maxW) => { const one = fitSize(ctx, 'display', dw, names, hi, 17, maxW, 1, 0); return names.every((n) => lineCount(ctx, 'display', dw, n, one, maxW) <= 1) ? one : fitSize(ctx, 'display', dw, names, Math.min(hi, 22), 15, maxW, 2, 0); };
     const leadSize = fitName([cs[0].name], 40, 400), otherSize = otherNames.length ? fitName(otherNames, 26, otherTw) : 26;
-    let x = 0;
     const fieldsHtml = cs.map((c, i) => {
-      const w = i === 0 ? leadW : otherW, tx = i === 0 ? 56 : x + 24, tw = i === 0 ? 400 : w - 48, ink = inkOn(ctx, c.hex), ch = chromeOn(ctx, c.hex);
+      const g = i === 0 ? { x: 0, y: 128, w: leadW, h: 592 } : cell(i - 1), x = g.x, w = g.w, bot = g.y + g.h;
+      const tx = i === 0 ? 56 : x + 24, tw = i === 0 ? 400 : w - 48, ink = inkOn(ctx, c.hex), ch = chromeOn(ctx, c.hex);
       const nameSize = i === 0 ? leadSize : otherSize, nameLines = splitLines(ctx, 'display', dw, c.name, nameSize, tw), nLines = nameLines.length, edge = c.role === 'ground' ? 'box-shadow:inset 1px 0 0 ' + L(ctx).divider : '';
-      const html = box(x, 128, w, 592, `background:${c.hex};${edge}`) +
-        (i === 0 ? box(tx, 160, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : box(tx, 160, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${slot ? `The ${A(c.roleText || c.role)} colour.` : A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
-        box(tx, topForBaseline(ctx, 'display', dw, nameSize, 1.05, 580 - (nLines - 1) * nameSize * 1.05), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${lineHtml(nameLines)}</p>`) +
-        box(tx, 592, tw, 48, `color:${ch}`, `<p class="r-t12">${A(c.lands)}</p>`) + box(tx, 656, tw, 16, `color:${ink}`, `<p class="r-mono num">${A(c.hex)}</p>`) +
-        box(tx, 676, tw, 16, `color:${ch}`, `<p class="r-t12 r-nw num">${values(c)}</p>`);
-      x += w; return html;
+      const html = box(x, g.y, w, g.h, `background:${c.hex};${edge}`) +
+        (i === 0 ? box(tx, g.y + 32, 432, 0, `color:${ink};font-size:${hlSize}px;line-height:1.02`, `<p class="disp">${lineHtml(hl.lines)}</p>`) : rows > 1 ? '' : box(tx, g.y + 32, tw, 0, `color:${ink}`, `<p class="r-t15 ${c.role === 'text' ? 'r-w600' : 'r-w500'}">${slot ? `The ${A(c.roleText || c.role)} colour.` : A(sentences[Math.min(i, 3)]).replace(/(\d) ([ap]m)\b/g, '$1&nbsp;$2')}</p>`)) +
+        box(tx, topForBaseline(ctx, 'display', dw, nameSize, 1.05, bot - 140 - (nLines - 1) * nameSize * 1.05), tw, 0, `color:${ink};font-size:${nameSize}px;line-height:1.05`, `<p class="disp r-nw">${lineHtml(nameLines)}</p>`) +
+        box(tx, bot - 128, tw, 48, `color:${ch}`, `<p class="r-t12">${A(c.lands)}</p>`) + box(tx, bot - 64, tw, 16, `color:${ink}`, `<p class="r-mono num">${A(c.hex)}</p>`) +
+        box(tx, bot - 44, tw, 16, `color:${ch}`, `<p class="r-t12 r-nw num">${values(c)}</p>`);
+      return html;
     }).join('');
     return page('palette', '', `${box(56, 72, 760, 48, `color:${L(ctx).textSoft}`, `<p class="r-t15">${lineHtml(wrapLines(ctx, 'body', 400, lead, 15, 760, 0, false))}</p>`)}${fieldsHtml}${head(ctx, 'palette')}`, gr);
   },
