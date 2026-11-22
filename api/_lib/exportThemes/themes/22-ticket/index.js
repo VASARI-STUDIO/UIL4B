@@ -3,6 +3,7 @@
 // and a barcode that encodes the page id). 1280 x 720. Round 1 builds the six gate pages; the other 27 pages, the UI kit and the book come in round 2.
 import { guidelines } from './guidelines.js';
 import { roles } from './helpers.js';
+import { screenContent, exampleDemo } from './story.js';
 
 // the sample brand builds the pages
 const BRAND = 'encore';
@@ -12,6 +13,7 @@ const bodyFont = { family: 'Work Sans', css: 'Work+Sans:wght@400;500;600', file:
 export const meta = {
   id: '22-ticket', name: 'Stub', tier: 'Pro', brand: BRAND,
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 },
+  screenContent, exampleDemo,
   chrome: { family: bodyFont.family, q: bodyFont.css, faces: bodyFont.weights.map((w) => ({ weight: w, stem: `${bodyFont.file}-${w}` })) },
 };
 
@@ -62,10 +64,9 @@ function baseCss(ctx) {
 .qt{color:var(--quiet)}
 .zone b{font-weight:600;color:var(--paper)}
 
-/* logo slot frame for the slot edition: 1 px dashed, labelled top left */
+${ctx.logo.drawn ? '' : `/* logo slot frame for the slot edition: 1 px dashed, labelled top left */
 .logo-slot{align-items:flex-start!important;justify-content:flex-start!important;padding:8px;text-align:left!important}
-.slotframe{position:absolute;box-sizing:border-box;border:1px dashed var(--ink);color:var(--ink);padding:8px;font:400 13px/18px var(--body)}
-
+`}
 /* arts drawn inside the page (layouts) or photographed (signage): their own coordinates, their own ground */
 .ar{position:absolute;overflow:hidden}
 .ar::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 1px oklch(0 0 0 / .14);pointer-events:none;z-index:2}

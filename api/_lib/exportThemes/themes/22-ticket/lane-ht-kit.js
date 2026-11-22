@@ -19,8 +19,11 @@ function open(ctx, R, K, live, { dark = false, cls = '', label = '' } = {}) {
   return ticket(ctx, R, { body: `<div class="ui hk-live${dark ? ' hk-live--dark' : ''}"${dark ? ' data-theme="dark"' : ''}${label ? ` role="group" aria-label="${A(label)}"` : ''}>${live}</div>`, stub, cls: `tb-tk--open ht-tk hk-tk ${cls}` });
 }
 // the markup to copy, pretty-printed by the engine, and the tokens the component reads
+// void elements (input, br, img, hr) have no closing tag: the engine's pretty-printer adds one, so the line is dropped before the markup is shown or copied
+const NL = String.fromCharCode(10);
+const unvoid = (text) => text.split(NL).filter((l) => !/^ *<[/](input|br|img|hr)>$/.test(l)).join(NL).replace(/<[/](input|br|img|hr)>/g, '');
 function code(ctx, K, name, markup, re) {
-  const pretty = K.prettyHtml(markup), used = re ? K.tokensUsed(re) : null;
+  const pretty = unvoid(K.prettyHtml(markup)), used = re ? K.tokensUsed(re) : null;
   const block = (title, text, what) => `<div class="hk-code"><div class="hk-code__h"><p class="ht-k">${title}</p><button type="button" class="tb-btn hk-copy" data-copy="${A(text)}" data-copy-name="${A(what)}"><span data-copy-text>Copy</span></button></div><pre><code>${A(text)}</code></pre></div>`;
   return full(`${h2('The code')}<div class="hk-codes">${block('Markup', pretty, `${name} markup`)}${used && used.names.length ? block('Tokens it reads', used.css, `${name} tokens`) : ''}</div>`);
 }

@@ -4,7 +4,20 @@ import { bookCss } from './lane-bk-css.js';
 
 export function htCss(ctx) {
   const W = ctx.weights;
-  return `${bookCss(ctx)}
+  // the site draws its own wordmark (site-clean.js), so the engine's dashed logo frame has no rule here
+  const book = ctx.logo.drawn ? bookCss(ctx).replace(/^\.tb-logo \.logo-slot\{[^}]*\}\n/m, '') : bookCss(ctx);
+  return `${book}
+.tb-logo{container-type:inline-size}
+.tb-logo>.tb-wm{height:auto!important;width:100%!important}
+.tb-wm{display:inline-flex;align-items:center;justify-content:center;max-width:100%;white-space:nowrap;line-height:1.1;letter-spacing:-0.01em;overflow:visible}
+.tb-wm--sym{letter-spacing:0}
+.tb-wm--h{gap:.45em}
+.tb-wm--h .tb-wm__s{font-size:1em;padding-right:.45em;border-right:.08em solid currentColor;line-height:1.1}
+.tb-wm--st{flex-direction:column;gap:.15em}
+.tb-wm--st .tb-wm__s{font-size:1.9em;line-height:1}
+.tb-wm--st span{font-size:.55em;letter-spacing:.04em;text-transform:uppercase}
+.tb-wm__s{font-weight:inherit}
+.tb-wm__a{font-style:normal}
 .ht{min-height:100vh}
 .sx-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .ht-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:24px;height:64px;padding:0 32px;background:var(--g);border-bottom:1px solid var(--hair)}
@@ -137,7 +150,6 @@ export function htCss(ctx) {
 .hk-cover{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center}
 .hk-cover__l{display:flex;flex-direction:column;gap:16px}
 .hk-title{margin-bottom:8px}
-.hk-title:has(.ph-c),.hk-title:has(.ph-c) *{white-space:normal!important}
 .hk-sws{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:24px}
 .hk-sw{display:block;height:64px;margin-bottom:8px;box-shadow:inset 0 0 0 1px var(--hair)}
 .hk-type li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:16px;align-items:baseline;padding:8px 0}
@@ -243,10 +255,8 @@ ${['rest', 'hover', 'focus', 'pressed', 'disabled', 'error', 'checked'].map((s) 
 .hk-tl--3 li>p:first-child{grid-column:1/-1}
 .hk-tw{overflow-x:auto}
 .hk-tw .hk-wide{display:none}
-.hk-tw .ph-c.ph-n{white-space:normal!important}
 .bk.ht .tb-stub__no{grid-row:2}
 .bk.ht .tb-stub__bc{grid-column:1/-1}
-.bk.ht .tb-stub__h .ph-c{white-space:normal!important;overflow-wrap:anywhere}
 .bk.ht .tb-serial{font-size:44px;line-height:48px}
 .hk-mx li{grid-template-columns:repeat(2,minmax(0,1fr))}
 .hk-mx li>.ht-k{grid-column:1/-1}

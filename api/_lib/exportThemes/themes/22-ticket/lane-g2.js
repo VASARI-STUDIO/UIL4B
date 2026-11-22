@@ -239,7 +239,7 @@ export const guidelines = {
   },
 };
 
-export function css() {
+export function css(ctx) {
   return `.pg.g2 .g2-ov{left:0;top:0;width:1280px;height:720px;pointer-events:none}
 .pg.g2 .g2-top{z-index:2}
 .pg.g2 .g2-x{text-align:center}
@@ -249,7 +249,7 @@ export function css() {
 .pg.g2 .ar.g2-art{overflow:hidden}
 .pg.g2 .g2-boxed{padding:16px;display:flex}
 .pg.g2 .g2-mslot{box-sizing:border-box;padding:0!important}
-.pg.g2 .g2-min .logo-slot{padding:0!important}
+${ctx && ctx.logo && ctx.logo.drawn ? '' : '.pg.g2 .g2-min .logo-slot{padding:0!important}'}
 .pg.g2 .g2-ph img,.pg.g2 .g2-ph svg.pl{display:block}
 .pg.g2 .a > svg{display:block}`;
 }
