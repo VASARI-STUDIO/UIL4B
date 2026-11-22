@@ -7,6 +7,7 @@
 //   over the per-account limit                            429 { code: 'rate_limited' } + Retry-After
 //   body over MAX_THEME_BODY_CHARS (Content-Length first)  413 { code: 'design_too_large' }
 //   project the engine refuses                            400 { code: 'invalid_project', inputCode, path? }
+//   a text pair that cannot reach its contrast, or a font file the deploy lacks   422 { code: 'contrast' | 'font_missing' }, logged here only
 //   anything else that throws                             500 { code: 'build_failed' }, logged here only
 //   zip rows                                              200, application/zip, name from the brand slug and theme id
 //   print rows                                            200 { ok: true, theme, row, format, html }
@@ -261,8 +262,11 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
       const path = safePath(e.path)
       return res.status(400).json({ error: 'That project could not be exported', code: 'invalid_project', inputCode: 'brand_input', ...(path ? { path } : {}) })
     }
-    // Logged here and nowhere else, by error name only: the message, cause and stack can quote the project's own text.
-    console.error('export theme: build failed', { theme, row, format, name: e?.name })
+    // Logged here and nowhere else: the theme, row and format, the error name and its message cut to 200 characters. Never the uid, the
+    // email, the project name or the design. The message of a coded error is only ever logged, never sent.
+    console.error('export theme: build failed', { theme, row, format, name: e?.name, message: String(e?.message ?? '').slice(0, 200) })
+    // A palette the engine cannot read text on, or a font file the deploy lacks: a code the client can act on, with nothing else in the body.
+    if (e && (e.code === 'contrast' || e.code === 'font_missing')) return res.status(422).json({ code: e.code })
     return res.status(500).json({ error: 'The document could not be created', code: 'build_failed' })
   }
 }

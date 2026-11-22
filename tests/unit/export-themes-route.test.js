@@ -191,6 +191,35 @@ test('any other throw is a bare 500 with a fixed message', async () => {
   assert.deepEqual(res.body, { error: 'The document could not be created', code: 'build_failed' })
 })
 
+// A text pair the palette cannot carry, or a font file the deploy lacks, is a 422 with its own code and nothing else in the body; the message
+// (a hex pair, a file name) is logged and never sent. Break: take the e.code branch out of the catch in serveThemeExport, and both go back to 500.
+for (const code of ['contrast', 'font_missing']) {
+  test(`a coded ${code} error is a 422 with only its code, and its message is not sent`, async () => {
+    const e = Object.assign(new Error('Contrast #D9E6E1 on #0A7562 is 4.38:1 secret-text-here'), { code })
+    const res = await ask('tok-pro', body(), { engine: { projectToBrand() { throw e } } })
+    assert.equal(res.code, 422)
+    assert.deepEqual(res.body, { code })
+  })
+}
+
+test('an error with some other code, or none, is still the bare 500 build_failed', async () => {
+  for (const code of [undefined, 'ENOENT', 'brand_input', 'contrast ']) {
+    const res = await ask('tok-pro', body(), { engine: { projectToBrand() { throw Object.assign(new Error('x'), code ? { code } : {}) } } })
+    assert.equal(res.code, 500, String(code))
+    assert.deepEqual(res.body, { error: 'The document could not be created', code: 'build_failed' })
+  }
+})
+
+test('the build-failed log carries the theme, row, format and a message cut to 200 characters, and none of the request', async () => {
+  const seen = []; const orig = console.error; console.error = (...a) => seen.push(a)
+  try { await ask('tok-pro', body({ projectName: 'Private Name Pty' }), { engine: { projectToBrand() { throw new Error('m'.repeat(500)) } } }) } finally { console.error = orig }
+  const line = seen.find((a) => a[0] === 'export theme: build failed')
+  assert.ok(line, 'logged')
+  assert.deepEqual(Object.keys(line[1]).sort(), ['format', 'message', 'name', 'row', 'theme'])
+  assert.equal(line[1].message.length, 200)
+  assert.ok(!/pro-1|Private Name|2F6F5E/.test(JSON.stringify(line)))
+})
+
 test('a UI kit zip is named from the slug and theme, opens, and holds the kit page and the code package', async () => {
   const res = await ask('tok-free', body({ projectName: '../../evil "name"; x' }))
   assert.equal(res.code, 200, JSON.stringify(res.body))
