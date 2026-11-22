@@ -90,7 +90,7 @@ function title(ctx, K, id, cands) {
     top: 92 + n * 22 + 28,
   };
 }
-const flow = stacker({ theme: 'Label', bottom: BOT, gapStretch: 2 });
+const flow = stacker({ theme: 'Label', bottom: BOT, gapStretch: 3 });
 const withFaces = (fn) => (ctx) => withHooks(ctx, () => fn(ctx));
 // the lines of a quiet sentence in a box, as text and height
 const para = (K, text, w, { size = 13, lh = 18, stem = K.S.body } = {}) => ({ n: nLines(stem, text, size, w), h: nLines(stem, text, size, w) * lh });
@@ -380,7 +380,7 @@ function typePage(ctx) {
     const stem = stemOf(ctx, s.face, s.weight), word = specimen(s), mult = s.face === 'display' ? K.st : 1;
     let sz = Math.min(s.size, CAP);
     while (sz > 14 && tw(stem, word, sz) * mult * 1.03 > SW) sz -= 2;
-    const lh = Math.max(Math.round((s.line / s.size) * sz), 20);
+    const lh = Math.max(Math.round((s.line / s.size) * sz), Math.ceil(sz * 1.2), 20);
     return { s, sz, lh, h: Math.max(lh, 34), shrunk: sz < s.size };
   });
   const lH = sum(rowsD.map((r) => r.h)) + 14 * (rowsD.length - 1);
@@ -389,7 +389,7 @@ function typePage(ctx) {
     let yy = y + SUBH + 12;
     return sec(K, X0, y, CW, catNo(ctx, 'type', 2), 'Scale', `${LAD.length} steps`) + rowsD.map((r) => {
       const { s } = r, fam = s.face === 'display' ? 'var(--display)' : s.face === 'mono' ? 'var(--mono)' : 'var(--body)', h = r.h + add;
-      const out = at(X0, yy, `<div class="lg-c">${A(s.name)}</div><div class="lg-m lg-q" style="font-family:var(--chrome)">${s.size} / ${s.line}, ${A(weightName(s.weight))}${r.shrunk ? `, shown at ${r.sz}` : ''}</div>`, { w: LW })
+      const out = at(X0, yy, `<div class="lg-c">${A(s.name)}</div><div class="lg-m lg-q" style="font-family:var(--chrome)">${s.size} / ${s.line}, ${A(weightName(s.weight))}</div>${r.shrunk ? `<div class="lg-m lg-q" style="font-family:var(--chrome)">shown at ${r.sz}</div>` : ''}`, { w: LW })
         + at(SX, yy + Math.floor((h - r.lh) / 2), A(specimen(s)), { w: SW, cls: 'lg-spec', style: `font-family:${fam};font-weight:${s.weight};font-size:${r.sz}px;line-height:${r.lh}px;${s.face === 'display' ? `font-stretch:${d.stretch || 100}%;` : ''}height:${r.lh}px` });
       yy += h + 14;
       return out;
@@ -405,7 +405,7 @@ function contrastPage(ctx) {
   const worst = P.filter((p) => !/^AA/.test(p.grade)).length;
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
   const RH = 36, AX = 360, AW = 170;
-  const pairs = { h: SUBH + 12 + P.length * RH, flex: P.length * 30, draw: (y, extra = 0) => {
+  const pairs = { h: SUBH + 12 + P.length * RH, flex: P.length * 40, draw: (y, extra = 0) => {
     const rh = RH + Math.floor(extra / Math.max(1, P.length));
     return sec(K, X0, y, CW, catNo(ctx, 'contrast', 1), 'Pairs', 'ratio of text to ground, out of 21') + P.map((p, i) => {
       const yy = y + SUBH + 12 + i * rh, fam = p.sample && p.sample.face === 'display' ? 'var(--display)' : 'var(--body)', sz = Math.min((p.sample || {}).size || 15, 20);
@@ -427,7 +427,7 @@ function contrastPage(ctx) {
   }).join('') } : null;
   const note = `${GRADE_NOTE}${(ctx.unusedPairs || []).length ? ` Not used: ${ctx.unusedPairs.map((u) => `${u.fg} on ${u.bg} (${u.ratioText}:1)`).join(', ')}.` : ''}`;
   const noteH = para(K, note, CW - 32, { size: 12, lh: 16, stem: K.S.body }).h;
-  const noteSec = { h: noteH + 24, flex: 24, draw: (y, extra = 0) => card(K, X0, y, CW, noteH + 24 + extra, at(16, 12 + Math.floor(extra / 2), A(note), { w: CW - 32, cls: 'lg-r' })) };
+  const noteSec = { h: noteH + 24, flex: 60, draw: (y, extra = 0) => card(K, X0, y, CW, noteH + 24 + extra, at(16, 12 + Math.floor(extra / 2), A(note), { w: CW - 32, cls: 'lg-r' })) };
   void worst;
   return shell(ctx, 'contrast', t.html + flow('contrast', t.top, [pairs, tonesSec, noteSec].filter(Boolean), { gap: 20, maxGap: 40 }));
 }
