@@ -136,7 +136,7 @@ function strip(ctx, id, rise) {
     const ly = SY - 14, cxs = narrow.map((s) => Math.round(s.x + s.w / 2)), x1 = Math.min(Math.min(...cxs), XR - 8);
     const text = narrow.map((s) => narrow.length > 1 ? A(`${s.c.name} ${fmtShare(s.c.share ?? 0)}`) : `<span class="sg-h sg-l12">${A(`${s.c.name} ${fmtShare(s.c.share ?? 0)}`)}</span> <span class="sg-i" style="font-size:11px">${hexOf(s.c)}</span>`).join('<span style="color:var(--quiet)"> · </span>');
     outside += hl(x1, ly, XR - 8 - x1 + 1, 'var(--quiet)') + cxs.map((cx) => vl(cx, ly, SY - ly, 'var(--quiet)')).join('')
-      + at(0, ly - 17, narrow.length > 1 ? `<span class="sg-h sg-l12">${text}</span>` : text, { style: `left:auto;right:${W - XR}px;color:var(--ink);white-space:nowrap` });
+      + at(0, ly - 18, narrow.length > 1 ? `<span class="sg-h sg-l12">${text}</span>` : text, { style: `left:auto;right:${W - XR}px;color:var(--ink);white-space:nowrap;line-height:14px` });
   }
   const folio = String(ctx.pageNo(id)).padStart(3, '0');
   h += box(`left:0;top:${SY}px;width:${g.w}px;height:${SH}px;background:var(--ground)`,
@@ -635,12 +635,13 @@ function tokensPage(ctx) {
   const t = title(ctx, 'tokens', copyOf(ctx, 'tokens', [`${cap1(spell(space.length))} steps of space, then radii and borders.`, 'Space, radii and borders.']), CW);
   const useW = COLW - 4;
   const srows = space.map((s) => { const lines = s.use ? wrap(CHROME[400], s.use, 13, useW).length : 0; return { s, lines, h: Math.max(40, 12 + 18 + lines * 18 + 8) }; });
+  const maxSp = Math.max(1, ...space.map((s) => s.px)), sk = Math.max(1, Math.min(6, Math.floor((XR - COL[1]) / maxSp)));
   const spaceSec = { h: SUBH + sum(srows.map((r) => r.h)), draw: (y) => {
-    let yy = y + SUBH, h = sub(X0, y, CW, 'Space', 'bars at six times the step');
+    let yy = y + SUBH, h = sub(X0, y, CW, 'Space', sk > 1 ? { html: `bars drawn at ${fig(`${sk}×`)} the step` } : 'bars at the step');
     srows.forEach((r) => {
       const rh = r.h;
       h += hl(X0, yy, CW) + mono(X0, yy + 11, r.s.token) + mono(X0 + 110, yy + 11, `${r.s.px} px`, { w: 80 }) + (r.s.use ? at(X0, yy + 30, A(r.s.use), { cls: 'sg-n', w: useW, style: 'color:var(--quiet)' }) : '')
-        + box(`left:${COL[1]}px;top:${yy + 12}px;width:${r.s.px * 6}px;height:12px;background:var(--ink)`);
+        + box(`left:${COL[1]}px;top:${yy + 12}px;width:${r.s.px * sk}px;height:12px;background:var(--ink)`);
       yy += rh;
     });
     return h + hl(X0, yy);
@@ -658,12 +659,16 @@ function tokensPage(ctx) {
   const bord = [...T.borders.map((b) => ({ ...b, tokens: b.tokens.filter((tk) => tk !== 'border-focus') })).filter((b) => b.tokens.length), { tokens: ['Focus ring'], px: ctl0.px, focus: true }], fc = ctx.roles.light.focus, fcName = (ctx.colours.find((c) => c.hex.toLowerCase() === fc.toLowerCase()) || {}).name || '';
   // each border is drawn in the colour it takes in use: the focus ring in the focus colour, a control edge in the border colour, a hairline in the divider
   const L = ctx.roles.light, bordCol = (b) => (b.focus ? L.focus : b.tokens.includes('border-control') ? L.border : L.divider);
-  const bordSec = { h: SUBH + bord.length * 40 + 4, draw: (y) => sub(X0, y, CW, 'Borders', 'drawn at their real width and colour') + bord.map((b, i) => {
-    const yy = y + SUBH + 4 + i * 40;
+  const bordUseW = CW - (COL[1] - X0) - 256, bordText = (b) => [...(b.uses || []).map(A), ...(b.focus ? [`${fcName ? `${A(fcName)} ` : ''}${fig(fc.replace('#', '').toUpperCase())} at ${fig('border-control')}`] : [])].join(', ');
+  const bordPlain = (b) => [...(b.uses || []), ...(b.focus ? [`${fcName ? `${fcName} ` : ''}${fc.replace('#', '').toUpperCase()} at border-control`] : [])].join(', ');
+  const bordH = bord.map((b) => Math.max(40, 10 + wrap(CHROME[400], bordPlain(b), 13, bordUseW).length * 18 + 8, 7 + b.tokens.length * 16 + 9));
+  const bordY = bordH.map((_, i) => sum(bordH.slice(0, i)));
+  const bordSec = { h: SUBH + sum(bordH) + 4, draw: (y) => sub(X0, y, CW, 'Borders', 'drawn at their real width and colour') + bord.map((b, i) => {
+    const yy = y + SUBH + 4 + bordY[i];
     return hl(X0, yy, CW) + at(X0, yy + 7, b.tokens.map((tk) => `<div class="sg-s">${A(tk)}</div>`).join(''), { style: 'color:var(--ink)' }) + mono(X0 + 150, yy + 11, `${b.px} px`, { w: 60 }) + box(`left:${COL[1]}px;top:${yy + 20 - b.px / 2}px;width:240px;height:${b.px}px;background:${bordCol(b)}`)
-      + at(COL[1] + 256, yy + 10, [...(b.uses || []).map(A), ...(b.focus ? [`${fcName ? `${A(fcName)} ` : ''}${fig(fc.replace('#', '').toUpperCase())} at ${fig('border-control')}`] : [])].join(', '), { cls: 'sg-n', w: CW - (COL[1] - X0) - 256, style: 'color:var(--quiet)' });
+      + at(COL[1] + 256, yy + 10, bordText(b), { cls: 'sg-n', w: bordUseW, style: 'color:var(--quiet)' });
   }).join('') };
-  hook(ctx, { borders: bord.map((b) => (b.focus ? ['Focus ring', `${fcName ? `${fcName} ` : ''}\`${fc.replace('#', '').toUpperCase()}\` at \`border-control\` ${b.px} px`] : [b.tokens.map((tk) => `\`${tk}\``).join(', '), `${b.px} px`])) });
+  hook(ctx, { borders: bord.map((b) => (b.focus ? ['Focus ring', `${fcName ? `${fcName} ` : ''}\`#${fc.replace('#', '').toUpperCase()}\` at \`border-control\` ${b.px} px`] : [b.tokens.map((tk) => `\`${tk}\``).join(', '), `${b.px} px`])) });
   // elevation: the brand's own sentence, with an edge drawn as it says, in the text colour at the control border's width
   const elev = (ctx.brand.ui || {}).elevationNote, ctl = ctx.borders.find((b) => b.token === 'border-control'), mm = model(ctx);
   const ep = elev ? para(0, 0, COL[2] - X0 - 32, elev, { size: 15, lh: 22 }) : null, EHt = ep ? Math.max(ep.h, 76) : 0;
@@ -809,11 +814,13 @@ function appliedPage(ctx) {
     const rs = ((B.imagery && B.imagery.rules) || []).filter((r) => r.do && r.dont), RW = 305, DX = X0 + 349;
     if (!rs.length) return null;
     const rows = rs.map((r) => { const a = para(0, 0, RW, r.do), b = para(0, 0, RW, r.dont); return { r, h: Math.max(a.lines, b.lines) * 18 + 14 }; });
-    return { h: SUBH + sum(rows.map((r) => r.h)), draw: (y) => {
+    return { h: SUBH + sum(rows.map((r) => r.h)), flex: rows.length * 24, draw: (y, extra = 0) => {
       let yy = y + SUBH, h = sub(X0, y, CW, 'Photograph rules');
-      rows.forEach(({ r, h: rh }) => {
-        h += hl(X0, yy, CW) + at(X0, yy + 7, 'Do', { cls: 'sg-n', style: 'color:var(--quiet)' }) + para(X0 + 44, yy + 7, RW, r.do).html
-          + at(DX, yy + 7, 'Don’t', { cls: 'sg-n', style: 'color:var(--quiet)' }) + para(DX + 44, yy + 7, RW, r.dont).html;
+      const add = Math.floor(extra / rows.length), pt = 7 + Math.floor(add / 2);
+      rows.forEach(({ r, h: rh0 }) => {
+        const rh = rh0 + add;
+        h += hl(X0, yy, CW) + at(X0, yy + pt, 'Do', { cls: 'sg-n', style: 'color:var(--quiet)' }) + para(X0 + 44, yy + pt, RW, r.do).html
+          + at(DX, yy + pt, 'Don’t', { cls: 'sg-n', style: 'color:var(--quiet)' }) + para(DX + 44, yy + pt, RW, r.dont).html;
         yy += rh;
       });
       return h + hl(X0, yy, CW);
@@ -889,9 +896,9 @@ function appliedPage(ctx) {
     const sceneAspect = ctx.sceneInfo('hoarding-site').quads[0].aspect, HH = 280, aw = Math.round(HH * sceneAspect);
     let FW = slot ? 380 : CW, HB = slot ? Math.round(((FW - 2) / aw) * HH) + 2 : 200;
     const setHB = (h) => { HB = h; if (slot) FW = Math.round(((h - 2) / HH) * aw) + 2; hoardSec.h = SUBH + 16 + HB; };
-    const hoardInnerAt = (k) => `<div style="position:absolute;inset:0;background:var(--ground)">`
-      + `<div style="position:absolute;left:56px;top:50%;transform:translateY(-50%)">${slot ? logoArt(ctx, 'colour', Math.max(210, Math.ceil(slotW(ctx, 0) / k))) : ctx.logo.html('colour', { width: 210 })}</div>`
-      + `<div style="position:absolute;left:360px;right:56px;top:50%;transform:translateY(-50%);${disp(52, 54)}color:${inkOnGround}">${nbu(boardLine)}</div></div>`;
+    const hoardInnerAt = (k) => { const lw = slot ? Math.max(210, Math.ceil(slotW(ctx, 0) / k)) : 210; return `<div style="position:absolute;inset:0;background:var(--ground)">`
+      + `<div style="position:absolute;left:56px;top:50%;transform:translateY(-50%)">${slot ? logoArt(ctx, 'colour', lw) : ctx.logo.html('colour', { width: 210 })}</div>`
+      + `<div style="position:absolute;left:${Math.max(360, 56 + lw + 40)}px;right:56px;top:50%;transform:translateY(-50%);${disp(52, 54)}color:${inkOnGround}">${nbu(boardLine)}</div></div>`; };
     const hoardInner = hoardInnerAt(1), hoardUrl = slot ? '' : ctx.mockup('hoarding-site', [{ html: ctx.artPage(hoardInner, { w: aw, h: HH, css: guideCss() }), w: aw, h: HH }]);
     // the slot edition holds no photograph to caption, so the flat artwork carries the sign's spec in rows
     const sz = /([\d.]+) x ([\d.]+) mm/.exec(sign.size || '');
@@ -926,9 +933,9 @@ function appliedPage(ctx) {
     // the email ends on the brand's own body: the data gives it no call to action, so none is drawn
     const EHn = pad + 38 + subjLines * 28 + 12 + gp.h + 8 + bp.h + pad;
     const EH = EHn;
-    const pairSec = { h: SUBH + 16 + EH, draw: (y) => {
+    const pairSec = { h: SUBH + 16 + EH, flex: 64, draw: (y, more = 0) => {
       const py = y + SUBH + 16, ex = EX, ey = py, by = ey + pad + 38 + subjLines * 28 + 12;
-      const mail = frame(ex, ey, EW, EH, '', 'background:var(--ground)')
+      const mail = frame(ex, ey, EW, EH + more, '', 'background:var(--ground)')
         + at(ex + pad, ey + pad, `<span class="sg-h">${A(em.person || card.person || '')}</span> <span class="sg-n" style="color:var(--quiet)">${A(em.role || card.role || '')}</span>`)
         + at(ex + EW - pad - 200, ey + pad, A(em.time || ''), { cls: 'sg-n', w: 200, style: 'text-align:right;color:var(--quiet)' })
         + hl(ex + pad, ey + pad + 26, tw)
@@ -945,8 +952,9 @@ function appliedPage(ctx) {
     if (over() > 0) setHB(Math.max(100, HB - over()));
     // the hoarding takes the room that is left, up to its own height in the scene
     if (!slot && over() < 0) hoardSec.flex = Math.min(HH - HB, -over());
+    if (slot && over() < 0) setHB(Math.min(HB - over(), Math.floor(((CW - 24 - 70 - 160 - 2) / aw) * HH) + 2));
   }
-  return shell(ctx, 'applied', { body: t.html + flow('applied', t.top, secs, { gap: photographed && !slot ? 26 : photographed || !slot ? 28 : 20 }) });
+  return shell(ctx, 'applied', { body: t.html + flow('applied', t.top, secs, { gap: photographed && !slot ? 26 : photographed || !slot ? 28 : 20, maxGap: 72 }) });
 }
 
 const withFaces = (fn) => (ctx) => { useFaces(ctx); return fn(ctx); };
