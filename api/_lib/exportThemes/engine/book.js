@@ -166,7 +166,8 @@ function withoutDownloads(body) {
   for (const s of BOOK_SECTIONS) {
     if (s.id !== 'downloads' && new RegExp(`<section[^>]*\\bid="${s.id}"`).test(after)) throw new Error('the downloads section is not last');
   }
-  return body.slice(0, open);
+  // Anything left in the book that pointed at the section (a "see Downloads" reference) is now a link to nothing: it keeps its words, not its href.
+  return body.slice(0, open).replace(/<a\b([^>]*?)\shref="#downloads"([^>]*)>([\s\S]*?)<\/a>/g, '<span$1$2>$3</span>');
 }
 
 // print: the page for printing and stand-alone viewing. No script, and no link into the kit folder.

@@ -20,7 +20,7 @@ const logoSpan = (ctx, mode) => {
   const g = ctx.logo.geos.colour || ctx.logo.geos.primary, lw = 96, lh = g ? Math.round(lw * g.h / g.w) : 24, rev = ctx.brand.logo.colourways.reversed;
   return `<span style="display:block;width:${lw}px;min-height:${lh}px">${mode === 'dark' ? ctx.logo.html('reversed', { width: lw, color: rev.name }) : ctx.logo.html('colour', { width: lw })}</span>`;
 };
-const topbar = (ctx, mode, active) => `<nav class="ui-topbar" aria-label="Main ${uid('nav')}">${logoSpan(ctx, mode)}<div class="ui-topbar__links">${ctx.ui.links(ex(ctx).links.slice(0, 3), active)}</div></nav>`;
+const topbar = (ctx, mode, active) => `<nav class="ui-topbar" aria-label="Main ${uid(ctx, 'nav')}">${logoSpan(ctx, mode)}<div class="ui-topbar__links">${ctx.ui.links(ex(ctx).links.slice(0, 3), active)}</div></nav>`;
 const liveStatus = (ctx) => (ctx.status.find((s) => s.label === sc(ctx).status) || {}).id || sc(ctx).deliveries[0].status;
 const facts = (ctx) => { const S = sc(ctx); return `<dl class="hk-dl"><div><dt>${E(ctx, S.deliverToLabel)}</dt><dd>${E(ctx, S.deliverTo)}</dd></div><div><dt>${E(ctx, S.paidLabel)}</dt><dd class="ui-num">${E(ctx, S.paid)}</dd></div></dl>`; };
 function liveBlock(ctx) {
@@ -34,7 +34,7 @@ const listScreen = (ctx, mode) => { const X = ex(ctx), ui = ctx.ui; return `<div
 function formScreen(ctx, mode) {
   const S = sc(ctx), F = S.form, X = ex(ctx), ui = ctx.ui;
   return `<div class="hk-scr">${topbar(ctx, mode, -1)}<div class="hk-bodyin">${ui.crumbs([X.crumbs[0], F.title])}<h2 class="ui-display hk-h">${E(ctx, F.title)}</h2><div class="hk-form">`
-    + `${ui.field({ id: uid('f1'), label: F.pickup, value: F.pickupValue || '' })}${ui.field({ id: uid('f2'), label: F.dropoff, value: F.dropoffValue || '' })}${ui.field({ id: uid('f3'), label: F.size, kind: 'select', options: F.sizes || [], value: (F.sizes || [])[1] })}${ui.btn(F.book, { block: true })}</div></div></div>`;
+    + `${ui.field({ id: uid(ctx, 'f1'), label: F.pickup, value: F.pickupValue || '' })}${ui.field({ id: uid(ctx, 'f2'), label: F.dropoff, value: F.dropoffValue || '' })}${ui.field({ id: uid(ctx, 'f3'), label: F.size, kind: 'select', options: F.sizes || [], value: (F.sizes || [])[1] })}${ui.btn(F.book, { block: true })}</div></div></div>`;
 }
 const liveScreen = (ctx, mode) => `<div class="hk-scr">${topbar(ctx, mode, 0)}<div class="hk-bodyin">${liveBlock(ctx)}${facts(ctx)}${ctx.ui.btn(sc(ctx).share, { variant: 'secondary', block: true })}</div></div>`;
 
@@ -42,7 +42,7 @@ const liveScreen = (ctx, mode) => `<div class="hk-scr">${topbar(ctx, mode, 0)}<d
 function dialog(ctx) {
   const D = sc(ctx).dialog, M = kitColours(ctx, 'light'), Dk = kitColours(ctx, 'dark'), r = (a, b) => ratio(ctx, a, b);
   const maxW = shippedPx(ctx, '.ui-dialog', 'max-width'), pad = shippedPx(ctx, '.ui-dialog', 'padding'), bw = ctx.brand.ui.border, tt = ut(ctx, 'title-s'), shadow = tokenGroups(ctx).shadow['shadow-float'];
-  const scrim = (mode) => piece(ctx, mode, `<div class="hk-scrim"><div class="ui-scrim">${ctx.ui.dialog({ ...D, danger: true }).replace(/dlg-t/g, uid('dlg'))}</div></div>`, { label: `Scrim, ${modeLabel(mode).toLowerCase()}`, cls: 'hk-flush' });
+  const scrim = (mode) => piece(ctx, mode, `<div class="hk-scrim"><div class="ui-scrim">${ctx.ui.dialog({ ...D, danger: true }).replace(/dlg-t/g, uid(ctx, 'dlg'))}</div></div>`, { label: `Scrim, ${modeLabel(mode).toLowerCase()}`, cls: 'hk-flush' });
   const parts = [
     ['Box', `${maxW} px wide at most, ${pad} px inside, a ${bw} px edge in the text colour, ${shadow === 'none' ? 'and no shadow' : 'and a floating shadow'}.`, `--shadow-float ${shadow}`],
     ['Question', `The title asks it, in the display face at ${tt.size} / ${tt.line}.`],

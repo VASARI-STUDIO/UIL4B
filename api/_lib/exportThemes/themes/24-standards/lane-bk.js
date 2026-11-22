@@ -65,8 +65,10 @@ function voice(ctx) {
 
 // ---- 3 Logo ----
 function logoSec(ctx) {
-  const B = ctx.brand, R = roles(ctx), L = ctx.logo, g = L.geos.colour, W = { w: 560, m: 448, n: 264 }, H = map3((k) => (W[k] * g.h) / g.w);
-  const cs = L.clearShare / 100, pad = map3((k) => H[k] * cs);
+  const B = ctx.brand, R = roles(ctx), L = ctx.logo, g = L.geos.colour, cs = L.clearShare / 100;
+  // the phone sheet holds 312 px less the figure's 24 px dimension column: the logo and its clear space on both sides must fit that, so a deep clear space narrows the logo
+  const W = { w: 560, m: 448, n: Math.min(264, Math.floor(288 / (1 + (2 * cs * g.h) / g.w))) }, H = map3((k) => (W[k] * g.h) / g.w);
+  const pad = map3((k) => H[k] * cs);
   const box = `<div class="sd-clear" style="${sv('cs', pad)}"><div class="sd-hz" style="${sv('hz', W)}">${logoMode(ctx, 'colour', 560, B.name + ' logo')}</div></div>`;
   const hero = fig(box, { h: lab(ctx, map3((k) => W[k] + 2 * pad[k])), v: lab(ctx, map3((k) => H[k] + 2 * pad[k])), cap: `The dashed box is the clear space: ${L.clearShare}% of the logo's height on every side. The logo is ${tri((k) => X(ctx, W[k]))} wide here.` });
   const cws = B.logo.colourways;
