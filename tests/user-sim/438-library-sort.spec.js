@@ -7,14 +7,13 @@
 //     arrive on "show more" carry on exactly where the last page stopped, with the pack scope still
 //     applied;
 //   - Name Z-A is the exact reverse, and going back to Recommended restores today's order;
-//   - the word "Sort" is on the control, and the default reads "Best match" once a search is typed;
+//   - the control is named "Sort: <choice>", and the default reads "Best match" once a search is typed;
 //   - the choice carries over to the other library, which is then sorted too.
 //
 // HOW TO SEE EACH FAIL (src/ unless named):
 //   IconLibrary `icons` memo returns the fetched list unsorted       -> "Name A-Z orders the whole result"
 //   sortLibraryList sorts a page-sized slice instead of the whole    -> "Name A-Z orders the whole result"
 //   sortLibraryList 'recommended' branch sorts too                   -> "...restores the order it started in"
-//   LibrarySort drops `triggerLabel` (no word "Sort" on the control)  -> "the default reads Best match"
 //   sortOptions stops renaming the default while searching           -> "the default reads Best match"
 //   librarySort.js keeps the choice per library instead of in one    -> "the choice carries over"
 //   EmojiLibrary `results` ignores `sort`                            -> "the choice carries over"

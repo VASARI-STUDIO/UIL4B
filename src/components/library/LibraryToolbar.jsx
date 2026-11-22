@@ -194,13 +194,17 @@ function LibraryToolbar({
   // A font swap changes every option's width, so every cached need is stale.
   // Cleared ONCE, when the fonts settle: clearing on every stage change would
   // empty the cache on each step, and a row that had stepped up could never
-  // find a lower stage to step back down to.
+  // find a lower stage to step back down to. The row then starts again from
+  // its floor: a stage reached while the fallback font was wider has no
+  // measured lower stage left to step back down to, so it would stay there.
   useEffect(() => {
     let cancelled = false
     document.fonts?.ready?.then(() => {
       if (cancelled) return
       needs.current = {}
-      decide()
+      const { effective, minStage } = live.current
+      if (effective !== minStage) setStage(minStage)
+      else decide()
     }).catch(() => {})
     return () => { cancelled = true }
   }, [decide])
