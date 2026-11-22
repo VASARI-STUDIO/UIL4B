@@ -15,6 +15,8 @@ import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
+import LibrarySort from '../components/library/LibrarySort'
+import { sortLibraryList, useLibrarySort } from '../utils/librarySort'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useInViewPlayback, { allowsAnimatedPreview } from '../hooks/useInViewPlayback'
@@ -3373,6 +3375,11 @@ const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
 const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
 const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
+// The pack an icon is sorted under for the "Pack" sort: the label the grid's pack headings use ('' for a custom icon, sorted last).
+const iconPackSortKey = (icon) => {
+  const p = packOf(icon)
+  return p ? (icon.logo ? 'Logo.dev' : gridPackLabel(p)) : ''
+}
 
 /* ── THE CREDIT FOR THE GRID ─────────────────────────────────────────────────
 
@@ -3779,11 +3786,28 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // What the grid shows. Signed out, the fetched set trimmed to whole rows of the
   // measured columns; everyone else sees it all. Memoised so the list keeps its
   // identity until the set or the column count changes.
+  //
+  // THE SORT (utils/librarySort.js, shared with the Emoji library). It orders the WHOLE filtered set here,
+  // before `shown` slices a page off it, so scrolling and "show more" carry on in the same order, and it runs
+  // AFTER the signed-out trim so the sample keeps its five-pack spread. Recommended hands back the very same
+  // array, so today's order (and the identity this memo had) is untouched.
+  const [sort] = useLibrarySort()
   const icons = useMemo(
-    () => (capped ? capAnonList(fetchedIcons, anonCap) : fetchedIcons),
-    [capped, fetchedIcons, anonCap],
+    () => sortLibraryList(
+      capped ? capAnonList(fetchedIcons, anonCap) : fetchedIcons,
+      sort,
+      { nameOf: (icon) => icon.name, packOf: iconPackSortKey },
+    ),
+    [capped, fetchedIcons, anonCap, sort],
   )
   const [visible, setVisible] = useState(PAGE_SIZE)
+  // A new order starts from its first page, like any other change to the list.
+  const sortSeen = useRef(sort)
+  useEffect(() => {
+    if (sortSeen.current === sort) return
+    sortSeen.current = sort
+    setVisible(PAGE_SIZE)
+  }, [sort])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   /* The catalogue is on screen but not all of it, and the notice says which:
@@ -5468,7 +5492,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // A GROUPED GRID STATES EACH PACK ONCE, in a full-width heading row, and its cells
   // draw no pack label (the label vanished at 980px and below, which left phones and
   // tablets with no sign of where one pack ends and the next begins).
-  const groupHeads = source === 'group'
+  //
+  // A NAME SORT (A-Z or Z-A) DRAWS NO HEADINGS: it interleaves the packs, so a heading would repeat on every
+  // change of pack. Each cell then states its own pack, as it does in a search.
+  const groupHeads = source === 'group' && sort !== 'az' && sort !== 'za'
   // Icons per pack across the whole result, not just the revealed page, so a
   // heading's count never changes as more of the list scrolls in.
   const packCounts = useMemo(() => {
@@ -5626,6 +5653,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             placeholder: 'Search icons…',
             label: 'Search icons',
           }}
+          /* The sort sits after the pack menu on the row, and in the Filters
+             sheet's foot on a phone and a narrow desktop. */
+          sort={<LibrarySort searching={!!query.trim()} />}
           /* The pack menu is a scope, not a filter, so it sits at the right end
              of the row (and in the Filters sheet on a phone). */
           action={(

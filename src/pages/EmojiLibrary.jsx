@@ -8,6 +8,8 @@ import { EMOJI_DATA } from '../data/emojiData'
 import { TONE_EMOJI } from '../data/emojiTones'
 import { normaliseQuery, searchEmoji } from '../data/emojiSearch'
 import { getLoadedEmojiIndex, loadEmojiIndex } from '../data/emojiIndexLoader'
+import LibrarySort from '../components/library/LibrarySort'
+import { sortLibraryList, useLibrarySort } from '../utils/librarySort'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -27,7 +29,10 @@ const PARSED_EMOJI_DATA = EMOJI_DATA.map(g => ({
   cat: g.cat,
   items: parseEmojis(g.emojis).map(char => ({ char, tone: TONE_EMOJI.has(char) })),
 }))
-const TOTAL_COUNT = PARSED_EMOJI_DATA.reduce((sum, g) => sum + g.items.length, 0)
+// The category an emoji belongs to for the "Category" sort (the first, for the few that sit in two).
+const CAT_OF = new Map()
+for (const g of PARSED_EMOJI_DATA) for (const item of g.items) if (!CAT_OF.has(item.char)) CAT_OF.set(item.char, g.cat)
+const TOTAL_COUNT =PARSED_EMOJI_DATA.reduce((sum, g) => sum + g.items.length, 0)
 
 const TONES = ['', '\u{1F3FB}', '\u{1F3FC}', '\u{1F3FD}', '\u{1F3FE}', '\u{1F3FF}']
 const CAT_ICONS = {
@@ -79,6 +84,8 @@ export default function EmojiLibrary({ onCopy }) {
   const { triggerRef: toneTriggerRef, popRef: tonePopRef } = usePopover(toneOpen, closeTone, { arrowNav: true })
 
   const query = normaliseQuery(search)
+  const [sort] = useLibrarySort()
+  const byName = sort === 'az' || sort === 'za'
 
   // Fetch the index. Called on focus, so it is normally resolved before the
   // first keystroke, and again on each keystroke as a backstop for anyone who
@@ -99,19 +106,50 @@ export default function EmojiLibrary({ onCopy }) {
   // A search produces ONE flat ranked list, not categories. Re-grouping ranked
   // results by category would bury the best match again — the exact fault this
   // replaces, where "thumbs up" returned all 61 Hands in catalogue order.
+  //
+  // THE SORT (utils/librarySort.js, shared with the Icon library). Recommended is the order described above, untouched.
+  // A name sort is one flat list too, ordered by the index's names, so it waits for the index: until it
+  // arrives the grid keeps the catalogue order (the effect below asks for it as soon as a name sort is picked).
+  // "Category" keeps the catalogue's category bands and, inside a search, regroups the ranked matches by band
+  // with the ranking kept inside each. A character that sits in two categories is listed once in a flat list.
   const results = useMemo(() => {
     const base = activeCat ? PARSED_EMOJI_DATA.filter(g => g.cat === activeCat) : PARSED_EMOJI_DATA
-    if (!query) return { groups: base, count: base.reduce((sum, g) => sum + g.items.length, 0) }
+    const nameOf = (item) => index?.get(item.char)?.name
+    if (!query) {
+      if (byName && index) {
+        const unique = [...new Map(base.flatMap(g => g.items).map(item => [item.char, item])).values()]
+        const items = sortLibraryList(unique, sort, { nameOf })
+        return { groups: [{ cat: activeCat || 'All emoji', items }], count: items.length }
+      }
+      return { groups: base, count: base.reduce((sum, g) => sum + g.items.length, 0) }
+    }
     if (!index) return { groups: [], count: 0 }
-    const items = searchEmoji(base, index, query)
-    return { groups: items.length ? [{ cat: 'Results', items }] : [], count: items.length }
-  }, [query, activeCat, index])
+    const found = searchEmoji(base, index, query)
+    if (!found.length) return { groups: [], count: 0 }
+    if (sort === 'pack') {
+      const byCat = new Map()
+      for (const item of found) {
+        const cat = CAT_OF.get(item.char)
+        byCat.set(cat, [...(byCat.get(cat) || []), item])
+      }
+      return { groups: PARSED_EMOJI_DATA.filter(g => byCat.has(g.cat)).map(g => ({ cat: g.cat, items: byCat.get(g.cat) })), count: found.length }
+    }
+    const items = byName ? sortLibraryList(found, sort, { nameOf }) : found
+    return { groups: [{ cat: 'Results', items }], count: found.length }
+  }, [query, activeCat, index, sort, byName])
 
   // The grid renders from a deferred copy, so a keystroke or a category click
   // paints the typed text, chip and status first and the new cells in a later
   // task. `gridStale` is true while the grid still shows the previous list.
   const gridGroups = useDeferredValue(results.groups)
   const gridStale = gridGroups !== results.groups
+
+  // A name sort needs the names, so picking one (here, or in the Icon library, which shares the choice) fetches them.
+  // A failed fetch leaves the grid in catalogue order; the search box's own retry path is unchanged.
+  useEffect(() => {
+    if (!byName || getLoadedEmojiIndex()) return
+    loadEmojiIndex().then((loaded) => { setIndex(loaded); setIndexState('ready') }, () => {})
+  }, [byName])
 
   // Offline is recoverable without the user doing anything: when the network
   // returns, fetch the index they already asked for. The Try again button stays
@@ -208,7 +246,9 @@ export default function EmojiLibrary({ onCopy }) {
   // The menu renders the SAME option buttons, so the glyph and the count
   // on each category survive, and the trigger states the current choice
   // ("Category · Smileys"), so nothing is hidden.
-  const handleCategory = useCallback((id) => setActiveCat(id === 'all' ? null : id), [])
+  const searching = !!query
+  const sortControl = useMemo(() => <LibrarySort searching={searching} packLabel="Category" />, [searching])
+  const handleCategory = useCallback((id) =>setActiveCat(id === 'all' ? null : id), [])
   const categoryFilter = useMemo(() => (
     <LibraryFilterGroup
       label="Filter by category"
@@ -256,6 +296,7 @@ export default function EmojiLibrary({ onCopy }) {
         activeFilters={activeCat ? 1 : 0}
         search={searchProp}
         action={toneAction}
+        sort={sortControl}
       >
         {categoryFilter}
       </LibraryToolbar>

@@ -884,6 +884,12 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
 .lib-surface .lbry-toolbar-row:has(>.lbry-toolbar-pinned)>.lbry-toolbar-action{display:flex;align-items:center;gap:12px}
 .lib-surface .lbry-toolbar-row:has(>.lbry-toolbar-pinned)>.lbry-toolbar-action::before{content:"";flex:0 0 1px;height:24px;margin-left:2px;background:var(--v3-hair)}
 .lib-surface .lbry-toolbar-row .lbry-select{width:auto}
+/* The sort menu (LibraryToolbar `sort`): on the row it follows the action at the right end. With no action before it
+   it carries the free space itself; a pinned control after it sits flush against it, as after an action. */
+.lib-surface .lbry-toolbar-sort{flex:0 0 auto;display:flex;align-items:center;margin-left:auto}
+.lib-surface .lbry-toolbar-action+.lbry-toolbar-sort{margin-left:0}
+.lib-surface .lbry-toolbar-sort+.lbry-toolbar-pinned{margin-left:0}
+.lib-surface .lbry-toolbar-sort .lbry-select{white-space:nowrap}
 
 /* The one control the groups collapse into. The same resting affordance as a
    collapsed group trigger (a hairline pill), because it is the same kind of
@@ -935,7 +941,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{tr
 .lib-surface .lbry-panel-groups>.lbry-filters{flex-wrap:wrap;width:auto}
 .lib-surface .lbry-panel-groups .lbry-select,
 .lib-surface .lbry-panel-action .lbry-select{width:100%;max-width:none}
-.lib-surface .lbry-panel-action{padding-top:14px;border-top:1px solid var(--v3-hair)}
+.lib-surface .lbry-panel-action{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--v3-hair)}
 .lib-surface .lbry-panel-action>*{width:100%;justify-content:center}
 
 /* Phone: the bottom sheet. Portalled to <body> inside its own `.lib-surface`
