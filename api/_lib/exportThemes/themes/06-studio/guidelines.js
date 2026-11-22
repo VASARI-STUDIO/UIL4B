@@ -8,7 +8,7 @@ import { guidelinesB } from './guidelines-b.js';
 
 const lc = (s) => s.toLowerCase();
 const r1 = (n) => n.toFixed(1);
-const isGround = (ctx, hex) => lc(hex) === lc(ctx.roles.light.surface);
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const content = (ctx) => ctx.brand.ui.screen.content;
 const delivery = (ctx, status) => content(ctx).deliveries.find((d) => d.status === status) || content(ctx).deliveries[0];
 // a width mark under the thing it measures (end ticks, label under the line)

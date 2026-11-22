@@ -59,7 +59,7 @@ function baseCss(ctx) {
 .lb-it p:first-child{margin-top:0}
 .lb-it b{font-weight:${W.medium}}
 .lb-tb{margin:12px 0 0;display:grid;grid-template-columns:${TERM_COL}px 1fr;font-size:13px;line-height:18px;font-weight:${W.regular}}
-.lb-tb dt{font-weight:${W.medium};padding-right:12px;overflow-wrap:anywhere}
+.lb-tb dt{font-weight:${W.medium};padding-right:12px;overflow-wrap:break-word;min-width:0}
 .lb-tb dd{margin:0;overflow-wrap:anywhere}
 .lb-tb dd .mono{margin-right:4px}
 .lb-k{margin-top:12px;list-style:none;display:grid;column-gap:12px;font-size:13px;line-height:17px;font-weight:${W.regular}}

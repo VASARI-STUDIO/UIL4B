@@ -7,7 +7,7 @@ const PX = '<span class="hg-m">1:1</span>, sizes in px';
 const photoOf = (ctx) => { const sh = ctx.brand.imagery.shots; return sh.find((s) => s.photo) || sh[0]; };
 const ph = (ctx, s, pos) => ctx.photo(s.id, { cls: 'hg-photo', pos: pos || '50% 45%', slotNote: false });
 // the ink a field wants on it: the engine's best pair for that ground, else whichever of the roles' two texts reads better
-const inkOn = (ctx, hex, size = 24) => {
+const inkOn = (ctx, hex, size = 13) => {
   const own = ctx.pairs.filter((p) => p.bgHex.toUpperCase() === hex.toUpperCase()).sort((a, b) => b.ratio - a.ratio)[0];
   if (own && own.ratio >= 4.5) return own.fgHex;
   return ctx.textOn(hex, { size, prefer: ctx.ratio(ctx.roles.light.text, hex) >= ctx.ratio(ctx.roles.dark.text, hex) ? ctx.roles.light.text : ctx.roles.dark.text });

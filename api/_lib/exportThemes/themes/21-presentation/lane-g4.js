@@ -41,10 +41,10 @@ const sentences = (s) => (s || '').split(/(?<=[.!?]) /).map((x) => x.trim()).fil
 // ---- colour roles and the chrome rule (as in guidelines-r1.js) ----------------------------------------------------------------
 const L = (ctx) => ctx.roles.light;
 const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
-const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
+const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 const chromeOn = (ctx, hex) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
-  return q || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
+  return q || ctx.textOn(hex, { size: 12, prefer: [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0] });
 };
 // running text a step below the ink on a ground: the soft text where it reads, else the dark soft text on a dark ground, else the ink
 const softOn = (ctx, hex) => {

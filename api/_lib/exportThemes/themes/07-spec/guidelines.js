@@ -85,7 +85,7 @@ ${figure}
   contrast(ctx) {
     const r = ctx.pages.find((p) => p.id === 'contrast').ref, surface = ctx.roles.light.surface.toLowerCase(), cs = ctx.colours;
     const t = ctx.roles.light.text, g = ctx.roles.light.surface;
-    const inkOn = (hex) => ctx.textOn(hex, { size: 24, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
+    const inkOn = (hex) => ctx.textOn(hex, { size: 13, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
     const rows = ctx.pairs.map((p, i) => `<tr><td class="a-no num">${r}.${i + 1}</td><td><span class="g-aa${p.large ? ' g-aa--big' : ''}${p.bgHex.toLowerCase() === surface ? ' hairline' : ''}" style="background:${p.bgHex};color:${p.fgHex}">Aa</span></td><td class="g-pr"><b>${A(nameOf(ctx, p.fg))} on ${A(nameOf(ctx, p.bg))}</b>${mono(p.fgHex)} ${mono(p.bgHex)}</td><td class="a-def">${A(p.use)}${p.large ? `, ${p.minSize} px and over` : ''}</td><td>${levelOf(p.ratio)}</td><td class="r">${ctx.fmt(p.ratio)}</td></tr>`).join('');
     const pairs = `<table class="st g-pt">${th([['', 52], ['', 56], ['Pair', 222], ['Use', ''], ['Level', 68], ['Ratio', 48, 'r']])}<tbody>${rows}</tbody></table>`;
     const used = new Set(ctx.pairs.map((p) => `${p.fgHex}|${p.bgHex}`.toLowerCase()));

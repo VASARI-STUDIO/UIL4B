@@ -13,13 +13,13 @@ export const L = (ctx) => ctx.roles.light;
 export const DK = (ctx) => ctx.roles.dark;
 export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
 export const lower = (h) => String(h).toLowerCase();
-export const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
+export const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // the deck's chrome rule: the quiet tone that reaches 4.5:1 on the field, else the best of text, ground and dark soft text
 export const chromeOn = (ctx, hex) => {
   const soft = softOnDark(ctx, hex);
   if (soft) return soft;
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, DK(ctx).quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
-  return q || [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
+  return q || ctx.textOn(hex, { size: 12, prefer: [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0] });
 };
 export const nameOfHex = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) => lower(c.hex) === lower(hex))?.name || hex;
 // the three fields of the deck, by role: the dark text field, the action field and the panel
@@ -28,10 +28,10 @@ export const actF = (ctx) => byRole(ctx, 'action')?.hex || L(ctx).action;
 export const panelF = (ctx) => L(ctx).sunken;
 // a colour as the palette token the page's CSS declares for it (the brand's own colours); a tone that is not one stays as its value
 const tokenOf = (ctx, hex) => { const c = ctx.colours.find((x) => lower(x.hex) === lower(hex)); return c ? `var(--palette-${cssIdent(c.id)})` : hex; };
-// a field's colours as custom properties, the ink checked against it at the size it is used
+// a field's colours as custom properties; every field carries 12 px labels as well as its headline, so the ink is picked and checked at 12 px whatever size is asked for
 export const fieldStyle = (ctx, hex, what, size = 15) => {
-  const ink = inkOn(ctx, hex, Math.max(size, 15)), t = tokenOf(ctx, hex);
-  ctx.pair(ink, hex, { size: Math.max(size, 15), what });
+  const at = Math.min(size, 12), ink = inkOn(ctx, hex, at), t = tokenOf(ctx, hex);
+  ctx.pair(ink, hex, { size: at, what });
   return `background:${t};color:${ink};--q:${chromeOn(ctx, hex)};--fi:${ink};--fb:${t}`;
 };
 // the logo colourway the brand draws for a ground, else the one-colour version in the field's ink

@@ -34,11 +34,11 @@ const L = (ctx) => ctx.roles.light;
 const DK = (ctx) => ctx.roles.dark;
 const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
 const lower = (h) => String(h).toLowerCase();
-const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
+const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // the deck's chrome rule: the quiet tone that reaches 4.5:1 on the field, else the best of text, ground and dark soft text
 const chromeOn = (ctx, hex) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, DK(ctx).quiet].find((c) => ctx.ratio(c, hex) >= 4.5);
-  return q || [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0];
+  return q || ctx.textOn(hex, { size: 12, prefer: [L(ctx).text, L(ctx).surface, DK(ctx).textSoft].sort((a, b) => ctx.ratio(b, hex) - ctx.ratio(a, hex))[0] });
 };
 // reading text on a field: the soft text tone of the matching mode when it passes, else the ink
 const softOn = (ctx, hex) => {
@@ -53,8 +53,8 @@ const cwFor = (ctx, hex) => cwOnGround(ctx, hex) || (lower(inkOn(ctx, hex)) === 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the colours a field gets: background, ink, chrome and reading tone as custom properties, each pair checked
 const fieldStyle = (ctx, hex, what, size = 12) => {
-  const ink = inkOn(ctx, hex, Math.max(size, 15));
-  ctx.pair(ink, hex, { size: Math.max(size, 15), what });
+  const ink = inkOn(ctx, hex, size);
+  ctx.pair(ink, hex, { size, what });
   return `background:${hex};color:${ink};--q:${chromeOn(ctx, hex)};--soft:${softOn(ctx, hex)};--ink:${ink};--bg:${hex}`;
 };
 

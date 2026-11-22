@@ -6,11 +6,11 @@ import { cssStr } from '../../engine/escape.js';
 // the top edge, the call number top left, the rod hole at the foot. One elevation language: 1.5 px Rod lines; no shadows.
 // Dark is the drawer interior: Type ground, Card ink. Roles come from the brand; no hex is written here.
 const mixHex = (ctx, a, b, t) => '#' + ctx.C.hexToRgb(a).map((v, i) => Math.round(v * t + ctx.C.hexToRgb(b)[i] * (1 - t)).toString(16).padStart(2, '0')).join('').toUpperCase();
-const vars = (ctx, r) => `--kb-ground:${r.surface};--kb-face:${r.raised};--kb-panel:${r.sunken};--kb-ink:${r.text};--kb-soft:${r.textSoft};--kb-quiet:${r.quiet};--kb-quiet-panel:${r.quietOnSunken};--kb-hair:${r.divider};--kb-rod:${r.quiet};--kb-rule:${mixHex(ctx, r.text, r.surface, 0.22)};--kb-edge:${r.border};--kb-action:${r.action};--kb-action-hover:${r.actionHover};--kb-action-ink:${r.actionLabel};--kb-focus:${r.focus};--kb-hole:${r.surface};`;
+const vars = (ctx, r) => `--kb-ground:${r.surface};--kb-face:${r.raised};--kb-panel:${r.sunken};--kb-ink:${r.text};--kb-soft:${r.textSoft};--kb-quiet:${ctx.textOn(r.surface, { size: 12, prefer: r.quiet })};--kb-quiet-panel:${ctx.textOn(r.sunken, { size: 12, prefer: r.quietOnSunken })};--kb-hair:${r.divider};--kb-rod:${r.quiet};--kb-rule:${mixHex(ctx, r.text, r.surface, 0.22)};--kb-edge:${r.border};--kb-action:${r.action};--kb-tab-edge:${ctx.ratio(r.action, r.surface) < 3 ? (r.actionEdge || r.border) : r.action};--kb-action-hover:${r.actionHover};--kb-action-ink:${r.actionLabel};--kb-focus:${r.focus};--kb-hole:${r.surface};`;
 
 export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono, bw = B.ui.border, rev = B.logo.colourways.reversed;
-  return `.bk{${vars(ctx, L)}--kb-fix-ground:${L.surface};--kb-fix-face:${L.raised};--kb-fix-ink:${L.text};--kb-fix-soft:${L.textSoft};--kb-fix-quiet:${L.quiet};--kb-fix-hair:${L.divider};--kb-fix-rule:${mixHex(ctx, L.text, L.surface, 0.22)};
+  return `.bk{${vars(ctx, L)}--kb-fix-ground:${L.surface};--kb-fix-face:${L.raised};--kb-fix-ink:${L.text};--kb-fix-soft:${L.textSoft};--kb-fix-quiet:${ctx.textOn(L.surface, { size: 12, prefer: L.quiet })};--kb-fix-hair:${L.divider};--kb-fix-rule:${mixHex(ctx, L.text, L.surface, 0.22)};
 --chrome:'Albert Sans',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',serif;--mono:'${cssStr(m.family)}',monospace;--i1:72px;--i2:144px}
 [data-theme="dark"] .bk{${vars(ctx, D)}}
 body:has(>.bk){background:${L.surface}}
@@ -62,7 +62,7 @@ body:has(>.bk){background:${L.surface}}
 .kb-call{font-size:13px;line-height:18px;color:var(--kb-quiet)}
 .kb-rh{font-size:12px;line-height:18px;color:var(--kb-quiet)}
 .kb-guide{padding-left:calc(var(--cut,0) * (100% - 320px));border-bottom:1.5px solid var(--kb-rod);margin-bottom:32px}
-.kb-tab{display:inline-flex;align-items:center;min-width:240px;height:76px;padding:0 28px 6px;margin-bottom:-1.5px;background:var(--kb-action);color:var(--kb-action-ink);border-radius:12px 12px 0 0;font-family:var(--display);font-weight:400;font-size:48px;line-height:1;white-space:nowrap}
+.kb-tab{display:inline-flex;align-items:center;min-width:240px;height:76px;padding:0 28px 6px;margin-bottom:-1.5px;background:var(--kb-action);color:var(--kb-action-ink);box-shadow:inset 1.5px 0 0 var(--kb-tab-edge),inset -1.5px 0 0 var(--kb-tab-edge),inset 0 1.5px 0 var(--kb-tab-edge);border-radius:12px 12px 0 0;font-family:var(--display);font-weight:400;font-size:48px;line-height:1;white-space:nowrap}
 .kb-lead{font-family:var(--body);font-weight:500;font-size:22px;line-height:1.4;max-width:60ch;margin:0 0 64px var(--i1)}
 .kb-body{font-family:var(--body);font-size:17px;line-height:1.55;color:var(--kb-soft);max-width:62ch}
 .kb-cap{font-size:12px;line-height:1.5;color:var(--kb-quiet)}

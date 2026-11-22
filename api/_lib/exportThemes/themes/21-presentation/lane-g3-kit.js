@@ -37,11 +37,15 @@ export const lineHtml = (lines) => lines.map((l) => `<span class="r-ln">${A(l)}<
 // colour roles
 export const L = (ctx) => ctx.roles.light;
 export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
-export const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
+export const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // chrome rule (spec 2.3): the brand's quiet tone that reaches 4.5:1 on every ground the text crosses; else the best of the text colour, the page ground and the dark soft text
 export const chromeOn = (ctx, ...hexes) => {
   const ok = (c) => hexes.every((h) => ctx.ratio(c, h) >= 4.5), worst = (c) => Math.min(...hexes.map((h) => ctx.ratio(c, h)));
-  return [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find(ok) || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => worst(b) - worst(a))[0];
+  const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find(ok);
+  if (q) return q;
+  const best = [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => worst(b) - worst(a))[0];
+  const tries = [best, ...hexes.map((h) => ctx.textOn(h, { size: 12, prefer: best })), '#111111', '#FAFAFA', '#000000', '#FFFFFF'];
+  return tries.find(ok) || tries.sort((a, b) => worst(b) - worst(a))[0];
 };
 // a colour or tone's name; a text tone by its role ("Quiet text"), so "Quiet text on Concrete" never reads "Quiet on White on Concrete"
 export const nameOfHex = (ctx, hex) => [...ctx.colours, ...ctx.tones].find((c) => c.hex.toLowerCase() === String(hex).toLowerCase())?.name || hex;

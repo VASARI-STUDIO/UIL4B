@@ -31,7 +31,7 @@ export function palette(ctx) {
   const dark = cols[0], light = cols[cols.length - 1];
   const action = B.colours.find((c) => c.role === 'action') || dark;
   const panel = B.colours.find((c) => c.role === 'panel') || null;
-  const inkOn = (bg) => ctx.textOn(bg, { size: 24, prefer: ctx.ratio(light.hex, bg) >= ctx.ratio(dark.hex, bg) ? light.hex : dark.hex });
+  const inkOn = (bg) => ctx.textOn(bg, { size: 13, prefer: ctx.ratio(light.hex, bg) >= ctx.ratio(dark.hex, bg) ? light.hex : dark.hex });
   // the quietest brand tone that still reads at 4.5 on this ground, else the ink
   const quietOn = (bg) => {
     const ok = [...(B.tones || []), ...B.colours].map((t) => t.hex).filter((h) => ctx.ratio(h, bg) >= 4.5 && h.toLowerCase() !== inkOn(bg).toLowerCase());

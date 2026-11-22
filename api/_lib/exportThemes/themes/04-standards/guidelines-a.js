@@ -6,7 +6,7 @@ import { A, std, crop, VIEWS, wharfPanel, drawnLogo } from './helpers.js';
 
 const hexName = (ctx, hex) => ctx.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
 const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === role) || ctx.colours[n];
-const isGround = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 const sentences = (s) => s.split(/(?<=\.)\s+/);
 const words = (s) => s.trim().split(/\s+/).length;
 const join = (a) => (a.length > 1 ? `${a.slice(0, -1).join(', ')} and ${a.at(-1)}` : a[0] || '');
@@ -20,7 +20,7 @@ const refOf = (ctx, id) => ctx.pages.find((p) => p.id === id)?.ref || '';
 const inkOn = (ctx, hex) => {
   const p = ctx.pairs.find((q) => q.bgHex.toLowerCase() === hex.toLowerCase());
   if (p) return p.fgHex;
-  const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size: 24, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
+  const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size: 13, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
 };
 // a caption with its clause number in the left column
 const fc = (no, b, t, cls = '') => `<figcaption class="cap a-fc ${cls}"><span class="num">${no}</span><span><b>${b}</b>${t}</span></figcaption>`;
@@ -218,7 +218,7 @@ export const guidelinesA = {
     const strip = (c, k) => { const hx = c.ramp[k];
       return `<i class="a-ts ${+k === c.rampBase ? 'a-ts--base ' : ''}${ctx.ratio(hx, surf) < 1.25 ? 'hairline' : ''}" style="background:${hx}"><span class="num">${k}</span></i>`; };
     const col = (c, i) => `<div class="a-vcol"><div class="a-vchip ${isGround(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex};color:${inkOn(ctx, c.hex)}"><span class="num">${ref}.${i + 2}</span></div><b class="a-vnm">${A(c.name)}</b>
-${c.rampBase === 50 ? `<p class="a-vnote">The ground. No tints.</p>` : `<span class="a-tint">${steps.map((k) => strip(c, k)).join('')}</span>`}
+${c.rampBase === 50 ? `<p class="a-vnote">${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</p>` : `<span class="a-tint">${steps.map((k) => strip(c, k)).join('')}</span>`}
 <dl class="a-spec"><dt>HEX</dt><dd class="a-mono">${A(c.hex)}</dd><dt>RGB</dt><dd class="a-mono">${A(c.rgb.replace(/R(\d+) G(\d+) B(\d+)/, 'R $1  G $2  B $3'))}</dd><dt>OKLCH</dt><dd class="a-mono a-ok">${A(c.oklch).replace(/^(oklch\([\d.]+) /, "$1<br>")}</dd></dl></div>`;
     const tones = ctx.tones.map((t, i) => `<li><i class="a-sw ${isGround(ctx, t.hex) ? 'hairline' : ''}" style="background:${t.hex}"></i><span><b>${A(t.name)}</b><span class="a-mono">${A(t.hex)}</span></span></li>`).join('');
     const work = `<div class="a-vals"><div class="a-vgrid">${ctx.colours.map(col).join('')}</div><div><h3 class="h3">Tones</h3><ul class="a-tones">${tones}</ul></div></div>`;

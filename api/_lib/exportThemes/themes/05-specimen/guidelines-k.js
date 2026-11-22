@@ -66,7 +66,7 @@ ${hole(24, 'k-hole--card')}
       const ink = inkOn(ctx, c.hex), big = i === 0;
       const tabInk = ink;
       return `<li class="k-gc ${big ? 'k-gc--tall' : ''} ph-tight" style="--c:${c.hex};--i:${ink};z-index:${i + 1}">
-<span class="k-gtab" style="left:${left}px;width:${w}px;color:${tabInk}"><span class="num">${Math.round(c.share * 100)}%</span></span>
+<span class="k-gtab" style="left:${Math.min(left, W - Math.max(w, 48))}px;width:${Math.max(w, 48)}px;color:${tabInk}"><span class="num">${Math.round(c.share * 100)}%</span></span>
 <div class="k-gface"><p class="k-gname"><b class="k-disp">${A(c.name)}</b><span class="k-mono k-ghex">${A(c.hex)}</span></p><p class="k-glands">${A(c.lands)}</p></div></li>`;
     }).join('');
     const inner = `<p class="k-lead">${cs.length} colours, each named for where it lands. ${A(action.name)} is the colour people know ${A(ctx.brand.name)} by, and ${A(ground.name)} is the page. Each tab is as wide as the colour's share of a typical page.</p>

@@ -25,11 +25,15 @@ export const px = (n) => +(+n).toFixed(2);
 // ---- colour roles and the chrome rule (as in guidelines-r1.js) ----
 export const L = (ctx) => ctx.roles.light;
 export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
-export const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
+export const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 // the brand's quiet tone that reaches 4.5:1 on every ground given; else the best of the text colour, the page ground and the dark soft text
 export const chromeOn = (ctx, ...hexes) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => hexes.every((h) => ctx.ratio(c, h) >= 4.5));
-  return q || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => Math.min(...hexes.map((h) => ctx.ratio(b, h))) - Math.min(...hexes.map((h) => ctx.ratio(a, h))))[0];
+  if (q) return q;
+  const worst = (c) => Math.min(...hexes.map((h) => ctx.ratio(c, h)));
+  const best = [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => worst(b) - worst(a))[0];
+  const tries = [best, ...hexes.map((h) => ctx.textOn(h, { size: 12, prefer: best })), '#111111', '#FAFAFA', '#000000', '#FFFFFF'];
+  return tries.find((c) => worst(c) >= 4.5) || tries.sort((a, b) => worst(b) - worst(a))[0];
 };
 // a softer body ink for longer notes: the brand's soft text where it reads at 4.5:1, else the full ink
 export const softOn = (ctx, hex) => [L(ctx).textSoft, ctx.roles.dark.textSoft].find((c) => ctx.ratio(c, hex) >= 4.5) || inkOn(ctx, hex);

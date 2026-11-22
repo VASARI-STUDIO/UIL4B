@@ -7,7 +7,7 @@ const sentences = (s) => s.split(/(?<=\.)\s+/);
 const words = (s) => s.trim().split(/\s+/).length;
 const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'];
 const nWord = (n) => NUM[n] || String(n);
-const isGround = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
+const isGround = (ctx, hex) => ctx.ratio(hex, ctx.roles.light.surface) < 1.25;
 // the brand colour for a hex, else the hex itself
 const hexName = (ctx, hex) => ctx.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
 const refOf = (ctx, id) => ctx.pages.find((p) => p.id === id).ref;
@@ -207,7 +207,7 @@ ${photo}`;
     const action = cs.find((c) => c.role === 'action') || cs[0];
     const texts = [sample.headline, V[0].example, V[1].example, ctx.brand.lines.others[0] || V[2].example, V[3].example];
     const t = ctx.roles.light.text, g = ctx.roles.light.surface;
-    const inkOn = (hex) => ctx.textOn(hex, { size: 24, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
+    const inkOn = (hex) => ctx.textOn(hex, { size: 13, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g });
     const chip = (hex) => `<i class="a-ch${hair(ctx, hex)}" style="background:${hex}"></i>`;
     const defs = cs.map((c, i) => `<tr><td class="a-no num">${r}.${i + 1}</td><td class="a-def"><p><b>${chip(c.hex)}${A(c.name)}.</b> The ${A(c.roleText ?? c.role)} colour. ${A(c.lands)}</p><p class="a-val">Value: ${mono(c.hex)}</p></td><td><div class="a-ex${hair(ctx, c.hex)}" style="background:${c.hex};color:${inkOn(c.hex)}"><span class="disp disp--sub">${A(texts[i % texts.length])}</span></div></td></tr>`).join('');
     // the conformance matrix: every brand colour as text (rows) on every brand colour as ground (columns); the pairs the brand uses are outlined

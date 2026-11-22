@@ -10,7 +10,7 @@ export const byRole = (ctx, role, n = 0) => ctx.colours.find((c) => c.role === r
 export const hexName = (ctx, hex) => ctx.colours.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name || hex;
 export const NUM = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 // the print ink that reads better on a stock: Night (the light text) or Stock (the light surface)
-export const inkOn = (ctx, hex, size = 24) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
+export const inkOn = (ctx, hex, size = 13) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.textOn(hex, { size, prefer: ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g }); };
 export const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 // a serial: the number in a run, zero-padded ("No. 004")
 export const serial = (n, w = 3) => `No. ${String(n).padStart(w, '0')}`;
@@ -24,7 +24,7 @@ export const perf = (colour, { d = 2, p = 6, dir = 'v', cls = '' } = {}) => dir 
 // a hole on a ticket the same colour as the page would vanish: there it takes the control edge instead
 export const holeOn = (ctx, hex) => (same(hex, ctx.roles.light.surface) ? ctx.roles.light.border : ctx.roles.light.surface);
 // a ticket the colour of the page gets a hairline so its edge reads
-export const edgeOn = (ctx, hex) => (same(hex, ctx.roles.light.surface) ? ' tk-edge' : '');
+export const edgeOn = (ctx, hex) => (ctx.ratio(hex, ctx.roles.light.surface) < 1.25 ? ' tk-edge' : '');
 
 // the page head: page name left, folio right, both in the condensed stub face, over a perforated edge
 export function page(ctx, id, inner, cls = '') {
@@ -94,7 +94,7 @@ ${fields([['Kept by', A(B.name)], ['Page', `<span class="num">${ctx.pageNo('cove
   'colour-values'(ctx) {
     const steps = Object.keys(ctx.colours[0].ramp), cs = bySize(ctx);
     const run = (c) => {
-      if (c.rampBase === 50) return `<div class="tk-run tk-run--flat${edgeOn(ctx, c.hex)}" style="background:${c.hex};color:${inkOn(ctx, c.hex)}"><b class="disp tk-vn">${A(c.name)}</b><p>The ground. No tints.</p></div>`;
+      if (c.rampBase === 50) return `<div class="tk-run tk-run--flat${edgeOn(ctx, c.hex)}" style="background:${c.hex};color:${inkOn(ctx, c.hex)}"><b class="disp tk-vn">${A(c.name)}</b><p>${c.hex.toLowerCase() === ctx.roles.light.surface.toLowerCase() ? 'The ground. ' : ''}No tints.</p></div>`;
       const t = steps.map((k, i) => {
         const hex = c.ramp[k], fg = inkOn(ctx, hex), base = +k === c.rampBase, hole = holeOn(ctx, hex);
         // the tear line between two tickets on the roll: holes at 4 px on a 9 px pitch, so the run reads as a roll and not a table row

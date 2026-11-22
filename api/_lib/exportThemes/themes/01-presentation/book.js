@@ -93,7 +93,7 @@ function colour(ctx) {
   };
   // one slide per brand colour: filled with it, the name huge bottom left, the values along the foot as the copy controls, the ramp a build strip on the top edge
   const colourSlide = (c) => {
-    const fg = onColour(ctx, c.hex, 64, `book colour slide ${c.name}`);
+    const fg = onColour(ctx, c.hex, 13, `book colour slide ${c.name}`);
     const ramp = c.rampBase === 50 ? '' : `<span class="bk-ramp" aria-hidden="true">${steps.map((k) => `<i${+k === c.rampBase ? ' class="is-base"' : ''} style="background:${c.ramp[k]}"></i>`).join('')}</span>`;
     return `<div class="bk-slide bk-slide--c bk-crow${hairlineOn(ctx, c.hex) ? ' is-hair' : ''}" style="background:${c.hex};color:${fg}">${ramp}<div class="bk-sb"><p class="bk-clands">${A(c.lands)}</p><h3 class="bk-cname disp bk-giant">${A(c.name)}</h3></div><div class="bk-sf">${vals(c, c.name)}</div></div>`;
   };
@@ -102,7 +102,7 @@ function colour(ctx) {
   const toneSlide = (t) => {
     const isText = /text$/.test(t.role);
     if (!isText) {
-      const fg = onColour(ctx, t.hex, 64, `book tone slide ${t.name}`);
+      const fg = onColour(ctx, t.hex, 13, `book tone slide ${t.name}`);
       return `<div class="bk-slide bk-slide--c bk-crow" style="background:${t.hex};color:${fg}"><div class="bk-sb"><p class="bk-clands">${A(t.lands)}</p><h3 class="bk-cname disp bk-giant">${A(t.name)}</h3></div><div class="bk-sf">${vals(t, t.name)}</div></div>`;
     }
     ctx.pair(t.hex, L0.surface, { size: 64, what: `book tone slide ${t.name}` });
@@ -114,8 +114,8 @@ function colour(ctx) {
   const toneKeys = [['success', 'Success'], ['warning', 'Warning'], ['danger', 'Danger'], ['info', 'Info']];
   const roles = (mode) => {
     const r = ctx.roles[mode];
-    const items = [...roleKeys.map(([k, n]) => [n, r[k]]), ...toneKeys.map(([k, n]) => [n, r[k].fg])];
-    return `<ul class="bk-roles bk-for-${mode}">${items.map(([n, hx]) => `<li><button type="button" class="bk-role" data-copy="${hx}" data-copy-label="${mode} ${A(n)} HEX ${hx}" aria-label="Copy HEX ${A(hx)}, ${mode} ${A(n)}"><span class="bk-role__sw${hairlineOn(ctx, hx) ? ' is-hair' : ''}" style="background:${hx}" aria-hidden="true"></span><span class="bk-role__n">${A(n)}</span><span class="bk-role__h">${hx}</span></button></li>`).join('')}</ul>`;
+    const items = [...roleKeys.map(([k, n]) => [n, r[k], k]), ...toneKeys.map(([k, n]) => [n, r[k].fg, k])];
+    return `<ul class="bk-roles bk-for-${mode}">${items.map(([n, hx, k]) => `<li><button type="button" class="bk-role" data-copy="${hx}" data-copy-label="${mode} ${A(n)} HEX ${hx}" aria-label="Copy HEX ${A(hx)}, ${mode} ${A(n)}"><span class="bk-role__sw${hairlineOn(ctx, hx) ? ' is-hair' : ''}${k === 'action' && ctx.ratio(hx, r.surface) < 3 ? ' is-edged' : ''}" style="background:${hx}${k === 'action' && ctx.ratio(hx, r.surface) < 3 ? `;--sw-edge:${r.actionEdge || r.border}` : ''}" aria-hidden="true"></span><span class="bk-role__n">${A(n)}</span><span class="bk-role__h">${hx}</span></button></li>`).join('')}</ul>`;
   };
   const opening = slide('bk-slide--title bk-slide--bar', `<h2 class="disp bk-giant" id="h-colour">Colour</h2><p class="bk-lead">Click a swatch to copy its HEX. Click a value on any colour slide to copy it. Wider swatches take more of a page.</p>`, `<div class="bk-bar">${bar}</div>`);
   return sec('colour', 'bk-sec--colour', `
@@ -185,6 +185,10 @@ ${slide('bk-slide--space', `<div class="bk-shape">${radii.map((r) => `<div><i st
 function applications(ctx) {
   const B = ctx.brand, L = ctx.logo, ap = B.applications, S = B.ui.screen.content, cw = B.logo.colourways, rev = cw.reversed;
   const [rr, rg, rb] = ctx.C.hexToRgb(rev.ground);
+  const over = (a) => [255, 0].map((u) => '#' + [rr, rg, rb].map((v) => Math.round(v * a + u * (1 - a)).toString(16).padStart(2, '0')).join(''));
+  const stTries = [rev.name, '#111111', '#FAFAFA', '#000000', '#FFFFFF'];
+  let stA = 1, stInk = ctx.textOn(rev.ground, { size: 24, weight: 700, prefer: rev.name });
+  for (const a of [0.7, 0.78, 0.86, 0.93]) { const gs = over(a), c = stTries.find((x) => gs.every((g) => ctx.ratio(x, g) >= 3)); if (c) { stA = a; stInk = c; break; } }
   const lastLine = B.lines.others[B.lines.others.length - 1] || B.lines.primary;
   const R = ctx.roles.light;
   const front = `<div class="bk-card bk-card--front"><div class="bk-card__logo">${L.html('reversed', { width: fit(ctx, 'reversed', 200, 80), color: rev.name, label: 'Your logo goes here' })}</div><p class="bk-card__line">${A(B.lines.primary)}</p></div>`;
@@ -192,7 +196,7 @@ function applications(ctx) {
   const social = `<div class="bk-posts">
 <div class="bk-post bk-post--sq" style="background:${R.action};color:${R.actionLabel}"><p class="disp">${A(ap.social[0])}</p><span class="bk-post__lg">${L.html('mono-dark', { width: 96, color: R.actionLabel, label: 'Logo' })}</span></div>
 <div class="bk-post bk-post--pt" style="background:${rev.ground};color:${rev.name}"><p class="disp">${A(ap.social[1])}</p><span class="bk-post__lg">${L.html('reversed', { width: 96, color: rev.name, label: 'Logo' })}</span></div>
-<div class="bk-post bk-post--st">${ctx.photo('evening', { cls: 'bk-post__ph', pos: '50% 40%' })}<span class="bk-post__tint" style="background:rgba(${rr},${rg},${rb},0.5)"></span><p class="disp">${A(ap.social[2])}</p></div>
+<div class="bk-post bk-post--st" style="color:${stInk}">${ctx.photo('evening', { cls: 'bk-post__ph', pos: '50% 40%', slotNote: false })}<span class="bk-post__tint" style="background:rgba(${rr},${rg},${rb},${stA})"></span><p class="disp">${A(ap.social[2])}</p></div>
 </div>`;
   // signage: the poster sits in the shelter's panel, as on the guidelines signage page. Sizes are in cqw of the stage,
   // so the whole scene scales together. The photo and poster geometry are fractions of the 1280 x 853 scene.

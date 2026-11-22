@@ -33,10 +33,14 @@ const words = (n) => ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven
 // ---- colour roles and the chrome rule (as in lane-u1.js) ---------------------------------------------------------------------
 const L = (ctx) => ctx.roles.light;
 const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
-const inkOn = (ctx, hex, size = 24) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
+const inkOn = (ctx, hex, size = 13) => ctx.textOn(hex, { size, prefer: ctx.ratio(L(ctx).text, hex) >= ctx.ratio(L(ctx).surface, hex) ? L(ctx).text : L(ctx).surface });
 const chromeOn = (ctx, ...hexes) => {
   const q = [L(ctx).quiet, L(ctx).quietOnSunken, ctx.roles.dark.quiet].find((c) => hexes.every((h) => ctx.ratio(c, h) >= 4.5));
-  return q || [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => Math.min(...hexes.map((h) => ctx.ratio(b, h))) - Math.min(...hexes.map((h) => ctx.ratio(a, h))))[0];
+  if (q) return q;
+  const worst = (c) => Math.min(...hexes.map((h) => ctx.ratio(c, h)));
+  const best = [L(ctx).text, L(ctx).surface, ctx.roles.dark.textSoft].sort((a, b) => worst(b) - worst(a))[0];
+  const tries = [best, ...hexes.map((h) => ctx.textOn(h, { size: 12, prefer: best })), '#111111', '#FAFAFA', '#000000', '#FFFFFF'];
+  return tries.find((c) => worst(c) >= 4.5) || tries.sort((a, b) => worst(b) - worst(a))[0];
 };
 const rt = (ctx, a, b) => `${ctx.fmt(ctx.ratio(a, b))}&nbsp;:&nbsp;1`;
 
