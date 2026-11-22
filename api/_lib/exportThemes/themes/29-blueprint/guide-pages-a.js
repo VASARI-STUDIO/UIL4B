@@ -157,27 +157,47 @@ export function colourPage(ctx) {
   const cmykOf = ([r, g, b]) => { const k = 1 - Math.max(r, g, b) / 255; return k >= 1 ? [0, 0, 0, 100] : [r, g, b].map((v) => ((1 - v / 255 - k) / (1 - k)) * 100).concat(k * 100).map(Math.round); };
   const computed = F.some((f) => !f.cmyk);
   const foot = computed ? 'CMYK * is computed from the hex: proof before print.' : '';
-  const cols = F.length > 1 ? 2 : 1, gx = 24, cw = Math.floor((CW - gx * (cols - 1)) / cols), nRows = Math.ceil(F.length / cols);
-  const KW = 88, textW = cw - KW;
+  // 1 to 6 colours: two columns, a roomy plate and a four-row register. From 7 the sheet goes denser (three columns, a tighter plate and rows) so the page is never dropped for palette size;
+  // a palette too big even for that draws the first colours that fit and says how many it shows (the markdown guide and the kit's colour files list them all)
+  const dense = F.length > 6;
+  const cols = F.length > 1 ? (dense ? 3 : 2) : 1, gx = dense ? 16 : 24, cw = Math.floor((CW - gx * (cols - 1)) / cols);
+  const KW = dense ? 72 : 88, rowK = dense ? 20 : 24, pad = dense ? 8 : 12, numW = dense ? 32 : 56, gy = dense ? 12 : 20, plateGap = dense ? 6 : 8;
+  const textW = cw - KW;
   const inkText = (f) => `${f.ink.name} ${f.ink.ratioText}:1 ${f.ink.grade}`;
-  const lastH = Math.max(...F.map((f) => Math.max(24, para(inkText(f), textW).h + 8)));
-  const regH = 3 * 24 + lastH + 1;
-  const minPlate = 64, gy = 20, footH = foot ? 20 : 0;
-  const gridH = nRows * (minPlate + 8 + regH) + (nRows - 1) * gy;
+  const nameW = cw - 2 * pad - numW - 4, footH = foot ? 20 : 0, noteH = 20;
+  // the size of the first k colours' grid: the last register row and the plate follow the tallest text among them
+  const runMax = (xs) => xs.reduce((o, v, i) => { o.push(Math.max(v, i ? o[i - 1] : 0)); return o; }, []);
+  const inkMax = runMax(F.map((f) => Math.max(rowK, para(inkText(f), textW).h + 8))), nameMax = runMax(F.map((f) => nLines(CH[500], f.name, 14, nameW)));
+  const sizeOf = (k) => {
+    const lastH = inkMax[k - 1], minPlate = dense ? Math.max(48, 2 * pad + 16 + nameMax[k - 1] * 20) : 64, rowH = minPlate + plateGap + 3 * rowK + lastH + 1, nRows = Math.ceil(k / cols);
+    return { lastH, minPlate, rowH, nRows, h: nRows * rowH + (nRows - 1) * gy };
+  };
+  // what the grid may take: the page body less the title and the foot line, each with the flow's 12 px; a note line, when the palette is cut, takes its own 20 and 12
+  const room = BOT - t.top - (foot ? footH + 12 : 0) - 4;
+  let shown = F.length;
+  if (sizeOf(shown).h > room) {
+    while (shown > cols && sizeOf(shown).h > room - noteH - 12) shown -= 1;
+    if (shown > cols) shown -= shown % cols;
+  }
+  const cut = shown < F.length, { lastH, minPlate, rowH, nRows } = sizeOf(shown), regH = 3 * rowK + lastH + 1;
+  const G = F.slice(0, shown);
+  const note = cut ? `Showing the first ${shown} of ${F.length} colours, widest first. The markdown style guide and the kit's colour files list all of them.` : '';
+  const gridH = sizeOf(shown).h;
   const draw = (y, extra) => {
     const ph = minPlate + Math.floor(extra / nRows);
-    return F.map((f, i) => {
-      const x = X0 + (i % cols) * (cw + gx), py = y + Math.floor(i / cols) * (ph + 8 + regH + gy), [r, g, b] = f.rgb, ink = R.onColour(f.hex, 13, 500);
+    return G.map((f, i) => {
+      const x = X0 + (i % cols) * (cw + gx), py = y + Math.floor(i / cols) * (ph + plateGap + regH + gy), [r, g, b] = f.rgb, ink = R.onColour(f.hex, 13, 500);
       const cmyk = f.cmyk ? (Array.isArray(f.cmyk) ? f.cmyk.join(' ') : String(f.cmyk)) : `${cmykOf(f.rgb).join(' ')} *`;
       const mono = (v) => `<div class="ga-m">${A(v)}</div>`;
-      const rows = [['HEX', mono(f.hex.replace('#', '').toUpperCase()), 24], ['RGB', mono(`${r} ${g} ${b}`), 24], ['CMYK', mono(cmyk), 24], ['Set text in', `<div class="ga-n">${A(inkText(f))}</div>`, lastH]];
-      return obj(K, x, py, cw, ph, f.hex, at(12, 12, `<div class="ga-h ga-wrap" style="color:${ink}">${A(f.name)}</div><div class="ga-r" style="color:${ink}">${A(pct(f.share))}, ${A(f.role)}</div>`, { w: cw - 80 })
-        + at(cw - 12 - 56, 12, A(pad2(i + 1)), { w: 56, cls: 'ga-r', style: `text-align:right;color:${ink}` }))
-        + register(K, x, py + ph + 8, cw, rows, { kw: KW });
+      const rows = [['HEX', mono(f.hex.replace('#', '').toUpperCase()), rowK], ['RGB', mono(`${r} ${g} ${b}`), rowK], ['CMYK', mono(cmyk), rowK], ['Set text in', `<div class="ga-n">${A(inkText(f))}</div>`, lastH]];
+      return obj(K, x, py, cw, ph, f.hex, at(pad, pad, `<div class="ga-h ga-wrap" style="color:${ink}">${A(f.name)}</div><div class="ga-r" style="color:${ink}">${A(pct(f.share))}, ${A(f.role)}</div>`, { w: nameW })
+        + at(cw - pad - numW, pad, A(pad2(i + 1)), { w: numW, cls: 'ga-r', style: `text-align:right;color:${ink}` }))
+        + register(K, x, py + ph + plateGap, cw, rows, { kw: KW });
     }).join('');
   };
   const secs = [{ h: gridH, flex: 400, draw }];
   if (foot) secs.push({ h: footH, draw: (y) => at(X0, y, A(foot), { w: CW, cls: 'ga-r ga-q' }) });
+  if (note) secs.push({ h: noteH, draw: (y) => at(X0, y, A(note), { w: CW, cls: 'ga-r ga-q' }) });
   return shell(ctx, 'colour', t.html + flow('colour', t.top, secs, { gap: 12, maxGap: 24 }));
 }
 

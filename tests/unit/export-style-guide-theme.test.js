@@ -228,7 +228,7 @@ const guideHtml = async (colors, projectName = 'Kerbside') => {
   try {
     const { html } = await renderThemeExport({ theme: BP, row: 'guide', format: 'pdf', design, projectName })
     const { md } = await renderThemeExport({ theme: BP, row: 'guide', format: 'md', design, projectName })
-    return { html, md, left: warns.filter((w) => /left out/.test(w)) }
+    return { html, md, warns, left: warns.filter((w) => /left out/.test(w)) }
   } finally { console.warn = warn }
 }
 // the card is the only box with a fill, a border and a padding; its title is the first text line inside it
@@ -289,4 +289,43 @@ test('29-blueprint: the contrast page still draws with more than ten pairs', asy
     const page = html.slice(html.indexOf('data-page="contrast"'), html.indexOf('data-page="tokens"'))
     assert.equal((page.match(/\d+(?:\.\d+)?:1</g) || []).length, 12 + 1, 'twelve pair rows (and the one in the grade key)')
   } finally { blueprintGuide.contrast = original }
+})
+
+// 15. THE COLOUR PAGE IS NEVER DROPPED FOR PALETTE SIZE: 8, 12 and 40 distinct colours still draw it, with no "left out" or too-tall warning that names colour.
+//     The route's own pipeline holds at most 12 colours, so the 40 (and the 200 the export allows) are put on the page by wrapping guide.colour; a palette too big for the page
+//     draws the first colours that fit and says so, and the markdown guide still lists the rest.
+//     Break: in themes/29-blueprint/guide-pages-a.js colourPage, set `const dense = false` and `const shown = F.length` (the page is then too tall and left out).
+test('29-blueprint: the colour page is drawn for 8, 12 and 40 distinct colours', async () => {
+  const palette = (n) => Array.from({ length: n }, (_, i) => {
+    const h = (i * 137.508) % 360, s = 0.55 + (i % 3) * 0.12, l = 0.3 + (i % 5) * 0.1
+    const f = (k) => { const a = s * Math.min(l, 1 - l), q = (k + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(q - 3, 9 - q, 1)))) }
+    return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('')
+  })
+  const original = blueprintGuide.colour
+  const cases = []
+  try {
+    for (const [n, total] of [[8, 8], [12, 12], [12, 40], [12, 200]]) {
+      // the pipeline's own colours first, then synthetic ones with their own names, up to the total
+      blueprintGuide.colour = (ctx) => {
+        const extra = palette(total).slice(ctx.colours.length).map((hex, i) => ({ id: `x-${i}`, name: `Extra colour ${i + 1}`, hex, role: 'alternative', share: 0.001 }))
+        const own = ctx.colours
+        ctx.colours = [...own, ...extra].slice(0, Math.max(total, own.length))
+        cases.push(ctx.colours.length)
+        try { return original(ctx) } finally { ctx.colours = own }
+      }
+      const { html, warns, left } = await guideHtml(palette(n))
+      const page = html.slice(html.indexOf('data-page="colour"'), html.indexOf('data-page="ruler"'))
+      assert.ok(drawnPages(html).includes('colour'), `the colour page is drawn for ${total} colours`)
+      assert.deepEqual(left.filter((w) => /colour/.test(w)), [], `no colour page left out for ${total} colours`)
+      assert.deepEqual(warns.filter((w) => /colour/.test(w) && /too tall/.test(w)), [], `colour page not too tall for ${total} colours`)
+      assert.doesNotMatch(html, /NaN|Infinity/, `html for ${total} colours`)
+      const shown = (page.match(/>HEX</g) || []).length
+      if (total <= 12) assert.doesNotMatch(page, /Showing the first/, `${total} colours all fit, no note`)
+      else {
+        const m = page.match(/Showing the first (\d+) of (\d+) colours/)
+        assert.ok(m && +m[2] === total && +m[1] === shown && shown < total, `${total} colours: the note says ${m && m[0]}, and ${shown} are drawn`)
+      }
+    }
+  } finally { blueprintGuide.colour = original }
+  assert.ok(cases.some((c) => c >= 40), 'the 40-colour palette reached the page')
 })
