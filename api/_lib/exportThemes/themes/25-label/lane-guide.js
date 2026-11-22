@@ -21,7 +21,7 @@ const pct = (s) => `${+((s ?? 0) * 100).toFixed(1)}%`;
 function tw(stem, text, size, track = 0) {
   const font = loadFont(stem);
   let x = 0, prev = null;
-  for (const ch of String(text).replace(/ /g, ' ')) {
+  for (const ch of String(text).replace(/\u00a0/g, ' ')) {
     const g = font.charToGlyph(ch);
     if (prev) { try { x += (font.getKerningValue(prev, g) * size) / font.unitsPerEm; } catch { /* no kerning table */ } }
     x += (g.advanceWidth * size) / font.unitsPerEm + track * size;
