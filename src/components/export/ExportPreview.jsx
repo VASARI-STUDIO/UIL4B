@@ -52,7 +52,9 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   // Whether the viewer may export this template. A template they cannot export is drawn as a 1x sample under the mark, in every document.
   const proTemplate = themed && !isPro && themedFileIsPro(file, themeId)
   const [stock, setStock] = useState(false)
-  const brand = useMemo(() => brandOf(design, name), [design, name])
+  // The project's own name, as typed; the 'Design System' stand-in is for the unnamed and must not stand in the brand, where it would
+  // print on a project that has a name (the server has its own wording for none).
+  const brand = useMemo(() => brandOf(design, fileProject), [design, fileProject])
   const live = useLivePage({ enabled: Boolean(user) && !proTemplate && !checking && themed && !stock, theme: themeId, page: page?.id, brand })
   // The server's 403 is the account's real plan. When it disagrees with the plan this screen holds, the page is treated as a Pro
   // template: the sample with the Pro mark, and the default template one click away.

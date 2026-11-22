@@ -24,6 +24,7 @@ import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
 import { themedFile, themedFileIsPro, themedZipName } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
+import { exportProjectName } from '../utils/exportProjectName'
 import { readIdentity } from '../utils/kitIdentity'
 
 // Everything that happens between a click on Export and a file in the downloads
@@ -307,7 +308,7 @@ export default function useExportRunner() {
     // The name the dialog shows on the file: the open project's, else the design's own.
     // `fileProject` is that name as typed ('' for an unnamed project), which the file
     // names are made from; `projectName` is what the documents print, with a stand-in.
-    const fileProject = projects.find((p) => String(p.id) === String(projectId))?.name || design?.name || ''
+    const fileProject = exportProjectName({ projects, projectId, design, working })
     const projectName = fileProject || 'Design System'
     const fmt = EXPORT_FORMATS.find((f) => f.id === format)
     if (!fmt?.live) { stop(FAILED_LINE); return { status: 'failed' } }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { pageAlt, pageImage } from './exportPages'
+import { liveHtml, liveSize } from './exportLiveSize'
 
 // The main picture of the Export dialog: one page of the chosen template, as large as the stage allows with its whole page in
 // view (object-fit: contain), sharp on a retina screen when the manifest has a 2x picture for it (srcset).
@@ -13,27 +14,27 @@ import { pageAlt, pageImage } from './exportPages'
 // tiled "Pro sample" mark that takes no clicks and is hidden from assistive tech; `locked` adds the Pro mark over it. A document
 // with no templates (the style guide, the code files) hands in `plain`, its own preview, and the stage only frames it.
 
-function LiveFrame({ html, page, title }) {
+function LiveFrame({ html, size, title }) {
   const box = useRef(null)
   const [scale, setScale] = useState(0)
   useEffect(() => {
     const el = box.current
     if (!el) return undefined
-    const fit = () => setScale(el.clientWidth / page.w)
+    const fit = () => setScale(el.clientWidth / size.w)
     fit()
     if (typeof ResizeObserver === 'undefined') return undefined
     const watch = new ResizeObserver(fit)
     watch.observe(el)
     return () => watch.disconnect()
-  }, [page.w])
+  }, [size.w])
   return (
     <div className="xd-live" ref={box}>
       <iframe
         title={title}
-        srcDoc={html}
+        srcDoc={liveHtml(html)}
         sandbox=""
         tabIndex={-1}
-        style={{ width: page.w, height: page.h, transform: `scale(${scale})` }}
+        style={{ width: size.w, height: size.h, transform: `scale(${scale})` }}
       />
     </div>
   )
@@ -43,11 +44,14 @@ export default function ExportStage({ page, theme, sample = false, locked = fals
   if (plain) return <div className="xd-stage xd-stage--plain">{plain}</div>
   if (!page) return <div className="xd-stage" />
   const image = pageImage(page, sample)
+  // A live page is drawn at the size its own document says, so the box is that shape, not the stock picture's (see exportLiveSize).
+  const live = Boolean(html) && !sample
+  const size = live ? liveSize(html, page) : { w: page.w, h: page.h }
   return (
     <div className="xd-stage">
-      <div className={`xd-box${sample ? ' is-locked' : ''}`} style={{ '--xd-w': page.w, '--xd-h': page.h }}>
-        {html && !sample
-          ? <LiveFrame html={html} page={page} title={`${theme.name} ${page.label} page, with your brand`} />
+      <div className={`xd-box${sample ? ' is-locked' : ''}`} style={{ '--xd-w': size.w, '--xd-h': size.h }}>
+        {live
+          ? <LiveFrame html={html} size={size} title={`${theme.name} ${page.label} page, with your brand`} />
           : image.src && (
             <img
               key={image.src}
