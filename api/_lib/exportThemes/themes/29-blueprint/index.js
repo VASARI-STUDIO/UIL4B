@@ -60,7 +60,7 @@ export { guidelines };
 export const uikit = {};
 
 // ---- lane modules (overnight build, 11 Nov): each builder adds lane-<name>.js beside this file, merged in file-name order (engine/lanes.js) ----
-import { mergeLanes as __mergeLanes, laneCss as __laneCss } from '../../engine/lanes.js';
+import { mergeLanes as __mergeLanes, laneCss as __laneCss, laneGuideCss as __laneGuideCss } from '../../engine/lanes.js';
 import * as __bk from './lane-bk.js';
 import * as __g1 from './lane-g1.js';
 import * as __g2 from './lane-g2.js';
@@ -73,8 +73,9 @@ import * as __kt from './lane-kt.js';
 import * as __u1 from './lane-u1.js';
 import * as __u2 from './lane-u2.js';
 import * as __u3 from './lane-u3.js';
+import * as __guide from './lane-guide.js';
 
-const __L = __mergeLanes([__bk, __g1, __g2, __g3, __g4, __g5, __hg, __hk, __kt, __u1, __u2, __u3]);
+const __L = __mergeLanes([__bk, __g1, __g2, __g3, __g4, __g5, __hg, __hk, __kt, __u1, __u2, __u3, __guide]);
 Object.assign(guidelines, __L.guidelines);
 Object.assign(uikit, __L.uikit);
 if (__L.fonts.length) meta.fonts = [...(meta.fonts || []), ...__L.fonts];
@@ -85,3 +86,7 @@ export const readMe = __L.readMe || undefined;
 export const sheets = __L.sheets || undefined;
 export const guideSite = __L.guideSite || undefined;
 export const kitSite = __L.kitSite || undefined;
+// the A4 style guide (lane-guide.js): the pages the route draws for the guide row, and the css that goes with them
+export const guide = {};
+Object.assign(guide, __L.guide);
+export const guideCss = __laneGuideCss(__L);

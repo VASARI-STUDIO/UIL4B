@@ -46,12 +46,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id), [THEME])
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), ['27-swissfield', '29-blueprint'])
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
 test('the picker offers the style guide only on Swiss Field, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id), [THEME])
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), ['27-swissfield', '29-blueprint'])
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
