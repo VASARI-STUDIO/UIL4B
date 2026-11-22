@@ -57,7 +57,7 @@ const cardsFor = (file) => {
   return [...PREMIUM, ...rest.filter((n) => ok.includes(n)), ...rest.filter((n) => !ok.includes(n))]
 }
 /** The names that carry the Pro mark: for a free account every template the file is not free in; for a Pro account none. */
-const proFor = (file, free) => (free ? namesFor(file).filter((n) => !freeFor(file).includes(n)) : [])
+const proFor = (file, free) => (free ? cardsFor(file).filter((n) => !freeFor(file).includes(n)) : [])
 
 // The files the templates belong to: what the dialog calls them, the row and format the route is asked for, and the zip they save as.
 const FILES = {
@@ -208,7 +208,7 @@ test.describe('Free and Pro', () => {
     for (const file of Object.keys(FILES)) {
       await chooseFormat(panel, file)
       const read = await readTemplates(panel)
-      expect(read.names, `${file}: the templates that can draw it`).toEqual(namesFor(file))
+      expect(read.names, `${file}: the templates that can draw it, premium first`).toEqual(cardsFor(file))
     }
   })
 

@@ -965,8 +965,9 @@ test.describe('what the popup remembers and says', () => {
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
     const steps = async () => {
-      await openDetails(panel)
-      return panel.getByRole('heading', { level: 3 }).allInnerTexts()
+      // The steps inside File details only: the Premium templates strip in the main view has its own level 3 heading.
+      const details = await openDetails(panel)
+      return details.getByRole('heading', { level: 3 }).allInnerTexts()
     }
     await typeRadio(panel, 'Branding').click()
     expect(await steps(), 'a templated file has File and Details; its template is behind View templates').toEqual(['File', 'Details'])
