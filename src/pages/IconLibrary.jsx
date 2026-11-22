@@ -34,7 +34,7 @@ import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
-import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
+import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
@@ -953,11 +953,9 @@ const gridShowsPack = (list) => {
 
 // What a cell is called to assistive tech: the action, the icon, and the pack
 // when the grid mixes packs (the visible label only appears on hover).
-// An icon whose line style the customiser can change says so as well.
-const cellLabel = (icon, packName, editable) => {
+const cellLabel = (icon, packName) => {
   const base = icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`
-  const named = packName ? `${base}, ${packName}` : base
-  return editable ? `${named}, line style editable` : named
+  return packName ? `${base}, ${packName}` : base
 }
 
 // Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
@@ -1155,16 +1153,6 @@ function cellGlyph(icon, src, onGlyphError, gone, cellRef, idx) {
   )
 }
 
-// Corner mark on a tile whose line style can be edited. The tile's accessible name says it.
-function EditMark() {
-  return (
-    <svg className="ic-edit" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  )
-}
-
 // Memoised so a grid change re-renders only the cells it touches. Appending a
 // page, a tranche of markup landing or the customizer opening used to re-run
 // every mounted cell; every prop here is a primitive, a stable callback or the
@@ -1181,7 +1169,7 @@ const findIconCell = (icon) => (icon
   ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
   : null)
 
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, hideEdit = false, idx = 0, onPick, onWarm, onGlyphError }) {
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, idx = 0, onPick, onWarm, onGlyphError }) {
   const cellRef = useRef(null)
   const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
@@ -1191,7 +1179,6 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
   // focused cell still has to say which pack it is from.
   const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
   const drawnPack = showPack ? packName : null
-  const editable = isGalleryEditable(icon)
   return (
     <div
       ref={cellRef}
@@ -1200,7 +1187,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
-      aria-label={cellLabel(icon, packName, editable)}
+      aria-label={cellLabel(icon, packName)}
       onClick={() => onPick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(icon) } }}
       onMouseEnter={() => onWarm(icon, false)}
@@ -1208,7 +1195,6 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       onFocus={() => onWarm(icon, true)}
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone, cellRef, idx)}</Fragment>}
-      {!ghost && editable && !hideEdit && <EditMark key="e" />}
       <span key="n" className="ic-name">{icon.name}</span>
       {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
@@ -5574,7 +5560,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       packInName={groupHeads}
       picked={isPicked(icon)}
       ghost={ghost}
-      hideEdit={category === 'editable'}
       idx={idx}
       onPick={onPick}
       onWarm={onWarm}
