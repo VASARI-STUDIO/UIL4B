@@ -64,9 +64,9 @@ export const EXPORT_FORMATS = Object.freeze([
   Object.freeze({ id: 'guidelines-html', name: 'Brand guidelines (offline HTML)', desc: 'The same deck as one HTML file. Opens offline in any browser.', live: true, pro: true, logo: true, variantOf: 'guidelines', group: 'guidelines', option: 'HTML', action: 'Export HTML' }),
   Object.freeze({ id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet: cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true, group: 'guide', option: 'HTML', action: 'Export style guide (HTML)' }),
   Object.freeze({ id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true, group: 'guide', option: 'Markdown', action: 'Export style guide (Markdown)' }),
-  Object.freeze({ id: 'style-guide', name: 'Style guide (themed PDF)', desc: 'The style guide drawn in the chosen theme, as a print document.', live: true, group: 'guide', option: 'Themed PDF', action: 'Export style guide (themed PDF)' }),
-  Object.freeze({ id: 'style-guide-html', name: 'Style guide (themed HTML)', desc: 'The style guide drawn in the chosen theme, as HTML in one zip.', live: true, group: 'guide', option: 'Themed HTML', action: 'Export style guide (themed HTML)' }),
-  Object.freeze({ id: 'style-guide-md', name: 'Style guide (themed Markdown)', desc: 'The themed style guide as Markdown.', live: true, group: 'guide', option: 'Themed Markdown', action: 'Export style guide (themed Markdown)' }),
+  Object.freeze({ id: 'style-guide', themed: true, name: 'Style guide (themed PDF)', desc: 'The style guide drawn in the chosen theme, as a print document.', live: true, group: 'guide', option: 'Themed PDF', action: 'Export style guide (themed PDF)' }),
+  Object.freeze({ id: 'style-guide-html', themed: true, name: 'Style guide (themed HTML)', desc: 'The style guide drawn in the chosen theme, as HTML in one zip.', live: true, group: 'guide', option: 'Themed HTML', action: 'Export style guide (themed HTML)' }),
+  Object.freeze({ id: 'style-guide-md', themed: true, name: 'Style guide (themed Markdown)', desc: 'The themed style guide as Markdown.', live: true, group: 'guide', option: 'Themed Markdown', action: 'Export style guide (themed Markdown)' }),
   Object.freeze({ id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2×: palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true, group: 'guide', option: 'PNG', action: 'Export style guide (PNG)' }),
   Object.freeze({ id: 'jpeg', name: 'Style guide (JPEG)', desc: 'The same sheet, smaller file, for anywhere that will not take a PNG.', live: true, group: 'guide', option: 'JPEG', action: 'Export style guide (JPEG)' }),
   Object.freeze({ id: 'css', name: 'CSS tokens', desc: 'Custom properties for the palette and its tints, semantic colours and type. Drop into any stylesheet.', live: true, group: 'tokens', option: 'CSS', action: 'Export CSS tokens' }),
@@ -116,8 +116,13 @@ export const comingLine = () => {
   return `${list.charAt(0).toUpperCase()}${list.slice(1)} ${names.length > 1 ? 'are' : 'is'} on the way.`
 }
 
+// A file drawn in an export theme (`themed: true`) is offered by the panel only
+// when the chosen theme has that page, and is sold by the themes line, not as a
+// format of its own. The plan and pricing lists below leave it out.
+const planFormats = () => EXPORT_FORMATS.filter((f) => !f.themed)
+
 // Built, and available without paying.
-export const freeFormats = () => EXPORT_FORMATS.filter((f) => f.live && !f.pro)
+export const freeFormats = () => planFormats().filter((f) => f.live && !f.pro)
 
 // Free formats that carry the small "Made with UI L4B" line. The contrast pairs
 // files have no place for one (`credit: false`).
@@ -135,7 +140,7 @@ export const proOnlyFormats = () => documentFormats().filter((f) => f.live && f.
 // beside the book as PDF) carries `variantOf`. The plan lines and the pricing page
 // count and name documents, so the Pro and live lists below leave variants out;
 // the panel reads EXPORT_FORMATS directly and offers every file.
-export const documentFormats = () => EXPORT_FORMATS.filter((f) => !f.variantOf)
+export const documentFormats = () => planFormats().filter((f) => !f.variantOf)
 
 // Built, on either plan.
 export const liveFormats = () => documentFormats().filter((f) => f.live)
