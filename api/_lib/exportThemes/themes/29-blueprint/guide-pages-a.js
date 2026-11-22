@@ -10,13 +10,13 @@ const xs = (n) => `${+(+n).toFixed(1)} x`;
 // ---------------------------------------------------------------- cover
 export function cover(ctx) {
   const K = kit(ctx), B = ctx.brand, G = ctx.logo.geos.colour, F = colourFacts(ctx), { R, S } = K, svg = [], slot = ctx.edition === 'slot';
-  const lw = Math.min(CW, 280), lh = slot ? 80 : (lw * G.h) / G.w, logoY = 104;
-  const logo = at(X0, logoY, logoArtK(ctx, 'colour', lw, slot ? { h: lh, seat: true } : {}));
+  const lw = Math.min(CW, 280), lh = slot ? 88 : (lw * G.h) / G.w, logoY = 76;
+  const logo = at(X0, logoY, logoArtK(ctx, 'colour', lw, slot ? { h: lh, frame: true } : {}));
   svg.push(dimH({ x1: X0, x2: X0 + lw, y: logoY + lh + 22, label: px(lw), obj: logoY + lh }));
   // the brand's one line, as large as sets in three lines
   const line = B.lines.primary, d = B.fonts.display;
   const size = slot ? 24 : [64, 56, 48, 40, 34, 28].find((s) => nLines(S.disp, line, s, CW, K.st) <= 3) || 28, lineH = Math.round(size * 1.08), nl = slot ? 0 : nLines(S.disp, line, size, CW, K.st);
-  const stmtY = logoY + lh + 22 + 44, stmtB = stmtY + (slot ? 96 : nl * lineH);
+  const stmtY = logoY + lh + 22 + 36, stmtB = stmtY + (slot ? 96 : nl * lineH);
   const stmt = at(X0, stmtY, A(line), { w: CW, cls: 'ga-d', style: `font-size:${size}px;line-height:${lineH}px;color:var(--ink)` });
   // the facts register at the foot, two columns
   const facts = [['Date', longDate(B.version.date)], ['Version', B.version.number], ['Display', `${d.family}, ${weightName(ctx.weights.heading)}`], ['Text', `${B.fonts.body.family}, ${weightName(ctx.weights.regular)} and ${weightName(ctx.weights.medium)}`]];
@@ -67,7 +67,7 @@ function logoDraw(ctx, maxTiles) {
     svg.push(dimH({ x1: px0, x2: px0 + fw, y: py + fh + 18, label: xs(fwX), obj: py + fh }));
     return sec(K, X0, y, CW, '01', 'Clear space', 'one x on every side')
       + obj(K, px0, py, fw, fh, R.ground, '', { frame: true })
-      + at(px0 + u, py + u, art('colour', lw))
+      + at(px0 + u, py + u, art('colour', lw, { frame: slot }))
       + sq(cx, py) + sq(cx, py + fh - u) + sq(px0, cy) + sq(px0 + fw - u, cy)
       + at(X0, py, `<div class="ga-n">${A(ruleText)}</div>`, { w: COLW })
       + register(K, X0, py + ruleH + 12, COLW, kv.map(([k, v], i) => [k, `<div class="ga-n">${A(v)}</div>`, kvH[i]]), { kw: 80 });
@@ -101,7 +101,7 @@ function logoDraw(ctx, maxTiles) {
   const mnPlateW = minW + 24, mnTextW = CW - mnPlateW - 24, mnTextH = para(minText, mnTextW).h;
   const mnPlateH = Math.ceil(minH) + 24 + (labelInside ? 0 : 20), C_h = SUBH + 8 + Math.max(mnPlateH + 28, mnTextH);
   if (mnTextW < COLW) throw new Error(`Drawing Sheet guide: the smallest size (${minW} px) leaves ${mnTextW} px for its text`);
-  const minArt = art('colour', minW, { h: slot ? minH : undefined });
+  const minArt = art('colour', minW, { h: slot ? minH : undefined, frame: slot });
   const drawC = (y) => {
     const py = y + SUBH + 8;
     svg.push(dimH({ x1: X0 + 12, x2: X0 + 12 + minW, y: py + mnPlateH + 18, label: `${minW} px`, obj: py + mnPlateH }));

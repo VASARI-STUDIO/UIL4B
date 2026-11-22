@@ -24,8 +24,8 @@ export function appliedPage(ctx) {
   const t = title(ctx, K, 'applied', copyOf(ctx, 'applied', ['The brand in use, on its own surfaces.', 'The brand in use.']));
   const m = /^(.+?), ([\d.]+) x ([\d.]+) mm: (.+)$/.exec(app.signage || '');
   const sg = m ? { name: m[1], mm: `${m[2]} x ${m[3]} mm`, w: +m[2], h: +m[3], line: m[4] } : { name: 'Sign', mm: '', w: 594, h: 841, line: app.signage || B.lines.primary };
-  const OH = 320, sw = Math.max(120, Math.min(250, Math.round((OH * sg.w) / sg.h))), cdW = 256, cdH = 168;
-  const so = { x: X0, w: sw }, co = { x: X0 + sw + 24, w: cdW }, sx = co.x + cdW + 24, soW = XR - sx;
+  const OH = 300, sw = Math.max(120, Math.min(250, Math.round((OH * sg.w) / sg.h)));
+  const cdW = Math.min(XR - X0 - sw - 24, Math.floor((OH * 85) / 54)), cdH = Math.round((cdW * 54) / 85), so = { x: X0, w: sw }, co = { x: X0 + sw + 24, w: cdW };
   // under each object: its width in mm, measured, then its name and size
   const card0 = app.card || {}, DIM = 28;
   const caps = [{ name: sg.name, detail: sg.mm, w: sw, mm: sg.w }, { name: 'Business card', detail: '85 x 54 mm', w: cdW, mm: 85 }];
@@ -37,30 +37,39 @@ export function appliedPage(ctx) {
   const cLw = Math.min(cdW - 32, 96), cInk = R.onColour(R.ground, 13, 500);
   const bizcard = (y0) => obj(K, co.x, y0, cdW, cdH, R.ground,
     at(16, 16, logoArt(ctx, 'colour', cLw, { h: ctx.edition === 'slot' ? 40 : undefined })) + at(16, cdH - 16 - 54, `<div class="ga-body" style="font-weight:500;color:${cInk}">${A(card0.person || '')}</div><div class="ga-r" style="color:${cInk}">${A(card0.role || '')}</div><div class="ga-m" style="color:${cInk}">${A(card0.contact || '')}</div>`, { w: cdW - 32 }), { frame: true, style: 'overflow:hidden' });
-  const social = (ctx.edition === 'slot' ? ['Post 1, image and caption', 'Post 2, image and caption', 'Post 3, image and caption'] : (app.social || [])).slice(0, 3), sRows = social.map((s) => Math.max(24, para(s, soW - 72).h + 8)), sH = 1 + sum(sRows);
-  const rowSec = { h: SUBH + 8 + OH + DIM + capH, flex: 80, draw: (y, extra = 0) => {
-    const oh = OH + extra, y0 = y + SUBH + 8, cy = y0 + oh - cdH;
-    caps.forEach((c, i) => svg.push(dimH({ x1: i ? co.x : so.x, x2: (i ? co.x : so.x) + c.w, y: y0 + oh + 16, label: `${c.mm} mm`, obj: y0 + oh })));
-    return sec(K, X0, y, CW, '01', 'Sign, card and social', 'each drawn to its own scale')
-      + sign(y0, oh) + bizcard(cy)
-      + [so, co].map((o, i) => at(o.x, y0 + oh + DIM,`<div class="ga-h">${A(caps[i].name)}</div>${caps[i].detail ? `<div class="ga-r ga-q">${A(caps[i].detail)}</div>` : ''}`, { w: o.w })).join('')
-      + (social.length && sH <= OH ? register(K, sx, y0, soW, social.map((s, i) => [i ? '' : 'Social', `<div class="ga-n">${A(s)}</div>`, sRows[i]]), { kw: 64 }) : '');
+  // section 01: the sign and the card, each top-aligned with its own width dimension and caption under its own foot
+  const rowSec = { h: SUBH + 8 + OH + DIM + capH, flex: 24, draw: (y) => {
+    const y0 = y + SUBH + 8, foot = [y0 + OH, y0 + cdH];
+    caps.forEach((c, i) => svg.push(dimH({ x1: i ? co.x : so.x, x2: (i ? co.x : so.x) + c.w, y: foot[i] + 16, label: `${c.mm} mm`, obj: foot[i] })));
+    return sec(K, X0, y, CW, '01', 'Sign and card', 'each drawn to its own scale')
+      + sign(y0, OH) + bizcard(y0)
+      + [so, co].map((o, i) => at(o.x, foot[i] + DIM, `<div class="ga-h">${A(caps[i].name)}</div>${caps[i].detail ? `<div class="ga-r ga-q">${A(caps[i].detail)}</div>` : ''}`, { w: o.w })).join('');
   } };
+  // section 02: social, three posts across the sheet, each a framed thumbnail and its caption
+  const social = (ctx.edition === 'slot' ? ['Post 1, image and caption', 'Post 2, image and caption', 'Post 3, image and caption'] : (app.social || [])).slice(0, 3);
+  const TH = 80, scW = Math.floor((CW - 24 * 2) / 3), capsH = Math.max(0, ...social.map((s) => para(s, scW).h));
+  const socSec = social.length ? { h: SUBH + 8 + TH + 8 + capsH, flex: 0, draw: (y) => {
+    const y0 = y + SUBH + 8;
+    return sec(K, X0, y, CW, '02', 'Social')
+      + social.map((s, i) => { const x = X0 + i * (scW + 24);
+        return obj(K, x, y0, scW, TH, R.ground, at(16, 16, logoArt(ctx, 'colour', 64, { h: ctx.edition === 'slot' ? TH - 32 : undefined })), { frame: true, style: 'overflow:hidden' })
+          + at(x, y0 + TH + 8, `<div class="ga-n">${A(s)}</div>`, { w: scW }); }).join('');
+  } } : null;
   // the order email, across the sheet
   const em = (B.guideB && B.guideB.email) || {}, emBody = (Array.isArray(em.body) ? em.body.reduce((s, p) => (s && /,$/.test(s) ? s + ' ' + p.charAt(0).toLowerCase() + p.slice(1) : s ? s + ' ' + p : p), '') : em.body) || '', pad = 24, tW = CW - 2 * pad;
   const subject = em.subject || '', subjLines = nLines(S.disp, subject, 22, tW, st), bp = para(emBody, tW, { stem: S.body });
   const BK = buttonKit(ctx, K);
   const EH = pad + 20 + 14 + subjLines * 26 + 12 + bp.h + 20 + BK.bh + pad;
-  const emSec = { h: SUBH + 8 + EH, flex: 40, draw: (y, extra = 0) => {
+  const emSec = { h: SUBH + 8 + EH, flex: 0, draw: (y, extra = 0) => {
     const ey = y + SUBH + 8, ink = R.onColour(R.ground, 13, 500), by = pad + 34 + subjLines * 26 + 12 + bp.h + 20;
-    return sec(K, X0, y, CW, '02', 'Order email')
+    return sec(K, X0, y, CW, '03', 'Order email')
       + obj(K, X0, ey, CW, EH + extra, R.ground, at(pad, pad, `<span class="ga-h">${A(em.to ? `To ${em.to}` : (card0.person || ''))}</span>`, { w: tW - 280, style: `color:${ink}` })
         + at(CW - pad - 260, pad, A(em.time || ''), { w: 260, cls: 'ga-m', style: `text-align:right;color:${ink}` })
         + at(pad, pad + 34, A(subject), { w: tW, cls: 'ga-d', style: `font-size:22px;line-height:26px;color:${ink}` })
         + at(pad, pad + 34 + subjLines * 26 + 12, A(emBody), { w: tW, cls: 'ga-body', style: `color:${ink}` })
         + rect(pad, by, BK.w1, BK.bh, `background:${BK.bt.fill};color:${BK.bt.label};${BK.bstyle}`, A(BK.vPrimary)), { frame: true });
   } };
-  const body = flow('applied', t.top, [rowSec, emSec], { gap: 24, maxGap: 60 });
+  const body = flow('applied', t.top, [rowSec, socSec, emSec].filter(Boolean), { gap: 24, maxGap: 60 });
   return shell(ctx, 'applied', t.html + body, svg.join(''));
 }
 

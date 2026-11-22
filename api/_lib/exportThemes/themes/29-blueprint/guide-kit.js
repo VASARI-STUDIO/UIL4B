@@ -4,7 +4,7 @@
 // No shadow, no gradient. Text is measured with the fonts' own metrics, so a page that cannot hold its content throws and the route leaves it out.
 import { loadFont } from '../../engine/nodeFont.js';
 import { esc as A } from '../../engine/brand.js';
-import { PAGE, r1, sum, pageSection, stacker, SLOT_MIN_H, logoArt } from '../../engine/guide-layout.js';
+import { PAGE, r1, sum, pageSection, stacker, logoArt } from '../../engine/guide-layout.js';
 
 export const { X0, XR, CW, COL, COLW } = PAGE;
 // the lowest y content reaches, and the height of a section header (its tag, name and leader, with the gap under it before the content's own 8 px)
@@ -106,11 +106,21 @@ export function kit(ctx) {
     S: { disp: stemOf(ctx, 'display', ctx.weights.heading), body: stemOf(ctx, 'body', 400), mono: B.fonts.mono ? stemOf(ctx, 'mono', 400) : MONO },
   };
 }
-// the logo at a width; a slot frame too short to hold its word is drawn without the word (the page names it instead)
+// the logo at a width. The slot edition draws this theme's own placeholder, not the engine's watermark (36% of the width, and it ignores the height): the mark is scaled
+// to its slot, never under 40 px wide, and a dashed frame (o.frame) shows the footprint the real logo will take, so a dimension line can measure something drawn.
+const MARK = { w: 323.61, h: 200, paths: ['M0 0H100V123.61A123.61 123.61 0 0 0 126.43 200H76.39A76.39 76.39 0 0 1 0 123.61Z', 'M125 0H177.79A47.21 47.21 0 0 1 225 47.21V125H276.39A47.21 47.21 0 0 1 323.61 172.21V200H201.39A76.39 76.39 0 0 1 125 123.61Z'] };
+export const MARK_MIN_W = 40;
+// the slot's size and the placeholder mark inside it, at a width (and a height, else the logo's own proportion)
+export function slotMark(ctx, id, w, o = {}) {
+  const g = ctx.logo.geos[id], h = o.h != null ? o.h : (w * g.h) / g.w, asp = MARK.w / MARK.h;
+  const mw = Math.min(Math.max(MARK_MIN_W, Math.min(w * 0.5, h * 0.8 * asp)), w * 0.9, h * 0.9 * asp);
+  return { w, h, mw, mh: mw / asp };
+}
 export const art = (ctx, id, w, o = {}) => {
-  const g = ctx.logo.geos[id], h = (w * g.h) / g.w;
-  if (ctx.edition === 'slot' && h < SLOT_MIN_H - 0.5) return ctx.logo.html(id, { width: r1(w), ...o, label: '' });
-  return logoArt(ctx, id, w, o);
+  if (ctx.edition !== 'slot') return logoArt(ctx, id, w, o);
+  const m = slotMark(ctx, id, w, o), ink = o.color || 'currentColor';
+  const mark = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MARK.w} ${MARK.h}" width="${r1(m.mw)}" height="${r1(m.mh)}" aria-hidden="true" focusable="false" style="display:block;flex:none;opacity:.42">${MARK.paths.map((d) => `<path d="${d}" fill="currentColor"/>`).join('')}</svg>`;
+  return `<div class="logo-slot" role="img" aria-label="Logo placeholder" style="width:${r1(w)}px;height:${r1(m.h)}px;box-sizing:border-box;color:${ink};display:flex;align-items:center;justify-content:center;overflow:hidden${o.frame ? ';outline:1px dashed var(--quiet);outline-offset:-1px' : ''}">${mark}</div>`;
 };
 
 // ---- placing things ----
@@ -199,9 +209,15 @@ function frame() {
   for (let j = 0; j < ZM; j++) for (const x0 of [12, 762]) nums += `<span class="zr" style="left:${x0}px;width:20px;top:${r1(FY0 + j * zh + zh / 2 - 7)}px">${'ABCDEFGH'[j]}</span>`;
   return (FRAME = { svg, nums });
 }
+// a page's number and the total: its place among the pages actually drawn (lane-guide.js finds them in a dry pass and keeps them on ctx._g29ids), so a page left out
+// is not counted; before that pass the engine's own numbering stands
+const sheetOf = (ctx, id) => {
+  const ids = ctx._g29ids, i = ids ? ids.indexOf(id) : -1;
+  return i >= 0 ? { n: i + 1, total: ids.length } : { n: ctx.pageNo(id) || 0, total: Object.keys(NAME).length };
+};
 // the page: the work, the title block with this sheet's own values, and the page's dimension lines over everything
 export function shell(ctx, id, body, svg = '') {
-  const B = ctx.brand, n = ctx.pageNo(id) || 0, total = (ctx.pages && ctx.pages.length) || Object.keys(NAME).length, F = frame();
+  const B = ctx.brand, { n, total } = sheetOf(ctx, id), F = frame();
   let x = FX0;
   const cell = (i, inner) => { const lab = TBC[i][0], cx = x + 12, w = TBC[i][1]; x += w; return `<span class="a tl" style="left:${cx}px;top:${TBY + 5}px">${lab}</span>${inner(cx, w - 24)}`; };
   const ver = String(B.version.number), date = shortDate(B.version.date);
@@ -217,7 +233,7 @@ export function title(ctx, K, id, cands) {
   const list = Array.isArray(cands) ? cands : [cands], W = 560;
   const pick = list.find((s) => nLines(CH[400], s, 13, W) <= 2) ?? list[list.length - 1], n = nLines(CH[400], pick, 13, W);
   return {
-    html: tag(X0 + 14, 70, pad2(ctx.pageNo(id)), 14) + at(X0 + 40, 57, A(NAME[id]), { cls: 'ga-t' }) + at(X0 + 40, 90, A(pick), { w: W, cls: 'ga-n ga-q' }),
+    html: tag(X0 + 14, 70, pad2(sheetOf(ctx, id).n), 14) + at(X0 + 40, 57, A(NAME[id]), { cls: 'ga-t' }) + at(X0 + 40, 90, A(pick), { w: W, cls: 'ga-n ga-q' }),
     top: 90 + n * 20 + 28,
   };
 }
