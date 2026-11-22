@@ -22,7 +22,7 @@ function baseCss(ctx) {
   const quietWall = R.quietOn(R.wall), quietPanel = R.quietOn(R.panel), quietLabel = R.quietOn(R.labelFill);
   // the credit line is pinned so its baseline lands on the same y on every page
   const creditTop = Math.round(lineTop({ ...ctx, faces: [{ role: 'chrome', stem: meta.chrome.faces[0].stem, style: 'normal' }] }, 'chrome', 12, 16, CREDIT_BASELINE) - LABEL.y);
-  return `.pg{--wall:${R.wall};--panel:${R.panel};--label:${R.labelFill};--ink:${R.ink};--quiet:${quietWall};--quiet-panel:${quietPanel};--quiet-label:${quietLabel};--action:${R.action};--edge:${R.edge};
+  return `.pg{--wall:${R.wall};--panel:${R.panel};--label:${R.labelFill};--ink:${R.ink};--quiet:${quietWall};--quiet-panel:${quietPanel};--quiet-label:${quietLabel};--label-ink:${R.labelInk};--action:${R.action};--edge:${R.edge};
   --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',serif;--mono:'${m ? m.family : meta.chrome.family}',monospace;
   background:var(--wall);color:var(--ink);font-family:var(--body);font-size:13px;line-height:19px;-webkit-font-smoothing:antialiased;font-kerning:normal;text-wrap:pretty}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
@@ -50,7 +50,7 @@ function baseCss(ctx) {
 
 /* the label: fixed box, fixed padding, a pale card with ink text, set smaller and tighter than the objects (title 15/18 at ${W.strong}, text 13/18 at ${W.regular}) with a hairline
    between the title block and the text. Never resized; the copy is checked to fit it */
-.lb{position:absolute;left:${LABEL.x}px;top:${LABEL.y}px;width:${LABEL.w}px;height:${LABEL.h}px;padding:${LABEL.pad}px;box-sizing:border-box;background:var(--label);color:var(--ink);font-family:var(--body)}
+.lb{position:absolute;left:${LABEL.x}px;top:${LABEL.y}px;width:${LABEL.w}px;height:${LABEL.h}px;padding:${LABEL.pad}px;box-sizing:border-box;background:var(--label);color:var(--label-ink);font-family:var(--body)}
 .lb-t{font-size:15px;line-height:18px;font-weight:${W.strong};letter-spacing:-0.005em;text-wrap:balance}
 .lb-d{margin-top:4px;font-size:13px;line-height:17px;font-weight:${W.regular};color:var(--quiet-label);text-wrap:pretty}
 .lb-p{margin-top:12px;font-size:13px;line-height:18px;font-weight:${W.regular};text-wrap:pretty}
@@ -59,8 +59,8 @@ function baseCss(ctx) {
 .lb-it p:first-child{margin-top:0}
 .lb-it b{font-weight:${W.medium}}
 .lb-tb{margin:12px 0 0;display:grid;grid-template-columns:${TERM_COL}px 1fr;font-size:13px;line-height:18px;font-weight:${W.regular}}
-.lb-tb dt{font-weight:${W.medium};white-space:nowrap}
-.lb-tb dd{margin:0;white-space:nowrap}
+.lb-tb dt{font-weight:${W.medium};padding-right:12px;overflow-wrap:anywhere}
+.lb-tb dd{margin:0;overflow-wrap:anywhere}
 .lb-tb dd .mono{margin-right:4px}
 .lb-k{margin-top:12px;list-style:none;display:grid;column-gap:12px;font-size:13px;line-height:17px;font-weight:${W.regular}}
 .lb-k.c1{grid-template-columns:1fr}.lb-k.c2{grid-template-columns:1fr 1fr}
