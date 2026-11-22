@@ -24,7 +24,9 @@ const inkOn = (ctx, hex) => {
 };
 // a caption with its clause number in the left column
 const fc = (no, b, t, cls = '') => `<figcaption class="cap a-fc ${cls}"><span class="num">${no}</span><span><b>${b}</b>${t}</span></figcaption>`;
-let uid = 0;
+// ids for one document, counted per build (per ctx), so two builds of the same project are byte-identical
+const counts = new WeakMap();
+const nextId = (ctx) => { const n = (counts.get(ctx) || 0) + 1; counts.set(ctx, n); return n; };
 
 // dimension lines for the drawings: a line with an end tick at each end and its label
 const dimV = (x, y1, y2, text, side = 1) => `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><line x1="${x - 4}" y1="${y1}" x2="${x + 4}" y2="${y1}"/><line x1="${x - 4}" y1="${y2}" x2="${x + 4}" y2="${y2}"/><text x="${x + side * 10}" y="${(y1 + y2) / 2 + 4}" text-anchor="${side > 0 ? 'start' : 'end'}">${A(text)}</text>`;
@@ -48,7 +50,7 @@ const REG = '<i class="a-reg a-r1"></i><i class="a-reg a-r2"></i><i class="a-reg
 // clear space drawn round a logo of width lw: the clear zone is a ring of x squares round the protected area
 function zone(ctx, lw, { marks = true } = {}) {
   const L = ctx.logo, g = L.geos.colour, cw = ctx.brand.logo.colourways.colour, s = lw / g.w, lh = g.h * s, X = L.geo.unit * s;
-  const zw = lw + 2 * X, zh = lh + 2 * X, ux = mult(L.geo.unit, xOf(ctx)), id = `zg${++uid}`;
+  const zw = lw + 2 * X, zh = lh + 2 * X, ux = mult(L.geo.unit, xOf(ctx)), id = `zg${nextId(ctx)}`;
   const m = (st) => `<span class="a-zm" style="${st}"><b>${ux}</b></span>`;
   const labels = marks ? m(`left:${X}px;top:0;width:${lw}px;height:${X}px`) + m(`left:${X}px;bottom:0;width:${lw}px;height:${X}px`) + m(`left:0;top:${X}px;width:${X}px;height:${lh}px`) + m(`right:0;top:${X}px;width:${X}px;height:${lh}px`) : '';
   // the grid is one x square; below 5 px it would read as a solid tone, so it is left out
@@ -101,7 +103,7 @@ export const guidelinesA = {
   logo(ctx) {
     const L = ctx.logo, B = ctx.brand, cw = B.logo.colourways.colour, g = L.geos.colour, show = ctx.edition === 'showcase', ref = refOf(ctx, 'logo');
     const lw = 520, s = lw / g.w, x = xOf(ctx) * s, cap = L.geo.cap * s, h = g.h * s, U = L.geo.unit * s, gap = 2, CW = 721, CH = 530;
-    const snap = (v) => Math.round(v / x) * x, ox = snap(64), oy = snap((CH - h) / 2 - 16), tx = lw + 28, id = `lg${++uid}`;
+    const snap = (v) => Math.round(v / x) * x, ox = snap(64), oy = snap((CH - h) / 2 - 16), tx = lw + 28, id = `lg${nextId(ctx)}`;
     const f = (n) => +n.toFixed(2);
     // ruler ticks on the top and left edges at every 6x, counted from the logo's own corner
     let ruler = '';

@@ -67,7 +67,7 @@ function spacing(ctx) {
   const squares = `<div class="hk-sq">${sp.map((s) => `<div><i style="width:${s.px}px;height:${s.px}px"></i>${ink(ctx, `${s.px} px`)}${mono(ctx, `sp-${s.token.replace('space-', '')}`)}</div>`).join('')}</div>`;
   const gIn = (sp[2] || sp[sp.length - 1]).px, gOut = (sp[5] || sp[sp.length - 1]).px, pad = (sp[4] || sp[sp.length - 1]).px;
   const gap = (h, label) => `<span class="hk-gapw" style="height:${h}px"><b></b><span>${E(ctx, label)}</span></span>`;
-  const form = `<div style="padding:${pad}px;display:flex;flex-direction:column;align-items:stretch;max-width:420px">${ctx.ui.field({ id: uid('sp'), label: F.pickup || 'Name', value: F.pickupValue || '' })}${gap(gIn, `${gIn} px in a group`)}${ctx.ui.field({ id: uid('sp'), label: F.dropoff || 'Address', value: F.dropoffValue || '' })}${gap(gOut, `${gOut} px between`)}<div>${ctx.ui.btn(F.book || S.share)}</div></div>`;
+  const form = `<div style="padding:${pad}px;display:flex;flex-direction:column;align-items:stretch;max-width:420px">${ctx.ui.field({ id: uid(ctx, 'sp'), label: F.pickup || 'Name', value: F.pickupValue || '' })}${gap(gIn, `${gIn} px in a group`)}${ctx.ui.field({ id: uid(ctx, 'sp'), label: F.dropoff || 'Address', value: F.dropoffValue || '' })}${gap(gOut, `${gOut} px between`)}<div>${ctx.ui.btn(F.book || S.share)}</div></div>`;
   const head = `${sp.length} steps, ${sp[0].px} to ${sp[sp.length - 1].px} px`;
   return `<div class="hk-body">${sec(ctx, head, `${allOn ? note(ctx, `Every gap and padding in the product is one of these, each a multiple of ${base} px.`) : ''}${squares}${note(ctx, 'Squares at true size.')}`)}`
     + `${sec(ctx, 'Form, at 1:1', `${piece(ctx, 'light', form.replace('padding:', 'margin:-36px -24px -24px;padding:'), { label: 'Light' })}${mono(ctx, `padding ${pad} px, inside a group ${gIn} px, between groups ${gOut} px`)}${note(ctx, `The gap inside a group, ${gIn} px, is smaller than the gap between groups, ${gOut} px, so what belongs together reads together.`)}`)}</div>`;
@@ -80,7 +80,7 @@ function radii(ctx) {
   const o = (ring + gap) * k, rr = R * k;
   const drawn = `<div class="hk-corner hk-lt" style="--ch:${Math.round(o + bw * k + rr + 80)}px;--co:${o}px"><i style="border:${bw * k}px solid ${M.edge};border-top-left-radius:${rr}px;box-shadow:0 0 0 ${gap * k}px ${M.surface},0 0 0 ${(gap + ring) * k}px ${M.focus};margin:0"></i></div>`;
   const items = [
-    [ui.field({ id: uid('rb'), label: F.pickup || 'Name', value: F.pickupValue || '', state: 'focus' }), 'Input, focused', `${ctx.radius.input} px, edge ${bc.px} px, ring ${bf.px} px`],
+    [ui.field({ id: uid(ctx, 'rb'), label: F.pickup || 'Name', value: F.pickupValue || '', state: 'focus' }), 'Input, focused', `${ctx.radius.input} px, edge ${bc.px} px, ring ${bf.px} px`],
     [ui.btn(F.book || S.share), 'Button', `${ctx.radius.button} px`],
     [`<div style="display:flex;align-items:center;gap:16px"><span class="ui-avatar">${E(ctx, S.initials || '')}</span>${ui.switch(S.call || 'On', { checked: true })}</div>`, 'Round', 'Avatars and switches only'],
     [ui.card({ meta: S.deliverToLabel, title: S.deliverTo, text: S.riderNote }), 'Card', `${ctx.radius.card} px, divider ${bh.px} px`],
@@ -94,7 +94,7 @@ function radii(ctx) {
 function elevation(ctx) {
   const B = ctx.brand, S = sc(ctx), D = S.dialog || {}, ui = ctx.ui, shadow = tokenGroups(ctx).shadow['shadow-float'];
   const leaf = (mode) => {
-    const M = colourMap(ctx, mode), id = uid('dlg');
+    const M = colourMap(ctx, mode), id = uid(ctx, 'dlg');
     const card = ui.card({ meta: S.deliverToLabel, title: S.deliverTo, text: S.paid, raised: true });
     const dlg = ui.dialog({ title: D.title || S.share, body: D.body || S.pickup, confirm: D.confirm || S.share, keep: D.keep || 'Cancel' }).replace(/dlg-t/g, id);
     const layers = `<div class="hk-stack" style="gap:24px;align-items:stretch">${cap(ctx, 'Sunken')}<div style="background:var(--surface);padding:24px;border:1px solid var(--hk-fold)"><div class="hk-stack" style="gap:12px">${cap(ctx, 'Surface')}${card}</div></div></div>`;
