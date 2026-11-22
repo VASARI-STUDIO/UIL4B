@@ -271,7 +271,6 @@ function rulerPage(ctx) {
   const base = raw.map(Math.floor);
   let left = inner - sum(base);
   raw.map((w, i) => ({ i, f: w - Math.floor(w) })).sort((a, b) => b.f - a.f || a.i - b.i).slice(0, left).forEach((o) => { base[o.i] += 1; });
-  left = 0;
   const BAR = 56, barSec = { h: SUBH + 12 + BAR, flex: 200, draw: (y, extra = 0) => {
     let x = 0;
     const by = y + SUBH + 12, bh = BAR + extra;
