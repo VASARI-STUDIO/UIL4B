@@ -5207,9 +5207,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const gateSample = gated ? gateSampleKind({ category, group, pack }) : null
   // The Filters badge counts what the Filters panel holds. From 641px up the category and style fold into it
   // (see LibraryToolbar), so all three count; on a phone both sit in the quick row and the sheet holds only the
-  // pack menu, so only that counts and the badge never points at a sheet that does not explain it.
+  // pack menu, so only that counts and the badge never points at a sheet that does not explain it. A changed
+  // sort counts at every width: whenever the badge shows, the Sort menu is in the panel with it.
   const phone = useMediaQuery('(max-width: 640px)')
-  const filtersCount = (selectValue !== 'all' ? 1 : 0) + (phone ? 0
+  const filtersCount = (selectValue !== 'all' ? 1 : 0) + (sort !== 'recommended' ? 1 : 0) + (phone ? 0
     : (category !== 'all' ? 1 : 0) + (category === 'all' ? (weight !== 'regular' && weightState(weight).ok ? 1 : 0) : (facet ? 1 : 0)))
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.

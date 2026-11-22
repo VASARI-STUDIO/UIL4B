@@ -293,7 +293,7 @@ export default function EmojiLibrary({ onCopy }) {
       <LibraryToolbar
         className="emoji-toolbar"
         quick={0}
-        activeFilters={activeCat ? 1 : 0}
+        activeFilters={(activeCat ? 1 : 0) + (sort !== 'recommended' ? 1 : 0)}
         search={searchProp}
         action={toneAction}
         sort={sortControl}

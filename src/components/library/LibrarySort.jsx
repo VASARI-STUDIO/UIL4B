@@ -6,8 +6,9 @@ import { sortOptions, useLibrarySort } from '../../utils/librarySort'
 // the choice it edits). It is the same listbox the pack menu is, in the same
 // `lbry-select` skin: a keyboard path (Enter or arrows to open, arrows and
 // typeahead to move, Escape to close), a bottom sheet under 768px, and the
-// toolbar's 44px touch height. The trigger reads "Sort: Recommended", so the
-// word is on screen as well as in the accessible name.
+// toolbar's 44px touch height. At the default the trigger reads just "Sort", so
+// the 1024 row keeps its groups; once changed it reads "Sort: Name A–Z". The
+// accessible name always carries the current choice ("Sort: Recommended").
 export default function LibrarySort({ searching = false, packLabel = 'Pack' }) {
   const [sort, setSort] = useLibrarySort()
   const options = useMemo(() => sortOptions(searching, packLabel), [searching, packLabel])
@@ -19,7 +20,7 @@ export default function LibrarySort({ searching = false, packLabel = 'Pack' }) {
       onChange={setSort}
       ariaLabel="Sort"
       options={options}
-      triggerLabel={`Sort: ${label}`}
+      triggerLabel={sort === 'recommended' ? 'Sort' : `Sort: ${label}`}
     />
   )
 }

@@ -129,6 +129,6 @@ test('on a phone the Filters badge counts only the pack menu inside the sheet, n
   await expect(count, 'Flags sits outside the sheet').toHaveCount(0)
   // POSITIVE CONTROL: the pack menu is inside the sheet, and it does count.
   await page.locator('.lbry-filtersbtn:visible').first().click()
-  await chooseMenuOption(page, page.locator('.lbry-sheet .lbry-select'), 'flag')
+  await chooseMenuOption(page, page.locator('.lbry-sheet .lbry-select:not(.lbry-sort)'), 'flag')
   await expect(count, 'a chosen pack counts').toHaveText('1')
 })

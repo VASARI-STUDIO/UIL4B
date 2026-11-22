@@ -172,6 +172,21 @@ test.describe('the icon and emoji libraries sort', () => {
       await chooseSort(page, 'Name A–Z')
       expect(await sortName(page)).toBe('Sort: Name A–Z')
     })
+
+    test('where the Sort menu is in the Filters panel, a changed sort counts on the Filters badge', async ({ page }) => {
+      watch(page, PERSONA)
+      await page.setViewportSize({ width: 390, height: 844 })
+      await go(page, '/create/icons')
+      await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+      const badge = filtersButton(page).locator('.lbry-filtersbtn-count')
+      await expect(badge, 'nothing is filtered yet').toHaveCount(0)
+
+      await chooseSort(page, 'Name A–Z')
+      await expect(badge, 'the hidden sort is counted, so the person can see something is set').toHaveText('1')
+
+      await chooseSort(page, 'Recommended')
+      await expect(badge, 'back to the default, the badge goes').toHaveCount(0)
+    })
   })
 
   test('the choice carries over to the emoji library, whose emoji are then in name order', async ({ page }) => {
