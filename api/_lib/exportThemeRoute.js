@@ -212,7 +212,7 @@ function declaredLength(req) {
 // head is cut off first and only frame lines ("    at ") are read: a message that quotes a path cannot pass itself off as the throw site.
 function thrownAt(e) {
   let stack = String(e?.stack ?? '')
-  let head = ''
+  let head
   try { head = `${e?.name ?? 'Error'}: ${e?.message ?? ''}` } catch { return '' }
   if (stack.startsWith(head)) stack = stack.slice(head.length)
   else if (e?.message) return ''
