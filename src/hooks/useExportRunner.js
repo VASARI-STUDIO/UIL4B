@@ -419,6 +419,9 @@ export default function useExportRunner() {
         }
         if (answer.zip) {
           savedFile = download(answer.zip, themedZipName(kitName || fileProject, format, theme) || answer.name)
+        } else if (answer.file) {
+          // A single file such as the Markdown style guide: saved under the server's name.
+          savedFile = download(answer.file, answer.name)
         } else {
           const file = formatFileName(fileProject, format, { saved: true })
           opened = printInWindow(printWin, answer.html, { title: formatFileName(fileProject, format).replace(/\.pdf$/, '') })

@@ -3,6 +3,7 @@
 //
 // requestThemeExport never throws. It resolves one of:
 //   { status: 'ok', zip: Blob, name }     a zip row, with the file name the server chose
+//   { status: 'ok', file: Blob, name }    a Markdown file (text/markdown), with the file name the server chose
 //   { status: 'ok', html }                a print row: a script-free document for the print window
 //   { status: 'error', code, line }       a refusal; `line` is fixed copy (ERROR_LINES), never the server's words
 //                                         code: signed-out | unknown | invalid-project | pro-required | too-large | rate-limited
@@ -45,11 +46,12 @@ const fail = (code, retryAfter) => {
   return wait ? { status: 'error', code, line, retryAfter: wait } : { status: 'error', code, line }
 }
 
-// The file name from Content-Disposition, only when it is a plain name of the kind the route writes.
-export function zipNameFrom(header) {
-  const m = /filename="([a-z0-9][a-z0-9-]{0,120}\.zip)"/.exec(String(header || ''))
-  return m ? m[1] : ''
+// The file name from Content-Disposition, only when it is a plain name of the kind the route writes, with the expected extension.
+export function fileNameFrom(header, ext) {
+  const m = /filename="([a-z0-9][a-z0-9-]{0,120})\.([a-z]{1,4})"/.exec(String(header || ''))
+  return m && m[2] === ext ? `${m[1]}.${m[2]}` : ''
 }
+export const zipNameFrom = (header) => fileNameFrom(header, 'zip')
 
 export async function requestThemeExport({ theme, row, format, design, projectName }, { loadAuth, fetchImpl } = {}) {
   try {
@@ -82,6 +84,12 @@ export async function requestThemeExport({ theme, row, format, design, projectNa
       const name = zipNameFrom(res.headers.get('Content-Disposition'))
       const blob = await res.blob()
       return name && blob.size ? { status: 'ok', zip: blob, name } : fail('build-failed')
+    }
+    if (type.startsWith('text/markdown')) {
+      // A Markdown file (the style guide): saved as it came, under the name the server chose.
+      const name = fileNameFrom(res.headers.get('Content-Disposition'), 'md')
+      const blob = await res.blob()
+      return name && blob.size ? { status: 'ok', file: new Blob([blob], { type: 'text/markdown;charset=utf-8' }), name } : fail('build-failed')
     }
     const body = await res.json().catch(() => null)
     // A 200 must be for this request and carry a document; the document must be the script-free one the server writes.
