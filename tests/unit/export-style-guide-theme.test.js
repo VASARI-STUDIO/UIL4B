@@ -267,6 +267,17 @@ test('29-blueprint: a one-colour and an all-the-same palette hold no NaN or Infi
   }
 })
 
+test('29-blueprint: the sheet counter counts the pages drawn, in order, and a page left out is not counted', async () => {
+  const sheets = (html) => [...html.matchAll(/<div class="ga-m" style="font-size:18px;line-height:22px">(\d{3})<\/div><div class="ga-r ga-q ga-nw">of (\d{3})<\/div>/g)].map((m) => [+m[1], +m[2]])
+  const whole = await guideHtml(undefined)
+  const all = drawnPages(whole.html)
+  assert.deepEqual(sheets(whole.html), all.map((_, i) => [i + 1, all.length]), 'every sheet reads its place of the pages drawn')
+  const long = await guideHtml(undefined, 'W'.repeat(48))
+  const kept = drawnPages(long.html)
+  assert.ok(kept.length < PAGES.length, 'the 48-letter name drops a page, so the total must follow the drawn pages')
+  assert.deepEqual(sheets(long.html), kept.map((_, i) => [i + 1, kept.length]), 'sheets stay consecutive and the total drops with the page left out')
+})
+
 test('29-blueprint: the contrast page still draws with more than ten pairs', async () => {
   const original = blueprintGuide.contrast
   // the default brand sets seven pairs; repeat them to twelve, which only fits at the 34 px row

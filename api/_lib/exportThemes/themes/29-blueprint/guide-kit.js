@@ -240,7 +240,8 @@ export function title(ctx, K, id, cands) {
 export const flow = stacker({ theme: 'Blueprint', bottom: BOT });
 
 export function guideCss(ctx) {
-  const W = ctx.weights, d = ctx.brand.fonts.display, m = ctx.brand.fonts.mono;
+  const W = ctx.weights, d = ctx.brand.fonts.display, m = ctx.brand.fonts.mono, Lt = ctx.roles.light;
+  const quiet = [Lt.quiet, SHEET.quiet, Lt.text].find((c) => ctx.ratio(c, Lt.surface) >= 4.5 && ctx.ratio(c, SHEET.film) >= 4.5) || Lt.text;
   return `/* Drawing Sheet style guide: A4 portrait. The 1587 x 1123 drawing sheet at page scale: border, zone references, title block, detail tags, redlines. */
 .pg .ga-h{font:500 14px/20px var(--chrome);white-space:nowrap}
 .pg .ga-r{font:400 12px/16px var(--chrome);letter-spacing:.01em;text-wrap:pretty}
@@ -256,13 +257,20 @@ export function guideCss(ctx) {
 .pg .ga-wrap{white-space:normal;overflow-wrap:anywhere}
 .pg .ga-spec{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 .pg .ga-nw{white-space:nowrap}
-/* the phone edition wears the sheet: each heading takes a detail tag and an ink leader */
+/* the phone edition wears the sheet in light: an ink frame round the column, a title-block strip for each heading (detail tag, then a red dimension cue) and a title block at the foot.
+   The caption grey is the brand's own unless it misses 4.5:1 on the ground, then the sheet's quiet ink, then the text ink. */
 @media screen and (max-width:841px){
-.sg-screen{counter-reset:sgno;overflow-wrap:anywhere}
-.sg-screen h2{counter-increment:sgno;display:flex;align-items:center;gap:10px;border-top:0;padding-top:0;font:500 15px/24px 'Chivo',sans-serif}
-.sg-screen h2::before{content:counter(sgno);flex:none;box-sizing:border-box;width:24px;height:24px;border:1px solid var(--ink);border-radius:50%;font:400 12px/22px 'Chivo Mono',monospace;text-align:center}
-.sg-screen h2::after{content:'';flex:1;min-width:12px;height:1px;background:var(--ink)}
-.sg-screen .sg-wrap{padding-left:16px;padding-right:16px;box-sizing:border-box}
+main.sg-screen{counter-reset:sgno;overflow-wrap:anywhere;--red:${redOf(ctx)};--quiet:${quiet}}
+main.sg-screen .sg-wrap{box-sizing:border-box;padding:20px 16px 0;background:${SHEET.film};border:1.5px solid var(--ink);outline:1px solid ${SHEET.hair};outline-offset:3px}
+main.sg-screen .sg-wrap::after{content:'Drawing sheet, style guide';display:block;margin:32px -16px 0;padding:10px 16px;border-top:1.5px solid var(--ink);background:var(--ground);font:400 12px/16px 'Chivo Mono',monospace;color:var(--quiet)}
+main.sg-screen h1 .ph-c{margin-right:10px;margin-bottom:6px;vertical-align:.15em}
+main.sg-screen h2{counter-increment:sgno;display:flex;align-items:center;gap:10px;margin:32px -16px 16px;padding:8px 16px;border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);background:var(--ground);font:500 15px/24px 'Chivo',sans-serif}
+main.sg-screen h2::before{content:counter(sgno);flex:none;box-sizing:border-box;width:24px;height:24px;border:1px solid var(--ink);border-radius:50%;font:400 12px/22px 'Chivo Mono',monospace;text-align:center}
+main.sg-screen h2::after{content:'';flex:1;min-width:12px;height:9px;box-sizing:border-box;border-left:1px solid var(--red);border-right:1px solid var(--red);background:linear-gradient(var(--red),var(--red)) center/100% 1px no-repeat}
+main.sg-screen div:has(> .sg-tile + p.sg-quiet){display:grid;grid-template-columns:112px 1fr;gap:8px 12px;align-items:center}
+main.sg-screen div:has(> .sg-tile + p.sg-quiet) .sg-tile{margin:0;padding:8px;min-height:56px;min-width:0;overflow:hidden;justify-content:center}
+main.sg-screen div:has(> .sg-tile + p.sg-quiet) .logo-slot{width:100%!important;height:40px!important}
+main.sg-screen div:has(> .sg-tile + p.sg-quiet) p.sg-quiet{margin:0!important}
 }
 `;
 }
