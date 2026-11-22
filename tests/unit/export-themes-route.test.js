@@ -214,13 +214,27 @@ test('an error with some other code, or none, is still the bare 500 build_failed
 // quote the brand's own copy; a coded refusal logs its message (a hex pair or a font stem) cut to 200 characters. Neither carries the request.
 // Break: log e.message on the build-failed line again, and the first test fails on its keys.
 test('the build-failed log carries the theme, row, format, error name and code line, and neither the message nor the request', async () => {
-  const seen = []; const orig = console.error; console.error = (...a) => seen.push(a)
-  try { await ask('tok-pro', body({ projectName: 'Private Name Pty' }), { engine: { projectToBrand() { throw new Error('m'.repeat(500)) } } }) } finally { console.error = orig }
+  const seen = []; const warned = []; const orig = console.error; const origW = console.warn
+  console.error = (...a) => seen.push(a); console.warn = (...a) => warned.push(a)
+  try { await ask('tok-pro', body({ projectName: 'Private Name Pty' }), { engine: { projectToBrand() { throw new Error('m'.repeat(500)) } } }) } finally { console.error = orig; console.warn = origW }
+  assert.deepEqual(warned, [], 'an uncoded throw is not a refusal, so nothing is warned')
   const line = seen.find((a) => a[0] === 'export theme: build failed')
   assert.ok(line, 'logged')
   assert.deepEqual(Object.keys(line[1]).sort(), ['at', 'format', 'name', 'row', 'theme'])
   assert.match(line[1].at, /^$|^[\w./-]+:\d+:\d+$/, 'a file:line:column under api/_lib, or nothing')
   assert.ok(!/mmm|pro-1|Private Name|2F6F5E/.test(JSON.stringify(line)), JSON.stringify(line))
+})
+
+// The stack opens with the message, so a message that quotes api/_lib frames on lines of its own is never logged as the throw site.
+// Break: read the stack from its second line again (slice(1)), or from the first "    at " line, and "spoofed/evil.js" comes back as the site.
+test('a message that quotes an api/_lib frame is never logged as the throw site', async () => {
+  const seen = []; const orig = console.error; console.error = (...a) => seen.push(a)
+  const e = new Error('x\n    at f (api/_lib/spoofed/evil.js:1:1)\napi/_lib/spoofed/evil.js:2:2')
+  try { await ask('tok-pro', body(), { engine: { projectToBrand() { throw e } } }) } finally { console.error = orig }
+  const line = seen.find((a) => a[0] === 'export theme: build failed')
+  assert.ok(line, 'logged')
+  assert.ok(!/spoofed/.test(line[1].at), line[1].at)
+  assert.match(line[1].at, /^$|^[\w./-]+:\d+:\d+$/)
 })
 
 test('a coded refusal logs a warning with its code and a message cut to 200 characters, and none of the request', async () => {
