@@ -33,7 +33,7 @@ const edge = (ctx, hex) => (faint(ctx, hex) ? 'box-shadow:inset 0 0 0 .75px var(
 const onFill = (ctx, hex) => {
   const best = (xs) => xs.reduce((a, b) => (ctx.ratio(b, hex) > ctx.ratio(a, hex) ? b : a));
   const t = best([N.ink, N.paper]);
-  return ctx.ratio(t, hex) >= 4.5 ? t : best([t, ...ctx.colours.map((c) => c.hex), ...ctx.tones.map((x) => x.hex)]);
+  return ctx.textOn(hex, { prefer: ctx.ratio(t, hex) >= 4.5 ? t : best([t, ...ctx.colours.map((c) => c.hex), ...ctx.tones.map((x) => x.hex)]) });
 };
 // a step of the brand's type scale: its family and the loaded weight it sets in (a "chrome" step is the brand's body face)
 const faceOf = (ctx, t) => {

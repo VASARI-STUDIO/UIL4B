@@ -3,6 +3,8 @@
 import { guideSite as G } from './lane-ht-guide.js';
 import { kitSite as K } from './lane-ht-kit.js';
 import { htCss } from './lane-ht-css.js';
+import { prepare } from './site-clean.js';
+import { keep } from './site-keep.js';
 
-export const guideSite = { ...G, css: htCss };
-export const kitSite = { ...K, css: htCss };
+export const guideSite = { ...G, css: htCss, prepare, keep };
+export const kitSite = { ...K, css: htCss, prepare };

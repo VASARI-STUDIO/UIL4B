@@ -29,8 +29,8 @@ const foot = (t) => `<p class="tb-body-foot">${t}</p>`;
 function intro(ctx, R) {
   const B = ctx.brand;
   return page(ctx, R, 'intro', `<p class="tb-big disp">${big(ctx, B.product, { max: 88, min: 40, maxLines: 3, nMax: 44, nMin: 26, nLines: 6 })}</p>`,
-    main(`<p class="tb-lead">${A(B.description)}</p>`) + side(rows([['City', A(B.city || '')], ['Version', A(B.version.number)], ['Issued', A(ctx.date)]]))
-    + main(`${h2('Who it serves')}<p class="tb-p">${A(B.audience)}</p>`));
+    (B.description ? main(`<p class="tb-lead">${A(B.description)}</p>`) : '') + side(rows([...(B.city ? [['City', A(B.city)]] : []), ['Version', A(B.version.number)], ['Issued', A(ctx.date)]]))
+    + (B.audience ? main(`${h2('Who it serves')}<p class="tb-p">${A(B.audience)}</p>`) : ''));
 }
 function personality(ctx, R) {
   const B = ctx.brand, P = B.personality, set = fitSet(ctx, P.map((p) => p.trait), { wide: { w: BODY.w - 64, max: 96, min: 40, maxLines: 1 }, narrow: { w: BODY.n - 40, max: 48, min: 28, maxLines: 2 } });
@@ -66,9 +66,9 @@ function messaging(ctx, R) {
 // ---- 3 Logo ----
 function logo(ctx, R) {
   const B = ctx.brand, L = ctx.logo;
-  const body = `<div class="tb-logo-hero">${logoOn(ctx, R, 'colour', R.field, 680, 200)}</div>${foot(A(B.logo.idea))}`;
+  const body = `<div class="tb-logo-hero">${logoOn(ctx, R, 'colour', R.field, 680, 200)}</div>${B.logo.idea ? foot(A(B.logo.idea)) : ''}`;
   const when = L.versions.filter((id) => B.logo.when[id]).map((id) => [A(L.labels[id]), A(B.logo.when[id])]);
-  return page(ctx, R, 'logo', body, main(`${h2('Which logo, where')}${rows(when)}`) + side(`<p class="tb-note">${L.versions.length} versions, all drawn from one mark.</p>`));
+  return page(ctx, R, 'logo', body, (when.length ? main(`${h2('Which logo, where')}${rows(when)}`) : main(`<p class="tb-lead">The logo in its main colours, on the ticket.</p>`)) + side(`<p class="tb-note">${L.versions.length} versions, all drawn from one mark.</p>`));
 }
 function logoVersions(ctx, R) {
   const B = ctx.brand, L = ctx.logo, cw = B.logo.colourways;
@@ -77,38 +77,42 @@ function logoVersions(ctx, R) {
   const cell = (id) => {
     const w = cw[L.colourwayOf(id)], ink = R.inkOn(w.ground, 13, 400, `guide site logo sheet ${id}`), maxW = wide.has(id) ? 340 : 180, maxH = id === 'symbol' ? 96 : id === 'stacked' ? 110 : 80;
     const near = `${ctx.ratio(w.ground, R.table) < 1.3 ? ' is-near-d' : ''}${ctx.ratio(w.ground, ctx.roles.light.surface) < 1.3 ? ' is-near-l' : ''}`;
-    return `<li class="tb-cell${wide.has(id) ? ' tb-cell--w' : ''}${near}" style="background:${w.ground};color:${ink}"><span class="tb-cell__lg">${logoAs(ctx, id, maxW, maxH)}</span><span class="tb-cell__cap"><b>${A(L.labels[id])}</b><span>${A(B.logo.when[id] || '')}</span></span></li>`;
+    return `<li class="tb-cell${wide.has(id) ? ' tb-cell--w' : ''}${near}" style="background:${w.ground};color:${ink}"><span class="tb-cell__lg">${logoAs(ctx, id, maxW, maxH)}</span><span class="tb-cell__cap"><b>${A(L.labels[id])}</b>${B.logo.when[id] ? `<span>${A(B.logo.when[id])}</span>` : ''}</span></li>`;
   };
   const P = paperOf(R);
   const body = `<div class="tb-logo-hero">${logoOn(ctx, R, 'horizontal', P.bg, 640, 120)}</div>${foot('The horizontal logo on Stock. Every version below is printed on the ground it is made for.')}`;
   return `${open(ctx, R, 'logo-versions', body, P)}\n${zone(`<ul class="tb-full tb-sheet tb-sheet--logo">${order.map(cell).join('')}</ul>`)}`;
 }
 function clearSpace(ctx, R) {
-  const L = ctx.logo, g = L.geo, pad = (L.clearShare / 100) * 100 * g.height / g.width;
-  const body = `<div class="ht-center"><div class="tb-clear__box ht-clear" style="padding:${pad.toFixed(3)}%">${logoOn(ctx, R, 'colour', R.field, 420, 140)}</div></div>`;
+  const L = ctx.logo, g = L.geo, k = (L.clearShare / 100) * g.height / g.width, lw = 420;
+  // the frame has a definite width (the logo, plus the margin each side) so the percentage margin has something to measure; on a narrow page the logo shrinks and the margin shrinks with it
+  const frame = `width:min(100%,${(lw * (1 + 2 * k)).toFixed(1)}px);padding:min(${(lw * k).toFixed(1)}px,${((k / (1 + 2 * k)) * 100).toFixed(3)}%)`;
+  const body = `<div class="ht-center"><div class="tb-clear__box ht-clear" style="${frame}">${logoOn(ctx, R, 'colour', R.field, lw, 140)}</div></div>`;
   return page(ctx, R, 'clear-space', body,
     main(`<p class="tb-lead">Keep ${L.clearShare}% of the logo&rsquo;s height clear on every side.</p><p class="tb-p ht-gap">Nothing else enters the dashed line: no type, no edge of a photo, no other mark. Where a piece is tight, use a smaller logo, never a smaller margin.</p>`)
     + side(rows([['Clear space', `<span class="m">${L.clearShare}%</span> of the height`]])));
 }
 function minSize(ctx, R) {
-  const L = ctx.logo, ms = L.minSize, slot = ctx.edition === 'slot';
+  const L = ctx.logo, ms = L.minSize;
   const sizes = [ms.screenPx, ms.screenPx * 2, ms.screenPx * 4];
-  const body = slot ? `<p class="tb-big disp">${big(ctx, 'Set the smallest size with the logo.', { max: 72, min: 36 })}</p>`
-    : `<ol class="ht-ladder">${sizes.map((w) => `<li style="--w:${w}px"><span class="ht-ladder__lg">${logoOn(ctx, R, 'colour', R.field, w, 400)}</span><span class="m">${w} px</span></li>`).join('')}</ol>`;
+  const body = `<ol class="ht-ladder">${sizes.map((w) => `<li style="--w:${w}px"><span class="ht-ladder__lg">${logoOn(ctx, R, 'colour', R.field, w, 400)}</span><span class="m">${w} px</span></li>`).join('')}</ol>`;
   return page(ctx, R, 'min-size', body,
-    main(slot ? `<p class="tb-p">Set the smallest size once the logo is in place: the width at which every part of it still reads as one mark.</p>`
-      : `<p class="tb-lead">Never smaller than <span class="m">${ms.screenPx} px</span> wide on screen or <span class="m">${ms.printMm} mm</span> in print.</p><p class="tb-p ht-gap">The ticket shows it at that width, then at twice and four times.</p>`)
-    + side(slot ? '' : rows([['Screen', `<span class="m">${ms.screenPx} px</span>`], ['Print', `<span class="m">${ms.printMm} mm</span>`]])));
+    main(`<p class="tb-lead">Never smaller than <span class="m">${ms.screenPx} px</span> wide on screen or <span class="m">${ms.printMm} mm</span> in print.</p><p class="tb-p ht-gap">The ticket shows it at that width, then at twice and four times.</p>`)
+    + side(rows([['Screen', `<span class="m">${ms.screenPx} px</span>`], ['Print', `<span class="m">${ms.printMm} mm</span>`]])));
 }
 function logoGrounds(ctx, R) {
   const B = ctx.brand, cw = B.logo.colourways, ids = Object.keys(cw);
+  // colourways that share a ground draw the same logo on it, so each ground is shown once
+  const seen = new Set(), shown = ids.filter((k) => !seen.has(cw[k].ground.toLowerCase()) && seen.add(cw[k].ground.toLowerCase()));
   const seg = (k) => {
     const c = cw[k], ink = R.inkOn(c.ground, 13, 600, `guide site grounds ${k}`);
-    return `<li class="ht-gr" style="background:${c.ground};color:${ink}"><span class="ht-gr__lg">${logoOn(ctx, R, 'colour', c.ground, 300, 72)}</span><span class="tb-b">${A(ctx.cap(k.replace(/-/g, ' ')))}</span></li>`;
+    return `<li class="ht-gr" style="background:${c.ground};color:${ink}"><span class="ht-gr__lg">${logoOn(ctx, R, 'colour', c.ground, 120, 34)}</span><span class="tb-b">${A(ctx.cap(k.replace(/-/g, ' ')))}</span></li>`;
   };
   const shot = (B.imagery.shots || [])[0];
   const onPhoto = shot ? full(`${h2('On a photograph')}<figure class="ht-onph">${ctx.photo(shot.id, { cls: 'ht-onph__img' })}<span class="ht-onph__lg" style="--onph:${R.table}">${logoOn(ctx, R, 'colour', R.table, 280, 64)}</span></figure><p class="tb-note ht-gap">Set it on the photograph&rsquo;s darkest quiet area, never across a face or a lit sign.</p>`) : '';
-  return `${open(ctx, R, 'logo-grounds', `<ul class="ht-grounds">${ids.map(seg).join('')}</ul>`, { cls: 'tb-tk--strip' })}\n${zone(main(rows(ids.filter((k) => B.logo.when[k]).map((k) => [A(ctx.cap(k.replace(/-/g, ' '))), A(B.logo.when[k])]))) + onPhoto)}`;
+  const whens = ids.filter((k) => B.logo.when[k]).map((k) => [A(ctx.cap(k.replace(/-/g, ' '))), A(B.logo.when[k])]);
+  const lead = whens.length ? main(rows(whens)) : main(`<p class="tb-lead">Each version is drawn on the ground it is made for.</p><p class="tb-p ht-gap">Keep to the pairing shown: the name and the mark hold their contrast only on their own ground.</p>`);
+  return `${open(ctx, R, 'logo-grounds', `<ul class="ht-grounds">${shown.map(seg).join('')}</ul>`, { cls: 'tb-tk--strip' })}\n${zone(lead + onPhoto)}`;
 }
 function logoMisuse(ctx, R) {
   const P = paperOf(R);
@@ -122,7 +126,7 @@ function logoMisuse(ctx, R) {
 function stripOf(ctx, R, cols, label) {
   return `<ul class="tb-strip ht-strip" aria-label="${A(label)}">${cols.map((c) => {
     const ink = R.inkOn(c.hex, 15, 600, `guide site strip ${c.id}`);
-    return `<li class="tb-seg${R.nearTable(c.hex) ? ' is-near' : ''}${ctx.ratio(c.hex, ctx.roles.light.surface) < 1.3 ? ' is-near-l' : ''}" style="--share:${c.share};background:${c.hex};color:${ink}"><span class="ht-seg"><span class="tb-b">${A(c.name)}</span><span class="m">${A(c.hex.toUpperCase())}</span><span class="tb-seg__p disp" style="--pfs:${Math.min(56, Math.max(24, Math.floor(c.share * 180)))}px">${pctOf(c.share)}</span></span></li>`;
+    return `<li class="tb-seg${c.share < 0.12 ? ' ht-thin' : ''}${c.share < 0.06 ? ' ht-tiny' : ''}${R.nearTable(c.hex) ? ' is-near' : ''}${ctx.ratio(c.hex, ctx.roles.light.surface) < 1.3 ? ' is-near-l' : ''}" style="--share:${c.share};background:${c.hex};color:${ink}"><span class="ht-seg"><span class="tb-b">${A(c.name)}</span><span class="m">${A(c.hex.toUpperCase())}</span><span class="tb-seg__p disp" style="--pfs:${Math.min(56, Math.max(24, Math.floor(c.share * 180)))}px">${pctOf(c.share)}</span></span></li>`;
   }).join('')}</ul>`;
 }
 function palette(ctx, R) {
@@ -135,7 +139,7 @@ function proportion(ctx, R) {
   const body = `<ol class="ht-prop">${cols.map((c) => `<li style="--share:${c.share};background:${c.hex};color:${R.inkOn(c.hex, 24, 600, `guide site proportion ${c.id}`)}"${R.nearTable(c.hex) ? ' class="is-near"' : ''}><span class="disp">${pctOf(c.share)}</span><span class="tb-b">${A(c.name)}</span></li>`).join('')}</ol>`;
   return page(ctx, R, 'proportion', body,
     main(`<p class="tb-lead">${A(cols[0].name)} carries ${pctOf(cols[0].share)} of a piece. ${A(cols[cols.length - 1].name)} gets ${pctOf(cols[cols.length - 1].share)}.</p>`)
-    + main(`${h2('The tones')}${rows(ctx.tones.map((t) => [A(t.name), `${A(t.lands || t.role || '')} ${hex(t.hex)}`]))}`), { cls: 'ht-tk--flush' });
+    + (ctx.tones.length ? main(`${h2('The tones')}${rows(ctx.tones.map((t) => [A(t.name), `${A(t.lands || t.role || '')} ${hex(t.hex)}`]))}`) : ''), { cls: 'ht-tk--flush' });
 }
 function contrast(ctx, R) {
   const P = ctx.pairs, top = [...P].sort((a, b) => b.ratio - a.ratio)[0], name = (h) => (ctx.colours.find((c) => c.hex.toLowerCase() === h.toLowerCase()) || ctx.tones.find((c) => c.hex.toLowerCase() === h.toLowerCase()) || { name: h }).name;
@@ -150,7 +154,7 @@ function colourValues(ctx, R) {
   const f = ctx.colours.find((c) => c.hex.toLowerCase() === R.field.toLowerCase()) || ctx.colours[0];
   const v = (c) => `<li><span class="ht-chip" style="background:${c.hex}"></span><p class="ht-k">${A(c.name)}</p><dl class="ht-vals"><div><dt>HEX</dt><dd class="m">${A(c.hex.toUpperCase())}</dd></div><div><dt>RGB</dt><dd class="m">${A(valText(c.rgb || ctx.C.hexToRgb(c.hex)))}</dd></div><div><dt>OKLCH</dt><dd class="m">${A(valText(c.oklch || ''))}</dd></div>${ctx.C.cmykOf(c) ? `<div><dt>CMYK</dt><dd class="m">${A(ctx.C.cmykOf(c))}</dd></div>` : ''}</dl></li>`;
   return page(ctx, R, 'colour-values', `<p class="ht-hex m">${A(f.hex.toUpperCase())}</p>${foot(`${A(f.name)}, the ticket&rsquo;s colour.`)}`,
-    full(`${h2('The colours')}<ul class="ht-valist">${ctx.colours.map(v).join('')}</ul>`) + full(`${h2('The tones')}<ul class="ht-valist">${ctx.tones.map(v).join('')}</ul>`));
+    full(`${h2('The colours')}<ul class="ht-valist">${ctx.colours.map(v).join('')}</ul>`) + (ctx.tones.length ? full(`${h2('The tones')}<ul class="ht-valist">${ctx.tones.map(v).join('')}</ul>`) : ''));
 }
 
 // ---- 5 Type ----
@@ -216,11 +220,11 @@ function grid(ctx, R) {
 function layouts(ctx, R) {
   const B = ctx.brand, L = B.layout, P = paperOf(R);
   const lay = (title, note, inner) => `<li><div class="ht-lay" style="aspect-ratio:${L.page.w}/${L.page.h};padding:${(L.margin / L.page.w * 100).toFixed(3)}%">${inner}</div><p class="ht-k">${title}</p><p class="tb-s">${note}</p></li>`;
-  const one = lay('One line', 'The line across eight columns, the rest of the page empty.', `<p class="disp ht-lay__l">${A(B.lines.primary)}</p>`);
-  const two = lay('Line and photograph', 'Six columns of type, six of photograph.', `<div class="ht-lay__two"><p class="disp ht-lay__l ht-lay__l--s">${A(B.lines.others[0] || B.lines.primary)}</p><span class="ht-lay__ph"></span></div>`);
+  const one = lay('One line', 'The line across eight columns, the rest of the page empty.', `<p class="disp ht-lay__l">${A(B.lines.primary || B.name)}</p>`);
+  const two = lay('Line and photograph', 'Six columns of type, six of photograph.', `<div class="ht-lay__two"><p class="disp ht-lay__l ht-lay__l--s">${A(B.lines.others[0] || B.lines.primary || B.name)}</p><span class="ht-lay__ph"></span></div>`);
   const tk = lay('The ticket', 'Body, perforation and stub: the stub takes the last three columns.', `<div class="ht-lay__tk"><span></span><span></span></div>`);
   return page(ctx, R, 'layouts', `<ul class="ht-lays">${one}${two}${tk}</ul>`,
-    main(`${h2('Three layouts')}<p class="tb-p">Start from one of these. Each sits on the ${L.columns}-column grid; none fills it.</p>`) + full(`${h2('The brand&rsquo;s rules')}<ol class="tb-order">${(B.guideB.rules || []).map((r) => `<li><p class="ht-k">${A(r.title)}</p><p class="tb-p">${A(r.text)}</p></li>`).join('')}</ol>`), P);
+    main(`${h2('Three layouts')}<p class="tb-p">Start from one of these. Each sits on the ${L.columns}-column grid; none fills it.</p>`) + ((B.guideB.rules || []).length ? full(`${h2('The brand&rsquo;s rules')}<ol class="tb-order">${B.guideB.rules.map((r) => `<li><p class="ht-k">${A(r.title)}</p><p class="tb-p">${A(r.text)}</p></li>`).join('')}</ol>`) : ''), P);
 }
 
 // ---- 8 Applications ----
@@ -228,7 +232,7 @@ let PHOTOS = null;
 const photosOf = (ctx, R) => (PHOTOS && PHOTOS.slug === ctx.slug + ctx.edition ? PHOTOS.list : (PHOTOS = { slug: ctx.slug + ctx.edition, list: appPhotos(ctx, R) }).list);
 function appCell(ctx, p) {
   const r = p.win.w / p.win.h, pc = (n) => `${(n * 100).toFixed(3)}%`;
-  if (p.frame) return `<div class="tb-app tb-app--frame" style="--r:${r.toFixed(4)}"><p class="tb-b">${A(ctx.cap(p.what))}</p><p class="tb-s">Photograph to come</p></div>`;
+  if (p.frame) return `<div class="tb-app tb-app--frame" style="--r:${r.toFixed(4)}"><p class="tb-b">${A(ctx.cap(p.what))}</p></div>`;
   const img = `${plateImg(`${p.src}`, ``, `left:${pc(-p.win.x / p.win.w)};top:${pc(-p.win.y / p.win.h)};width:${pc(p.si.w / p.win.w)};height:${pc(p.si.h / p.win.h)}`)}`;
   return `<div class="tb-app" style="--r:${r.toFixed(4)}" role="img" aria-label="${A(`${ctx.brand.name} ${p.what}`)}"><div class="tb-app__win">${img}${p.over}</div></div>`;
 }
@@ -236,7 +240,7 @@ function businessCard(ctx, R) {
   const B = ctx.brand, ap = B.applications, cw = B.logo.colourways, rev = cw[R.colourwayOn(R.table)], P = paperOf(R);
   ctx.pair(R.fieldInk, R.field, { size: 13, what: 'guide site business card' });
   const front = `<div class="tb-card" style="background:${R.field};color:${R.fieldInk}" role="img" aria-label="Business card, front: the logo and the line ${A(B.lines.primary)}"><span class="tb-card__lg">${logoOn(ctx, R, 'colour', R.field, 200, 64)}</span><p class="tb-card__l">${A(B.lines.primary)}</p></div>`;
-  const back = `<div class="tb-card" style="background:${rev.ground};color:${R.inkOn(rev.ground, 13, 400, 'guide site card back')}"><p class="tb-card__nm">${A(ap.card.person)}</p><p>${A(ap.card.role)}</p><p class="tb-card__ct">${A(ap.card.contact)}<br>${A(ap.site.url)}</p></div>`;
+  const back = `<div class="tb-card" style="background:${rev.ground};color:${R.inkOn(rev.ground, 13, 400, 'guide site card back')}"><p class="tb-card__nm">${A(ap.card.person)}</p><p>${A(ap.card.role)}</p><p class="tb-card__ct">${[ap.card.contact, ap.site.url].filter(Boolean).map(A).join('<br>')}</p></div>`;
   return page(ctx, R, 'business-card', `<div class="ht-cards">${front}${back}</div>`,
     main(`<p class="tb-lead">Front: the logo and the line on ${A(ctx.colours.find((c) => c.hex.toLowerCase() === R.field.toLowerCase())?.name || 'the ticket colour')}. Back: the person, on the dark.</p>`)
     + side(rows([['Size', '<span class="m">90 × 55 mm</span>'], ['Name', A(ap.card.person)], ['Role', A(ap.card.role)]])), P);
@@ -257,7 +261,7 @@ function signage(ctx, R) {
 }
 function emailSignature(ctx, R) {
   const B = ctx.brand, ap = B.applications, E = B.guideB.email || {}, P = paperOf(R);
-  const sig = `<div class="tb-email"><p class="tb-email__n">${A(ap.email.person)}</p><p>${A(ap.email.role)}, ${A(B.name)}</p><p class="tb-s">${A(ap.card.contact)}<br>${A(ap.site.url)}</p><div class="tb-email__l">${logoOn(ctx, R, 'horizontal', P.bg, 168, 40)}</div></div>`;
+  const sig = `<div class="tb-email"><p class="tb-email__n">${A(ap.email.person)}</p><p>${A(ap.email.role)}, ${A(B.name)}</p><p class="tb-s">${[ap.card.contact, ap.site.url].filter(Boolean).map(A).join('<br>')}</p><div class="tb-email__l">${logoOn(ctx, R, 'horizontal', P.bg, 168, 40)}</div></div>`;
   const msg = `<div class="ht-mail">${E.subject ? `<p class="ht-mail__s">${A(E.subject)}</p>` : ''}${E.to ? `<p class="tb-s">To ${A(E.to)}${E.time ? `, ${A(E.time)}` : ''}</p>` : ''}<div class="ht-mail__b">${(E.body || []).map((t) => `<p>${A(t)}</p>`).join('')}</div>${sig}</div>`;
   return page(ctx, R, 'email-signature', msg, main(`<p class="tb-lead">Name, role, contact and the horizontal logo. Nothing else under the name.</p>`) + side(rows([['Name', A(ap.email.person)], ['Role', A(ap.email.role)]])), P);
 }
@@ -269,7 +273,7 @@ function digital(ctx, R) {
 <ul class="ui-list">${rs.map((d) => ctx.ui.row({ title: d.to, sub: d.when, end: d.price, chip: ctx.ui.statusChip(d.status) })).join('')}</ul>
 </div></div>`;
   return page(ctx, R, 'digital', `<div class="ht-dig">${screen}<p class="tb-big disp ht-dig__l">${fitTwo(ctx, B.ui.screen.title || B.name, { wide: { w: 248, max: 72, min: 28, maxLines: 2 }, narrow: { w: BODY.n, max: 40, min: 24, maxLines: 4 } })}</p></div>`,
-    main(`<p class="tb-lead">The product follows the UI kit: the same colours, type and components as every page of it.</p>`) + side(rows([['Site', `<span class="m">${A(B.applications.site.url)}</span>`]])));
+    main(`<p class="tb-lead">The product follows the UI kit: the same colours, type and components as every page of it.</p>`) + (B.applications.site.url ? side(rows([['Site', `<span class="m">${A(B.applications.site.url)}</span>`]])) : ''));
 }
 
 // ---- 9 Close ----
@@ -283,10 +287,10 @@ function summary(ctx, R) {
 }
 function contactScope(ctx, R) {
   const B = ctx.brand, P = paperOf(R);
-  const body = `<p class="tb-b">Questions about the brand</p><p class="tb-big disp">${big(ctx, B.contact.email, { max: 88, min: 28, maxLines: 1, nMax: 34, nMin: 18, nLines: 2 })}</p>${foot(A(B.contact.owner))}`;
+  const body = `<p class="tb-b">Questions about the brand</p><p class="tb-big disp">${big(ctx, B.contact.email, { max: 88, min: 28, maxLines: 1, nMax: 34, nMin: 18, nLines: 2 })}</p>${B.contact.owner ? foot(A(B.contact.owner)) : ''}`;
   return page(ctx, R, 'contact-scope', body,
     main(`${h2('What these guidelines cover')}<ol class="ht-scope">${ctx.sections.map((s) => `<li><span class="num">${s.n}</span><span>${A(s.title)}</span></li>`).join('')}</ol>`)
-    + side(rows([['Owner', A(B.contact.owner)], ['Version', A(B.version.number)], ['Issued', A(ctx.date)]])), P);
+    + side(rows([...(B.contact.owner ? [['Owner', A(B.contact.owner)]] : []), ['Version', A(B.version.number)], ['Issued', A(ctx.date)]])), P);
 }
 
 const PAGES = {
@@ -299,11 +303,11 @@ const PAGES = {
 // ---- the front page: the cover ticket, then the running order in full ----
 function front(ctx, S) {
   const B = ctx.brand, R = roles(ctx), first = S.units.find((u) => !u.front);
-  const body = `<div class="tb-cover__logo">${logoOn(ctx, R, 'colour', R.field, 280, 80)}</div><p class="tb-big disp">${big(ctx, B.lines.primary, { max: 128, min: 56, nMax: 64, nMin: 36 })}</p><p class="tb-cover__foot">${A(B.description)}</p>`;
+  const body = `<div class="tb-cover__logo">${logoOn(ctx, R, 'colour', R.field, 280, 80)}</div><p class="tb-big disp">${big(ctx, B.lines.primary || B.name, { max: 128, min: 56, nMax: 64, nMin: 36 })}</p>${B.description ? `<p class="tb-cover__foot">${A(B.description)}</p>` : ''}`;
   const stub = pageStub(ctx, { part: PART, section: '', title: `${B.name} brand guidelines`, no: B.version.number, code: codeOf(ctx, 'g', 0), next: first ? { href: first.file, ref: first.ref, title: first.title } : null });
   const set = S.sections.map((s) => `<li class="ht-run"><h2 class="ht-run__h"><span class="num disp">${s.n}</span><span>${A(s.title)}</span></h2><ol>${s.units.map((u) => `<li><a href="${u.file}"><span class="num">${A(u.ref)}</span><span>${A(u.title)}</span></a></li>`).join('')}</ol></li>`).join('');
   return `${ticket(ctx, R, { body, stub, cls: 'tb-tk--open tb-tk--hero ht-tk' })}
-${zone(main(`<p class="tb-lead">${A(B.product)}</p>`) + side(rows([['Version', A(B.version.number)], ['Issued', A(ctx.date)], ['From', A(B.city || '')]]))
+${zone((B.product ? main(`<p class="tb-lead">${A(B.product)}</p>`) : '') + side(rows([['Version', A(B.version.number)], ['Issued', A(ctx.date)], ...(B.city ? [['From', A(B.city)]] : [])]))
     + full(`${h2('Running order')}<ol class="ht-runs">${set}</ol>`))}`;
 }
 
@@ -326,6 +330,6 @@ ${order(ctx, { first, sections, current: u.front ? null : { ref: u.ref, title: u
 export const guideSite = {
   css: null, shell, front,
   page: (ctx, id) => { const f = PAGES[id]; if (!f) throw new Error(`guide site: no page ${id}`); return f(ctx, roles(ctx)); },
-  adapt: { strip: [], minStack: 3, noLink: '.m,.num,.tb-serial,.tb-rows,.tb-s,.logo-slot,.photo-slot' },
+  adapt: { strip: [], minStack: 3, noLink: '.m,.num,.tb-serial,.tb-rows,.tb-s,.photo-slot' },
   darkSample: ['index', 'logo-versions', 'palette', 'contrast', 'typefaces', 'shot-list', 'business-card', 'digital'],
 };

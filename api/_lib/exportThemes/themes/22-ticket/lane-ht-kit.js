@@ -19,8 +19,11 @@ function open(ctx, R, K, live, { dark = false, cls = '', label = '' } = {}) {
   return ticket(ctx, R, { body: `<div class="ui hk-live${dark ? ' hk-live--dark' : ''}"${dark ? ' data-theme="dark"' : ''}${label ? ` role="group" aria-label="${A(label)}"` : ''}>${live}</div>`, stub, cls: `tb-tk--open ht-tk hk-tk ${cls}` });
 }
 // the markup to copy, pretty-printed by the engine, and the tokens the component reads
+// void elements (input, br, img, hr) have no closing tag: the engine's pretty-printer adds one, so the line is dropped before the markup is shown or copied
+const NL = String.fromCharCode(10);
+const unvoid = (text) => text.split(NL).filter((l) => !/^ *<[/](input|br|img|hr)>$/.test(l)).join(NL).replace(/<[/](input|br|img|hr)>/g, '');
 function code(ctx, K, name, markup, re) {
-  const pretty = K.prettyHtml(markup), used = re ? K.tokensUsed(re) : null;
+  const pretty = unvoid(K.prettyHtml(markup)), used = re ? K.tokensUsed(re) : null;
   const block = (title, text, what) => `<div class="hk-code"><div class="hk-code__h"><p class="ht-k">${title}</p><button type="button" class="tb-btn hk-copy" data-copy="${A(text)}" data-copy-name="${A(what)}"><span data-copy-text>Copy</span></button></div><pre><code>${A(text)}</code></pre></div>`;
   return full(`${h2('The code')}<div class="hk-codes">${block('Markup', pretty, `${name} markup`)}${used && used.names.length ? block('Tokens it reads', used.css, `${name} tokens`) : ''}</div>`);
 }
@@ -75,7 +78,7 @@ function cover(ctx, K) {
 <ul class="ui-list hk-cover__r">${S.deliveries.slice(0, 3).map((d) => ui.row({ title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('')}</ul></div>`;
   const count = K.pages.filter((p) => p.section).length;
   return page(ctx, R, K, live,
-    main(`<p class="tb-big disp hk-title">${big(ctx, `${B.name} UI kit`, { max: 96, min: 40, maxLines: ctx.edition === 'slot' ? 2 : 1, nMax: 48, nMin: 28, nLines: 2 })}</p><p class="tb-lead ht-gap">The components the product ships, live, in light and dark, with the markup to copy.</p>`)
+    main(`<p class="tb-big disp hk-title">${big(ctx, `${B.name} UI kit`, { max: 96, min: 40, maxLines: ctx.edition === 'slot' ? 2 : 1, nMax: 48, nMin: 28, nLines: 2 })}</p><p class="tb-lead ht-gap">The components the product ships, live, in light and dark, with the markup to copy. <a href="example.html">Open example.html</a> to try every component in one page.</p>`)
     + side(rows([['Pages', m(String(count))], ['Version', A(B.version.number)], ['Issued', A(ctx.date)]]))
     + full(`${h2('Running order')}<ol class="ht-runs">${K.sections.map((s) => `<li class="ht-run"><h2 class="ht-run__h"><span class="num disp">${s.n}</span><span>${A(s.title)}</span></h2><ol>${s.pages.map((q) => `<li><a href="${K.href(q.id)}"><span class="num">${A(q.ref)}</span><span>${A(q.title)}</span></a></li>`).join('')}</ol></li>`).join('')}</ol>`), { label: 'The product, live' });
 }
@@ -147,7 +150,7 @@ function inputs(ctx, K) {
   const R = roles(ctx), F = sc(ctx).form, ui = ctx.ui;
   const f = [ui.field({ id: 'hk-show', label: F.pickup, value: F.pickupValue }), ui.field({ id: 'hk-name', label: F.dropoff, value: F.dropoffValue, help: F.notesHelp }),
     ui.field({ id: 'hk-code', label: F.ready, value: F.readyValue, error: F.readyError }), ui.field({ id: 'hk-size', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[1] }),
-    ui.field({ id: 'hk-note', label: F.notes, kind: 'textarea', value: '' }), ui.field({ id: 'hk-off', label: F.pickup, value: F.pickupValue, disabled: true })];
+    ui.field({ id: 'hk-note', label: F.notes, kind: 'textarea', value: '' }), ui.field({ id: 'hk-off', label: F.lockedLabel || F.pickup, value: F.lockedValue || F.pickupValue, disabled: true })];
   const live = `<div class="hk-form">${f.join('')}</div>`;
   return page(ctx, R, K, live, lead('A label above every field, always. Help and errors sit under the field and are joined to it.') + note('The error names what went wrong and what to do.')
     + bench(ctx, K) + code(ctx, K, 'Field', f[2], /^\.ui-(field|label|input|error|help)/), { label: 'Fields' });
@@ -195,7 +198,7 @@ function table(ctx, K) {
   const R = roles(ctx), S = sc(ctx), ui = ctx.ui;
   const heads = ['Booking', 'Details', 'Status', S.paidLabel];
   const t = `<div class="hk-tw"><table class="ui-table"><thead><tr>${heads.map((h, i) => `<th scope="col"${i === 3 ? ' class="is-num"' : i === 1 ? ' class="hk-wide"' : ''}>${A(h)}</th>`).join('')}</tr></thead><tbody>${S.deliveries.map((d, i) => `<tr${i === 0 ? ' aria-selected="true"' : ''}><td>${A(d.to)}</td><td class="hk-wide">${A(d.when)}</td><td>${ui.statusChip(d.status)}</td><td class="is-num">${A(d.price)}</td></tr>`).join('')}</tbody></table></div>`;
-  return page(ctx, R, K, t, lead('Numbers right-aligned, statuses as words, the selected row marked by a bar.') + note('At phone width the details column folds away; the booking, its status and the price stay.') + code(ctx, K, 'Table', t.replace(/<tbody>.*<\/tbody>/, '<tbody></tbody>').replace(/ class="hk-wide"/g, '').replace(/^<div class="hk-tw">|<\/div>$/g, ''), /^\.ui-table/), { label: 'A table' });
+  return page(ctx, R, K, t, lead('Numbers right-aligned, statuses as words, the selected row marked by a bar.') + note('At phone width the details column folds away; the booking, its status and the price stay.') + code(ctx, K, 'Table', t.replace(/<tbody>(.*)<\/tbody>/, (m, rows) => '<tbody>' + rows.split('</tr>').slice(0, 2).join('</tr>') + '</tr></tbody>').replace(/ class="hk-wide"/g, '').replace(/^<div class="hk-tw">|<\/div>$/g, ''), /^\.ui-table/), { label: 'A table' });
 }
 function empty(ctx, K) {
   const R = roles(ctx), E = sc(ctx).empty, ui = ctx.ui;
