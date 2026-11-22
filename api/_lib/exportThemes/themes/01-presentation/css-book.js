@@ -162,6 +162,9 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk-sw__share{font-size:12px;font-variant-numeric:tabular-nums}
 .bk-sw__name{font-size:max(15px,1.7cqw);font-weight:600;line-height:1.2;display:block}
 .bk-sw__hex{font-family:var(--mono);font-size:13px;display:block;margin-top:4px}
+.bk-sw{container-type:inline-size}
+@container (max-width:104px){.bk-sw__hex{display:none}}
+@container (max-width:72px){.bk-sw__name{display:none}}
 .bk-slide--c .bk-sb{justify-content:space-between;gap:2cqw}
 .bk-slide--c::after{top:max(18px,3cqw)}
 .bk-slide--tone{background:var(--fix-ground);color:var(--fix-ink)}

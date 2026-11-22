@@ -152,7 +152,7 @@ function colour(ctx) {
   const clauses = ctx.colours.map((c) => `${term(c.name)} ${A(c.lands)}`);
   const key = `<li class="bk-key"><p class="bk-cnum">Key</p><dl><div><dt>Chip</dt><dd>Click it to copy the HEX.</dd></div><div><dt>Figure</dt><dd>The share of a page the colour takes.</dd></div><div><dt>Tint table</dt><dd>Steps ${steps[0]} to ${steps.at(-1)}. The bar marks the colour itself.</dd></div></dl></li>`;
   const work = `<ol class="bk-chips">${ctx.colours.map(cell).join('')}${key}</ol>
-<div class="bk-block">${sub('Text tones')}<ol class="bk-chips bk-chips--tones">${ctx.tones.map(toneCell).join('')}</ol></div>
+${ctx.tones.length ? `<div class="bk-block">${sub('Text tones')}<ol class="bk-chips bk-chips--tones">${ctx.tones.map(toneCell).join('')}</ol></div>` : ''}
 <div class="bk-block">${sub('Contrast, pair by pair')}<p class="bk-body bk-measure">Every text pair ${A(B.name)} uses, with its WCAG ratio. Text needs 4.5 : 1. Type at 24 px and over needs 3 : 1. Sizes are given in x, which is ${x} px on screen.</p><ol class="bk-pairs">${ctx.pairs.map(pair).join('')}</ol></div>
 <div class="bk-block">${sub('Interface roles')}<p class="bk-body bk-measure">The same roles in the light and dark previews. Use the switch to see the other set.</p>${roles('light')}${roles('dark')}</div>`;
   return page(ctx, 4, 'colour', 'Colour', 'Five colours and two tones. Deck and Hull do most of the work.', clauses, work, 'bk-sec--colour');

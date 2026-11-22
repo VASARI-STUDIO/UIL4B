@@ -137,7 +137,7 @@ ${dim('a-dim--v', `left:50%;top:0;height:${r(X)}px`)}${dim('a-dim--v', `left:50%
     const tile = (c, i) => {
       const ink = inkOn(ctx, c.hex);
       const body = i === 0 ? `<span class="disp a-ptext">${A(texts[0])}</span>` : `<span class="a-ptext2">${A(texts[i % texts.length])}</span>`;
-      return `<figure class="a-pt-tile ${i === 0 ? 'a-p0' : ''} ${isGround(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex};color:${ink}">${body}<figcaption class="cap"><span class="disp a-pn">${A(c.name)}</span>${A(ctx.cap(c.role))}. ${A(c.lands)}</figcaption></figure>`;
+      return `<figure class="a-pt-tile ${i === 0 ? 'a-p0' : ''} ${isGround(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex};color:${ink}">${body}<figcaption class="cap"><span class="disp a-pn">${A(c.name)}</span>${c.name.toLowerCase() === String(c.role).toLowerCase() ? '' : `${A(ctx.cap(c.role))}. `}${A(ctx.cap(String(c.lands ?? "")))}</figcaption></figure>`;
     };
     const inner = `<p class="lead a-glead">${A(lead)}</p><div class="a-pal" style="grid-template-columns:2fr repeat(${cs.length - 1},minmax(0,1fr))">${cs.map(tile).join('')}</div>`;
     return slide(ctx, 'palette', inner, { fo: inkOn(ctx, cs[0].hex) });

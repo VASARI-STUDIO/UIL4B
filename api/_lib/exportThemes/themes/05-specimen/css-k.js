@@ -56,7 +56,7 @@ export function cssK(ctx) {
 .k-gcs{display:flex;flex-direction:column;height:100%}
 .k-gc{position:relative;flex:0 1 116px;background:var(--c);color:var(--i);box-shadow:inset 1px 0 0 var(--rod),inset -1px 0 0 var(--rod),inset 0 1px 0 var(--rod)}
 .k-gc--tall{flex:0 8 300px}
-.k-gc:last-child{flex:1 1 auto;height:auto;padding-bottom:22px}
+.k-gc:last-child{flex:1 1 116px;padding-bottom:22px}
 .k-gtab{position:absolute;bottom:100%;height:28px;display:flex;align-items:center;padding:0 8px;background:var(--c);border-radius:7px 7px 0 0;box-shadow:inset 1px 0 0 var(--rod),inset -1px 0 0 var(--rod),inset 0 1px 0 var(--rod);font-size:12px;line-height:16px;overflow:hidden}
 .k-gface{padding:16px 22px 0}
 .k-gname{display:flex;align-items:baseline;gap:14px}

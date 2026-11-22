@@ -76,7 +76,10 @@ function palette(ctx) {
   const panels = hungC.map((c, i) => {
     const w = widths[i], H = Math.round((280 + (H_PANELS - 280) * c.share / top) / 8) * 8, y = hung(H), tc = R.onColour(c.hex, 13), [r, g, b] = ctx.C.hexToRgb(c.hex);
     const cm = Array.isArray(c.cmyk) ? ['C', 'M', 'Y', 'K'].map((k, j) => `<span class="sw-v mono">${k} ${c.cmyk[j]}</span>`).join('') : '';
-    const inner = `<div style="left:24px;top:24px;color:${tc}"><span class="sw-n">${A(c.name)}</span><span class="sw-v mono" style="margin-top:4px">${A(c.hex)}</span>`
+    const inner = w < 112
+      ? `<div class="sw-spine" style="left:16px;top:24px;width:${w - 32}px;height:${H - 80}px;color:${tc}"><span class="sw-n">${A(c.name)}</span><span class="sw-v mono">${A(c.hex)}</span></div>`
+        + `<div class="sw-s" style="left:16px;bottom:24px;color:${tc}">${Math.round(c.share * 100)}%</div>`
+      : `<div style="left:24px;top:24px;color:${tc}"><span class="sw-n">${A(c.name)}</span><span class="sw-v mono" style="margin-top:4px">${A(c.hex)}</span>`
       + `<span class="sw-v mono" style="margin-top:8px">R ${r}</span><span class="sw-v mono">G ${g}</span><span class="sw-v mono">B ${b}</span>`
       + (cm ? `<div style="margin-top:8px">${cm}</div>` : '') + `</div>`
       + `<div class="sw-s" style="left:24px;bottom:24px;color:${tc}">${Math.round(c.share * 100)}%</div>`;

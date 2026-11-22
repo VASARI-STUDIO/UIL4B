@@ -234,7 +234,8 @@ export function labelCard(ctx, id, { title, detail, paragraph, items = [], mode 
   // so a brand's long colour names never print over the text beside them; a term or text too long for its column wraps, and the card counts the lines
   const itemed = items.map((k) => (mode === 'table' ? { term: k.term, text: tie(k.text, { names }) } : { term: '', text: tie(`${k.term} ${k.text}`, { names }) }));
   const termW = mode === 'table' && items.length
-    ? Math.min(Math.max(TERM_COL, Math.ceil(Math.max(...items.map((k) => advance(ctx, 'body', W.medium, k.term, 13))) * 1.04) + 12), Math.floor(inner * 0.45))
+    ? Math.min(Math.max(TERM_COL, Math.min(Math.ceil(Math.max(...items.map((k) => advance(ctx, 'body', W.medium, k.term, 13))) * 1.04) + 12, Math.floor(inner * 0.45)),
+      Math.ceil(Math.max(...items.flatMap((k) => k.term.split(/s+/).map((w) => advance(ctx, 'body', W.medium, w, 13)))) * 1.08) + 14), Math.floor(inner * 0.6))
     : TERM_COL;
   const linesIn = (weight, s, width) => { try { return wrapLines(ctx, 'body', weight, 13, s, width).length; } catch { return Math.max(1, Math.ceil(advance(ctx, 'body', weight, s, 13) * 1.04 / width)); } };
   const itemLines = itemed.map((k, i) => {

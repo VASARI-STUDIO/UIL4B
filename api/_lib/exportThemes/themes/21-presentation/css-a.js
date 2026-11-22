@@ -108,12 +108,12 @@ export function cssA(ctx) {
 
 /* palette: one panel per colour, edge to edge */
 .a-pal{top:132px}
-.a-pt-tile{display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 72px;margin:0;min-height:0;font-family:var(--body)}
+.a-pt-tile{container-type:inline-size;display:flex;flex-direction:column;justify-content:space-between;padding:28px 24px 72px;margin:0;min-height:0;font-family:var(--body)}
 .a-p0{padding-left:var(--m)}
 .a-ptext{font-size:44px;line-height:1.05}
 .a-ptext2{font-size:15px;line-height:1.45;font-weight:500}
-.a-pn{display:block;font-size:24px;line-height:1.1;margin-bottom:8px}
-.a-p0 .a-pn{font-size:36px}
+.a-pn{display:block;font-size:min(24px,14cqw);overflow-wrap:break-word;line-height:1.1;margin-bottom:8px}
+.a-p0 .a-pn{font-size:min(36px,14cqw)}
 
 /* proportion: the slide is the page, split by area */
 .a-pg{display:grid}

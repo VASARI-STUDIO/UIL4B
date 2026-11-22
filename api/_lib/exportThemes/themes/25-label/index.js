@@ -78,6 +78,8 @@ function baseCss(ctx) {
 /* colour panels: values at the top left, 12 px in */
 .sw-n{font-size:13px;line-height:18px;font-weight:${W.medium}}
 .sw-v{display:block}
+.sw-spine{writing-mode:vertical-rl;transform:rotate(180deg);display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px;white-space:nowrap;overflow:hidden}
+.sw-spine .sw-v{display:inline}
 .sw-s{position:absolute;font:500 13px/18px var(--chrome)}
 
 /* type plates */

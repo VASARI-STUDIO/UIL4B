@@ -194,8 +194,8 @@ export const guidelinesA = {
     const texts = [sample.headline, V[0].example, W[2].write, ctx.brand.lines.others[1], V[1].example];
     const chip = (c, i) => `<figure><div class="a-ch ${ctx.ratio(ctx.roles.light.surface, c.hex) < 1.3 ? 'hairline' : ''}" style="background:${c.hex};color:${inkOn(ctx, c.hex)}"><span class="num a-cno">${ref}.${i + 1}</span><span class="${i < 2 ? 'disp ' : ''}a-ptext">${A(texts[i % texts.length])}</span><span class="a-pn">${A(c.name)}</span></div><figcaption class="cap"><b>${A(c.name)}, ${A(ctx.cap(c.role))}</b>${A(c.lands)}</figcaption></figure>`;
     const vref = refOf(ctx, 'colour-values');
-    const tones = `<figure><div class="a-ch a-ch--t hairline">${ctx.tones.map((t) => `<span><i class="a-sw ${isGround(ctx, t.hex) ? 'hairline' : ''}" style="background:${t.hex}"></i><span><b>${A(t.name)}</b><span class="a-mono">${A(t.hex)}</span></span></span>`).join('')}</div><figcaption class="cap"><b>Tones</b>${vref ? `Their ramps and values are at ${vref}.` : 'Rules and quiet text.'}</figcaption></figure>`;
-    return std(ctx, 'palette', { lead, work: `<div class="a-pal">${cs.map(chip).join('')}${tones}</div>` });
+    const tones = !ctx.tones.length ? '' : `<figure><div class="a-ch a-ch--t hairline">${ctx.tones.map((t) => `<span><i class="a-sw ${isGround(ctx, t.hex) ? 'hairline' : ''}" style="background:${t.hex}"></i><span><b>${A(t.name)}</b><span class="a-mono">${A(t.hex)}</span></span></span>`).join('')}</div><figcaption class="cap"><b>Tones</b>${vref ? `Their ramps and values are at ${vref}.` : 'Rules and quiet text.'}</figcaption></figure>`;
+    return std(ctx, 'palette', { lead, work: `<div class="a-pal"${cs.length + (ctx.tones.length ? 1 : 0) > 6 ? ' style="grid-template-columns:repeat(4,minmax(0,1fr))"' : ''}>${cs.map(chip).join('')}${tones}</div>` });
   },
 
   proportion(ctx) {
