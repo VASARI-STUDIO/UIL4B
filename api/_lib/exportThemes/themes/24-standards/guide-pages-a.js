@@ -8,8 +8,8 @@ import { X0, XR, CW, COL, COLW, BOT, SUBH, CH, cap1, pad2, pct, numberWord, weig
 // ---------------------------------------------------------------- cover
 export function cover(ctx) {
   const K = kit(ctx), B = ctx.brand, G = ctx.logo.geos.colour, F = colourFacts(ctx), { R, S } = K, svg = [], slot = ctx.edition === 'slot';
-  const lw = Math.min(CW, slot ? slotW(ctx, 280) : 280), lh = (lw * G.h) / G.w, logoY = 104;
-  const logo = at(X0, logoY, logoArtK(ctx, 'colour', lw));
+  const lw = Math.min(CW, 280), lh = slot ? 80 : (lw * G.h) / G.w, logoY = 104;
+  const logo = at(X0, logoY, logoArtK(ctx, 'colour', lw, slot ? { h: lh, seat: true } : {}));
   svg.push(dimH(ctx, { x1: X0, x2: X0 + lw, y: logoY + lh + 22, label: inX(K, lw), col: R.ink, qcol: R.q, obj: logoY + lh }));
   // the brand's one line, as large as sets in three lines
   const line = B.lines.primary, d = B.fonts.display;
@@ -73,30 +73,32 @@ function logoDraw(ctx, maxTiles) {
   // 2 colourways, each on the ground it is drawn for (one tile per drawing; the slot edition one per colourway, as it draws one frame whatever the drawing)
   const groups = [];
   for (const g of LF.grounds) {
-    const key = slot ? `${g.groundHex.toLowerCase()}|${g.label}` : JSON.stringify(g.cw);
+    const key = slot ? g.groundHex.toLowerCase() : JSON.stringify(g.cw);
     const f = groups.find((o) => o.key2 === key);
     if (f) f.labels.push(g.label); else groups.push({ ...g, key2: key, labels: [g.label] });
   }
   if (groups.length > maxTiles) groups.length = maxTiles;
-  const lgw0 = Math.min(180, Math.max(116, Math.round((44 * G.w) / G.h))), lgw = slot ? Math.min(CW - 24, slotW(ctx, lgw0)) : lgw0, lgh = (lgw * G.h) / G.w;
+  const lgw0 = Math.min(180, Math.max(116, Math.round((44 * G.w) / G.h))), lgw = lgw0, lgh = slot ? 48 : (lgw * G.h) / G.w;
   let perRow = Math.min(3, groups.length);
   const tileW = (pr) => Math.floor((CW - 12 * (pr - 1)) / pr);
   while (perRow > 1 && lgw + 24 > tileW(perRow)) perRow -= 1;
   if (lgw + 24 > tileW(perRow)) throw new Error(`Standards guide: the colourway tile is ${tileW(perRow)} px wide and the logo needs ${lgw + 24}`);
-  const rowsN = Math.ceil(groups.length / perRow), th = Math.ceil(12 + lgh + 12 + 16 + 12), TW = tileW(perRow);
+  const TW = tileW(perRow), tileLab = (g) => (g.labels.length > 2 ? `${g.labels[0]}, ${g.labels[1]} and ${g.labels.length - 2} more` : g.labels.join(' and '));
+  const labLines = Math.max(...groups.map((g) => nLines(CH[400], tileLab(g), 12, TW - 24)));
+  const rowsN = Math.ceil(groups.length / perRow), th = Math.ceil(12 + lgh + 12 + 16 * labLines + 12);
   const B_h = SUBH + 8 + rowsN * th + (rowsN - 1) * 12;
   const drawB = (y) => sec(K, X0, y, CW, catNo(ctx, 'logo', 2), 'Colourways', 'each on the ground it is drawn for') + groups.map((g, i) => {
     const x = X0 + (i % perRow) * (TW + 12), ty = y + SUBH + 8 + Math.floor(i / perRow) * (th + 12), ink = R.onColour(g.groundHex, 12, 600);
-    return obj(K, x, ty, TW, th, g.groundHex, at(12, 12, art('colour', lgw, { colourway: g.key, color: ink })) + at(12, th - 28, A(g.labels.join(' and ')), { w: TW - 24, cls: 'ga-r ga-e', style: `color:${ink}` }));
+    return obj(K, x, ty, TW, th, g.groundHex, at(12, 12, art('colour', lgw, { colourway: g.key, color: ink, h: slot ? lgh : undefined })) + at(12, th - 12 - 16 * labLines, A(tileLab(g)), { w: TW - 24, cls: 'ga-r', style: `color:${ink}` }));
   }).join('');
 
   // 3 the smallest size, drawn at the size it names, with its width measured
-  const mn = L.minSize, minW = mn.screenPx, minH = (minW * G.h) / G.w, labelInside = !slot || minH >= SLOT_MIN_H;
+  const mn = L.minSize, minW = mn.screenPx, minH = slot ? 32 : (minW * G.h) / G.w, labelInside = !slot || minH >= SLOT_MIN_H;
   const minText = `Never set the logo narrower than ${mn.screenPx} px on screen or ${mn.printMm} mm in print, so the name keeps reading.`;
   const mnPlateW = minW + 24, mnTextW = CW - mnPlateW - 24, mnTextH = para(minText, mnTextW).h;
   const mnPlateH = Math.ceil(minH) + 24 + (labelInside ? 0 : 20), C_h = SUBH + 8 + Math.max(mnPlateH + 28, mnTextH);
   if (mnTextW < COLW) throw new Error(`Standards guide: the smallest size (${minW} px) leaves ${mnTextW} px for its text`);
-  const minArt = slot ? ctx.logo.html('colour', { width: minW, label: labelInside ? 'Logo' : '' }) : art('colour', minW);
+  const minArt = art('colour', minW, { h: slot ? minH : undefined });
   const drawC = (y) => {
     const py = y + SUBH + 8;
     svg.push(dimH(ctx, { x1: X0 + 12, x2: X0 + 12 + minW, y: py + mnPlateH + 18, label: `${minW} px`, col: R.ink, qcol: R.q, obj: py + mnPlateH }));
@@ -109,12 +111,12 @@ function logoDraw(ctx, maxTiles) {
   const LK = [['horizontal', 'Horizontal'], ['stacked', 'Stacked'], ['symbol', 'Symbol']];
   const lkWhen = (id) => (slot ? { horizontal: 'Headers, signatures, wide spaces.', stacked: 'Squarer spaces, such as avatars.', symbol: 'App icon, favicon and stamp.' }[id] : ctx.brand.logo.when[id]);
   const lkTile = 56, lkMaxH = 32, lkMaxW = COLW - 32;
-  const lkW = (id) => { const g = L.geos[id], w = Math.min(lkMaxW, (lkMaxH * g.w) / g.h); return slot ? Math.min(lkMaxW, Math.max(w, Math.ceil((SLOT_MIN_H * g.w) / g.h))) : w; };
+  const lkW = (id) => { const g = L.geos[id]; const w = Math.min(lkMaxW, (lkMaxH * g.w) / g.h); return slot ? Math.max(w, 56) : w; };
   const lkCap = Math.max(...LK.map(([id]) => nLines(CH[400], lkWhen(id), 12, COLW) * 16));
   const D_h = SUBH + 8 + lkTile + 8 + 16 + 2 + lkCap;
   const drawD = (y) => sec(K, X0, y, CW, catNo(ctx, 'logo', 4), 'Lockups') + LK.map(([id, name], i) => {
-    const x = COL[i], ty = y + SUBH + 8, w = lkW(id), h = (w * L.geos[id].h) / L.geos[id].w;
-    return obj(K, x, ty, COLW, lkTile, R.ground, at((COLW - w) / 2, (lkTile - h) / 2, art(id, w)), { frame: true })
+    const x = COL[i], ty = y + SUBH + 8, w = lkW(id), h0 = (w * L.geos[id].h) / L.geos[id].w, h = slot ? Math.min(44, Math.max(28, h0)) : h0;
+    return obj(K, x, ty, COLW, lkTile, R.ground, at((COLW - w) / 2, (lkTile - h) / 2, art(id, w, { h: slot ? h : undefined })), { frame: true })
       + at(x, ty + lkTile + 8, A(name), { cls: 'ga-h' }) + at(x, ty + lkTile + 8 + 18, A(lkWhen(id)), { w: COLW, cls: 'ga-r ga-q' });
   }).join('');
 

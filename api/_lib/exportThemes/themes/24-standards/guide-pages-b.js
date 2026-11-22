@@ -31,13 +31,13 @@ export function appliedPage(ctx) {
   const card0 = app.card || {}, DIM = 28;
   const caps = [{ name: sg.name, detail: sg.mm, w: sw, mm: sg.w }, { name: 'Business card', detail: '85 x 54 mm', w: cdW, mm: 85 }];
   const capH = Math.max(...caps.map((c) => 20 + (c.detail ? para(c.detail, c.w, { size: 12, lh: 16 }).h : 0)));
-  const sInk = R.onColour(R.action, 13, 600), swCw = R.colourwayOn(R.action), lw0 = Math.min(sw - 32, ctx.edition === 'slot' ? slotW(ctx, 110) : 110), lh0 = (lw0 * G.h) / G.w;
+  const sInk = R.onColour(R.action, 13, 600), swCw = R.colourwayOn(R.action), lw0 = Math.min(sw - 32, 110), lh0 = ctx.edition === 'slot' ? 44 : (lw0 * G.h) / G.w;
   const sRoom = OH - 32 - lh0 - 16;
   const sSize = [26, 22, 18, 16, 14].find((s) => nLines(S.disp, sg.line, s, sw - 32, st) * Math.round(s * 1.15) <= sRoom) || 14;
-  const sign = (y0) => obj(K, so.x, y0, sw, OH, R.action, at(16, 16, logoArt(ctx, 'colour', Math.min(sw - 32, lw0), { colourway: swCw, color: sInk })) + at(16, 16 + lh0 + 16, A(sg.line), { w: sw - 32, cls: 'ga-d', style: `font-size:${sSize}px;line-height:${Math.round(sSize * 1.15)}px;color:${sInk}` }), { style: 'overflow:hidden' });
-  const cLw = Math.min(cdW - 32, ctx.edition === 'slot' ? slotW(ctx, 96) : 96), cInk = R.onColour(R.ground, 13, 600);
+  const sign = (y0) => obj(K, so.x, y0, sw, OH, R.action, at(16, 16, logoArt(ctx, 'colour', Math.min(sw - 32, lw0), { colourway: swCw, color: sInk, h: ctx.edition === 'slot' ? lh0 : undefined })) + at(16, 16 + lh0 + 16, A(sg.line), { w: sw - 32, cls: 'ga-d', style: `font-size:${sSize}px;line-height:${Math.round(sSize * 1.15)}px;color:${sInk}` }), { style: 'overflow:hidden' });
+  const cLw = Math.min(cdW - 32, 96), cInk = R.onColour(R.ground, 13, 600);
   const bizcard = (y0) => obj(K, co.x, y0, cdW, cdH, R.ground,
-    at(16, 16, logoArt(ctx, 'colour', cLw)) + at(16, cdH - 16 - 54, `<div class="ga-body" style="font-weight:600;color:${cInk}">${A(card0.person || '')}</div><div class="ga-r" style="color:${cInk}">${A(card0.role || '')}</div><div class="ga-m" style="color:${cInk}">${A(card0.contact || '')}</div>`, { w: cdW - 32 }), { frame: true, style: 'overflow:hidden' });
+    at(16, 16, logoArt(ctx, 'colour', cLw, { h: ctx.edition === 'slot' ? 40 : undefined })) + at(16, cdH - 16 - 54, `<div class="ga-body" style="font-weight:600;color:${cInk}">${A(card0.person || '')}</div><div class="ga-r" style="color:${cInk}">${A(card0.role || '')}</div><div class="ga-m" style="color:${cInk}">${A(card0.contact || '')}</div>`, { w: cdW - 32 }), { frame: true, style: 'overflow:hidden' });
   const social = (ctx.edition === 'slot' ? ['Post 1, image and caption', 'Post 2, image and caption', 'Post 3, image and caption'] : (app.social || [])).slice(0, 3), sRows = social.map((s) => Math.max(24, para(s, soW - 72).h + 8)), sH = 1 + sum(sRows);
   const rowSec = { h: SUBH + 8 + OH + DIM + capH, draw: (y) => {
     const y0 = y + SUBH + 8, cy = y0 + OH - cdH;
@@ -52,11 +52,11 @@ export function appliedPage(ctx) {
   const subject = em.subject || '', subjLines = nLines(S.disp, subject, 22, tW, st), bp = para(emBody, tW, { stem: S.body });
   const BK = buttonKit(ctx, K);
   const EH = pad + 20 + 14 + subjLines * 26 + 12 + bp.h + 20 + BK.bh + pad;
-  const emSec = { h: SUBH + 8 + EH, flex: 160, draw: (y, extra = 0) => {
+  const emSec = { h: SUBH + 8 + EH, flex: 40, draw: (y, extra = 0) => {
     const ey = y + SUBH + 8, ink = R.onColour(R.ground, 13, 600), by = pad + 34 + subjLines * 26 + 12 + bp.h + 20;
     return sec(K, X0, y, CW, catNo(ctx, 'applied', 2), 'Order email')
-      + obj(K, X0, ey, CW, EH + extra, R.ground, at(pad, pad, `<span class="ga-h">${A(em.to ? `To ${em.to}` : (card0.person || ''))}</span>`, { w: tW - 200, style: `color:${ink}` })
-        + at(CW - pad - 190, pad, A(em.time || ''), { w: 190, cls: 'ga-m', style: `text-align:right;color:${ink}` })
+      + obj(K, X0, ey, CW, EH + extra, R.ground, at(pad, pad, `<span class="ga-h">${A(em.to ? `To ${em.to}` : (card0.person || ''))}</span>`, { w: tW - 280, style: `color:${ink}` })
+        + at(CW - pad - 260, pad, A(em.time || ''), { w: 260, cls: 'ga-m', style: `text-align:right;color:${ink}` })
         + at(pad, pad + 34, A(subject), { w: tW, cls: 'ga-d', style: `font-size:22px;line-height:26px;color:${ink}` })
         + at(pad, pad + 34 + subjLines * 26 + 12, A(emBody), { w: tW, cls: 'ga-body', style: `color:${ink}` })
         + rect(pad, by, BK.w1, BK.bh, `background:${BK.bt.fill};color:${BK.bt.label};${BK.bstyle}`, A(BK.vPrimary)), { frame: true });
@@ -72,7 +72,7 @@ export function typePage(ctx) {
   const t = title(ctx, K, 'type', copyOf(ctx, 'type', [`${cap1(numberWord(LAD.length))} steps, set in ${listAnd(fams)}.`, 'The scale, step by step.']));
   const sp = copyRaw(ctx, 'typeSpecimens', {}), lines0 = [B.lines.primary, ...(B.lines.others || [])].filter(Boolean);
   const specimen = (s) => {
-    if (ctx.edition === 'slot') return s.face === 'display' ? 'Aa Bb Cc 123, display' : 'A line of text set in this step.';
+    if (ctx.edition === 'slot') return s.face === 'display' ? 'Aa Bb Cc 123' : 'A line of text set in this step.';
     const own = (sp[s.token] || [])[0] || (s.token === 'display' && sp.display && sp.display[0]);
     return own || (s.face === 'display' ? lines0[0] : (lines0.find((l) => l.length > 18) || lines0[0] || s.name));
   };
@@ -87,12 +87,17 @@ export function typePage(ctx) {
   }).join('') };
   // the ladder: each step at its own size (a display step over 56 px is shown at 56 and says so), its name and numbers in the first column, a hairline between steps
   const CAP = 56, LW = 168, SX = X0 + LW + 16, SW = XR - SX;
+  // a step is never shown larger than the one above it was, and a long specimen that would shrink the step a long way is swapped for a short one
+  let prev = null;
   const rowsD = LAD.map((s) => {
-    const stem = stemOf(ctx, s.face, s.weight), word = specimen(s), mult = s.face === 'display' ? K.st : 1;
-    let sz = Math.min(s.size, CAP);
-    while (sz > 14 && tw(stem, word, sz) * mult * 1.03 > SW) sz -= 2;
+    const stem = stemOf(ctx, s.face, s.weight), mult = s.face === 'display' ? K.st : 1, want = Math.min(s.size, CAP);
+    const fit = (w, from) => { let z = from; while (z > 14 && tw(stem, w, z) * mult * 1.2 > SW) z -= 2; return z; };
+    let word = specimen(s), sz = want;
+    if (prev && prev.shrunk && s.size < prev.s.size) sz = Math.min(sz, Math.floor((prev.sz * 0.8) / 2) * 2);
+    sz = fit(word, sz);
+    if (sz < want * 0.7 && s.face === 'display') { word = 'Aa Bb Cc 123'; sz = fit(word, want); }
     const lh = Math.max(Math.round((s.line / s.size) * sz), Math.ceil(sz * 1.2), 20);
-    return { s, sz, lh, h: Math.max(lh, 34) + 16, shrunk: sz < s.size };
+    return (prev = { s, sz, lh, word, h: Math.max(lh, 34) + 16, shrunk: sz < s.size });
   });
   const lH = sum(rowsD.map((r) => r.h)) + 1;
   const ladSec = { h: SUBH + 8 + lH, flex: 44 * rowsD.length, draw: (y, extra = 0) => {
@@ -102,7 +107,7 @@ export function typePage(ctx) {
       const { s } = r, fam = s.face === 'display' ? 'var(--display)' : s.face === 'mono' ? 'var(--mono)' : 'var(--body)', h = r.h + add;
       const row = hr(X0, yy, CW, R.edge)
         + at(X0, yy + 8, `<div class="ga-h">${A(s.name)}</div><div class="ga-r ga-q">${s.size} / ${s.line}, ${A(weightName(s.weight))}</div>${r.shrunk ? `<div class="ga-r ga-q">shown at ${r.sz}</div>` : ''}`, { w: LW })
-        + at(SX, yy + Math.floor((h - r.lh) / 2), A(specimen(s)), { w: SW, cls: 'ga-spec', style: `font-family:${fam};font-weight:${s.weight};font-size:${r.sz}px;line-height:${r.lh}px;${s.face === 'display' ? `font-stretch:${d.stretch || 100}%;` : ''}height:${r.lh}px` });
+        + at(SX, yy + Math.floor((h - r.lh) / 2), A(r.word), { w: SW, cls: 'ga-spec', style: `font-family:${fam};font-weight:${s.weight};font-size:${r.sz}px;line-height:${r.lh}px;${s.face === 'display' ? `font-stretch:${d.stretch || 100}%;` : ''}height:${r.lh}px` });
       yy += h;
       return row;
     }).join('');

@@ -83,9 +83,20 @@ export function kit(ctx) {
   };
 }
 // the logo at a width; in the slot edition a frame too short to hold its word is drawn without the word (the page names it instead)
-export const art = (ctx, id, w, o = {}) => {
-  const g = ctx.logo.geos[id];
-  return ctx.edition === 'slot' && (w * g.h) / g.w < SLOT_MIN_H - 0.5 ? ctx.logo.html(id, { width: r1(w), ...o, label: '' }) : logoArt(ctx, id, w, o);
+// This theme draws the placeholder mark larger than the shared frame does: about 40% of the slot's width, never more than 80% of its height,
+// and without the "Your logo" line (the page names the slot instead). The frame itself is the shared one, untouched.
+// o.h draws the slot taller than the logo's own proportion (a long name makes a very shallow frame); o.seat sits the mark on the frame's foot.
+const bigMark = (html, w, h, own, seat) => {
+  if (!html.includes('class="logo-slot"')) return html;
+  const mw = Math.min(w * 0.4, h * 0.8 * (323.61 / 200)), mh = mw * (200 / 323.61);
+  if (own) html = html.replace(/(class="logo-slot"[^>]*?height:)[\d.]+px/, (m, a) => `${a}${h}px`);
+  if (seat) html = html.replace('justify-content:center', 'justify-content:flex-end');
+  return html.replace(/(viewBox="0 0 323\.61 200" )width="[^"]*" height="[^"]*"/, (m, a) => `${a}width="${mw.toFixed(1)}" height="${mh.toFixed(1)}"`).replace(/<span[^>]*>Your logo<\/span>/, '');
+};
+export const art = (ctx, id, w, { h: own, seat, ...o } = {}) => {
+  const g = ctx.logo.geos[id], h = own || (w * g.h) / g.w;
+  if (ctx.edition !== 'slot') return logoArt(ctx, id, w, o);
+  return bigMark(own || h < SLOT_MIN_H - 0.5 ? ctx.logo.html(id, { width: r1(w), ...o, label: '' }) : logoArt(ctx, id, w, o), w, h, !!own, seat);
 };
 // a length in x, to the half
 export const inX = (K, px) => `${half(px / K.X)}x`;
@@ -131,9 +142,10 @@ function footRuler(K) {
 // ---- the page: running head, the work, the thumb tab, the foot ruler ----
 export function shell(ctx, id, body, svg = '') {
   const K = kit(ctx), B = ctx.brand, R = K.R, n = ctx.pageNo(id) || 0, sec1 = `${pad2(n)} ${NAME[id]}`;
-  const left = headLabel(B.name, (s) => tw(CH[600], s, 12) <= COL[1] - X0 - 24, 'brand standards');
+  const secW = Math.max(...Object.values(NAME).map((v) => tw(CH[600], `00 ${v}`, 12))), secX = Math.min(COL[1] + 60, COL[2] - 16 - Math.ceil(secW));
+  const left = headLabel(B.name, (s) => tw(CH[600], s, 12) <= secX - X0 - 24, 'brand standards');
   const ver = /^\d/.test(B.version.number) ? `Version ${B.version.number}` : String(B.version.number);
-  const slots = [[X0, left], [COL[1], sec1]];
+  const slots = [[X0, left], [secX, sec1]];
   if (COL[2] + tw(CH[600], ver, 12) + 12 <= XR - 60) slots.push([COL[2], ver]);
   const head = hr(X0, 56, CW, R.ink) + slots.map(([x, t]) => at(x, 32, A(t), { cls: 'ga-h' })).join('')
     + at(XR - 60, 32, pad3(n), { w: 60, cls: 'ga-h', style: 'text-align:right' });

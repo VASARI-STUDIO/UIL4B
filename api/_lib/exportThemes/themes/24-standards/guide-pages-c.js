@@ -22,7 +22,7 @@ export function contrastPage(ctx) {
         + rect(AX, yy + mid, AW, 1, `background:${R.edge}`)
         + rect(AX, yy + mid - 3, Math.max(1, r1((Math.min(p.ratio, 21) / 21) * AW)), 6, `background:${R.ink}`)
         + at(AX + AW + 16, yy + mid - 8, A(`${p.ratioText}:1`), { w: 60, cls: 'ga-m' })
-        + at(AX + AW + 76, yy + mid - 8, A(p.grade), { w: XR - (AX + AW + 76), cls: 'ga-r ga-q ga-e', style: 'line-height:16px' });
+        + at(AX + AW + 76, yy + mid - 8, A(p.grade), { w: XR - (AX + AW + 76), cls: 'ga-r ga-e', style: `line-height:16px;color:${R.ink};font-weight:600` });
     }).join('') + hr(X0, y + SUBH + 8 + P.length * rh, CW, R.edge);
   } };
   // the tones the guide draws that the palette does not carry
