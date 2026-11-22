@@ -1,0 +1,27 @@
+{
+  "prefix": "stash",
+  "total": 20,
+  "title": "Stash Icons",
+  "uncategorized": [
+    "home",
+    "home-light",
+    "home-solid",
+    "home-duotone",
+    "heart",
+    "heart-solid",
+    "heart-duotone",
+    "star",
+    "star-solid",
+    "search",
+    "search-light",
+    "bell",
+    "bell-solid",
+    "calendar",
+    "check",
+    "plus",
+    "user",
+    "user-solid",
+    "mail",
+    "settings"
+  ]
+}

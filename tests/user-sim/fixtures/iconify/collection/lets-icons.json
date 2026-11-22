@@ -1,0 +1,27 @@
+{
+  "prefix": "lets-icons",
+  "total": 20,
+  "title": "Lets Icons",
+  "uncategorized": [
+    "home",
+    "home-light",
+    "home-fill",
+    "home-duotone",
+    "home-duotone-line",
+    "heart",
+    "heart-fill",
+    "heart-duotone",
+    "star",
+    "star-fill",
+    "star-light",
+    "search",
+    "search-duotone-line",
+    "bell",
+    "bell-fill",
+    "calendar",
+    "check",
+    "plus",
+    "user",
+    "user-alt"
+  ]
+}

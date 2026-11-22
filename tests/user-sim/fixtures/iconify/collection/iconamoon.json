@@ -1,0 +1,27 @@
+{
+  "prefix": "iconamoon",
+  "total": 20,
+  "title": "IconaMoon",
+  "uncategorized": [
+    "home",
+    "home-bold",
+    "home-fill",
+    "home-duotone",
+    "home-light",
+    "home-thin",
+    "heart",
+    "heart-bold",
+    "heart-fill",
+    "heart-duotone",
+    "star",
+    "star-fill",
+    "search",
+    "search-bold",
+    "bell",
+    "bell-fill",
+    "calendar",
+    "check",
+    "close",
+    "plus"
+  ]
+}

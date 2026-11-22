@@ -1066,7 +1066,8 @@ test('a saved duotone icon reopens with the Original colour chip', async ({ page
   await go(page, '/create/icons')
   await page.getByRole('group', { name: 'Icon weight' }).getByRole('button', { name: /^Duo/ }).click()
   const cell = page.locator('.ig .ic').first()
-  await expect(cell).toHaveAttribute('aria-label', /-duotone$/)
+  // Several packs draw Duo, so the All packs cell names its pack after the glyph.
+  await expect(cell).toHaveAttribute('aria-label', /-duotone(?:, [^,]+)?$/)
   await cell.click()
   const save = page.getByRole('button', { name: 'Save to project', exact: true })
   await expect(save).toBeEnabled()

@@ -338,3 +338,14 @@ test('the gate copy is complete, count-driven, and reuses the app\'s own action 
   assert.match(ICON_GATE_COPY.lockedPro.heading('Simple Icons'), /Simple Icons/)
   assert.match(ICON_GATE_COPY.lockedFree.heading('Solar'), /Solar/)
 })
+
+test('the eight packs of batch 3 are free-tier interface packs', () => {
+  for (const pack of ['iconamoon', 'icon-park-outline', 'icon-park-solid', 'icon-park-twotone', 'stash', 'glyphs', 'lets-icons', 'mynaui']) {
+    assert.equal(tierOf(pack), 'free', `${pack} is free`)
+    assert.equal(canSeePack(pack, 'anon'), false, `${pack} needs an account`)
+    assert.equal(canSeePack(pack, 'free'), true)
+    assert.equal(ICON_PACK_TIERS[pack].group, undefined, `${pack} is an interface pack`)
+  }
+  for (const never of ['icon-park', 'glyphs-poly']) assert.equal(ICON_PACK_TIERS[never], undefined, `${never} is coloured and stays out`)
+  assert.equal(Object.keys(ICON_PACK_TIERS).filter((p) => tierOf(p) === 'anon').length, 5)
+})

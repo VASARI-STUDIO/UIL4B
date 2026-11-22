@@ -21,28 +21,21 @@
 // ── How to change who sees what ────────────────────────────────────────────
 //
 // Edit the `tier` word on that pack's line. Nothing else. No component code
-// knows any pack name; `src/pages/IconLibrary.jsx` asks this module and does
-// what it says. Moving `simple-icons` from 'paid' to 'free' is a one-word edit
-// and the grid, the pack menu, the group chips, the search scope and the
-// network requests all follow on the next render.
+// knows any pack name; `src/pages/IconLibrary.jsx` asks this module. The grid,
+// pack menu, group chips, search scope and network requests all follow.
 //
 // ── Why every line carries a `why` ─────────────────────────────────────────
 //
-// Because for several packs THE RULE AND THE PRODUCT CALL DISAGREE, and a
-// table that hid that would be a table nobody could audit. simpleicons.org,
+// For several packs the rule and the product call disagree. simpleicons.org,
 // svgporn.com, devicon.dev, skillicons.dev, flagicons.lipis.dev, flagpack.xyz
-// and openmoji.org are all free browsers run by the pack's own creator — and
-// all seven sit in 'paid', because free users do not get brands and
-// the flag and emoji sets are paid explicitly. Each line says so, so the
-// next reader knows it was a product decision, not a miss.
+// and openmoji.org are free browsers run by each creator, yet all seven sit
+// in 'paid': free users get no brands, and flags and emoji are paid on purpose.
 //
 // ── The house rule this table serves ───────────────────────────────────────
 //
 // src/utils/lockedPreview.js: a locked thing's payload never reaches the
-// browser. Here that is stronger than not rendering — a pack the viewer cannot
-// see is never REQUESTED. No /collection, no batched /{prefix}.json?icons=, no
-// prefix in the /search scope. Fetch-then-hide would leak the payload and spend
-// the rate limit that IconLibrary.jsx was rescued from.
+// browser. A pack the viewer cannot see is never REQUESTED: no /collection,
+// no batched /{prefix}.json?icons=, no prefix in the /search scope.
 
 // The tiers, widest last. Exported so a caller can compare rather than
 // hard-code the ordering.
@@ -79,6 +72,14 @@ export const ICON_PACK_TIERS = {
   pixelarticons:      { tier: 'free', why: 'pixelarticons.com, free. The free set only, never the Pro glyphs.' },
   'radix-icons':      { tier: 'free', why: 'The Radix team publish it free. Drawn on a 15px grid.' },
   bi:                 { tier: 'free', why: 'icons.getbootstrap.com, free. Outline and fill pairs on a 16px grid.' },
+  iconamoon:          { tier: 'free', why: 'Free (CC BY 4.0). Bold, fill and duotone in one prefix.' },
+  'icon-park-outline': { tier: 'free', why: 'ByteDance IconPark, free (Apache-2.0). Outline style.' },
+  'icon-park-solid':  { tier: 'free', why: 'ByteDance IconPark, free (Apache-2.0). Solid style.' },
+  'icon-park-twotone': { tier: 'free', why: 'ByteDance IconPark, free (Apache-2.0). Two-tone style.' },
+  stash:              { tier: 'free', why: 'Free on GitHub (MIT). Regular, light, solid and duotone.' },
+  glyphs:             { tier: 'free', why: 'Free on GitHub (MIT). Regular, bold and duo weights.' },
+  'lets-icons':       { tier: 'free', why: 'Free (CC BY 4.0). Line, fill and duotone styles.' },
+  mynaui:             { tier: 'free', why: 'Myna UI, free on GitHub (MIT). Line and solid styles.' },
 
   // ── paid · brands ────────────────────────────────────────────────────────
   // Read the `why` before moving one of these. The first four HAVE a free

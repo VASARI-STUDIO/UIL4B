@@ -142,7 +142,8 @@ test.describe('the icon weight segment', () => {
     await expect(bold).toHaveAttribute('aria-pressed', 'false')
     await expect(bold).toHaveCSS('text-decoration-line', 'none')
     // The reason is in the name, not only in a tooltip a keyboard never sees.
-    await expect(bold).toHaveAccessibleName(/drawn by Phosphor only/)
+    // It names the packs that do draw Bold, Phosphor first.
+    await expect(bold).toHaveAccessibleName(/drawn by Phosphor(?:, [^,]+)* only$/)
     // Until Lucide's own listing lands the grid still shows the "All packs" cells, so a read
     // taken now is the old view and differs from the Lucide list that replaces it.
     // Signed out the count is not drawn; the single-pack view is the one with no pack name on its cells.

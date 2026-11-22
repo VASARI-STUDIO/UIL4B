@@ -191,7 +191,7 @@ const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi', 'iconamoon', 'icon-park-outline', 'icon-park-solid', 'icon-park-twotone', 'stash', 'glyphs', 'lets-icons', 'mynaui']
 const ALL_PACKS = [...new Set([...INTERFACE_PACKS, 'simple-icons', ...ICON_GROUPS.coloured.packs, ...EMOJI_PACKS])]
 
 // The category tray's options (All, Coloured, Animated, Editable) are built inside
@@ -370,6 +370,11 @@ const CUSTOMISER_DEFAULTS = Object.freeze({
 //   Fluent UI              -24-regular, -24-filled           — Fill
 //   Bootstrap Icons        outline, -fill   (a subset)       — Fill
 //   Pixelarticons          outline, -solid  (a subset)       — Fill
+//   IconaMoon              bare, -bold, -fill, -duotone      — Bold, Fill, Duo
+//   Stash Icons            bare, -solid, -duotone            — Fill, Duo
+//   Glyphs                 bare, -bold, -duo                 — Bold, Duo (-outline stays out of Regular)
+//   Lets Icons             bare, -fill, -duotone             — Fill, Duo
+//   Myna UI Icons          bare, -solid                      — Fill
 //
 // Lucide draws one weight and so offers Regular only. A segment the current
 // scope cannot honour is DISABLED with the reason (which packs do draw it),
@@ -385,7 +390,11 @@ const ICON_WEIGHTS = [
   { id: 'duo', label: 'Duo' },
 ]
 const WEIGHT_RULES = {
-  bold: { ph: n => /-bold$/.test(n) },
+  bold: {
+    ph: n => /-bold$/.test(n),
+    iconamoon: n => /-bold$/.test(n),
+    glyphs: n => /-bold$/.test(n),
+  },
   fill: {
     ph: n => /-fill$/.test(n),
     heroicons: n => /-solid$/.test(n) && !/-(?:16|20)-solid$/.test(n),
@@ -394,10 +403,20 @@ const WEIGHT_RULES = {
     fluent: n => /-24-filled$/.test(n),
     bi: n => /-fill$/.test(n),
     pixelarticons: n => /-solid$/.test(n),
+    iconamoon: n => /-fill$/.test(n),
+    stash: n => /-solid$/.test(n),
+    'lets-icons': n => /-fill$/.test(n),
+    mynaui: n => /-solid$/.test(n),
   },
-  duo: { ph: n => /-duotone$/.test(n) },
+  duo: {
+    ph: n => /-duotone$/.test(n),
+    iconamoon: n => /-duotone$/.test(n),
+    stash: n => /-duotone$/.test(n),
+    glyphs: n => /-duo$/.test(n),
+    'lets-icons': n => /-duotone$/.test(n),
+  },
 }
-const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir', fluent: 'Fluent UI', bi: 'Bootstrap Icons', pixelarticons: 'Pixelarticons' }
+const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir', fluent: 'Fluent UI', bi: 'Bootstrap Icons', pixelarticons: 'Pixelarticons', iconamoon: 'IconaMoon', stash: 'Stash Icons', glyphs: 'Glyphs', 'lets-icons': 'Lets Icons', mynaui: 'Myna UI Icons' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
 // Collections use the pack's Regular artwork; other scopes honour the weight.
 // `tier` also drops the icons a pack keeps for Pro (Carbon's logo-*), so a name the
@@ -3352,7 +3371,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
 const PACK_MENU = [
   {
     label: 'Interface',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon'], ['fluent', 'Fluent UI'], ['pixelarticons', 'Pixelarticons'], ['radix-icons', 'Radix Icons'], ['bi', 'Bootstrap Icons']],
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon'], ['fluent', 'Fluent UI'], ['pixelarticons', 'Pixelarticons'], ['radix-icons', 'Radix Icons'], ['bi', 'Bootstrap Icons'], ['iconamoon', 'IconaMoon'], ['icon-park-outline', 'IconPark Outline'], ['icon-park-solid', 'IconPark Solid'], ['icon-park-twotone', 'IconPark Two-tone'], ['stash', 'Stash Icons'], ['glyphs', 'Glyphs'], ['lets-icons', 'Lets Icons'], ['mynaui', 'Myna UI Icons']],
   },
   {
     label: 'Brand logos',
