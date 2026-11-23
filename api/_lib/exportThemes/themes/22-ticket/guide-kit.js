@@ -156,8 +156,8 @@ export const hr = (x, y, w, col) => rect(x, y, w, 1, `border-top:1px dotted ${co
 export const obj = (K, x, y, w, h, hex, inner = '', { frame = false, style = '' } = {}) => rect(x, y, w, h, `background:${hex};${frame || K.R.near(hex) ? `outline:1px solid ${K.R.edge};outline-offset:-1px;` : ''}${style}`, inner);
 // a section header: a field chip with the number, the name beside it, a dotted rule running out to a quiet note at the right
 export function sec(K, x, y, w, no, name, note = '') {
-  const R = K.R, nameW = Math.ceil(tw(CH[600], name, 15)), noteW = note ? Math.ceil(tw(CH[400], note, 12, 0.01)) + 2 : 0, lead0 = x + 38 + nameW + 12;
-  const showNote = note && x + w - noteW - 12 - lead0 >= 24, ruleEnd = showNote ? x + w - noteW - 12 : x + w;
+  const R = K.R, nameW = Math.ceil(tw(CH[600], name, 15)), noteW = note ? Math.ceil(tw(CH[400], note, 12, 0.01) * 1.06) + 6 : 0, lead0 = x + 38 + nameW + 12;
+  const showNote = note && x + w - noteW - 20 - lead0 >= 32, ruleEnd = showNote ? x + w - noteW - 20 : x + w;
   return rect(x, y, 28, 22, `background:${R.field}`, `<div class="tk-m" style="line-height:22px;text-align:center;font-weight:500;color:${R.fieldInk}">${A(no)}</div>`)
     + at(x + 38, y + 1, A(name), { cls: 'tk-h' })
     + (ruleEnd - lead0 >= 16 ? rect(lead0, y + 10, ruleEnd - lead0, 2, `border-top:2px dotted ${R.ink}`) : '')

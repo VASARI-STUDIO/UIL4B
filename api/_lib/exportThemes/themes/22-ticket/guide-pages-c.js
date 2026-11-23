@@ -10,7 +10,7 @@ import { X0, XR, CW, SUBH, BOT, CH, cap1, numberWord, nLines, clampText, clampCs
 export function contrastPage(ctx) {
   const K = kit(ctx), { R } = K, F = contrastFacts(ctx), P = F.pairs;
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
-  const RH = P.length > 10 ? 34 : 40, AX = 400, AW = 150, TXW = AX - X0 - 88;
+  const RH = P.length > 10 ? 34 : 40, AX = 460, AW = 110, TXW = AX - X0 - 88;
   // each pair's name wraps to two lines with its usage line under it; when the page cannot hold that, the usage line takes one line, and last the name does too
   const LEVELS = [[2, 2, RH], [2, 1, RH], [1, 1, RH], [1, 0, RH], [1, 0, 24]]; let PS = P;
   const rowsAt = ([lm, um, floor]) => PS.map((p) => {
@@ -46,9 +46,9 @@ export function contrastPage(ctx) {
   const palName = (id) => { const c = ctx.byId[id]; return !c ? String(id) : ctx.tones.some((tn) => tn.id === id) && c.role.endsWith('text') ? ctx.cap(c.role) : c.name; };
   const unused = (ctx.unusedPairs || []).slice().sort((a, b) => parseFloat(b.ratioText) - parseFloat(a.ratioText)).slice(0, 6);
   const note = `${GRADE_NOTE}${unused.length ? ` Not used: ${unused.map((u) => `${palName(u.fg)} on ${palName(u.bg)} (${u.ratioText}:1)`).join(', ')}.` : ''}`;
-  const noteH = para(note, CW - 88, { size: 12, lh: 16, stem: K.S.body }).h;
+  const noteH = para(note, CW - 88, { size: 12, lh: 20, stem: K.S.body }).h;
   const noteSec = { h: SUBH + 8 + noteH + 8 + 1, draw: (y) => sec(K, X0, y, CW, tones.length ? '03' : '02', 'Note')
-    + register(K, X0, y + SUBH + 8, CW, [['Reading', `<div class="tk-r" style="line-height:16px">${A(note)}</div>`, noteH + 8]], { kw: 88 }) };
+    + register(K, X0, y + SUBH + 8, CW, [['Reading', `<div class="tk-r" style="line-height:20px">${A(note)}</div>`, noteH + 8]], { kw: 88 }) };
   // the grades: four cells, each the least ratio that earns it, drawn on the same bar as the pairs
   const GR = [['Fail', 'under 3:1', 0], ['AA Large', '3:1 and over', 3], ['AA', '4.5:1 and over', 4.5], ['AAA', '7:1 and over', 7]], GW = Math.floor((CW - 12 * 3) / 4), GH = 64;
   const gradesSec = { h: SUBH + 8 + GH, draw: (y) => sec(K, X0, y, CW, tones.length ? '04' : '03', 'Grades', 'least ratio for each, out of 21') + GR.map(([n, r, min], i) => {
@@ -140,13 +140,13 @@ export function usagePage(ctx) {
   const linkSec = { h: SUBH + 8 + lH, draw: (y) => {
     const by = y + SUBH + 8;
     return sec(K, X0, y, CW, '03', 'Link') + specReg(X0, by, lspec)
-      + obj(K, PLX, by, PLW, lH, R.ground, at(24, Math.floor((lH - lk.type.line) / 2), A(lk.text), { style: `${font(lk.type)}color:${lkCol.hex};text-decoration:underline;text-decoration-thickness:${lk.border ? lk.border.px : 1.5}px;text-underline-offset:3px;white-space:nowrap` }), { frame: true });
+      + obj(K, PLX, by, PLW, lH, R.ground, at(24, Math.floor((lH - lk.type.line) / 2), A('Read the terms'), { style: `${font(lk.type)}color:${lkCol.hex};text-decoration:underline;text-decoration-thickness:${lk.border ? lk.border.px : 1.5}px;text-underline-offset:3px;white-space:nowrap` }), { frame: true });
   } };
   // the card's ink: its colour's own ink when that reads at 4.5, else the text colour, else the best of the sheet's ink, black and white
   const cardInk = (() => {
     let own = null;
     try { const cf = colourFacts(ctx).find((c) => c.hex.toLowerCase() === String(cd.fill).toLowerCase()); own = cf && cf.ink ? cf.ink.hex : null; } catch { /* no facts: own stays null */ }
-    const cands = [own, L.text, R.ink, '#000000', '#ffffff'].filter(Boolean);
+    const cands = [R.ink, own, L.text, '#000000', '#ffffff'].filter(Boolean);
     return cands.find((h) => ctx.ratio(h, cd.fill) >= 4.5) || cands.reduce((a, b) => (ctx.ratio(b, cd.fill) > ctx.ratio(a, cd.fill) ? b : a));
   })();
   const cardInkName = lkHexName(cardInk) || cardInk.replace('#', '').toUpperCase();

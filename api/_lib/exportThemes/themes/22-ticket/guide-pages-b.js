@@ -95,8 +95,8 @@ export function typePage(ctx) {
   const facesSec = { h: SUBH + 8 + PHt, flex: 60, draw: (y, extra = 0) => sec(K, X0, y, CW, '01', 'Faces') + plates.map(([fam, wt, role], i) => {
     const x0 = X0 + Math.round((i * CW) / plates.length), x1 = X0 + Math.round(((i + 1) * CW) / plates.length), pw = x1 - x0;
     const w = role === 'display' ? ctx.weights.heading : 400, fam2 = role === 'display' ? 'var(--display)' : role === 'mono' ? 'var(--bmono)' : 'var(--body)';
-    return obj(K, x0, y + SUBH + 8, pw, PHt + extra, R.ground, at(16, 10 + Math.floor(extra / 2), `<span style="font-family:${fam2};font-weight:${w};font-size:40px;line-height:44px">Aa</span>`, { cls: 'tk-nw' })
-      + at(16, 58 + extra, `<div class="tk-h tk-e" style="width:${pw - 32}px">${A(fam)}</div><div class="tk-r tk-q tk-e" style="width:${pw - 32}px">${A(wt)}</div>`), { frame: true });
+    return obj(K, x0, y + SUBH + 8, pw, PHt + extra, R.ground, at(16, 10 + Math.floor(extra / 2), `<span style="font-family:${fam2};font-weight:${w};font-size:40px;line-height:44px">Aa</span>`, { w: pw - 32, cls: 'tk-nw', style: 'color:var(--ink)' })
+      + at(16, 58 + extra, `<div class="tk-h tk-e" style="width:${pw - 32}px;font-family:${fam2}">${A(fam)}</div><div class="tk-r tk-q tk-e" style="width:${pw - 32}px">${A(wt)}</div>`), { frame: true });
   }).join('') };
   // 02 the ladder: each step at its own size (a display step over 56 px is shown at 56 and says so), its name and numbers in the first column, a hairline between steps
   const CAP = 56, LW = 168, SX = X0 + LW + 16, SW = XR - SX;
