@@ -34,7 +34,7 @@ export function pageName(title) {
 // shell is the log-in page.
 export const LOGIN_SIGNUP_TITLE = 'UI L4B | Create your free account'
 // The sales page's own title; `/` and `/home` share it.
-export const HOME_TITLE = 'UI L4B: your UI and brand kit, from one app'
+export const HOME_TITLE = 'UIL4B: your UI and brand kit, from one app'
 
 // The sales page's share image: a 1200x630 JPEG rendered from the built page
 // by scripts/render-home-og.mjs. `path` is site-relative; both the prerendered

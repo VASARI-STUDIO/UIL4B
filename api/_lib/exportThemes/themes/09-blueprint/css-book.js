@@ -534,6 +534,7 @@ ${ramp}
 @media (max-width:560px){
 .bk-hero{--sz:36px;--lbl:"36"}
 .bk-ht{--sz:32px;--lbl:"32"}
+.bk-hl{white-space:normal;text-wrap:wrap;overflow-wrap:anywhere}
 .bk-hero__lead{font-size:18px;line-height:26px}
 .bk-bub--abs{min-width:22px;height:22px;font-size:11px;padding:0 4px;border-radius:11px}
 /* card front and back stay one width: the back's 55 mm line reads sideways in a 33 px column the front reserves too */

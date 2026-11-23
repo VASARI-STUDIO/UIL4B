@@ -141,6 +141,7 @@ export function webApplicationSchema() {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'UI L4B Design Toolkit',
+    alternateName: 'UIL4B',
     url: ORIGIN,
     applicationCategory: 'DesignApplication',
     operatingSystem: 'Web',
@@ -154,11 +155,49 @@ export function webApplicationSchema() {
   }
 }
 
+/**
+ * A schema object as a JSON-LD <script> tag. Every non-ASCII character is
+ * written as a \u escape, so the bytes are plain ASCII and a consumer that
+ * guesses the wrong charset cannot garble an offer name's em dash.
+ */
+export function jsonLdScript(schema) {
+  const json = JSON.stringify(schema, null, 2)
+    .replace(/[\u007f-￿]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)
+  return `<script type="application/ld+json">\n${json}\n</script>`
+}
+
 /** That entity as the <script> tag index.html used to hold literally. */
 export function webApplicationJsonLd() {
-  return '<script type="application/ld+json">\n'
-    + `${JSON.stringify(webApplicationSchema(), null, 2)}\n`
-    + '</script>'
+  return jsonLdScript(webApplicationSchema())
+}
+
+/**
+ * The homepage's site identity: the WebSite and the Organization behind it,
+ * under the name people search for. Served on `/` only.
+ */
+export function homeGraphJsonLd() {
+  const url = `${ORIGIN}/`
+  return jsonLdScript({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${url}#website`,
+        name: 'UIL4B',
+        alternateName: ['UI L4B'],
+        url,
+        publisher: { '@id': `${url}#organization` },
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${url}#organization`,
+        name: 'UIL4B',
+        alternateName: 'UI L4B',
+        url,
+        logo: `${ORIGIN}/web-app-512.png`,
+      },
+    ],
+  })
 }
 
 /**

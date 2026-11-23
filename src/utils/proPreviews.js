@@ -142,7 +142,7 @@ export function buildGuidelinesPreviewPages(design, { projectName = 'Design Syst
 
   // The logo on paper, on ink and on the brand colour. With no logo uploaded the
   // grounds carry the name set in the heading face, which is as far as the
-  // preview can honestly go: the real document says which pages it leaves out.
+  // preview can honestly go: the real document shows a placeholder mark there.
   const grounds = [PAPER, INK, base]
   const tileGap = 14
   const tileW = (W - M * 2 - tileGap * 2) / 3
