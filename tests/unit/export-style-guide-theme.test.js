@@ -236,6 +236,14 @@ test('22-ticket: an over-long single word drops only the logo page, and the md t
   assert.deepEqual(md.md.match(/^## \d\d · .+$/gm), ['## 01 · Colour', '## 02 · Typography', '## 03 · Contrast', '## 04 · Tokens', '## 05 · Usage'])
 })
 
+test('22-ticket: a mid-tone swatch where neither #111 nor white reaches 4.5 : 1 still draws the cover and colour pages', async () => {
+  for (const colors of [['#777777'], ['#D63B9C'], ['#5eebde', '#6b6dd1'], ['#1a8508', '#ea1347', '#0ee103', '#52ad0f']]) {
+    const { pdf, warned } = await stubRun({ design: { palette: { base: colors[0], harmony: 'auto', colors } }, projectName: 'Kerbside' }, ['pdf'])
+    assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${colors[0]}: no page left out`)
+    assert.deepEqual(drawnPages(pdf.html), PAGES, `${colors[0]}: every page drawn`)
+  }
+})
+
 test('22-ticket: the placeholder logo is the UIL4B watermark, the colour proportion bar has a keyline, and the type page fills to its foot', async () => {
   const { pdf, warned } = await stubRun({}, ['pdf'])
   assert.match(stubPage(pdf.html, 'logo'), /aria-label="Logo placeholder"/)

@@ -119,9 +119,9 @@ function palette(ctx) {
     ctx.pair(pick, bg, { size, weight, what: '(Stub guide text on a field)' });
     return pick;
   };
-  // text on a swatch: the nearer to black or to white, whichever has the higher ratio (the brand's own ink and paper count as the black-ish and the white-ish)
+  // text on a swatch: the nearer to black or to white, whichever has the higher ratio (the brand's own ink and paper count as the black-ish and the white-ish; pure black is last, so a mid-tone between #111 and white still finds a pass)
   R.bestInk = (bg, size = 13, weight = 500) => {
-    const cands = [R.ink, R.paper, '#111111', '#ffffff'].filter(ok), pick = cands.reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
+    const cands = [R.ink, R.paper, '#111111', '#ffffff', '#000000'].filter(ok), pick = cands.reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
     ctx.pair(pick, bg, { size, weight, what: '(Stub guide text on a swatch)' });
     return pick;
   };
