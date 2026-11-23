@@ -3109,6 +3109,7 @@ html.lenis{scroll-behavior:auto!important}
 .mm-gl :is(.i2,.i3,.i4,.i5){opacity:0}
 /* The right eye winks: the dot gives way to a short closed lid, so the wink reads as an eye closing. */
 .mm-gl .ew{opacity:0;fill:none}
+.mm-gl .tx2{opacity:0;stroke-width:2.4}
 /* A dot is a zero-length stroke with a round cap, as the emoji eyes are. */
 .mm-gl .d{opacity:0;stroke-width:2.6}
 /* The moments themselves (their timings and colours, the pivots the glyph parts turn on, hover loops, keyframes, motion guards, live hues) load later from styles/deferred/menu-moments.css. */

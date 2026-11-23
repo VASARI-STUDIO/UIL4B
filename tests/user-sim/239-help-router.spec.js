@@ -8,12 +8,12 @@ import { test, expect } from './base.js'
 import { expectRendered, go, signIn, watch } from './helpers.js'
 import { HELP_JOBS } from '../../src/data/helpStart.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { freeFormats } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { generateTintScale, T_LABELS } from '../../src/utils/colors.js'
 
 const VISITOR_JOBS = HELP_JOBS.filter((j) => !j.adminOnly)
-const FREE_FORMATS = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
+const FREE_FORMATS = freeFormats()
 const SIZES = [
   { name: 'phone', width: 390, height: 844 },
   { name: 'tablet', width: 768, height: 1024 },

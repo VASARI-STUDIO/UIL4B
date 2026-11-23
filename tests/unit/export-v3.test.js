@@ -25,7 +25,7 @@ const allCategories = EXPORT_TYPES.flatMap((t) => t.categories)
 
 test('every live format is in exactly one category, and no category lists a format that is not live', () => {
   const live = EXPORT_FORMATS.filter((f) => f.live).map((f) => f.id)
-  assert.deepEqual([...live].sort(), ['app-bundle', 'book', 'book-html', 'book-png', 'contrast', 'contrast-json', 'css', 'guidelines', 'guidelines-html', 'html', 'jpeg', 'json', 'kit', 'md', 'png', 'tailwind'])
+  assert.deepEqual([...live].sort(), ['app-bundle', 'book', 'book-html', 'book-png', 'contrast', 'contrast-json', 'css', 'guidelines', 'guidelines-html', 'html', 'jpeg', 'json', 'kit', 'md', 'png', 'style-guide', 'style-guide-html', 'style-guide-md', 'tailwind'])
   for (const id of live) {
     const homes = allCategories.filter((c) => c.files.includes(id))
     assert.equal(homes.length, 1, `${id} is in ${homes.length} categories`)
@@ -330,6 +330,7 @@ test('the gallery offers the book as PNG pages', () => {
 test('offline: the book, the slides and the kit need the network; the style guide and the code files do not', () => {
   for (const id of ['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'kit']) assert.equal(needsNetwork(id), true, id)
   for (const id of ['html', 'md', 'png', 'jpeg', 'css', 'json', 'tailwind', 'contrast', 'contrast-json', 'app-bundle']) assert.equal(needsNetwork(id), false, id)
+  for (const id of ['style-guide', 'style-guide-html', 'style-guide-md']) assert.equal(needsNetwork(id), true, id)
 })
 
 // ── The runner's source ─────────────────────────────────────────────────────
