@@ -3,8 +3,8 @@ import { PAGE_IDS, hook, inkFor, headLabel } from '../../engine/guide-layout.js'
 import { colourFacts, roleLabel, logoFacts, listedTones, stateFacts } from '../../engine/styleguide.js';
 import { copyOf } from './guide-copy.js';
 import {
-  X0, XR, CW, SUBH, NAME, A, r1, pad2, pct, MONO, pressOf, logoOnPlate, faceCss, stems, nl, clamp, one, mono, at, rect, hr, chip, line, para, sub, safeInk,
-  folio, page, coverSheet, flowTry, flow, logoBox, logoFit, isSlot,
+  X0, XR, CW, SUBH, NAME, A, r1, pad2, pct, MONO, logoOnPlate, faceCss, stems, nl, clamp, one, mono, at, rect, hr, chip, line, para, sub, safeInk,
+  folio, page, coverSheet, flowTry, flow, logoBox, logoFit, coverLogo, isSlot,
 } from './guide-kit.js';
 import { inkW } from './sheet.js';
 
@@ -13,11 +13,10 @@ const cmykText = (k) => { try { const v = Array.isArray(k) ? k : k && typeof k =
 
 // ---------------------------------------------------------------- cover
 export function cover(ctx) {
-  const P = pressOf(ctx), S = stems(ctx), B = ctx.brand, cs = colourFacts(ctx).slice(0, 6), PH = 640, NW = 400;
+  const S = stems(ctx), B = ctx.brand, cs = colourFacts(ctx).slice(0, 6), PH = 640, NW = 400;
   const ids = (ctx._g28ids || PAGE_IDS).filter((id) => id !== 'cover');
-  // tall enough that the mark is at least 120 px wide, even for a squarish one
-  const G0 = ctx.logo.geos.colour, lh = Math.min(150, Math.max(90, Math.ceil((120 * G0.h) / G0.w)));
-  const cw = logoOnPlate(ctx), lg = logoFit(ctx, 260, lh, { colourway: cw, color: P.textOnPlate });
+  // the mark sits on the left margin, 160 px wide (120 tall at most, so the title under it is never crowded), in solid ink
+  const lg = coverLogo(ctx, logoOnPlate(ctx));
   let size = 64; while (size > 34 && nl(S.d, B.name, size, NW, -0.01) > 3) size -= 6;
   const lead = Math.round(size * 1.05), nameText = clamp(S.d, B.name, size, NW, 3, -0.01);
   const ver = `Version ${B.version && B.version.number != null ? B.version.number : '1'}, ${ctx.date || ''}`.replace(/,\s*$/, '');
@@ -67,7 +66,7 @@ export function logoPage(ctx) {
           const full = g0only || (prim && i === 0), j = prim ? i - 1 : i, last = !full && j === rest - 1 && rest % 2 === 1;
           const w = full || last ? CW : tw, h = full ? (g0only ? o.prim : prim) : th;
           const x = full || last ? X0 : X0 + (j % 2) * (tw + 16), yy = y0 + (full ? 0 : P + Math.floor(j / 2) * RH);
-          const lf = logoFit(ctx, full ? 360 : w - 48, h - 32, { colourway: g.key, color: inkFor(ctx, g.groundHex) });
+          const lf = logoFit(ctx, full ? 360 : w - 48, h - 32, { colourway: g.key, color: inkFor(ctx, g.groundHex), solid: true });
           return chip(x, yy, w, h, g.groundHex) + at(x + (w - lf.w) / 2, yy + (h - lf.h) / 2, lf.html, { style: `width:${r1(lf.w)}px;height:${r1(lf.h)}px` })
             + at(x, yy + h + 6, A(one(S.b6, g.label, 11, w * 0.6)), { cls: 'c-label nw' })
             + at(x + w - 140, yy + h + 6, A(`${g.groundHex.toUpperCase()}`), { cls: 'g-s', style: 'width:140px;text-align:right' });
@@ -199,7 +198,7 @@ export function rulerPage(ctx) {
         let x = X0, html = sub(S, X0, y, CW, 'The sheet', 'share of the sheet by ink');
         cs.forEach((c, i) => { const w = i === cs.length - 1 ? XR - x : Math.round(share(c) * CW * 10) / 10; html += rect(x, y0, w, BH, `background:${c.hex};border-right:${i === cs.length - 1 ? 0 : 1}px solid var(--key)`); x += w; });
         html += rect(X0, y0, CW, BH, 'border:1px solid var(--key)');
-        html += [0, 25, 50, 75, 100].map((p) => { const px = X0 + (CW * p) / 100; return rect(px, y0 + BH, 1, 6, 'background:var(--key)') + at(px - 20, y0 + BH + 8, A(`${p}%`), { cls: 'g-s', style: `width:40px;text-align:center` }); }).join('');
+        html += [0, 25, 50, 75, 100].map((p) => { const px = X0 + (CW * p) / 100; return rect(px, y0 + BH, 1, 6, 'background:var(--key)') + (p === 100 ? at(px - 40, y0 + BH + 8, A(`${p}%`), { cls: 'g-s', style: 'width:40px;text-align:right' }) : at(px - 20, y0 + BH + 8, A(`${p}%`), { cls: 'g-s', style: 'width:40px;text-align:center' })); }).join('');
         return html;
       } };
       const RH = o.rowH;

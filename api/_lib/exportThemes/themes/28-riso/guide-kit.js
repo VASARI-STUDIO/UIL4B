@@ -144,14 +144,35 @@ export function flowTry(id, top, options, make, opts) {
 }
 
 // the logo as wide as asked (the slot edition's frame is never under its minimum height); returns the markup and its box
+// `solid` prints the slot edition's placeholder mark in full ink: the engine draws it as a quiet watermark at low opacity, which on a dark or mid ground
+// is a mark about as dark as the ground (and reads backwards on a near-black one). On a proof sheet it prints solid, in the ink that reads on its ground.
+const solidMark = (html) => html.replace(/(<svg\b[^>]*\baria-hidden="true"[^>]*style="[^"]*?)opacity:[\d.]+/, '$1opacity:1');
 export function logoBox(ctx, w, o = {}) {
-  const G = ctx.logo.geos.colour, ww = isSlot(ctx) ? slotW(ctx, w) : w, h = (ww * G.h) / G.w;
-  return { html: logoArt(ctx, 'colour', ww, { ...o, ...(isSlot(ctx) ? { h: r1(h) } : {}) }), w: ww, h };
+  const { solid, ...rest } = o, G = ctx.logo.geos.colour, slot = isSlot(ctx), ww = slot ? slotW(ctx, w) : w, h = (ww * G.h) / G.w;
+  const html = logoArt(ctx, 'colour', ww, { ...rest, ...(slot ? { h: r1(h) } : {}) });
+  return { html: slot && solid ? solidMark(html) : html, w: ww, h };
 }
 // the logo as wide as `maxW` and as tall as `maxH` allow
 export function logoFit(ctx, maxW, maxH, o) {
   const G = ctx.logo.geos.colour;
   return logoBox(ctx, Math.floor(Math.min(maxW, (maxH * G.w) / G.h)), o);
+}
+// the ground the cover's plate band prints (neutralBand may swap a grey plate for the darkest ink)
+export function coverGround(ctx) {
+  const m = /--plate:(#[0-9a-f]{6})/i.exec(neutralBand(ctx));
+  return m ? m[1] : pressOf(ctx).plate;
+}
+// the cover's mark: left on the margin, 160 px wide (never over 120 tall, so it stays clear of the title under it) and in the solid ink that reads on the plate.
+// The showcase edition draws the brand's own colourway (mono-light on a swapped band); the slot edition draws the placeholder mark alone, not centred in a frame.
+export function coverLogo(ctx, colourway) {
+  const ground = coverGround(ctx), swapped = ground !== pressOf(ctx).plate, ink = inkFor(ctx, ground);
+  const lg = logoFit(ctx, 160, 120, { colourway: swapped ? 'mono-light' : colourway, color: ink, solid: true });
+  if (!isSlot(ctx)) return lg;
+  const m = /<svg\b[^>]*viewBox="0 0 ([\d.]+) ([\d.]+)"[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/svg>/.exec(lg.html);
+  if (!m) return lg;
+  const w = Math.min(160, Math.floor((120 * m[1]) / m[2])), h = r1((w * m[2]) / m[1]);
+  const svg = m[0].replace(/ width="[^"]*"/, ` width="${w}"`).replace(/ height="[^"]*"/, ` height="${h}"`);
+  return { html: `<div class="logo-slot" role="img" aria-label="Logo placeholder" style="width:${w}px;height:${h}px;color:${ink}">${svg}</div>`, w, h };
 }
 
 // the guide's css: the book's own c-* classes carry the type; these add wrapping and the mono figures
