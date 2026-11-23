@@ -7,7 +7,7 @@
 //     Break: change the folder E.fontFiles writes to, so a page links a font the zip does not hold.
 //  3. NOTHING THIRD-PARTY: no origin in any file, and the print document keeps its CSP meta and holds no script.
 //     Break: add a Google Fonts link to guideCss in themes/27-swissfield/lane-guide.js.
-//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Swiss Field is offered it.
+//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Swiss Field, Keynote and Stub are offered it.
 //     Break: make themeHasRow in src/data/exportThemes.js ignore OPT_IN_ROWS.
 //  5. A THEME WITHOUT THE ROW IS REFUSED like any other missing row: 400 unknown_row.
 //     Break: drop the themeHasRow line in themeRequestProblem.
@@ -35,6 +35,7 @@ import { mdCell } from '../../api/_lib/exportThemes/engine/styleguide.js'
 import { guide as swissGuide } from '../../api/_lib/exportThemes/themes/27-swissfield/index.js'
 
 const THEME = '27-swissfield'
+const KEYNOTE = '21-presentation'
 const out = {}
 const build = (format) => (out[format] ??= renderThemeExport({ theme: THEME, row: 'guide', format }))
 const PAGES = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast', 'tokens', 'usage']
@@ -46,12 +47,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id), [THEME])
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', THEME])
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
-test('the picker offers the style guide only on Swiss Field, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id), [THEME])
+test('the picker offers the style guide only on Swiss Field, Keynote and Stub, in the three formats', () => {
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', THEME])
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
@@ -189,4 +190,252 @@ test('a page that throws after writing a markdown hook leaves no trace in the ma
     swissGuide.applied = applied
     console.warn = keep
   }
+})
+
+// ---- 22-ticket (Stub): keyed on data-page and its own folio class (tk-fo), never another theme's classes
+const STUB = '22-ticket'
+const stubPage = (html, id) => (html.split(`data-page="${id}"`)[1] || '').split('</section>')[0]
+const stubRun = async (opts, formats = ['pdf', 'md']) => {
+  const warned = []
+  const keep = console.warn
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    const got = {}
+    for (const format of formats) got[format] = await renderThemeExport({ theme: STUB, row: 'guide', format, ...opts })
+    return { ...got, warned }
+  } finally {
+    console.warn = keep
+  }
+}
+
+test('22-ticket: has the guide row, in the three formats', () => {
+  assert.equal(themeHasRow(STUB, 'guide'), true)
+  assert.deepEqual([...THEME_ROW_FORMATS.guide].sort(), ['html', 'md', 'pdf'])
+})
+
+test('22-ticket: four brands on three palettes draw all nine pages, no page left out, and md keeps its six sections', async () => {
+  const NAMES = ['Kerbside', 'Bright Harbour Studio', 'Wild Tide Collective', 'Northern Rivers Community Credit Union']
+  const PALETTES = [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#F96B76'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  for (const colors of PALETTES) {
+    for (const projectName of NAMES) {
+      const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+      const { pdf, md, warned } = await stubRun({ design, projectName })
+      const label = `${colors[0]} "${projectName}"`
+      assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${label}: no page left out`)
+      assert.deepEqual(warned.filter((w) => /at the foot/.test(w)), [], `${label}: no large gap at a page foot`)
+      assert.deepEqual(drawnPages(pdf.html), PAGES, `${label}: every page drawn`)
+      assert.deepEqual((md.md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'], `${label}: every md section`)
+      assert.equal((pdf.html.match(/class="a tk-fo"/g) || []).length, 9, `${label}: a folio on every page`)
+    }
+  }
+})
+
+test('22-ticket: an over-long single word drops only the logo page, and the md then numbers 01 to 05', async () => {
+  const { pdf, md, warned } = await stubRun({ projectName: 'A'.repeat(36) })
+  assert.deepEqual(drawnPages(pdf.html), PAGES.filter((p) => p !== 'logo'))
+  assert.ok(warned.some((w) => w.includes('guide page logo left out')), 'the warning names the page')
+  assert.deepEqual(md.md.match(/^## \d\d · .+$/gm), ['## 01 · Colour', '## 02 · Typography', '## 03 · Contrast', '## 04 · Tokens', '## 05 · Usage'])
+})
+
+test('22-ticket: a mid-tone swatch where neither #111 nor white reaches 4.5 : 1 still draws the cover and colour pages', async () => {
+  for (const colors of [['#777777'], ['#D63B9C'], ['#5eebde', '#6b6dd1'], ['#1a8508', '#ea1347', '#0ee103', '#52ad0f']]) {
+    const { pdf, warned } = await stubRun({ design: { palette: { base: colors[0], harmony: 'auto', colors } }, projectName: 'Kerbside' }, ['pdf'])
+    assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${colors[0]}: no page left out`)
+    assert.deepEqual(drawnPages(pdf.html), PAGES, `${colors[0]}: every page drawn`)
+  }
+})
+
+test('22-ticket: the placeholder logo is the UIL4B watermark, the colour proportion bar has a keyline, and the type page fills to its foot', async () => {
+  const { pdf, warned } = await stubRun({}, ['pdf'])
+  assert.match(stubPage(pdf.html, 'logo'), /aria-label="Logo placeholder"/)
+  assert.match(stubPage(pdf.html, 'ruler'), /outline:1px solid [^;]+;outline-offset:-1px/)
+  assert.deepEqual(warned.filter((w) => /at the foot/.test(w)), [])
+})
+
+test('22-ticket: the html zip holds a page each, style-guide.md and the phone reflow', async () => {
+  const { zip, name } = await renderThemeExport({ theme: STUB, row: 'guide', format: 'html' })
+  assert.match(name, /^[a-z0-9-]+-style-guide-22-ticket\.zip$/)
+  const z = await JSZip.loadAsync(zip)
+  const files = Object.keys(z.files).filter((f) => !z.files[f].dir)
+  const top = files[0].split('/')[0]
+  const rel = files.map((f) => f.slice(top.length + 1))
+  for (const p of PAGES) assert.ok(rel.includes(p + '.html'), p + '.html')
+  assert.ok(rel.includes('style-guide.md'), 'style-guide.md')
+  const text = (await Promise.all(files.filter((x) => /\.(html|css)$/.test(x)).map((x) => z.file(x).async('string')))).join('\n')
+  assert.match(text, /max-width:\s*841px/, 'the phone reflow')
+  assert.ok(!/https?:\/\/(?!www\.w3\.org)/i.test(text), 'no origin')
+})
+
+// Keynote (21-presentation). Each test names the change that makes it fail.
+// 11. IT BUILDS, PRO ONLY: pdf, html and md build; the zip holds its own links; a free account is refused.
+//     Break: drop 'guide' from the 21 entry's extraRows in src/data/exportThemes.js, or set `free: true` on it.
+// 12. A PAGE LEFT OUT IS NOT COUNTED: the folio on each page reads its place among the pages drawn; a 48-letter name drops the logo page and the md numbers 01 to 05.
+//     Break: in themes/21-presentation/lane-guide.js, make drawnIds return the whole PAGE_IDS list.
+// 13. THE USAGE CARD READS on a mid-grey raised colour; a brand with no border token still draws it; one-colour palettes hold no NaN or Infinity.
+//     Break: in guide-pages-c.js, drop the cardInk chain, dereference the border token without a guard, or divide by a palette spread without a zero guard.
+// 14. THE COLOUR PAGE IS NEVER DROPPED FOR PALETTE SIZE: 8, 12 and 40 colours draw it, and a cap says how many are shown.
+//     Break: in guide-pages-a.js colourPage, stop capping the shown colours (the page is then too tall and left out).
+const keynoteGuide = (await import('../../api/_lib/exportThemes/themes/21-presentation/index.js')).guide
+const kHtml = async (colors, projectName = 'Kerbside') => {
+  const design = colors && { palette: { base: colors[0], harmony: 'auto', colors } }
+  const warns = []
+  const warn = console.warn
+  console.warn = (...a) => { warns.push(a.join(' ')) }
+  try {
+    const { html } = await renderThemeExport({ theme: KEYNOTE, row: 'guide', format: 'pdf', design, projectName })
+    const { md } = await renderThemeExport({ theme: KEYNOTE, row: 'guide', format: 'md', design, projectName })
+    return { html, md, warns, left: warns.filter((w) => /left out/.test(w)) }
+  } finally { console.warn = warn }
+}
+const hexLum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] }
+const hexRatio = (a, b) => { const [x, y] = [hexLum(a), hexLum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+
+test('Keynote: the guide is Pro only, offered in three formats, and builds in each', async () => {
+  assert.equal(isThemeExportPro('guide', KEYNOTE), true)
+  assert.equal(assertThemeAccess({ id: 'free' }, { theme: KEYNOTE, row: 'guide', format: 'md' }).code, 'pro_required')
+  assert.deepEqual(assertThemeAccess({ id: 'pro' }, { theme: KEYNOTE, row: 'guide', format: 'md' }), { ok: true })
+  assert.equal(themeRequestProblem({ theme: KEYNOTE, row: 'guide', format: 'pdf' }), null)
+  const { html, md } = await kHtml()
+  assert.deepEqual(drawnPages(html), PAGES)
+  assert.ok(!/<script[\s>]/i.test(html) && !/https?:\/\//i.test(html.replace(/xmlns=(["'])[^"']*\1/g, '')), 'no script and no origin')
+  assert.match(html, /url\(data:font\/woff2/)
+  assert.match(md, /^# /m)
+  const { zip, name } = await renderThemeExport({ theme: KEYNOTE, row: 'guide', format: 'html' })
+  assert.match(name, /-style-guide-21-presentation\.zip$/)
+  const z = await JSZip.loadAsync(zip)
+  const files = Object.keys(z.files).filter((f) => !z.files[f].dir)
+  for (const f of files.filter((x) => /\.(html|css)$/.test(x))) {
+    const text = await z.file(f).async('string')
+    const dir = f.split('/').slice(0, -1).join('/')
+    for (const m of text.matchAll(/(?:url\(\s*['"]?|href=["'])([^'")#"]+)/g)) {
+      if (/^(data:|#|mailto:)/.test(m[1])) continue
+      const stack = []
+      for (const p of (dir + '/' + m[1]).split('/')) { if (p === '..') stack.pop(); else if (p && p !== '.') stack.push(p) }
+      assert.ok(files.includes(stack.join('/')), `${f}: ${m[1]} is not in the zip`)
+    }
+  }
+})
+
+test('Keynote: long names and small palettes draw every page, and the markdown keeps every section', async () => {
+  for (const colors of [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#F96B76'], ['#2E7BB8', '#F2B705', '#1B1B1B']]) {
+    for (const projectName of ['Kerbside', 'Bright Harbour Studio', 'Northern Rivers Community Credit Union']) {
+      const { html, md, left } = await kHtml(colors, projectName)
+      assert.deepEqual(left, [], `${colors[0]} "${projectName}": no page left out`)
+      assert.deepEqual(drawnPages(html), PAGES)
+      assert.deepEqual((md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'])
+    }
+  }
+})
+
+test('Keynote: the folio counts the pages drawn, and a page left out is left out of the markdown', async () => {
+  const folios = (html) => [...html.matchAll(/gk-fo"[^>]*>(\d{3}) \/ (\d{3})</g)].map((m) => [+m[1], +m[2]])
+  const whole = await kHtml()
+  assert.deepEqual(folios(whole.html), PAGES.map((_, i) => [i + 1, PAGES.length]))
+  const long = await kHtml(undefined, 'W'.repeat(48))
+  const kept = drawnPages(long.html)
+  assert.ok(!kept.includes('logo'), 'the logo page is left out for a 48-letter name')
+  assert.ok(long.warns.some((w) => w.includes('guide page logo left out')))
+  assert.deepEqual(folios(long.html), kept.map((_, i) => [i + 1, kept.length]))
+  assert.deepEqual(long.md.match(/^## \d\d · .+$/gm), ['## 01 · Colour', '## 02 · Typography', '## 03 · Contrast', '## 04 · Tokens', '## 05 · Usage'])
+})
+
+test('Keynote: the usage card reaches 4.5 on a mid-grey raised colour', async () => {
+  for (const colors of [['#8a8a8a', '#111111', '#f5f5f5'], ['#767676', '#222222', '#eeeeee'], ['#949494', '#101010', '#fafafa']]) {
+    const { html, left } = await kHtml(colors)
+    assert.deepEqual(left, [])
+    const m = html.slice(html.indexOf('data-page="usage"')).match(/background:(#[0-9a-fA-F]{6});border:[^"]*"[^>]*><div [^>]*style="[^"]*color:(#[0-9a-fA-F]{6})/)
+    assert.ok(m, `card found for ${colors}`)
+    assert.ok(hexRatio(m[1], m[2]) >= 4.5, `card ${m[2]} on ${m[1]}`)
+  }
+})
+
+test('Keynote: a long title and body in the usage card are clamped and stay inside the card and its frame', async () => {
+  const original = keynoteGuide.usage
+  const longTitle = 'An extraordinarily long headline that keeps going well past two lines of the card so it has to be cut short'
+  const longBody = 'Body copy that runs on and on, sentence after sentence, far beyond the three lines the card has room for, so the rest must be trimmed away. '.repeat(4)
+  keynoteGuide.usage = (ctx) => { ctx.brand.type.sample = { ...ctx.brand.type.sample, headline: longTitle, paragraph: longBody }; return original(ctx) }
+  try {
+    for (const colors of [undefined, ['#1F4B8E', '#2E7BB8', '#3FA9A0']]) {
+      const { html, left } = await kHtml(colors, 'Northern Rivers Community Credit Union')
+      assert.deepEqual(left.filter((w) => /usage/.test(w)), [], 'the usage page is drawn')
+      const page = html.slice(html.indexOf('data-page="usage"'))
+      const px = (s, k) => +(s.match(new RegExp(`(?:^|;)${k}:(\\d+(?:\\.\\d+)?)px`)) || [])[1]
+      const m = page.match(/<div class="a " style="([^"]*padding:\d+px[^"]*)"><div class="ph-tight" style="([^"]*)">([^<]*)<\/div><div class="ph-tight" style="([^"]*)">([^<]*)<\/div>/)
+      assert.ok(m, 'the usage card is found')
+      const [, card, tStyle, tText, bStyle] = m
+      const clamp = (s) => +(s.match(/-webkit-line-clamp:(\d+)/) || [])[1]
+      assert.ok(clamp(tStyle) <= 2 && clamp(bStyle) <= 3, `clamps ${clamp(tStyle)} and ${clamp(bStyle)}`)
+      assert.match(tStyle, /overflow:hidden/)
+      assert.match(bStyle, /overflow:hidden/)
+      assert.ok(tText.length > 0)
+      const edge = +card.match(/border:(\d+)px/)[1], pad = +card.match(/padding:(\d+)px/)[1]
+      assert.ok(px(tStyle, 'height') + 8 + px(bStyle, 'height') + 2 * (edge + pad) <= px(card, 'height'), 'title and body fit the card')
+      const frame = [...page.slice(0, page.indexOf(card)).matchAll(/<div class="a " style="left:[\d.]+px;top:[\d.]+px;width:([\d.]+)px;height:([\d.]+)px;[^"]*outline:1px solid/g)].pop()
+      assert.ok(frame, 'the frame is found')
+      assert.ok(px(card, 'height') <= +frame[2] && px(card, 'width') <= +frame[1], 'the card fits its frame')
+    }
+  } finally { keynoteGuide.usage = original }
+})
+
+test('Keynote: no border token still draws the usage page, and one-colour palettes hold no NaN or Infinity', async () => {
+  const original = keynoteGuide.usage
+  keynoteGuide.usage = (ctx) => { ctx.borders = ctx.borders.filter((b) => b.token !== 'border-control'); return original(ctx) }
+  try {
+    const { html, md, left } = await kHtml()
+    assert.match(html, /data-page="usage"/)
+    assert.deepEqual(left, [])
+    assert.match(md, /not underlined/)
+    assert.match(md, /no edge/)
+  } finally { keynoteGuide.usage = original }
+  for (const colors of [['#F96B76'], ['#336699', '#336699', '#336699'], ['#ffffff'], ['#000000', '#000000']]) {
+    const { html, md, left } = await kHtml(colors)
+    assert.doesNotMatch(html, /NaN|Infinity/)
+    assert.doesNotMatch(md, /NaN|Infinity/)
+    assert.deepEqual(drawnPages(html), PAGES)
+    assert.deepEqual(left, [])
+  }
+})
+
+test('Keynote: the contrast page still draws with twelve pairs', async () => {
+  const original = keynoteGuide.contrast
+  keynoteGuide.contrast = (ctx) => { const more = []; while (more.length < 12) more.push(...ctx.pairs); ctx.pairs = more.slice(0, 12); return original(ctx) }
+  try {
+    const { html, left } = await kHtml()
+    assert.deepEqual(left.filter((w) => w.includes('contrast')), [])
+    assert.ok(drawnPages(html).includes('contrast'))
+  } finally { keynoteGuide.contrast = original }
+})
+
+test('Keynote: the colour page is drawn for 8, 12 and 40 distinct colours, with a cap note when it cannot show them all', async () => {
+  const palette = (n) => Array.from({ length: n }, (_, i) => {
+    const h = (i * 137.508) % 360, s = 0.55 + (i % 3) * 0.12, l = 0.3 + (i % 5) * 0.1
+    const f = (k) => { const a = s * Math.min(l, 1 - l), q = (k + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(q - 3, 9 - q, 1)))) }
+    return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('')
+  })
+  const original = keynoteGuide.colour
+  let distinct = 0
+  try {
+    for (const [n, total] of [[8, 8], [12, 12], [12, 40]]) {
+      keynoteGuide.colour = (ctx) => {
+        const extra = palette(total).slice(ctx.colours.length).map((hex, i) => ({ id: `x-${i}`, name: `Extra colour ${i + 1}`, hex, role: 'alternative', share: 0.001 }))
+        const own = ctx.colours
+        ctx.colours = [...own, ...extra].slice(0, Math.max(total, own.length))
+        distinct = new Set(ctx.colours.map((c) => c.hex.toLowerCase())).size
+        try { return original(ctx) } finally { ctx.colours = own }
+      }
+      const { html, warns, left } = await kHtml(palette(n))
+      const page = html.slice(html.indexOf('data-page="colour"'), html.indexOf('data-page="ruler"'))
+      assert.ok(drawnPages(html).includes('colour'), `drawn for ${total} colours`)
+      assert.deepEqual(left.filter((w) => /colour/.test(w)), [])
+      assert.deepEqual(warns.filter((w) => /colour/.test(w) && /too tall/.test(w)), [])
+      assert.doesNotMatch(html, /NaN|Infinity/)
+      const shown = (page.match(/>HEX</g) || []).length
+      if (total <= 12) assert.doesNotMatch(page, /Showing the first/)
+      else {
+        const m = page.match(/Showing the first (\d+) of (\d+) colours/)
+        // colours with the same hex are drawn once, so the note counts the distinct hexes
+        assert.ok(distinct <= total && distinct > 12 && m && +m[2] === distinct && +m[1] === shown && shown < distinct, `the note says ${m && m[0]}, and ${shown} are drawn`)
+      }
+    }
+  } finally { keynoteGuide.colour = original }
 })

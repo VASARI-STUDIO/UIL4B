@@ -19,7 +19,11 @@
 //  5. THE HELPER ITSELF: readableOn() always returns a colour that reaches the ratio the size needs, on every background, and
 //     keeps the first candidate that passes (so a brand that already read is drawn as before).
 //     Break: as 1.
-// Test seam: serveExportDocument (the route's entry) for 1, 2 and 4; renderThemePage for 3; engine/color.js readableOn for 5.
+//  6. EVERY GUIDE DRAWS EVERY PAGE: every theme with a guide builds its print guide for 500 seeded palettes of one to six colours,
+//     with no page left out. Six colours give up to twenty failing pairs and many mid-tone swatches, which is where pages went.
+//     Break: take the row cutting out of 27's contrast page. (The guide does not check swatch contrast, so the inkFor fallback
+//     is guarded by its own unit test below: take readableOn out of inkFor and that test fails on #777777.)
+// Test seam: serveExportDocument (the route's entry) for 1, 2, 4 and 6; renderThemePage for 3; engine/color.js readableOn for 5.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
@@ -27,6 +31,7 @@ import { renderThemePage } from '../../api/_lib/exportThemeRoute.js'
 import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow } from '../../src/data/exportThemes.js'
 import { isPrintSafe } from '../../src/utils/exportThemeRequest.js'
 import * as colour from '../../api/_lib/exportThemes/engine/color.js'
+import { inkFor } from '../../api/_lib/exportThemes/engine/guide-layout.js'
 
 const FONTS = { heading: { family: 'Barlow Condensed', weight: 700, category: 'sans-serif' }, body: { family: 'Roboto', weight: 400, category: 'sans-serif' } }
 const designOf = (colors) => ({ palette: { base: colors[0], harmony: 'auto', colors }, fonts: FONTS })
@@ -160,4 +165,37 @@ test('readableOn always reaches the ratio the size needs, and keeps the first ca
   assert.ok(ratio(readableOn('#0A7562', ['#D9E6E1', '#FFFFFF']), '#0A7562') >= 4.5)
   assert.equal(readableOn('#808080', ['nonsense', undefined, null]).length, 7)
   assert.equal(readableOn('not a colour', ['#123456']), '#123456')
+})
+
+// 6. Every guide, 500 palettes of one to six colours, print row only (the zip and md editions draw the same pages).
+const GUIDE_THEMES = EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id)
+test('at least one theme has a guide, so the sweep below is not empty', () => {
+  assert.ok(GUIDE_THEMES.length > 0, 'no theme opts into the guide row')
+})
+const sweepPalettes = (() => {
+  const rnd = seeded(20261123)
+  return Array.from({ length: 500 }, () => Array.from({ length: 1 + Math.floor(rnd() * 6) }, () => hexFrom(rnd)))
+})()
+for (const theme of GUIDE_THEMES) {
+  test(`the ${theme} guide draws every page for 500 seeded palettes of one to six colours`, async () => {
+    const problems = []
+    const dropped = await quietly(async () => {
+      for (const colors of sweepPalettes) {
+        const where = colors.join(' ')
+        try {
+          const res = await ask({ theme, row: 'guide', format: 'pdf', design: designOf(colors), projectName: 'Kerbside' })
+          if (res.code !== 200 || res.body?.ok !== true) problems.push(`${where}: ${res.code} ${res.body?.code || ''}`)
+        } catch (e) { problems.push(`${where}: threw ${String(e?.message).slice(0, 120)}`) }
+      }
+    })
+    assert.deepEqual([...problems, ...dropped.map((d) => `dropped: ${d}`)].slice(0, 10), [])
+  })
+}
+
+test('inkFor keeps the brand ink when it reads, and falls back to one that does when neither brand ink reads', () => {
+  const ctx = { roles: { light: { text: '#1A1A1A', surface: '#F4F1EA' } }, C: colour }
+  assert.equal(inkFor(ctx, '#0A3D62'), '#F4F1EA')
+  assert.equal(inkFor(ctx, '#F2B544'), '#1A1A1A')
+  const mid = { roles: { light: { text: '#555555', surface: '#AAAAAA' } }, C: colour }
+  for (const bg of ['#777777', '#808080', '#2E7BB8', '#F96B76']) assert.ok(colour.ratio(inkFor(mid, bg), bg) >= 4.5, bg)
 })
