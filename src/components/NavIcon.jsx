@@ -437,6 +437,7 @@ const MOMENT_ICONS = {
         <path d="M4 16l4-3.5 3 2.5" />
       </g>
       <path className="tx" d="M13.5 9.5h5M16 9.5v6" />
+      <path className="tx2" d="M13.5 9.5h5M16 9.5v6" />
     </>
   ),
   // A short glint line draws across each swatch, in reading order.

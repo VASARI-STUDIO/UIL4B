@@ -2,8 +2,8 @@
    keyboard focus). PillNav loads this on a fine pointer only, after first paint. The rest states
    (every glyph part at its resting value) stay in global.css, so a menu opened before this sheet
    arrives sits still, never broken.
-   Each moment plays once, in 180 to 320ms on one easing, holds its end state while the row stays
-   live, and goes back in 150ms ease-in when it stops. Only transform, opacity, stroke-width and
+   Each moment plays once, in 180 to 300ms on one easing, holds its end state while the row stays
+   live, and goes back in 150ms ease-in when it stops. Only transform, opacity and
    stroke-dashoffset move (and the Font Pair face, which swaps). A glyph is ink, never a category
    colour: the live row answers in the V3 neutral tile and ink, nothing else.
    Two moments are cycles by their nature and keep going while the row is live: Icon Library steps
@@ -18,7 +18,7 @@
   .pnav-tool-ico svg{transition:transform var(--mm-out),color var(--mm-out)}
   /* A row with no moment of its own: the glyph lifts 2px. */
   .pnav-tool:not([data-moment]):is(:hover,:focus-visible) .pnav-tool-ico svg{transform:translateY(-2px);transition:transform 240ms var(--mm-ease)}
-  .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),stroke-dashoffset var(--mm-out),stroke-width var(--mm-out)}
+  .mm-gl [class]{transition:opacity var(--mm-out),transform var(--mm-out),stroke-dashoffset var(--mm-out)}
   /* Lines that draw in (Gradient, Semantic, 3D Model, Palette Library, Gradient Library): each draws in 240ms, a later
      line 60ms behind the one before. */
   .pnav-tool:is([data-moment="gradient"],[data-moment="semantic"],[data-moment="model-3d"],[data-moment="palette-library"],[data-moment="gradient-library"])[data-live] .dr{stroke-dashoffset:0;transition:stroke-dashoffset 240ms var(--mm-ease)}
@@ -33,9 +33,9 @@
   .pnav-tool[data-moment="palette"][data-live] .sw4{transform:translate(1.6px,1.6px);transition-delay:105ms}
   /* 2 Gradient: banding lines draw in either side of the diagonal (the shared rule above). */
   /* 3 Contrast Checker: the hatching on the shaded half swings across to the other half. */
-  .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 320ms var(--mm-ease)}
+  .pnav-tool[data-moment="contrast"][data-live] .half{transform:rotate(180deg);transition:transform 300ms var(--mm-ease)}
   /* 4 Tint: the ramp rises inside the drop. */
-  .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 320ms var(--mm-ease)}
+  .pnav-tool[data-moment="tint"][data-live] .rise{transform:none;transition:transform 300ms var(--mm-ease)}
   /* 5 Semantic Colour: a level line draws along the inside of each bar (the shared rule above). */
   /* 6 Font Gallery: PillNav steps the name through the shuffled ready faces (style + data-face). */
   /* 7 Font Pair: "Font" settles in Literata 600, then "Pair" in Geist Mono 500, 70ms later, each rising into place.
@@ -67,14 +67,15 @@
   /* 12 Aspect: the inner frame turns a quarter, from landscape to portrait. */
   .pnav-tool[data-moment="ratio"][data-live] .in{transform:rotate(90deg);transition:transform 300ms var(--mm-ease)}
   /* 13 3D Model Converter: a glint line draws across each of the cube's three faces (the shared rule above). */
-  /* 14 Alt Text: the picture steps back to 30% and the T thickens. */
+  /* 14 Alt Text: the picture steps back to 30% and the T cross-fades to a heavier twin (opacity only). */
   .pnav-tool[data-moment="alt-text"][data-live] .pic{opacity:.3;transition:opacity 240ms var(--mm-ease)}
-  .pnav-tool[data-moment="alt-text"][data-live] .tx{stroke-width:2.4;transition:stroke-width 240ms var(--mm-ease)}
+  .pnav-tool[data-moment="alt-text"][data-live] .tx{opacity:0;transition:opacity 240ms var(--mm-ease)}
+  .pnav-tool[data-moment="alt-text"][data-live] .tx2{opacity:1;transition:opacity 240ms var(--mm-ease)}
   /* 15 Palette Library: a glint line draws across each swatch, in reading order (the shared rule above). */
   /* 16 Gradient Library: banding lines draw into the front square while the sheet behind slides out. */
   .pnav-tool[data-moment="gradient-library"][data-live] .sh{transform:translate(1.6px,-1.6px);transition:transform 260ms var(--mm-ease)}
   /* 17 Inspiration: the compass needle swings a quarter turn to a new heading. */
-  .pnav-tool[data-moment="inspiration"][data-live] .needle{transform:rotate(90deg);transition:transform 320ms var(--mm-ease)}
+  .pnav-tool[data-moment="inspiration"][data-live] .needle{transform:rotate(90deg);transition:transform 300ms var(--mm-ease)}
   /* 18 Prompt Library: the line becomes three dots that each hop once. */
   .pnav-tool[data-moment="prompt-library"][data-live] .ln{opacity:0;transition:opacity 120ms ease-out}
   .pnav-tool[data-moment="prompt-library"][data-live] .d{opacity:1;transition:opacity 120ms ease-out 60ms;animation:mm-hop 300ms var(--mm-ease) 120ms both}

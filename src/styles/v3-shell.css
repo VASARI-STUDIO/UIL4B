@@ -205,10 +205,10 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 }
 .pnav-tool:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
 .pnav-tool:active{background:var(--v3-rowp);transition:none}
-.pnav-tool[aria-current="page"]{background:var(--v3-rowc);color:var(--v3-ink)}
+.pnav-tool[aria-current="page"]{background:color-mix(in oklch,var(--v3-ink) 16%,transparent);color:var(--v3-ink)}
 .pnav-tool[aria-current="page"]::before{content:"";position:absolute;left:0;top:50%;width:2px;height:16px;margin-top:-8px;border-radius:1px;background:var(--v3-ink)}
-@media(hover:hover){.pnav-tool[aria-current="page"]:hover{background:var(--v3-rowhc)}}
-.pnav-tool[aria-current="page"]:focus-visible{background:var(--v3-rowc)}
+@media(hover:hover){.pnav-tool[aria-current="page"]:hover{background:color-mix(in oklch,var(--v3-ink) 20%,transparent)}}
+.pnav-tool[aria-current="page"]:focus-visible{background:color-mix(in oklch,var(--v3-ink) 16%,transparent)}
 .pnav-tool[aria-current="page"] .pnav-tool-ico{color:var(--v3-ink)}
 .pnav-tool[aria-current="page"] .pnav-tool-label{font-weight:500}
 .pnav-tool-here{color:var(--v3-ink)}
@@ -264,7 +264,7 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 @media(min-width:980px){.pnav-menu-foot{padding:12px 40px}}
 /* On desktop the foot holds a two-line readout in every menu, so it takes that height even when the line is one; the
    readout sheds its own reserved box and centres, so a one-line note sits level with the link. */
-@media(min-width:980px){.pnav-menu-foot{min-height:61px}.pnav-menu .pnav-menu-readout{min-height:0;align-self:center;-webkit-line-clamp:2;line-clamp:2}.pnav-menu{transform-origin:50% 0}}
+@media(min-width:980px){.pnav-menu-foot{min-height:61px}.pnav-menu[data-menu] .pnav-menu-readout{min-height:0;align-self:center;-webkit-line-clamp:2;line-clamp:2}.pnav-menu{transform-origin:50% 0}}
 /* From 980px the frame is centred (PillNav places it) and takes 90% of the viewport: never narrower than 976px (the 24px gutters at 1024), never wider than 1440px. */
 @media(min-width:980px){.pnav-menu{width:min(1440px,max(90vw,min(976px,calc(100vw - 48px))))}}
 .pnav-menu-foot-note{align-self:center;margin:0;font-size:13px;line-height:18px;color:var(--v3-sec)}
