@@ -21,7 +21,7 @@ const IMAGE = path.join(REPO, 'public', 'og', 'home.jpg')
 
 const skip = !fs.existsSync(SHELL) && 'run `npm run build` first'
 
-const TITLE = 'UI L4B: your UI and brand kit, from one app'
+const TITLE = 'UIL4B: your UI and brand kit, from one app'
 const DESCRIPTION = 'Colours, type, icons and imagery in one app, exported as one file. Free to use, no account needed.'
 const IMAGE_URL = 'https://uil4b.com/og/home.jpg'
 
@@ -104,4 +104,59 @@ test('public/og/home.jpg is 1200 by 630', () => {
 test('public/og/home.jpg is under 200KB', () => {
   const bytes = fs.statSync(IMAGE).size
   assert.ok(bytes < MAX_IMAGE_BYTES, `public/og/home.jpg is ${bytes} bytes, limit ${MAX_IMAGE_BYTES}`)
+})
+
+/** Every JSON-LD node in the shell's head, @graph members flattened in. */
+function jsonLdNodes(html) {
+  const head = html.slice(0, html.indexOf('</head>'))
+  const nodes = []
+  for (const [, body] of head.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+    const data = JSON.parse(body)
+    nodes.push(...(Array.isArray(data['@graph']) ? data['@graph'] : [data]))
+  }
+  return nodes
+}
+
+test('the built / shell names the site UIL4B in a WebSite node', { skip }, () => {
+  const sites = jsonLdNodes(fs.readFileSync(SHELL, 'utf8')).filter((n) => n['@type'] === 'WebSite')
+  assert.equal(sites.length, 1)
+  assert.equal(sites[0].name, 'UIL4B')
+  assert.deepEqual(sites[0].alternateName, ['UI L4B'])
+  assert.equal(sites[0].url, 'https://uil4b.com/')
+})
+
+test('the built / shell carries an Organization with an absolute logo', { skip }, () => {
+  const orgs = jsonLdNodes(fs.readFileSync(SHELL, 'utf8')).filter((n) => n['@type'] === 'Organization')
+  assert.equal(orgs.length, 1)
+  assert.equal(orgs[0].name, 'UIL4B')
+  assert.equal(orgs[0].alternateName, 'UI L4B')
+  assert.match(String(orgs[0].logo), /^https:\/\/uil4b\.com\/.+\.png$/)
+  const file = path.join(REPO, 'public', new URL(orgs[0].logo).pathname)
+  assert.ok(fs.existsSync(file), `${orgs[0].logo} is not in public/`)
+})
+
+test('the built / shell keeps the WebApplication, also named UIL4B', { skip }, () => {
+  const apps = jsonLdNodes(fs.readFileSync(SHELL, 'utf8')).filter((n) => n['@type'] === 'WebApplication')
+  assert.equal(apps.length, 1)
+  assert.equal(apps[0].alternateName, 'UIL4B')
+})
+
+test('the built / shell JSON-LD is plain ASCII, so no decoder can garble it', { skip }, () => {
+  const head = fs.readFileSync(SHELL, 'utf8')
+  for (const [, body] of head.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+    const wide = [...body].filter((c) => c.charCodeAt(0) > 0x7f)
+    assert.deepEqual(wide, [])
+  }
+})
+
+test('the built / shell shares the home title and names the site UIL4B', { skip }, () => {
+  const tags = metaTags(fs.readFileSync(SHELL, 'utf8'))
+  assert.equal(metaOne(tags, 'og:title'), TITLE)
+  assert.equal(metaOne(tags, 'twitter:title'), TITLE)
+  assert.equal(metaOne(tags, 'og:site_name'), 'UIL4B')
+})
+
+test('the built / shell has a single <h1>', { skip }, () => {
+  const html = fs.readFileSync(SHELL, 'utf8').replace(/<script\b[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '')
+  assert.equal([...html.matchAll(/<h1\b/g)].length, 1)
 })
