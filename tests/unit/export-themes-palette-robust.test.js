@@ -21,7 +21,8 @@
 //     Break: as 1.
 //  6. EVERY GUIDE DRAWS EVERY PAGE: every theme with a guide builds its print guide for 500 seeded palettes of one to six colours,
 //     with no page left out. Six colours give up to twenty failing pairs and many mid-tone swatches, which is where pages went.
-//     Break: take the readableOn fallback out of inkFor in engine/guide-layout.js, or the row cutting out of 27's contrast page.
+//     Break: take the row cutting out of 27's contrast page. (The guide does not check swatch contrast, so the inkFor fallback
+//     is guarded by its own unit test below: take readableOn out of inkFor and that test fails on #777777.)
 // Test seam: serveExportDocument (the route's entry) for 1, 2, 4 and 6; renderThemePage for 3; engine/color.js readableOn for 5.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -168,6 +169,9 @@ test('readableOn always reaches the ratio the size needs, and keeps the first ca
 
 // 6. Every guide, 500 palettes of one to six colours, print row only (the zip and md editions draw the same pages).
 const GUIDE_THEMES = EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id)
+test('at least one theme has a guide, so the sweep below is not empty', () => {
+  assert.ok(GUIDE_THEMES.length > 0, 'no theme opts into the guide row')
+})
 const sweepPalettes = (() => {
   const rnd = seeded(20261123)
   return Array.from({ length: 500 }, () => Array.from({ length: 1 + Math.floor(rnd() * 6) }, () => hexFrom(rnd)))

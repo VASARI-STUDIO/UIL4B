@@ -189,8 +189,8 @@ function cover(ctx) {
   // a generated colour name can be wider than the 160 px column ("Sun-Bleached Conservatory"): it is cut at a word, or at a letter, with an ellipsis
   const clip = (k) => {
     if (textWidth(CHROME[500], k, 13) <= kw - 8) return k;
-    const words = k.split(/(?<=[s-])/);
-    for (let n = words.length - 1; n > 0; n--) { const c = words.slice(0, n).join('').replace(/[s-]+$/, '') + '…'; if (textWidth(CHROME[500], c, 13) <= kw - 8) return c; }
+    const words = k.split(/(?<=[\s-])/);
+    for (let n = words.length - 1; n > 0; n--) { const c = words.slice(0, n).join('').replace(/[\s-]+$/, '') + '…'; if (textWidth(CHROME[500], c, 13) <= kw - 8) return c; }
     for (let n = k.length - 1; n > 0; n--) { const c = k.slice(0, n).trimEnd() + '…'; if (textWidth(CHROME[500], c, 13) <= kw - 8) return c; }
     return '…';
   };
