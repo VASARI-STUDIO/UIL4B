@@ -69,7 +69,7 @@ export const PRO_GATE = {
     gate: 'brand-guidelines-export',
     eyebrow: 'UI L4B Pro',
     title: 'Export the brand guidelines',
-    subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
+    subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Its logo pages show a placeholder until you add a logo. The style guide stays free.',
     features: [
       'A cover and numbered section openings, with a rationale beside every page',
       'Each swatch with its name, hex and the ink that reads on it',
