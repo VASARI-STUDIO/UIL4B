@@ -31,7 +31,7 @@ export function appliedPage(ctx) {
   const caps = [{ name: sg.name, detail: sg.mm, w: sw, mm: sg.w }, { name: 'Business card', detail: '85 x 54 mm', w: cdW, mm: 85 }];
   const capH = Math.max(...caps.map((c) => 20 + (c.detail ? para(c.detail, c.w, { size: 12, lh: 16 }).h : 0)));
   const sInk = R.onColour(R.action, 13, 500), swCw = R.colourwayOn(R.action), lw0 = Math.min(sw - 32, 110), lh0 = slot ? slotH(lw0) : (lw0 * G.h) / G.w;
-  const sRoom = OH - 32 - lh0 - 16;
+  const sRoom = OH - 32 - lh0 - 16 - (slot ? 72 : 0); // the template chip also carries its hint (about three 14px lines)
   const sSize = [26, 22, 18, 16, 14].find((s) => nLines(S.disp, sg.line, s, sw - 32, st) * Math.round(s * 1.15) <= sRoom) || 14;
   const sign = (y0, oh) => obj(K, so.x, y0, sw, oh, R.action, at(16, 16, logoArt(ctx, 'colour', Math.min(sw - 32, lw0), { colourway: swCw, color: sInk, h: slot ? lh0 : undefined })) + at(16, 16 + lh0 + 16, A(sg.line), { w: sw - 32, cls: 'gk-d', style: `font-size:${sSize}px;line-height:${Math.round(sSize * 1.15)}px;color:${sInk}` }), { style: 'overflow:hidden' });
   const cLw = Math.min(cdW - 32, 96), cInk = R.onColour(R.ground, 13, 500);
@@ -47,7 +47,7 @@ export function appliedPage(ctx) {
   } };
   // 02: social, three posts across the page as thumbnails that meet, each with its caption under it
   const social = (slot ? ['Post 1, image and caption', 'Post 2, image and caption', 'Post 3, image and caption'] : (app.social || [])).slice(0, 3);
-  const TH = 80, scW = Math.floor(CW / 3) - 12, capsH = Math.max(0, ...social.map((s) => para(s, scW).h));
+  const TH = slot ? 64 : 80, scW = Math.floor(CW / 3) - 12, capsH = Math.max(0, ...social.map((s) => para(s, scW).h));
   const socSec = social.length ? { h: SUBH + 8 + TH + 8 + capsH, flex: 40, draw: (y, extra = 0) => {
     const y0 = y + SUBH + 8, th = TH + extra;
     return sec(K, X0, y, CW, '02', 'Social')
