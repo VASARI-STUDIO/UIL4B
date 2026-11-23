@@ -1,14 +1,15 @@
 // The three desktop mega menus (Create, Discover, Learn) are ONE frame: same left, top,
-// width and height, one shared opening origin, and wider than the old 1120px. Test seam:
+// width and height, one shared opening origin, centred in the viewport and about 90% of its
+// width (capped on very wide screens). Test seam:
 // the open panel (#pnav-mega) under the header triggers (.pnav-trigger) at /create/palette.
 //
 // Run: LANE=onef PLAYWRIGHT_PORT=4330 npx playwright test -c pw-lane.config.js tests/user-sim/442-mega-menu-one-frame.spec.js
 //
 // MUTATIONS (each should fail the named test, then be put back):
-//   · Set the panel's left again from the open trigger (PillNav.jsx placement effect: use `tl` in
-//     `left`): "one frame" fails on x.
+//   · Set the panel's left again from the open trigger, or right-anchor it (PillNav.jsx placement
+//     effect): "one frame" fails on x, and "centred" fails at 1440 and 1280.
 //   · Set `panel.style.transformOrigin` from the trigger again: "one frame" fails on transform-origin.
-//   · Put `width:min(1120px,...)` back on `.pnav-menu` (v3-shell.css): "width" fails at 1440 and 1280.
+//   · Put a fixed `width:min(1264px,...)` back on `.pnav-menu` (v3-shell.css): "width" fails at 1440 and 1280.
 //   · Drop the shared `min-height` on `.pnav-menu-cols` for the menus: "one frame" fails on height.
 //   · Give `.pnav-menu` `transition:all`: "the panel names what it transitions" fails.
 import { test, expect } from './base.js'
@@ -60,6 +61,7 @@ test.describe('one frame for the three menus', () => {
         expect(f[name].origin, `${name} transform-origin`).toBe(f.Create.origin)
       }
       for (const name of NAMES) {
+        expect(Math.abs(f[name].x - (vw - f[name].w) / 2), `${name} centred: x ${f[name].x}, width ${f[name].w}, viewport ${vw}`).toBeLessThanOrEqual(1)
         expect(f[name].x, `${name} left edge`).toBeGreaterThanOrEqual(23.5)
         expect(f[name].right, `${name} right edge`).toBeLessThanOrEqual(vw - 23.5)
       }
@@ -67,18 +69,23 @@ test.describe('one frame for the three menus', () => {
     })
   }
 
-  test('width: about 1260 at 1440, wide at 1280, the viewport less the gutters at 1024', async ({ browser }) => {
+  test('width: about 90% of the viewport at 1440 and 1280, the viewport less the gutters at 1024, capped when very wide', async ({ browser }) => {
     const got = {}
-    for (const vw of [1440, 1280, 1024]) {
+    for (const vw of [1920, 1440, 1280, 1024]) {
       const { ctx, page } = await open(browser, vw)
       await trig(page, 'Create').click()
-      got[vw] = (await frame(page)).w
+      got[vw] = await frame(page)
       await ctx.close()
     }
-    expect(got[1440], 'width at 1440').toBeGreaterThanOrEqual(1232)
-    expect(got[1280], 'width at 1280').toBeGreaterThanOrEqual(1200)
-    expect(got[1280], 'width at 1280').toBeLessThanOrEqual(1280 - 48)
-    expect(Math.abs(got[1024] - (1024 - 48)), 'width at 1024').toBeLessThanOrEqual(1)
+    for (const vw of [1440, 1280]) {
+      const ratio = got[vw].w / vw
+      expect(ratio, `width at ${vw}: ${got[vw].w} is ${(ratio * 100).toFixed(1)}%`).toBeGreaterThanOrEqual(0.88)
+      expect(ratio, `width at ${vw}: ${got[vw].w} is ${(ratio * 100).toFixed(1)}%`).toBeLessThanOrEqual(0.92)
+    }
+    expect(got[1024].x, 'left gutter at 1024').toBeGreaterThanOrEqual(23.5)
+    expect(1024 - got[1024].right, 'right gutter at 1024').toBeGreaterThanOrEqual(23.5)
+    expect(Math.abs(got[1920].x - (1920 - got[1920].w) / 2), 'centred at 1920').toBeLessThanOrEqual(1)
+    expect(got[1920].w, 'capped at 1920').toBeLessThanOrEqual(1440)
   })
 
   test('switching straight from Create to Discover to Learn does not move the frame', async ({ browser }) => {

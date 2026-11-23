@@ -1,5 +1,5 @@
-// Every mega menu hover moment loops while its row is live, and none of them loops
-// under reduced motion.
+// Every mega menu hover moment plays on its row (once and hold, or a cycle for the Icons row), on a fine
+// pointer only, and none of them moves under reduced motion.
 //
 // The moments are CSS: the rest states in global.css, the loops and their guards in
 // styles/deferred/menu-moments.css, which PillNav loads on a fine pointer. A row that is live carries
@@ -63,16 +63,20 @@ test('the menu has moments to check', () => {
   assert.ok(rules.length > 100, 'the stylesheet parsed into rules')
 })
 
+// Icon Library steps through its glyphs for as long as the row is live; every other CSS moment plays once and holds.
+const CYCLES = new Set(['icons'])
 for (const id of CSS_IDS) {
-  test(`${id}: loops forever while the row is live, on a fine pointer only`, () => {
-    const loops = rules.filter((r) => has(r.selector, id) && r.selector.includes('[data-live]') && /\binfinite\b/.test(animationOf(r.body)))
-    assert.ok(loops.length, `no rule under [data-live] gives ${id} an infinite animation`)
-    for (const r of loops) {
+  test(`${id}: plays while the row is live, on a fine pointer only${CYCLES.has(id) ? ' (a cycle)' : ' (once, then holds)'}`, () => {
+    const plays = rules.filter((r) => has(r.selector, id) && r.selector.includes('[data-live]') && (/\btransition\s*:/.test(r.body) || !/^(none)?$/.test(animationOf(r.body).trim())))
+    assert.ok(plays.length, `no rule under [data-live] gives ${id} a transition or an animation`)
+    for (const r of plays) {
       assert.ok(r.atRules.some((a) => a.includes('hover:hover') && a.includes('pointer:fine')), `${r.selector} is outside the hover media query`)
-      for (const name of animationOf(r.body).split(',').map((a) => a.trim().split(/\s+/)[0])) {
+      for (const name of animationOf(r.body).split(',').map((a) => a.trim().split(/\s+/)[0]).filter(Boolean)) {
         assert.ok(keyframes.has(name), `${r.selector} names @keyframes ${name}, which does not exist`)
       }
+      if (!CYCLES.has(id)) assert.doesNotMatch(animationOf(r.body), /\binfinite\b/, `${r.selector} loops`)
     }
+    if (CYCLES.has(id)) assert.ok(plays.some((r) => /\binfinite\b/.test(animationOf(r.body))), `${id} should cycle`)
   })
 
   test(`${id}: switched off under reduced motion, both the site setting and the OS`, () => {

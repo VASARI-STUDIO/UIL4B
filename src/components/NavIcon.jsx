@@ -314,6 +314,15 @@ const FALLBACK = <circle cx="12" cy="12" r="7" />
 // given `moment` uses these; every other use is untouched. A part with the `dr` class is drawn by
 // dashoffset, which needs pathLength="1" on it. A value that is a function gets a unique id, for a clipPath.
 const MOMENT_ICONS = {
+  // The four swatches fan out from the centre of the grid.
+  palette: (
+    <>
+      <rect className="sw sw1" x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect className="sw sw2" x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect className="sw sw3" x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect className="sw sw4" x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  ),
   // The diameter stays; the hatching that marks the shaded half turns with it to the other side.
   contrast: (
     <>
@@ -428,6 +437,7 @@ const MOMENT_ICONS = {
         <path d="M4 16l4-3.5 3 2.5" />
       </g>
       <path className="tx" d="M13.5 9.5h5M16 9.5v6" />
+      <path className="tx2" d="M13.5 9.5h5M16 9.5v6" />
     </>
   ),
   // A short glint line draws across each swatch, in reading order.
