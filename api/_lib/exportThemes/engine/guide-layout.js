@@ -15,7 +15,7 @@
  *   withHooks(ctx, draw)  runs a page and puts the hooks back as they were if it throws, so the md never describes a page left out.
  *   pageSection(id, inner)   the page wrapper every document and the snapshot test read: <section class="pg" data-page="id">.
  *   PAGE_IDS, makeGuide(pages, opts)  the nine page ids in reading order, and the `guide` export a theme's index.js merges.
- *   stacker({theme, bottom, footWarn})  returns flow(id, top, sections, {gap, maxGap}): stacks sections down a page and shares the
+ *   stacker({theme, bottom, footWarn, gapStretch})  returns flow(id, top, sections, {gap, maxGap}): stacks sections down a page and shares the
  *                         spare height by weight (see below). Throws when the sections do not fit; warns when much is left at the foot.
  *   inkFor(ctx, hex, {size, weight})  text on a colour the user chose: the brand's light text or surface, whichever reads better, and when
  *                         neither reaches the ratio the size needs, the engine's readableOn fallback (#111, #FAFAFA, then pure black or white).
@@ -72,14 +72,14 @@ export const makeGuide = (pages, { order = PAGE_IDS, extra = ['ruler', 'applied'
 
 // ---- spare height ----
 // Content fills the page: sections stack from `top`; spare height goes first to the sections that can grow (flex, in px), then to the gaps (up to maxGap).
-export function stacker({ theme, bottom, footWarn = 70 }) {
+export function stacker({ theme, bottom, footWarn = 70, gapStretch = 1 }) {
   return function flow(id, top, sections, { gap = 28, maxGap = 60 } = {}) {
     const n = sections.length, nat = sum(sections.map((s) => s.h)) + gap * (n - 1);
     let slack = bottom - top - nat;
     if (slack < 0) throw Object.assign(new Error(`${theme} guide: ${id} is ${Math.ceil(-slack)} px too tall (top ${top}, sections ${sections.map((s) => Math.round(s.h)).join(', ')})`), { code: 'too_tall' });
     const flexTotal = sum(sections.map((s) => s.flex || 0)), extra = sections.map(() => 0);
     if (flexTotal) { const give = Math.min(slack, flexTotal); sections.forEach((s, i) => { extra[i] = Math.floor(((s.flex || 0) / flexTotal) * give); }); slack -= sum(extra); }
-    const g = n > 1 ? Math.min(maxGap, gap + Math.floor(slack / (n - 1))) : gap;
+    const g = n > 1 ? Math.min(maxGap * gapStretch, gap + Math.floor(slack / (n - 1))) : gap;
     if (n > 1) slack -= (g - gap) * (n - 1);
     if (slack > footWarn) console.warn(`  ${theme} guide: ${id} leaves ${slack} px at the foot`);
     let y = top, html = '';

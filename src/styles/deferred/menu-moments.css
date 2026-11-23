@@ -97,10 +97,12 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   html:not([data-reduced-motion="false"]) .pnav-menu .pnav-tool:is([data-moment="palette"],[data-moment="gradient"],[data-moment="contrast"],[data-moment="tint"],[data-moment="semantic"],[data-moment="font-pair"],[data-moment="type-scale"],[data-moment="emoji"],[data-moment="file-converter"],[data-moment="ratio"],[data-moment="model-3d"],[data-moment="alt-text"],[data-moment="palette-library"],[data-moment="gradient-library"],[data-moment="inspiration"],[data-moment="prompt-library"])[data-live] :is(.pnav-tool-nm,.w1,.w2,.mm-gl *){animation:none}
 }
 
-/* V3 roles for the moments: the live row's name and glyph answer in ink, whatever the tool's category
-   (the rest state stays the V3 grey glyph and ink name from v3-shell.css). The extra .pnav-menu outranks
-   v3-shell's hover ink on the glyph. */
-.pnav-menu .pnav-tool[data-hue]{--mm-s:var(--v3-ink)}
+/* V3 roles for the moments: the live row's name and glyph answer in the brand green (the V3 green role),
+   whatever the tool's category (the rest state stays the V3 grey glyph and ink name from v3-shell.css).
+   The extra .pnav-menu outranks v3-shell's hover ink on the glyph. */
+.pnav-menu .pnav-tool[data-hue]{--mm-s:var(--v3-h-icons)}
 @media (hover:hover) and (pointer:fine){
-  .pnav-menu .pnav-tool[data-hue]:not([data-soon])[data-live] .pnav-tool-ico{color:var(--v3-ink);transition:color 200ms var(--mm-ease)}
+  .pnav-tool:is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{transition:color 200ms var(--mm-ease)}
+  .pnav-tool[data-hue]:not([data-soon]):is([data-live],:not([data-moment]):is(:hover,:focus-visible)) .pnav-tool-label{color:var(--mm-s)}
+  .pnav-menu .pnav-tool[data-hue]:not([data-soon])[data-live] .pnav-tool-ico{color:var(--mm-s);transition:color 200ms var(--mm-ease)}
 }
