@@ -15,7 +15,7 @@
  *   withHooks(ctx, draw)  runs a page and puts the hooks back as they were if it throws, so the md never describes a page left out.
  *   pageSection(id, inner)   the page wrapper every document and the snapshot test read: <section class="pg" data-page="id">.
  *   PAGE_IDS, makeGuide(pages, opts)  the nine page ids in reading order, and the `guide` export a theme's index.js merges.
- *   stacker({theme, bottom, footWarn})  returns flow(id, top, sections, {gap, maxGap}): stacks sections down a page and shares the
+ *   stacker({theme, bottom, footWarn, gapStretch})  returns flow(id, top, sections, {gap, maxGap}): stacks sections down a page and shares the
  *                         spare height by weight (see below). Throws when the sections do not fit; warns when much is left at the foot.
  *   inkFor(ctx, hex, {size, weight})  text on a colour the user chose: the brand's light text or surface, whichever reads better, and when
  *                         neither reaches the ratio the size needs, the engine's readableOn fallback (#111, #FAFAFA, then pure black or white).

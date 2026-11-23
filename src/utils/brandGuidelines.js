@@ -106,7 +106,7 @@
 import { contrast, grade, inkFor, readDesign, typeLadder } from './styleGuideExport.js'
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
-import { clearSpace, readLogo, LOGO_DEPENDENT_PAGES } from './brandLogo.js'
+import { clearSpace, readLogo } from './brandLogo.js'
 import { esc, orderSections, paletteLayout, specimenScale, fmtRatio, systemSentence, glyphStrip, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, isNeutral, softInk } from './exportTemplates/roles.js'
 import { GUIDELINES_TEMPLATES } from './exportTemplates/guidelines/index.js'
@@ -559,9 +559,8 @@ function scopeFacts(ctx) {
   const cut = d.palette.length > MAX_SLOTS ? ` (the first ${MAX_SLOTS} of ${d.palette.length} colours)` : ''
   const covers = ctx.sections.map(s => `${s.title}: ${s.leaves.join(', ').toLowerCase()}${s.id === 'colour' ? cut : ''}`)
   const absent = []
-  if (!d.logo) {
-    absent.push(`A logo section: ${LOGO_DEPENDENT_PAGES.join(', ')}. Add your logo in the export panel to include it.`)
-  } else if (!d.logo.aspect) {
+  // No logo is not listed as left out: the themed document shows a placeholder mark on those pages until one is added.
+  if (d.logo && !d.logo.aspect) {
     absent.push('The clear-space rule. The logo file states no dimensions.')
   }
   absent.push('Reversed and single-colour versions of the mark. The mark is shown unaltered on each ground.')
