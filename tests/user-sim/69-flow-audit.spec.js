@@ -59,7 +59,7 @@ import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, formatMoney } from '../../src/config/planLadder.js'
-import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { freeFormats } from '../../src/config/exportFormats.js'
 import { mockThemeApi } from './export-theme-mock.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
 
@@ -524,7 +524,7 @@ test.describe('flow 3 — a generated starter touches nothing until asked, on th
 // FLOW 4 — export: every live free format hands over a correctly named file
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('flow 4 — each live free format downloads under its own name', () => {
-  const FREE_LIVE = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
+  const FREE_LIVE = freeFormats()
   // Each free format and the file name it must download under.
   const FILE = {
     kit: /-ui-kit-04-standards\.zip$/,
