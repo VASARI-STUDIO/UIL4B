@@ -178,8 +178,8 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 .pnav-menu-cols{flex-wrap:wrap;gap:0}
 /* One frame for all three menus: the same width, and on desktop the same height, so switching menus never jumps. */
 @media(min-width:980px){.pnav-menu-cols{min-height:396px;flex-wrap:nowrap}}
-/* 980-1023: the brand kit pane wraps to more lines, so every menu takes its taller height. */
-@media(min-width:980px) and (max-width:1023px){.pnav-menu-cols{min-height:420px}}
+/* 980-1199: the frame is at its narrowest (976px or less), so the brand kit and Discover panes wrap to more lines; every menu takes the taller height. */
+@media(min-width:980px) and (max-width:1199px){.pnav-menu-cols{min-height:420px}}
 .pnav-grid{flex:1 1 auto;gap:12px}
 @media(min-width:980px){.pnav-grid{gap:16px 40px}}
 .pnav-menu[data-menu="create"] .pnav-grid[data-cols]{grid-template-columns:minmax(176px,1fr) minmax(176px,1fr) minmax(240px,1.3fr)}
