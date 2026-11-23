@@ -193,19 +193,14 @@ test.describe('premium homepage', () => {
     await expect(page.locator('.htools-facts'), 'the figure strip is back').toHaveCount(0)
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
 
-    // The bookmarks section is the proof. It states the live tool count (counted,
-    // never typed), and the window's sidebar has one link per live tool, each to
-    // that tool's route.
+    // The bookmarks section is the proof. The window's sidebar has one link per
+    // live tool (counted, never typed), each to that tool's route.
     // #bookmarks is an empty stand-in until the section's chunk arrives, and the
     // stand-in is replaced while the scroll below is under way, so wait for the
     // real sections first.
     await homeSectionsLoaded(page)
     const bench = page.locator('#bookmarks')
     await bench.scrollIntoViewIfNeeded()
-    const lede = (await bench.locator('.bm-sub').innerText()).toLowerCase()
-    expect(lede, 'the bookmarks sub-line no longer states the tool count the tree gives')
-      .toContain(`${TOOL_COUNT} tools`)
-
     await expect(bench.locator('a[data-tool]'), 'one sidebar link per live tool').toHaveCount(TOOL_COUNT)
     for (const [name, href] of [
       ['Palette', '/create/palette'],

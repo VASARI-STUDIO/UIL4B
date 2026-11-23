@@ -19,9 +19,6 @@ import '../../styles/pages/home-showcase.css'
 // the same way. Opacity and transform only; reduced motion drops the movement and the stagger.
 
 const capitalise = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
-const joinAnd = (items) => (items.length < 2
-  ? items.join('')
-  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
 
 // Which row a theme sits in follows its page shape; the order is the theme list's.
 const SLOTS = SHOWCASE_THEMES.map((theme, index) => ({ theme, index, landscape: theme.shape !== 'A4' }))
@@ -286,8 +283,6 @@ export default function HomeShowcase() {
     pick(SHOWCASE_KINDS[to].id, { focus: true })
   }
 
-  const count = THEME_FACTS.showcaseCountWord
-
   const renderRow = (slots, modifier, labelId) => (
     <ul className={`hsc-row hsc-row--${modifier}`} role="list" aria-labelledby={labelId} data-hsc-rail="">
       {slots.map((slot) => (
@@ -311,11 +306,6 @@ export default function HomeShowcase() {
             <span className="hsc-h-line">Don’t believe us?</span>{' '}
             <span className="hsc-h-line">See it for yourself.</span>
           </h2>
-          {/* ships with the export themes */}
-          <p className="hsc-sub">
-            {capitalise(count)} sample brands, {count} export themes. Pick a page to see it in all {count}, then open
-            any of them full size. Every page below is a real export, not a mock-up.
-          </p>
         </div>
 
         <div className="hsc-bar" role="tablist" aria-label="Choose a page to compare">
@@ -360,11 +350,6 @@ export default function HomeShowcase() {
         </div>
 
         <div className="hsc-foot">
-          {/* ships with the export themes */}
-          <p className="hsc-footnote">
-            {joinAnd(SHOWCASE_THEMES.map((t) => t.brand))} are sample brands; {SHOWCASE_THEMES[0].brand}’s photos are from Unsplash.{' '}
-            {THEME_FACTS.freeNote}; every other export is Pro.
-          </p>
           <Link className="hsc-cta ui-pill-out" to="/projects">
             Open the toolkit
             <span className="mi-go" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>

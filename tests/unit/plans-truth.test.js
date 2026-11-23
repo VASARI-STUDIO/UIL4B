@@ -510,7 +510,7 @@ test('the homepage plans section reads its lines from planFacts and its amounts 
   assert.match(lists, /\bfreeLines\b/)
   assert.match(lists, /\bproRows\b/)
   assert.match(lists, /\bFREE_EXCLUSION_FULL\b/)
-  assert.match(section, /\bplansLead\b/)
+  assert.doesNotMatch(section, /\bplansLead\b/, 'the homepage plans section shows the /plans lead under its heading again')
   assert.match(section, /\bplanPriceFacts\b/)
   assert.match(section, /usePrices\(\{ enabled: near \}\)/, 'the prices are not held back until the section is near')
   // The figure of two Pro pages is true only once the themes export.

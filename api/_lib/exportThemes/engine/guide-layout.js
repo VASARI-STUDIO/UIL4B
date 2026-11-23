@@ -72,6 +72,8 @@ export const makeGuide = (pages, { order = PAGE_IDS, extra = ['ruler', 'applied'
 
 // ---- spare height ----
 // Content fills the page: sections stack from `top`; spare height goes first to the sections that can grow (flex, in px), then to the gaps (up to maxGap).
+// `gapStretch` lets a theme whose pages run short spread the slack over the gaps up to that many times maxGap (default 1: a gap never passes maxGap),
+// so a sparse page does not leave one hole at its foot. A theme that does not ask keeps the layout it had.
 export function stacker({ theme, bottom, footWarn = 70, gapStretch = 1 }) {
   return function flow(id, top, sections, { gap = 28, maxGap = 60 } = {}) {
     const n = sections.length, nat = sum(sections.map((s) => s.h)) + gap * (n - 1);
