@@ -22,7 +22,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow } from '../../src/data/exportThemes.js'
+import { EXPORT_THEMES, THEME_ROW_FORMATS, entryHasRow, themeHasRow } from '../../src/data/exportThemes.js'
 import { previewPages, publicPreviewSrc, needsGatedPreview, gatedPreviewPath } from '../../src/config/exportPreviews.js'
 import { serveExportPreview } from '../../api/_lib/exportPreview.js'
 
@@ -70,7 +70,7 @@ test('the manifest covers every theme and row, with numbered pages, labels and s
       assert.deepEqual(Object.keys(p).sort(), ['h', 'id', 'label', 'n', 'w'], `${theme} ${row} ${p.n}: labels and sizes only`)
     })
   }
-  for (const { id } of EXPORT_THEMES.filter((t) => t.rows)) {
+  for (const { id } of EXPORT_THEMES.filter((t) => !Object.keys(THEME_ROW_FORMATS).every((r) => entryHasRow(t, r)))) {
     for (const row of Object.keys(THEME_ROW_FORMATS)) {
       if (!themeHasRow(id, row)) assert.deepEqual(previewPages(id, row), [], `${id} has no ${row}`)
     }

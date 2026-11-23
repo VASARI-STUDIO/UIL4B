@@ -2,7 +2,7 @@
 // the Free rule are src/data/exportThemes.js's (the one table the server reads too); this adds the sample brand each preview is
 // drawn from, the page shape, and the picture paths. No theme code is here: the previews are pictures of the sample brands' pages.
 
-import { EXPORT_THEMES, isThemeExportPro, themeHasRow } from '../data/exportThemes.js'
+import { EXPORT_THEMES, entryHasRow, isThemeExportPro, themeHasRow } from '../data/exportThemes.js'
 import { fileName } from '../utils/exportFileName.js'
 
 // Page counts of the two documents, checked against the engine's page lists by tests/unit/export-theme-picker.test.js.
@@ -45,7 +45,7 @@ export const PICKER_THEMES = Object.freeze(EXPORT_THEMES.map((t) => Object.freez
   brand: SAMPLE[t.id][0],
   shape: SAMPLE[t.id][1],
   free: !isThemeExportPro('ui-kit', t.id),
-  guidePages: t.rows ? GUIDELINES_ONLY_PAGES : GUIDELINES_PAGES,
+  guidePages: entryHasRow(t, 'ui-kit') ? GUIDELINES_PAGES : GUIDELINES_ONLY_PAGES,
 })))
 
 export const pickerTheme = (id) => PICKER_THEMES.find((t) => t.id === id) || PICKER_THEMES[0]
