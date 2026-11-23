@@ -59,7 +59,7 @@ const TAKEN = ['8:45 am', '11:00 am', '2:45 pm']
 const CHOSEN_SLOT = '9:30 am'
 
 /** The 35 grid cells for a state: a day, or an empty cell after the 30th. */
-export function calendarCells(state) {
+export function calendarCells(state, chosenDay = CHOSEN) {
   const cells = []
   for (let i = 0; i < 35; i++) {
     const n = i + 1
@@ -69,7 +69,7 @@ export function calendarCells(state) {
     }
     const today = n === TODAY
     if (state === 'full' && FULL.includes(n)) cells.push({ n, today, cls: n === CHOSEN ? 'is-full is-ring' : 'is-full', role: 'error' })
-    else if (n === CHOSEN) cells.push({ n, today, cls: 'is-sel', role: 'primary' })
+    else if (n === chosenDay) cells.push({ n, today, cls: 'is-sel', role: 'primary' })
     else if (OPEN.includes(n)) cells.push({ n, today, cls: 'is-av', role: 'subtle' })
     else cells.push({ n, today, cls: 'is-off', role: 'neutral' })
   }
@@ -77,14 +77,15 @@ export function calendarCells(state) {
 }
 
 /** The slot list for a state; the held state marks the chosen slot. */
-export const slotList = (state) =>
-  SLOTS.map((t) => ({
+export const THURSDAY_SLOTS = ['10:15 am', '3:30 pm']
+export const slotList = (state, chosen = CHOSEN_SLOT, slots = SLOTS) =>
+  slots.map((t) => ({
     t,
-    cls: TAKEN.includes(t) ? 'is-taken' : t === CHOSEN_SLOT ? 'is-sel' : '',
-    hold: state === 'held' && t === CHOSEN_SLOT,
+    cls: TAKEN.includes(t) ? 'is-taken' : t === chosen ? 'is-sel' : '',
+    hold: state === 'held' && t === chosen,
   }))
 
 export const ctaFor = (state) => (state === 'full' ? COPY.ctaFull : state === 'held' ? COPY.ctaHeld : COPY.ctaPick)
 
-export const calendarLabel = (state) =>
-  `${COPY.month} calendar. Wednesday 18 is selected. ${state === 'full' ? 'Tuesday 17 and Wednesday 18 are fully booked.' : 'Thursday 19 has 2 times left.'}`
+export const calendarLabel = (state, chosenDay = CHOSEN) =>
+  `${COPY.month} calendar. ${chosenDay === 19 ? 'Thursday 19' : 'Wednesday 18'} is selected. ${state === 'full' ? 'Tuesday 17 and Wednesday 18 are fully booked.' : 'Thursday 19 has 2 times left.'}`

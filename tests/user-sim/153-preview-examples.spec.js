@@ -194,6 +194,67 @@ const hits = (page) => page.locator('.pvd-stage [data-hit="on"]')
 
 // ── 1. each example renders ──────────────────────────────────────────────────
 
+test('a booking time uses the generated primary and follows the held and fully booked states', async ({ page }) => {
+  await seed(page, PALETTES.mid)
+  const dialog = await openDialog(page)
+  await pickScene(dialog, 'Booking page')
+  const scene = dialog.locator('.bk')
+  const slot = scene.getByRole('button', { name: '8:00 am', exact: true })
+  const primary = await chipFor(dialog, 'primary')
+  await primary.click()
+  await expect(scene.getByRole('button', { name: '9:30 am', exact: true })).toHaveAttribute('data-hit', 'on')
+  await slot.click()
+  await expect(slot).toHaveAttribute('data-hit', 'on')
+  await expect(scene.getByRole('button', { name: '9:30 am', exact: true })).toHaveAttribute('data-hit', 'off')
+  await primary.click()
+  await expect(slot).toHaveCSS('background-color', 'rgb(32, 131, 141)')
+  await scene.getByRole('button', { name: 'Book 8:00 am' }).click()
+  await expect(scene).toHaveAttribute('data-state', 'held')
+  await scene.getByRole('button', { name: 'Release time' }).click()
+  await expect(slot).toHaveAttribute('aria-pressed', 'true')
+  await pickPreviewState(dialog, 'Fully booked day')
+  await scene.getByRole('button', { name: 'See Thursday 19 November' }).click()
+  await expect(scene.locator('.bk-s')).toHaveCount(2)
+  await expect(scene.locator('.bk-dt')).toHaveText('Thursday 19 November')
+})
+
+for (const width of [320, 768, 1440]) {
+  test(`the three brand examples keep their printed copy inside each object at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seed(page, PALETTES.mid)
+    const dialog = await openDialog(page)
+    for (const [name, objects] of [
+      ['Coffee bag', ['.cf-label']],
+      ['Shopfront', ['.sf-fascia', '.sf-door']],
+      ['Stationery', ['.st-lg', '.st-card', '.st-lh']],
+    ]) {
+      await pickScene(dialog, name)
+      const stage = await dialog.locator('.pvd-stage').boundingBox()
+      const specimen = await dialog.locator('.pvs > :first-child').boundingBox()
+      expect(specimen.height, name + ' fills the preview stage').toBeGreaterThanOrEqual(stage.height - 1)
+      for (const selector of objects) {
+        const object = dialog.locator(selector)
+        await expect(object).toBeVisible()
+        const clipped = await object.evaluate((el) => {
+          const frame = el.getBoundingClientRect()
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+          const outside = []
+          while (walker.nextNode()) {
+            if (!walker.currentNode.textContent.trim()) continue
+            const range = document.createRange()
+            range.selectNodeContents(walker.currentNode)
+            if ([...range.getClientRects()].some(r => r.left < frame.left - 1 || r.right > frame.right + 1 || r.top < frame.top - 1 || r.bottom > frame.bottom + 1)) {
+              outside.push(walker.currentNode.textContent)
+            }
+          }
+          return outside
+        })
+        expect(clipped, name + ' ' + selector).toEqual([])
+      }
+    }
+  })
+}
+
 test.describe('the six preview examples', () => {
   test('the preview opens on the editorial example and each example renders as the scene that was picked', async ({ page }) => {
     watch(page, 'designer opening the six preview examples')

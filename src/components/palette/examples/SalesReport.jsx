@@ -36,9 +36,10 @@ export default function SalesReport({ roles }) {
             <div className="rp-lines">{GRID.map((y) => <i key={y} style={{ bottom: `${y}px` }} />)}</div>
             {rep.days.map((d) => (
               <div key={d.name} className="rp-day">
+                <span className="rp-day-name" data-role="neutral">{d.name}</span>
                 <span className="rp-tot" data-role="neutral">{dollars(d.total)}</span>
-                <div className="rp-stack">
-                  {d.segs.map((s) => <i key={s.i} className={`rp-seg ${swatch(s)}`} style={{ height: `${s.h.toFixed(1)}px` }} data-role={s.role} />)}
+                <div className="rp-stack" style={{ '--day-width': `${100 * d.total / rep.peakSales}%` }}>
+                  {d.segs.map((s) => <i key={s.i} className={`rp-seg ${swatch(s)}`} style={{ '--segment-height': `${s.h.toFixed(1)}px`, '--segment-weight': s.h }} data-role={s.role} />)}
                 </div>
               </div>
             ))}

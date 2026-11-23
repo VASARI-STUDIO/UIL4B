@@ -527,6 +527,10 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
 }
 .tt .tt-pv-foot {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex: 0 0 auto;
   margin-top: auto;
   /* The footer text starts where the page copy does (the body is 880px at most). */
@@ -534,6 +538,7 @@ html[data-reduced-motion="true"] .tt .tt-stage[data-swapped="true"] > * { animat
   background: var(--tpv-dark);
 }
 .tt .tt-pv-foot-h { margin: 0; font-weight: 600; font-size: 0.875rem; color: var(--tpv-dark-ink); }
+.tt .tt-pv-pots { flex: 0 0 auto; width: clamp(50px, 12cqi, 88px); height: 32px; color: var(--tpv-dark-sub); }
 .tt .tt-pv-foot-m { margin: 2px 0 0; font-size: var(--fs-caption); color: var(--tpv-dark-sub); }
 @container tt-pv (min-width: 760px) {
   .tt .tt-pv-body { grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr); gap: 32px; align-items: start; }

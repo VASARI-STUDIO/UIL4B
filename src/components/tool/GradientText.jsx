@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import useMeasured from './useMeasured'
+import ShallowEndMark from '../ShallowEndMark'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import { boxWithin, inkFor, sceneInks, sceneBadge } from '../../utils/gradientText'
 import {
@@ -51,9 +52,15 @@ function PosterText({ stops, type, angle }) {
         <div className="grd-poster-frame">
           <div className="grd-poster-in">
             <div className="grd-poster-top" data-box="top" style={{ color: inks.top.css }}>
-              <p className="grd-poster-brand">{POSTER_COPY.brand}</p>
+              <p className="grd-poster-brand"><ShallowEndMark />{POSTER_COPY.brand}</p>
               <p className="grd-poster-h">{POSTER_COPY.display}</p>
             </div>
+            <svg className="grd-poster-lanes" viewBox="0 0 200 80" preserveAspectRatio="xMaxYMid meet" aria-hidden="true" fill="none" stroke={inks.foot.css} strokeWidth="2">
+              {[0, 1, 2, 3, 4].map((lane) => {
+                const offset = lane * 7
+                return <path key={lane} d={`M0 ${6 + offset}h95c28 0 34 38 65 38h40`} />
+              })}
+            </svg>
             <p className="grd-poster-foot" data-box="foot" style={{ color: inks.foot.css }}>{POSTER_COPY.footer}</p>
           </div>
         </div>

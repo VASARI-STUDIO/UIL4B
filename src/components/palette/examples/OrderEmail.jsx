@@ -26,7 +26,12 @@ export default function OrderEmail({ roles }) {
     <div className="em" style={vars}>
       <p className="em-pre" data-role="neutral">{COPY.preheader}</p>
       <div className="em-col">
-        <div className="em-mast" data-role="deep">{COPY.brand}</div>
+        <div className="em-mast" data-role="deep">
+          <svg viewBox="0 0 42 40" width="38" height="36" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+            <path d="m3 18 22-13 14 8-22 13zM3 18v7l14 8 22-13v-7M17 26v7M8 18l17-10m-12 12 17-10" />
+          </svg>
+          {COPY.brand}
+        </div>
         <i className="em-rule" data-role="secondary" />
         <div className="em-in">
           <h3 className="em-h" data-role="neutral">{COPY.heading}</h3>

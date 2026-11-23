@@ -58,14 +58,14 @@ function Photo({ narrow }) {
   return (
     <figure className="sw-photo" data-role="neutral">
       <PreviewImage asset={asset} sizes={narrow ? '100vw' : '(min-width: 1100px) 1080px, 100vw'} eager className="sw-img" />
-      <figcaption className="sw-cap">{HERO.caption}</figcaption>
+      <figcaption className="sw-cap" data-role="primary">{HERO.caption}</figcaption>
     </figure>
   )
 }
 
 function Lede({ saved, setSaved }) {
   return (
-    <section className="sw-lede" data-role="neutral">
+    <section className="sw-lede" data-role="subtle">
       <p className="sw-rubric">{HERO.rubric}</p>
       <h2 className="sw-head">{HERO.head}</h2>
       <div className="sw-aside">

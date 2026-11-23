@@ -90,14 +90,15 @@ export default function PreviewScene({ roles, labels, sceneId, highlight = null,
       stop.push(() => ro.disconnect())
     }
     // A live scene changes its own elements (a tab, a panel, the form), so the marks are redone
-    // after each change, once per frame. The marks are attributes, which this observer does not watch.
+    // after each change, once per frame. A selected slot can trade roles with
+    // another without adding a node. Ignore the hit/fail attributes mark writes.
     if (live && typeof MutationObserver !== 'undefined') {
       let frame = 0
       const mo = new MutationObserver(() => {
         cancelAnimationFrame(frame)
         frame = requestAnimationFrame(mark)
       })
-      mo.observe(root, { childList: true, subtree: true })
+      mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-role', 'data-adjusted'] })
       stop.push(() => { mo.disconnect(); cancelAnimationFrame(frame) })
     }
     return stop.length ? () => stop.forEach((fn) => fn()) : undefined

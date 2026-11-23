@@ -115,6 +115,9 @@
 .pvd-stage{container:pvstage / size;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0;touch-action:pan-y pinch-zoom}
 /* One preview fills the stage edge to edge, as a page: no border, no radius. Compare mode keeps both, so two palettes read as two panes. `clip` rather than `hidden` so a sticky element inside scrolls with the stage. */
 .pvd-stage:not(.is-compare) .pvs{border:0;border-radius:0;overflow:clip}
+/* A short specimen fills its own viewing area. A percentage minimum on the
+   scene alone cannot resolve through the two auto-height loading wrappers. */
+.pvd-stage .pvs > :first-child{min-height:var(--stage-room,100cqh)}
 .pvd-stage.is-compare{padding:var(--s-5)}
 .plb-modal--preview[data-layout="strip"] .pvd-stage.is-compare{padding:var(--s-4)}
 .pvd-stage.is-compare{--stage-room:calc(100cqh - 32px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--s-5)}
