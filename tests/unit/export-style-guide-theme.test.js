@@ -7,7 +7,7 @@
 //     Break: change the folder E.fontFiles writes to, so a page links a font the zip does not hold.
 //  3. NOTHING THIRD-PARTY: no origin in any file, and the print document keeps its CSP meta and holds no script.
 //     Break: add a Google Fonts link to guideCss in themes/27-swissfield/lane-guide.js.
-//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Swiss Field, Keynote and Stub are offered it.
+//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Swiss Field, Drawing Sheet, Keynote and Stub are offered it.
 //     Break: make themeHasRow in src/data/exportThemes.js ignore OPT_IN_ROWS.
 //  5. A THEME WITHOUT THE ROW IS REFUSED like any other missing row: 400 unknown_row.
 //     Break: drop the themeHasRow line in themeRequestProblem.
@@ -16,7 +16,7 @@
 //  7. NO PAGE IS LEFT OUT for long brand names or a one-colour palette: every page id is drawn, in order, with no warning,
 //     and the markdown carries all six sections.
 //     Break: put the head's left label back to the full `${name} style guide`, or drop the one-row retry on the logo page.
-//  8. A PAGE LEFT OUT IS LEFT OUT OF THE MARKDOWN: an over-long one-word name (30 letters on Swiss Field, 48 on Standards Plate) drops the logo page, and the md then numbers
+//  8. A PAGE LEFT OUT IS LEFT OUT OF THE MARKDOWN: an over-long one-word name (30 letters on Swiss Field, 48 on Standards Plate and Drawing Sheet) drops the logo page, and the md then numbers
 //     Colour to Usage 01 to 05 with no Logo section.
 //     Break: drop the drawn(k) check in styleGuideMarkdown, or the ctx.pagesDrawn line in styleGuide.
 //  9. A TABLE CELL NEVER BREAKS THE TABLE: a pipe is escaped and a line break becomes a space.
@@ -34,12 +34,13 @@ import { assertThemeAccess } from '../../api/_lib/themeAccess.js'
 import { mdCell } from '../../api/_lib/exportThemes/engine/styleguide.js'
 import { guide as swissGuide } from '../../api/_lib/exportThemes/themes/27-swissfield/index.js'
 import { guide as standardsGuide } from '../../api/_lib/exportThemes/themes/24-standards/index.js'
+import { guide as blueprintGuide } from '../../api/_lib/exportThemes/themes/29-blueprint/index.js'
 
-// the two themes that name the row, each with its own guide export (the applied-throws test plants a failure in it)
-const THEMES = { '24-standards': standardsGuide, '27-swissfield': swissGuide }
+// the themes that name the row, each with its own guide export (the applied-throws test plants a failure in it)
+const THEMES = { '24-standards': standardsGuide, '27-swissfield': swissGuide, '29-blueprint': blueprintGuide }
 const IDS = Object.keys(THEMES)
 // the shortest run of one wide letter that no logo slot can hold, per theme: only the logo page drops for it
-const LONG_WORD = { '24-standards': 'W'.repeat(48), '27-swissfield': 'A'.repeat(30) }
+const LONG_WORD = { '24-standards': 'W'.repeat(48), '27-swissfield': 'A'.repeat(30), '29-blueprint': 'W'.repeat(48) }
 const KEYNOTE = '21-presentation'
 const PAGES = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast', 'tokens', 'usage']
 const drawnPages = (html) => [...html.matchAll(/<section class="pg" data-page="([a-z]+)"/g)].map((m) => m[1])
@@ -54,7 +55,7 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
-test('the picker offers the style guide only on Standards Plate, Swiss Field, Keynote and Stub, in the three formats', () => {
+test('the picker offers the style guide only on Standards Plate, Swiss Field, Drawing Sheet, Keynote and Stub, in the three formats', () => {
   assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
@@ -64,7 +65,7 @@ test('the picker offers the style guide only on Standards Plate, Swiss Field, Ke
 
 test('the style guide is free where the guidelines are free (Pro on a premium theme), and a theme without the row is refused', () => {
   for (const THEME of IDS) {
-    const free = THEME === '27-swissfield' // Standards Plate is a premium theme: its guide is Pro, like its book
+    const free = THEME === '27-swissfield' // Standards Plate and Drawing Sheet are premium themes: each guide is Pro, like its book
     assert.equal(isThemeExportPro('guide', THEME), !free)
     const asFree = assertThemeAccess({ id: 'free' }, { theme: THEME, row: 'guide', format: 'md' })
     if (free) assert.deepEqual(asFree, { ok: true })
@@ -208,6 +209,7 @@ for (const THEME of IDS) {
   })
 }
 
+// Standards Plate (24-standards) robustness.
 // 11. THE USAGE CARD READS: its title and body take an ink that reaches 4.5 on the card fill, even when the raised colour is mid-grey.
 //     Break: set the card's `color:` back to `L.text` in themes/24-standards/guide-pages-c.js.
 // 12. NO BORDER TOKEN, NO DROPPED PAGE: a brand without a border-control token still draws the usage page (link not underlined, card with no edge).
@@ -215,7 +217,7 @@ for (const THEME of IDS) {
 // 13. A ONE-COLOUR OR ALL-THE-SAME PALETTE draws without NaN or Infinity; each page is drawn or named in a "left out" warning.
 const hexLum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] }
 const hexRatio = (a, b) => { const [x, y] = [hexLum(a), hexLum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
-const guideHtml = async (colors, projectName = 'Kerbside') => {
+const spGuideHtml = async (colors, projectName = 'Kerbside') => {
   const design = { palette: { base: colors[0], harmony: 'auto', colors } }
   const warns = []
   const warn = console.warn
@@ -226,9 +228,67 @@ const guideHtml = async (colors, projectName = 'Kerbside') => {
     return { html, md, left: warns.filter((w) => /left out/.test(w)) }
   } finally { console.warn = warn }
 }
-const usageCard = (html) => { const m = html.match(/background:(#[0-9a-fA-F]{6});border:[^"]*"[^>]*><div style="[^"]*color:(#[0-9a-fA-F]{6})/); return m && { fill: m[1], ink: m[2] } }
+const spUsageCard = (html) => { const m = html.match(/background:(#[0-9a-fA-F]{6});border:[^"]*"[^>]*><div style="[^"]*color:(#[0-9a-fA-F]{6})/); return m && { fill: m[1], ink: m[2] } }
 
 test('24-standards: the usage card text reaches 4.5 on a mid-grey raised colour', async () => {
+  for (const colors of [['#8a8a8a', '#111111', '#f5f5f5'], ['#1a1a1a', '#8a8a8a', '#ffffff', '#8a8a8a'], ['#767676', '#222222', '#eeeeee'], ['#949494', '#101010', '#fafafa']]) {
+    const { html, left } = await spGuideHtml(colors)
+    assert.match(html, /data-page="usage"/, `usage page drawn for ${colors}`)
+    assert.deepEqual(left, [])
+    const card = spUsageCard(html)
+    assert.ok(card, `card found for ${colors}`)
+    assert.ok(hexRatio(card.ink, card.fill) >= 4.5, `card ${card.ink} on ${card.fill} is ${hexRatio(card.ink, card.fill).toFixed(2)}`)
+  }
+})
+
+test('24-standards: a brand with no border-control token still draws the usage page', async () => {
+  const original = standardsGuide.usage
+  standardsGuide.usage = (ctx) => { ctx.borders = ctx.borders.filter((b) => b.token !== 'border-control'); return original(ctx) }
+  try {
+    const { html, md, left } = await spGuideHtml(['#0A7562', '#033C31', '#D9E6E1'])
+    assert.match(html, /data-page="usage"/)
+    assert.deepEqual(left, [])
+    assert.match(md, /not underlined/)
+    assert.match(md, /no edge/)
+  } finally { standardsGuide.usage = original }
+})
+
+test('24-standards: a one-colour and an all-the-same palette hold no NaN or Infinity', async () => {
+  for (const colors of [['#F96B76'], ['#336699', '#336699', '#336699'], ['#ffffff'], ['#000000', '#000000']]) {
+    const { html, md, left } = await spGuideHtml(colors)
+    assert.doesNotMatch(html, /NaN|Infinity/, `html for ${colors}`)
+    assert.doesNotMatch(md, /NaN|Infinity/, `md for ${colors}`)
+    for (const id of PAGES) {
+      assert.ok(drawnPages(html).includes(id) || left.some((w) => w.includes(id)), `${id} drawn or named for ${colors}`)
+    }
+  }
+})
+
+// Drawing Sheet (29-blueprint) robustness. Each test names the change that makes it fail.
+// 11. THE USAGE CARD READS: its title and body take an ink that reaches 4.5 on the card fill, even when the raised colour is mid-grey.
+//     Break: in themes/29-blueprint/guide-pages-c.js, replace the `cardInk` chain with `color:${L.text}` (or `R.ink`) on the card's two text lines.
+// 12. NO BORDER TOKEN, NO DROPPED PAGE: a brand without a border-control token still draws the usage page (link not underlined, card with no edge).
+//     Break: in guide-pages-c.js, dereference `lk.border.token` / `cd.edge.token` without the `lk.border ?` / `cd.edge ?` guards (lines for lspec, edgeText, cardLine, link line).
+// 13. A ONE-COLOUR OR ALL-THE-SAME PALETTE draws without NaN or Infinity; each page is drawn or named in a "left out" warning.
+//     Break: divide by a palette spread or a colour count without a zero guard in guide-pages-a.js (colour page) or guide-kit.js.
+// 14. THE CONTRAST PAGE FITS MORE THAN TEN PAIRS: twelve pairs still draw (the 40 px rows drop to 34 px), with no "left out" warning.
+//     Break: in guide-pages-c.js set `const RH = P.length > 10 ? 34 : 40` back to a flat 40 (twelve pairs then throw and the page is left out).
+const BP = '29-blueprint'
+const guideHtml = async (colors, projectName = 'Kerbside') => {
+  const design = colors && { palette: { base: colors[0], harmony: 'auto', colors } }
+  const warns = []
+  const warn = console.warn
+  console.warn = (...a) => { warns.push(a.join(' ')) }
+  try {
+    const { html } = await renderThemeExport({ theme: BP, row: 'guide', format: 'pdf', design, projectName })
+    const { md } = await renderThemeExport({ theme: BP, row: 'guide', format: 'md', design, projectName })
+    return { html, md, warns, left: warns.filter((w) => /left out/.test(w)) }
+  } finally { console.warn = warn }
+}
+// the card is the only box with a fill, a border and a padding; its title is the first text line inside it
+const usageCard = (html) => { const m = html.slice(html.indexOf('data-page="usage"')).match(/background:(#[0-9a-fA-F]{6});border:[^"]*"[^>]*><div [^>]*style="[^"]*color:(#[0-9a-fA-F]{6})/); return m && { fill: m[1], ink: m[2] } }
+
+test('29-blueprint: the usage card text reaches 4.5 on a mid-grey raised colour', async () => {
   for (const colors of [['#8a8a8a', '#111111', '#f5f5f5'], ['#1a1a1a', '#8a8a8a', '#ffffff', '#8a8a8a'], ['#767676', '#222222', '#eeeeee'], ['#949494', '#101010', '#fafafa']]) {
     const { html, left } = await guideHtml(colors)
     assert.match(html, /data-page="usage"/, `usage page drawn for ${colors}`)
@@ -239,27 +299,89 @@ test('24-standards: the usage card text reaches 4.5 on a mid-grey raised colour'
   }
 })
 
-test('24-standards: a brand with no border-control token still draws the usage page', async () => {
-  const original = standardsGuide.usage
-  standardsGuide.usage = (ctx) => { ctx.borders = ctx.borders.filter((b) => b.token !== 'border-control'); return original(ctx) }
+test('29-blueprint: a brand with no border-control token still draws the usage page', async () => {
+  const original = blueprintGuide.usage
+  blueprintGuide.usage = (ctx) => { ctx.borders = ctx.borders.filter((b) => b.token !== 'border-control'); return original(ctx) }
   try {
     const { html, md, left } = await guideHtml(['#0A7562', '#033C31', '#D9E6E1'])
     assert.match(html, /data-page="usage"/)
     assert.deepEqual(left, [])
     assert.match(md, /not underlined/)
     assert.match(md, /no edge/)
-  } finally { standardsGuide.usage = original }
+  } finally { blueprintGuide.usage = original }
 })
 
-test('24-standards: a one-colour and an all-the-same palette hold no NaN or Infinity', async () => {
+test('29-blueprint: a one-colour and an all-the-same palette hold no NaN or Infinity', async () => {
   for (const colors of [['#F96B76'], ['#336699', '#336699', '#336699'], ['#ffffff'], ['#000000', '#000000']]) {
     const { html, md, left } = await guideHtml(colors)
     assert.doesNotMatch(html, /NaN|Infinity/, `html for ${colors}`)
     assert.doesNotMatch(md, /NaN|Infinity/, `md for ${colors}`)
-    for (const id of PAGES) {
-      assert.ok(drawnPages(html).includes(id) || left.some((w) => w.includes(id)), `${id} drawn or named for ${colors}`)
-    }
+    assert.deepEqual(drawnPages(html), PAGES, `every page drawn for ${colors}`)
+    assert.deepEqual(left, [], `nothing left out for ${colors}`)
   }
+})
+
+test('29-blueprint: the sheet counter counts the pages drawn, in order, and a page left out is not counted', async () => {
+  const sheets = (html) => [...html.matchAll(/<div class="ga-m" style="font-size:18px;line-height:22px">(\d{3})<\/div><div class="ga-r ga-q ga-nw">of (\d{3})<\/div>/g)].map((m) => [+m[1], +m[2]])
+  const whole = await guideHtml(undefined)
+  const all = drawnPages(whole.html)
+  assert.deepEqual(sheets(whole.html), all.map((_, i) => [i + 1, all.length]), 'every sheet reads its place of the pages drawn')
+  const long = await guideHtml(undefined, 'W'.repeat(48))
+  const kept = drawnPages(long.html)
+  assert.ok(kept.length < PAGES.length, 'the 48-letter name drops a page, so the total must follow the drawn pages')
+  assert.deepEqual(sheets(long.html), kept.map((_, i) => [i + 1, kept.length]), 'sheets stay consecutive and the total drops with the page left out')
+})
+
+test('29-blueprint: the contrast page still draws with more than ten pairs', async () => {
+  const original = blueprintGuide.contrast
+  // the default brand sets seven pairs; repeat them to twelve, which only fits at the 34 px row
+  blueprintGuide.contrast = (ctx) => { const base = ctx.pairs, more = []; while (more.length < 12) more.push(...base); ctx.pairs = more.slice(0, 12); return original(ctx) }
+  try {
+    const { html, left } = await guideHtml(undefined)
+    assert.deepEqual(left.filter((w) => w.includes('contrast')), [], 'no "guide page contrast left out" warning')
+    assert.ok(drawnPages(html).includes('contrast'), 'the contrast page is drawn')
+    const page = html.slice(html.indexOf('data-page="contrast"'), html.indexOf('data-page="tokens"'))
+    assert.equal((page.match(/\d+(?:\.\d+)?:1</g) || []).length, 12 + 1, 'twelve pair rows (and the one in the grade key)')
+  } finally { blueprintGuide.contrast = original }
+})
+
+// 15. THE COLOUR PAGE IS NEVER DROPPED FOR PALETTE SIZE: 8, 12 and 40 distinct colours still draw it, with no "left out" or too-tall warning that names colour.
+//     The route's own pipeline holds at most 12 colours, so the 40 (and the 200 the export allows) are put on the page by wrapping guide.colour; a palette too big for the page
+//     draws the first colours that fit and says so, and the markdown guide still lists the rest.
+//     Break: in themes/29-blueprint/guide-pages-a.js colourPage, set `const dense = false` and `const shown = F.length` (the page is then too tall and left out).
+test('29-blueprint: the colour page is drawn for 8, 12 and 40 distinct colours', async () => {
+  const palette = (n) => Array.from({ length: n }, (_, i) => {
+    const h = (i * 137.508) % 360, s = 0.55 + (i % 3) * 0.12, l = 0.3 + (i % 5) * 0.1
+    const f = (k) => { const a = s * Math.min(l, 1 - l), q = (k + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(q - 3, 9 - q, 1)))) }
+    return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('')
+  })
+  const original = blueprintGuide.colour
+  const cases = []
+  try {
+    for (const [n, total] of [[8, 8], [12, 12], [12, 40], [12, 200]]) {
+      // the pipeline's own colours first, then synthetic ones with their own names, up to the total
+      blueprintGuide.colour = (ctx) => {
+        const extra = palette(total).slice(ctx.colours.length).map((hex, i) => ({ id: `x-${i}`, name: `Extra colour ${i + 1}`, hex, role: 'alternative', share: 0.001 }))
+        const own = ctx.colours
+        ctx.colours = [...own, ...extra].slice(0, Math.max(total, own.length))
+        cases.push(ctx.colours.length)
+        try { return original(ctx) } finally { ctx.colours = own }
+      }
+      const { html, warns, left } = await guideHtml(palette(n))
+      const page = html.slice(html.indexOf('data-page="colour"'), html.indexOf('data-page="ruler"'))
+      assert.ok(drawnPages(html).includes('colour'), `the colour page is drawn for ${total} colours`)
+      assert.deepEqual(left.filter((w) => /colour/.test(w)), [], `no colour page left out for ${total} colours`)
+      assert.deepEqual(warns.filter((w) => /colour/.test(w) && /too tall/.test(w)), [], `colour page not too tall for ${total} colours`)
+      assert.doesNotMatch(html, /NaN|Infinity/, `html for ${total} colours`)
+      const shown = (page.match(/>HEX</g) || []).length
+      if (total <= 12) assert.doesNotMatch(page, /Showing the first/, `${total} colours all fit, no note`)
+      else {
+        const m = page.match(/Showing the first (\d+) of (\d+) colours/)
+        assert.ok(m && +m[2] === total && +m[1] === shown && shown < total, `${total} colours: the note says ${m && m[0]}, and ${shown} are drawn`)
+      }
+    }
+  } finally { blueprintGuide.colour = original }
+  assert.ok(cases.some((c) => c >= 40), 'the 40-colour palette reached the page')
 })
 
 // ---- 22-ticket (Stub): keyed on data-page and its own folio class (tk-fo), never another theme's classes
