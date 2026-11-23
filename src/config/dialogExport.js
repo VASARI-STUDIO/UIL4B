@@ -28,7 +28,7 @@ export const EXPORT_TYPES = Object.freeze([
     categories: Object.freeze([
       category('slides', 'Guidelines', 'Brand guidelines', false, ['guidelines', 'guidelines-html'], 'guidelines', 'guidelines'),
       category('book', 'Brand book', 'A4 pages', true, ['book', 'book-html'], 'book', 'book'),
-      category('guide', 'Style guide', 'A4', false, ['html', 'md'], null, 'guide'),
+      category('guide', 'Style guide', 'A4', false, ['html', 'md', 'style-guide', 'style-guide-html', 'style-guide-md'], null, 'guide'),
     ]),
   }),
   Object.freeze({
@@ -202,7 +202,7 @@ export function resolveUpgradeTarget({ formatId, projectId, signedIn }) {
 // ── Offline ─────────────────────────────────────────────────────────────────
 // The files that need the network to be made: the server builds the book and the
 // slides, and the kit fetches its font files first. The style guide and the token
-// files are made in the browser from the saved design.
-const NEEDS_NETWORK = new Set(['kit', 'book', 'book-png', 'book-html', 'guidelines', 'guidelines-html'])
+// files are made in the browser from the saved design; the themed style guide is made on the server.
+const NEEDS_NETWORK = new Set(['kit', 'book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'style-guide', 'style-guide-html', 'style-guide-md'])
 
 export const needsNetwork = (formatId) => NEEDS_NETWORK.has(formatId)

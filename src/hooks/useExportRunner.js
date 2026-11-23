@@ -404,7 +404,7 @@ export default function useExportRunner() {
       if (themed) {
         // A themed file: the server builds it in the chosen theme. A zip is saved under the name the dialog lists (themedZipName); a print row is written
         // into the reserved window and printed from here (utils/exportThemeRequest.js), never opened from a blob.
-        activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
+        activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'guide' ? 'style-guide' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
         setStage(themed.format === 'pdf' ? 'document' : 'building')
         labelPrintWindow(printWin, 'Preparing your document…')
         // A Pro kit is named for the identity name typed in the panel, in the request and on the zip; any other file keeps the project's name.
