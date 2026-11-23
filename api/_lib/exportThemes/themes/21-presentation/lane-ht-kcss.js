@@ -26,6 +26,8 @@ export function kitCss(ctx) {
 .hk-row--2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
 .hk-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:40px 48px;align-items:start}
 .hk-col>.hk-i--w{grid-column:1/-1;max-width:960px}
+.ui-table[data-sortable] th[aria-sort="ascending"] button::after{content:"\\2191" / ""}
+.ui-table[data-sortable] th[aria-sort="descending"] button::after{content:"\\2193" / ""}
 .hk-i--stack .hk-i__c{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 .hk-i{display:flex;flex-direction:column;gap:12px;margin:0}
 .hk-i--w .hk-i__c{width:100%;max-width:960px}

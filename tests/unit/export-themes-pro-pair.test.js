@@ -36,8 +36,9 @@ const BAD = new RegExp(String.raw`\[object Object\]|\bundefined\b|\bNaN\b|[${PRI
 
 const rows = (theme) => Object.entries(THEME_ROW_FORMATS).flatMap(([row, formats]) => (themeHasRow(theme, row) ? formats.map((format) => [row, format]) : []))
 
-// The text of an export: the print document, or every text file in the zip
+// The text of an export: the markdown guide, the print document, or every text file in the zip
 async function textsOf(out) {
+  if (typeof out.md === 'string') return [['guide.md', out.md]]
   if (typeof out.html === 'string') return [['print', out.html]]
   if (typeof out.md === 'string') return [['guide.md', out.md]]
   const zip = await JSZip.loadAsync(out.zip)

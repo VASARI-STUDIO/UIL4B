@@ -56,10 +56,11 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
   const { user } = useAuth()
   // Before any page is read from memory: a sign-out, another account or a change of plan empties what the last one was shown.
   syncPreviewOwner(user?.uid, isPro)
-  const themed = Boolean(themedFile(file))
   const kind = cat.preview
   const shown = pickerTheme(themeId)
-  const pages = useMemo(() => (themed ? pagesOf(themeId, kind) : []), [themed, themeId, kind])
+  const pages = useMemo(() => (themedFile(file) ? pagesOf(themeId, kind) : []), [file, themeId, kind])
+  // A themed file whose theme has no stock pages for it (the themed style guide) shows its document's plain preview.
+  const themed = pages.length > 0
   const [carousel, dispatch] = usePageCarousel(pages.length, `${themeId}|${cat.id}`)
   const page = pages[Math.min(carousel.index, pages.length - 1)] || null
 

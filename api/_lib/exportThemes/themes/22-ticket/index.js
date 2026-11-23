@@ -82,7 +82,7 @@ ${ctx.logo.drawn ? '' : `/* logo slot frame for the slot edition: 1 px dashed, l
 }
 
 // ---- lane modules (overnight build, 11 Nov): each builder adds lane-<name>.js beside this file, merged in file-name order (engine/lanes.js) ----
-import { mergeLanes as __mergeLanes, laneCss as __laneCss } from '../../engine/lanes.js';
+import { mergeLanes as __mergeLanes, laneCss as __laneCss, laneGuideCss as __laneGuideCss } from '../../engine/lanes.js';
 import * as __bk_apps from './lane-bk-apps.js';
 import * as __bk_css from './lane-bk-css.js';
 import * as __bk from './lane-bk.js';
@@ -96,12 +96,13 @@ import * as __ht_guide from './lane-ht-guide.js';
 import * as __ht_kit from './lane-ht-kit.js';
 import * as __ht_parts from './lane-ht-parts.js';
 import * as __ht from './lane-ht.js';
+import * as __guide from './lane-guide.js';
 import * as __kt from './lane-kt.js';
 import * as __u1 from './lane-u1.js';
 import * as __u2 from './lane-u2.js';
 import * as __u3 from './lane-u3.js';
 
-const __L = __mergeLanes([__bk_apps, __bk_css, __bk, __g1, __g2, __g3, __g4, __g5, __ht_css, __ht_guide, __ht_kit, __ht_parts, __ht, __kt, __u1, __u2, __u3]);
+const __L = __mergeLanes([__bk_apps, __bk_css, __bk, __g1, __g2, __g3, __g4, __g5, __ht_css, __ht_guide, __ht_kit, __ht_parts, __ht, __kt, __u1, __u2, __u3, __guide]);
 Object.assign(guidelines, __L.guidelines);
 Object.assign(uikit, __L.uikit);
 if (__L.fonts.length) meta.fonts = [...(meta.fonts || []), ...__L.fonts];
@@ -112,3 +113,8 @@ export const readMe = __L.readMe || undefined;
 export const sheets = __L.sheets || undefined;
 export const guideSite = __L.guideSite || undefined;
 export const kitSite = __L.kitSite || undefined;
+
+// the A4 style guide (lane-guide.js): the pages the route draws for the guide row, and the css that goes with them
+export const guide = {};
+Object.assign(guide, __L.guide);
+export const guideCss = __laneGuideCss(__L);
