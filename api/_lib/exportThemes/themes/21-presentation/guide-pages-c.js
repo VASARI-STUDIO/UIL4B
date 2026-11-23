@@ -12,10 +12,10 @@ export function contrastPage(ctx) {
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
   const RH = P.length > 10 ? 34 : 40, AX = 400, AW = 150, TXW = AX - X0 - 88;
   // each pair's name wraps to two lines with its usage line under it; when the page cannot hold that, the usage line takes one line, and last the name does too
-  const LEVELS = [[2, 2], [2, 1], [1, 1]];
+  const LEVELS = [[2, 2], [2, 1], [1, 1], [1, 0]];
   const rowsAt = ([lm, um]) => P.map((p) => {
     const ln = Math.min(lm, nLines(CH[600], p.label, 15, TXW)), un = p.use ? Math.min(um, nLines(CH[400], p.use, 12, TXW)) : 0;
-    return { ln, un, h: Math.max(RH, ln * 20 + un * 16 + 8) };
+    return { ln, un, h: Math.max(RH, ln * 20 + un * 16 + (lm > 1 ? 8 : 0)) };
   });
   const pairs = { rows: [], h: 0, flex: P.length * 72, draw: (y, extra = 0) => {
     const add = Math.floor(extra / Math.max(1, P.length));
