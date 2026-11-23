@@ -137,7 +137,7 @@ export { guidelines, uikit };
 
 // ---- lane modules (overnight build, 11 Nov): each builder adds lane-<name>.js beside this file, merged in file-name order (engine/lanes.js) ----
 import { tightenPages } from './ph.js';
-import { mergeLanes as __mergeLanes, laneCss as __laneCss } from '../../engine/lanes.js';
+import { mergeLanes as __mergeLanes, laneCss as __laneCss, laneGuideCss as __laneGuideCss } from '../../engine/lanes.js';
 import * as __bk from './lane-bk.js';
 import * as __g1 from './lane-g1.js';
 import * as __g2 from './lane-g2.js';
@@ -149,13 +149,17 @@ import * as __kt from './lane-kt.js';
 import * as __u1 from './lane-u1.js';
 import * as __u2 from './lane-u2.js';
 import * as __u3 from './lane-u3.js';
+import * as __guide from './lane-guide.js';
 
-const __L = __mergeLanes([__bk, __g1, __g2, __g3, __g4, __g5, __ht, __kt, __u1, __u2, __u3]);
+export const guide = {};
+const __L = __mergeLanes([__bk, __g1, __g2, __g3, __g4, __g5, __ht, __kt, __u1, __u2, __u3, __guide]);
+Object.assign(guide, __L.guide);
 Object.assign(guidelines, __L.guidelines);
 Object.assign(uikit, __L.uikit);
 tightenPages(guidelines); // slot: compact placeholders on the pages laid out from measured lines (ph.js)
 if (__L.fonts.length) meta.fonts = [...(meta.fonts || []), ...__L.fonts];
 export const css = __laneCss(baseCss, __L);
+export const guideCss = __laneGuideCss(__L);
 export const brandBook = __L.brandBook || baseBrandBook;
 export const bookCss = __L.bookCss || baseBookCss;
 export const readMe = __L.readMe || baseReadMe;
