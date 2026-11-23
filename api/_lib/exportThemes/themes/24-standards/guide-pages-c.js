@@ -130,7 +130,7 @@ export function usagePage(ctx) {
   // the card's ink: its colour's own ink when that reads at 4.5, else the text colour, else the best of the ink, black and white
   const cardInk = (() => {
     let own = null;
-    try { const cf = colourFacts(ctx).find((c) => c.hex.toLowerCase() === String(cd.fill).toLowerCase()); own = cf && cf.ink ? cf.ink.hex : null; } catch { own = null; }
+    try { const cf = colourFacts(ctx).find((c) => c.hex.toLowerCase() === String(cd.fill).toLowerCase()); own = cf && cf.ink ? cf.ink.hex : null; } catch { /* no colour facts: fall through to the text colour */ }
     const cands = [own, L.text, R.ink, '#000000', '#ffffff'].filter(Boolean);
     return cands.find((h) => ctx.ratio(h, cd.fill) >= 4.5) || cands.reduce((a, b) => (ctx.ratio(b, cd.fill) > ctx.ratio(a, cd.fill) ? b : a));
   })();
