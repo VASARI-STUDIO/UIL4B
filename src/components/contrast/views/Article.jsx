@@ -52,7 +52,7 @@ export default function Article({ job = null }) {
           <span className="bs-lab bs-lab--warm">{CHART.warm.label}</span>
           <span className="bs-lab bs-lab--cool">{CHART.cool.label}</span>
         </div>
-        <div className="bs-xl" {...part('text', job)}><span>{CHART.from}</span><span>{CHART.to}</span></div>
+        <div className="bs-xl" {...part('text', job)}><span>{CHART.from}</span><span>1 h</span><span>2 h</span><span>3 h</span><span>{CHART.to}</span></div>
         <p className="bs-cap" {...part('text', job)}>{CHART.caption}</p>
       </div>
     </div>

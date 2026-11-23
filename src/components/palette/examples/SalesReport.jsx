@@ -25,8 +25,10 @@ export default function SalesReport({ roles }) {
       </header>
       <div className="rp-in">
         <div className="rp-hero">
+          <div><p className="rp-measure" data-role="neutral">Weekly sales</p>
           <p className="rp-fig" data-role="neutral">{rep.headline}</p>
-          <p className="rp-up" data-role="success">{rep.up}</p>
+          <p className="rp-up" data-role="success">{rep.up}</p></div>
+          <p className="rp-peak" data-role="neutral">Best trading day<strong>{rep.peakDay}</strong>{dollars(rep.peakSales)}</p>
         </div>
         <div className="rp-chart" role="img" aria-label={rep.chartLabel}>
           <div className="rp-axis" aria-hidden="true">

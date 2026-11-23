@@ -9,7 +9,7 @@
 // Pure: no state, no effects. Colours arrive as --pv-* custom properties from
 // the dialog; the two this scene works out itself are set on its root.
 import { useId, useMemo } from 'react'
-import { CHART, FIGURES, BATTERY_KWH, FEED_IN_CENTS, sundialVars } from './Sundial.data.js'
+import { CHART, FIGURES, HOURS, NOW_H, BATTERY_KWH, FEED_IN_CENTS, sundialVars } from './Sundial.data.js'
 import './Sundial.css'
 
 const Icon = ({ children }) => (
@@ -18,11 +18,17 @@ const Icon = ({ children }) => (
   </svg>
 )
 
-function Segmented({ className }) {
+function MeterReadings() {
+  const hour = HOURS[NOW_H - 1]
   return (
-    <span className={`sd-seg ${className}`} data-role="neutral">
-      <span className="is-on">Day</span><span>Week</span><span>Month</span>
-    </span>
+    <section className="sd-meter" data-role="neutral" aria-label="Last complete hour">
+      <p>{String(hour.h).padStart(2, '0')}:00–{FIGURES.now} · Average power</p>
+      <dl>
+        {[['Solar', hour.solar], ['House load', hour.load], ['To grid', hour.exported]].map(([label, value]) => (
+          <div key={label}><dt>{label}</dt><dd>{value.toFixed(1)} <small>kW</small></dd></div>
+        ))}
+      </dl>
+    </section>
   )
 }
 
@@ -72,7 +78,7 @@ function Chart() {
           </span>
         ))}
       </div>
-      <figcaption className="sd-cap">kW · Forecast after now, shown faint</figcaption>
+      <figcaption className="sd-cap">Power in kW · Dashed lines show the forecast</figcaption>
     </figure>
   )
 }
@@ -164,7 +170,6 @@ export default function Sundial({ roles }) {
         </span>
         <span className="sd-site">Home · Castlemaine VIC</span>
         <span className="sd-day">Today</span>
-        <Segmented className="sd-seg--top" />
         <span className="sd-sample">Sample data</span>
       </header>
 
@@ -176,7 +181,7 @@ export default function Sundial({ roles }) {
             <Icon><path d="M8 3.5 13 12H3z" fill="currentColor" /></Icon>
             ${FIGURES.credit} credit at {FEED_IN_CENTS}c/kWh
           </p>
-          <Segmented className="sd-seg--lead" />
+          <MeterReadings />
           <Chart />
         </section>
 

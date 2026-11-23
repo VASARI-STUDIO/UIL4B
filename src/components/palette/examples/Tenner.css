@@ -55,6 +55,7 @@
 /* The edge sits over the render so a pale card still has a visible outline. */
 .ty-cardface::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--ty-card-edge);pointer-events:none}
 .ty-cardface.is-frozen{filter:saturate(.4)}
+.ty-engraving{position:absolute;left:39%;top:14%;width:48%;height:71%;stroke:var(--ty-card-ink);stroke-width:.7;opacity:.48;pointer-events:none}
 .ty-card-mark{position:absolute;left:6.7%;top:9%;font-size:20px;font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--ty-card-ink)}
 /* The card number is a literal code, so it takes the mono face; nothing else on the page does. */
 .ty-card-num{position:absolute;left:6.7%;bottom:9%;font-family:'PV Martian Mono','Geist Mono',ui-monospace,monospace;font-size:13px;line-height:1;letter-spacing:.08em;color:var(--ty-card-ink)}
@@ -105,6 +106,8 @@
 .ty-glyph-ico,.ty-merchant-ico,.ty-act-ico,.ty-ico{flex:none;display:block}
 .ty-cat{font-weight:500}
 .ty-amt{font-size:15px}
+.ty-cat-track{display:block;width:min(100%,160px);height:3px;margin-top:5px;background:var(--pv-border)}
+.ty-cat-track i{display:block;height:100%;background:var(--pv-primary)}
 .ty-share{font-size:13px;text-align:right;color:var(--pv-muted)}
 
 /* ── Transactions ── */

@@ -1,3 +1,4 @@
+import KerbsideRoute from '../components/typescale/KerbsideRoute.jsx'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
@@ -1007,6 +1008,7 @@ export default function FontMatcher({ onCopy, toast }) {
             <span className="fpr-pp-status">On the way</span>
             <h3 className="fpr-h1">{sample || KS_ETA}</h3>
             <p className="fpr-lede">{KS_PICKUP}</p>
+            <KerbsideRoute />
             <dl className="fpr-pp-stats">
               {KS_STATS.map(([n, l]) => (
                 <div key={l}><dt>{n}</dt><dd>{l}</dd></div>

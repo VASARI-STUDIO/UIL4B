@@ -35,6 +35,11 @@ export default function Stationery({ roles }) {
           <span className="st-sc" data-role="deep" data-adjusted={deepAdjusted ? 'true' : undefined}>{COPY.school}</span>
         </div>
         <p className="st-lt" data-role="neutral">{COPY.letter}</p>
+        <div className="st-slip" data-role="neutral">
+          <span>Pool deck pass · Term 1</span>
+          <strong>{COPY.group}</strong>
+          <span>{COPY.lesson}</span>
+        </div>
         <div className="st-contact" data-role="neutral">
           <span>{COPY.address}</span>
           <span>{COPY.phone}</span>

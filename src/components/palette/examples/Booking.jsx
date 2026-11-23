@@ -56,8 +56,10 @@ export default function Booking({ roles, state, onState }) {
               <span className="bk-svc" data-role="neutral">{COPY.service}</span>
               <span className="bk-price" data-role="neutral">{COPY.price}</span>
             </div>
-            <p className="bk-mut" data-role="neutral">{COPY.length}</p>
-            <p data-role="neutral">{COPY.clinician}</p>
+            <div className="bk-consult" data-role="neutral">
+              <span className="bk-clinician-mark" aria-hidden="true">AR</span>
+              <span>{COPY.clinician}<small>{COPY.length} · In person</small></span>
+            </div>
             <div className="bk-pin">
               <svg data-role="secondary" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 14s4.5-3.9 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 10.1 8 14 8 14z" /><circle cx="8" cy="6.5" r="1.6" />

@@ -58,7 +58,10 @@ function Photo({ narrow }) {
   return (
     <figure className="sw-photo" data-role="neutral">
       <PreviewImage asset={asset} sizes={narrow ? '100vw' : '(min-width: 1100px) 1080px, 100vw'} eager className="sw-img" />
-      <figcaption className="sw-cap" data-role="primary">{HERO.caption}</figcaption>
+      <figcaption className="sw-cap" data-role="primary">
+        <span>{HERO.caption}</span>
+        <span className="sw-crossing-time">{clockAt(0)} to {clockAt(1)}</span>
+      </figcaption>
     </figure>
   )
 }

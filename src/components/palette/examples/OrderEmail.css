@@ -58,3 +58,6 @@
   .em-th{font-size:12px}
   .em-st{padding-right:4px}
 }
+.em-consignment { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-block: 16px; padding-block: 12px; border-block: 1px solid var(--pv-border); }
+.em-consignment span { font-size: 12px; color: var(--pv-muted); }
+.em-consignment strong { display: block; font-size: 16px; color: var(--pv-text); }

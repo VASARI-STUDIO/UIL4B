@@ -77,6 +77,7 @@ export function reportFor(roles) {
     cats,
     days,
     peakSales: best.total,
+    peakDay: FULL_DAYS[days.indexOf(best)],
     labels: cats.map((c, i) => ({ ...c, y: ys[i] })),
     rows: cats.map((c) => ({ ...c, sales: dollars(c.total), share: `${Math.round((c.total / grand) * 100)}%`, delta: signed(c.change) })),
     totals: { sales: dollars(grand), share: '100%', delta: signed(sum(cats.map((c) => c.change))) },

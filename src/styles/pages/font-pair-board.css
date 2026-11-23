@@ -339,3 +339,4 @@ html.fpr-sheet-room .fpr-page .tl-body { padding-bottom: 62dvh; }
 @media (hover: hover) and (pointer: fine) {
   .tl-sheet-layer .fpr-more-save .svt-trigger:hover { background: var(--tl-wash-2); }
 }
+.fpr-product .kerbside-route { display: block; width: 100%; height: auto; max-height: 78px; margin-block: 12px; color: var(--fpr-sfg); --route-paper: var(--fpr-sbg); }

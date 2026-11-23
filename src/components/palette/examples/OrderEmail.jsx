@@ -39,6 +39,10 @@ export default function OrderEmail({ roles }) {
             <span className="em-lnk" data-role="secondary" data-adjusted={adjusted}>{COPY.order}</span>
             <span data-role="neutral">{COPY.count}</span>
           </p>
+          <div className="em-consignment" data-role="neutral">
+            <span>Delivery to <strong>Marrickville</strong></span>
+            <span>Longest load <strong>{LINES[0].length}</strong></span>
+          </div>
           <div className="em-tb" role="table" aria-label={COPY.tableLabel}>
             <div className="em-tr em-th" role="row" data-role="subtle">
               {COPY.columns.map((c) => <span key={c} role="columnheader">{c}</span>)}

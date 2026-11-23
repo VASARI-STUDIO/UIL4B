@@ -162,7 +162,7 @@ function PhoneScene({ framed, paint, stops, type, angle }) {
       <div className="grd-phone-form">
         <p className="grd-phone-h">{PHONE_COPY.heading}</p>
         <p className="grd-phone-label">{PHONE_COPY.label}</p>
-        <div className="grd-phone-field" />
+        <div className="grd-phone-field">{PHONE_COPY.email}</div>
         <div className="grd-phone-btn" style={{ background: fill, color: buttonInk.css }}>{PHONE_COPY.button}</div>
         <p className="grd-phone-link">{PHONE_COPY.link}</p>
       </div>

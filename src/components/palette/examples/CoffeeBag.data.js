@@ -19,10 +19,10 @@ export const TEXT_RECIPE = [
 export const COPY = {
   brand: 'Low Light Roasters',
   name: 'Night Shift',
-  notes: 'Washed Huila and natural Sidamo. Dark chocolate, plum, molasses.',
+  blend: 'Washed Huila and natural Sidamo',
+  tasting: 'Dark chocolate, plum, molasses',
   price: '250 g · $24',
   cta: 'Add to cart',
-  wordmark: ['Low Light', 'Roasters'],
   roasted: 'Roasted 3 Nov',
   imageLabel: 'A coffee bag drawn from your palette: a primary backdrop, a subtle bag and a deep label.',
 }

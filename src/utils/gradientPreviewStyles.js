@@ -232,6 +232,7 @@ export function phoneButton(stops) {
 export const PHONE_COPY = {
   line: 'Quote on site. Paid by Friday.',
   heading: 'Sign in to Offcut',
+  email: 'mel@offcut.example',
   label: 'Email',
   button: 'Continue',
   link: 'Create an account',

@@ -172,3 +172,6 @@
 }
 html[data-reduced-motion="true"] .sw-img{animation:none}
 html[data-reduced-motion="true"] .sw :is(button,input){transition:none}
+.sw-cap { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.sw-crossing-time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+@container pvs (max-width: 599px) { .sw-crossing-time { display: none; } }

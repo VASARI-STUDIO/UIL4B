@@ -6,7 +6,7 @@
  * frame down to 320px wide. */
 
 .sp{display:grid;align-content:center;gap:var(--s-4);height:100%;padding:var(--s-6);color:var(--pv-text)}
-.sp .sp-h{font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.sp .sp-h{padding-bottom:var(--s-2);border-bottom:2px solid currentColor;font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
 .sp .sp-large{font-size:24px;font-weight:400;line-height:1.35}
 .sp .sp-bold{font-size:19px;font-weight:700;line-height:1.4}
 .sp .sp-body{max-width:min(60ch,100%);font-size:16px;font-weight:400;line-height:1.6}

@@ -1,7 +1,7 @@
 /* Shopfront (Shopfront.jsx): a hardware shop's frontage painted with the user's palette.
  *
  * Colour comes only from --pv-* (set by the dialog) and the --fi-* inks and edges the scene
- * works out per palette. The shop is flat shapes, no photograph. Layout is a container query
+ * works out per palette. Two window panes reveal one continuous shop display. Layout is a container query
  * on .pvs: a wide frontage from 720px, a narrower one with a smaller name under it.
  * Type: 13 / 16 / 28 / 32px, Geist, which loads only when this example opens. */
 @font-face{font-family:'PV Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin.woff2') format('woff2')}
@@ -14,17 +14,27 @@
 .sf :where(p,i){margin:0;padding:0}
 .sf :where(*,*::before,*::after){box-sizing:border-box}
 
-.sf-shop{display:flex;flex-direction:column;width:min(100%,620px);border-bottom:6px double var(--pv-border-strong)}
-.sf-fascia{display:flex;align-items:center;justify-content:center;height:88px;padding:0 var(--s-5);background:var(--pv-primary);color:var(--fi-ink);box-shadow:inset 0 0 0 1px var(--fi-edge)}
-.sf-wm{padding-block:5px;border-block:1px solid currentColor;font-size:clamp(20px,4.4cqi,38px);font-weight:700;letter-spacing:.045em;text-align:center;line-height:1.12}
+.sf-shop{display:flex;flex-direction:column;width:min(100%,900px);border-bottom:6px double var(--pv-border-strong)}
+.sf-fascia{display:flex;align-items:center;justify-content:center;height:clamp(84px,12cqi,132px);padding:0 var(--s-5);background:var(--pv-primary);color:var(--fi-ink);box-shadow:inset 0 0 0 1px var(--fi-edge)}
+.sf-wm{padding-block:5px;border-block:1px solid currentColor;font-family:Georgia,serif;font-size:clamp(20px,5.3cqi,54px);font-weight:700;letter-spacing:.045em;text-align:center;line-height:1.12}
 .sf-awning{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));height:40px}
 .sf-awning i{position:relative;border-radius:0 0 35% 35%;background:var(--pv-secondary);box-shadow:inset 0 0 0 1px var(--fi-sec-edge)}
 .sf-awning { position:relative;z-index:1;margin:0 -3px -8px; }
 .sf-awning i::after { content:'';position:absolute;inset:auto 0 8px;border-top:1px solid var(--pv-border-strong); }
 .sf-awning i.is-alt{background:var(--pv-surface);box-shadow:inset 0 0 0 1px var(--pv-border)}
-.sf-wall{display:grid;grid-template-columns:minmax(0,1fr) 112px minmax(0,1fr);align-items:end;gap:var(--s-4);height:220px;padding:var(--s-4) var(--s-5) 0;background:var(--pv-surface);box-shadow:inset 0 0 0 1px var(--pv-border)}
-.sf-win{align-self:center;display:grid;align-items:end;height:128px;border:3px double var(--pv-border-strong);background:var(--pv-raised);color:var(--pv-muted)}
-.sf-win svg{display:block;width:100%;max-height:100%}
+.sf-wall{display:grid;grid-template-columns:minmax(0,1fr) 112px minmax(0,1fr);align-items:end;gap:var(--s-4);height:clamp(220px,35cqi,330px);padding:var(--s-4) var(--s-5) 0;background:var(--pv-surface);box-shadow:inset 0 0 0 1px var(--pv-border)}
+.sf-win {
+  position: relative; overflow: hidden; align-self: stretch; margin-block: 4px 20px;
+  border: 4px ridge var(--pv-border-strong);
+  background: var(--pv-raised);
+}
+.sf-win::before {
+  content: ''; position: absolute; inset-block: 0; width: 220%;
+  background: url('/previews/hardware-window.webp') center / cover no-repeat;
+}
+.sf-win--paint::before { left: 0; }
+.sf-win--tools::before { right: 0; }
+.sf-door::before{content:'';position:absolute;inset:6px;border:3px double var(--fi-deep-ink);opacity:.48;pointer-events:none}
 .sf-door::after{content:'';position:absolute;top:55%;right:12%;width:4px;height:25px;border-radius:2px;background:var(--fi-deep-ink)}
 .sf-door{position:relative;display:flex;justify-content:center;height:100%;padding-top:var(--s-4);background:var(--pv-deep);box-shadow:0 0 0 1px var(--fi-deep-edge)}
 .sf-no{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--pv-accent);color:var(--fi-acc-ink);font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--fi-acc-edge)}
@@ -35,5 +45,5 @@
   .sf-fascia{height:72px}
   .sf-wm{font-size:20px}
   .sf-wall{grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr);height:180px;padding-inline:var(--s-3)}
-  .sf-win{height:90px}
+  .sf-win{margin-block:4px 12px;border-width:3px}
 }

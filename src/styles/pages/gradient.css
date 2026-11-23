@@ -1637,7 +1637,7 @@
 .grd .grd-phone-form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 20px; overflow: hidden; }
 .grd .grd-phone-h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; color: var(--tl-ink); }
 .grd .grd-phone-label { margin: 16px 0 0; font-size: 13px; line-height: 16px; font-weight: 500; color: var(--tl-ink); }
-.grd .grd-phone-field { height: 40px; margin-top: 4px; border: 1px solid var(--tl-line); border-radius: 999px; background: var(--tl-card); }
+.grd .grd-phone-field { display: flex; align-items: center; padding-inline: 12px; color: var(--tl-ink); font-size: 13px; height: 40px; margin-top: 4px; border: 1px solid var(--tl-line); border-radius: 999px; background: var(--tl-card); }
 .grd .grd-phone-btn {
   display: flex; align-items: center; justify-content: center; height: 40px; margin-top: 12px;
   border-radius: 999px; font-size: 14px; line-height: 16px; font-weight: 600;

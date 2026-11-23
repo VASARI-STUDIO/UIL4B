@@ -88,6 +88,11 @@ function Card({ color, frozen }) {
   return (
     <div className="ty-cardwrap">
       <Recolour asset={PREVIEW_ASSETS['card-front']} color={color} sizes="360px" eager className={frozen ? 'ty-cardface is-frozen' : 'ty-cardface'}>
+        <svg className="ty-engraving" viewBox="0 0 130 88" fill="none" aria-hidden="true">
+          {Array.from({ length: 16 }, (_, n) => (
+            <ellipse key={n} cx="65" cy="44" rx="58" ry="18" transform={`rotate(${n * 11.25} 65 44)`} />
+          ))}
+        </svg>
         <span className="ty-card-mark">Tenner</span>
         <span className="ty-card-num">•••• {CARD.last4}</span>
         <span className="ty-network" aria-hidden="true"><i /><i /></span>
@@ -251,12 +256,14 @@ function Categories() {
     <ul className="ty-cats" data-role="neutral">
       {FIGURES.cats.map((c) => (
         <li key={c.name}>
-          <Ctl className="ty-catrow">
+          <div className="ty-catrow">
             <span className="ty-glyph" data-role="subtle"><Icon size={18} className="ty-glyph-ico">{GLYPHS[c.glyph]}</Icon></span>
-            <span className="ty-cat">{c.name}</span>
+            <span className="ty-cat">{c.name}
+              <span className="ty-cat-track" aria-hidden="true"><i data-role="primary" style={{ width: `${c.share}%` }} /></span>
+            </span>
             <span className="ty-amt">{c.text}</span>
             <span className="ty-share">{c.share}%</span>
-          </Ctl>
+          </div>
         </li>
       ))}
     </ul>

@@ -16,6 +16,7 @@ function Volume({ v, roof }) {
       <path className="ho-face ho-face--lit" data-role="subtle" d={v.lit} />
       <path className="ho-face ho-face--shade" data-role="deep" d={v.shade} />
       <path className={`ho-face ho-face--${roof}`} data-role={roof} d={v.roof} />
+      <path className={`ho-roof-lines ho-roof-lines--${roof}`} d={v.seams} />
       {v.glass && <path className="ho-face ho-face--glass" data-role="accent" d={v.glass} />}
     </g>
   )
@@ -63,7 +64,10 @@ export default function HaleOkoro({ roles }) {
           </h3>
           <p className="ho-lede">{COPY.lede}</p>
         </div>
-        <Drawing />
+        <figure className="ho-plate">
+          <Drawing />
+          <figcaption><b>{COPY.projects[0][0]}</b><span>{COPY.projects[0][1]} · Site axonometric</span></figcaption>
+        </figure>
       </section>
 
       <section className="ho-index" data-role="neutral">

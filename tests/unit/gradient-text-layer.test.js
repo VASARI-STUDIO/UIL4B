@@ -132,7 +132,7 @@ test('the Sampled at line is there when there are fewer than five stops, and onl
 
 test("the Phone sets Offcut's own words and the icon is Tenner's T", () => {
   assert.deepEqual(PHONE_COPY, {
-    line: 'Quote on site. Paid by Friday.', heading: 'Sign in to Offcut', label: 'Email', button: 'Continue', link: 'Create an account',
+    line: 'Quote on site. Paid by Friday.', heading: 'Sign in to Offcut', email: 'mel@offcut.example', label: 'Email', button: 'Continue', link: 'Create an account',
   })
   assert.equal(ICON_GLYPH, 'T')
 })

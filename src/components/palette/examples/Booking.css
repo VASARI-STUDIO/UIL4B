@@ -82,3 +82,7 @@
   .bk-nav span:not(.is-cur){display:none}
   .bk-pin{flex-wrap:wrap}
 }
+.bk-consult { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
+.bk-consult small { display: block; color: var(--pv-muted); font-size: 13px; }
+.bk-clinician-mark { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border: 1px solid var(--pv-border-strong); border-radius: 50%; font: 600 17px var(--bk-serif); }
+.bk-confirm { border-top: 3px solid var(--pv-primary); }

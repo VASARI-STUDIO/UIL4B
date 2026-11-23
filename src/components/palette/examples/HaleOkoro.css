@@ -38,7 +38,12 @@
 /* ── Hero: the headline over columns 1 to 6, the drawing over 7 to 12 ── */
 .ho-hero{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--s-5);align-items:center;padding:var(--s-6) 0 var(--s-5)}
 .ho-words{grid-column:1 / span 6;grid-row:1;display:flex;flex-direction:column;gap:var(--s-4);min-width:0}
-.ho-draw{grid-column:7 / span 6;grid-row:1;position:relative;min-width:0}
+.ho-plate{grid-column:7 / span 6;grid-row:1;min-width:0;margin:0}
+.ho-draw{position:relative}
+.ho-plate figcaption{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border-top:1px solid var(--pv-border-strong);padding-block:8px;font-size:12px;color:var(--pv-muted)}
+.ho-plate figcaption b{color:var(--pv-text)}
+.ho-roof-lines{fill:none;stroke:var(--ho-seam-primary);stroke-width:.8;opacity:.52;vector-effect:non-scaling-stroke}
+.ho-roof-lines--secondary{stroke:var(--ho-seam-secondary)}
 .ho-h{
   font-family:'PV Big Shoulders','Switzer Fallback',Impact,system-ui,sans-serif;
   font-size:clamp(56px,9.5cqi,128px);font-weight:800;line-height:.92;letter-spacing:-.01em;text-transform:uppercase;
@@ -84,7 +89,7 @@
 @container pvs (max-width:943px){
   .ho{padding:var(--s-5)}
   .ho-words{grid-column:1 / -1}
-  .ho-draw{grid-column:5 / -1;grid-row:2;margin-top:var(--s-4)}
+  .ho-plate{grid-column:5 / -1;grid-row:2;margin-top:var(--s-4)}
   .ho-hero{padding-top:var(--s-5)}
   .ho-line{display:inline}
   .ho-line--3{padding-left:0}
@@ -99,7 +104,7 @@
   .ho-line{display:block}
   /* One column: twelve with their 24px gaps would be wider than a 320px stage. */
   .ho-hero{grid-template-columns:minmax(0,1fr)}
-  .ho-draw{grid-column:1 / -1}
+  .ho-plate{grid-column:1 / -1}
   /* The drawing is small here, so the level label sits up and to the right of its leader's end, clear of the studio wall and of the plot's back edge. */
   .ho-call--top{transform:translate(calc(-100% + var(--s-5)),calc(-100% - var(--s-2)))}
   .ho-row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name year" "sub type";row-gap:0}

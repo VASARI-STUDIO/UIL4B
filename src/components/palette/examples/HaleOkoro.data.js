@@ -68,6 +68,10 @@ function volume({ x0, x1, y0, y1, floor, roofUp, roofDown }) {
     lit: poly([at(x0, y1, floor), at(x1, y1, floor), at(x1, y1, roofDown), at(x0, y1, roofDown)]),
     shade: poly([at(x1, y0, floor), at(x1, y1, floor), at(x1, y1, roofDown), at(x1, y0, roofUp)]),
     roof: poly([at(x0 - over, y0 - over, roofUp), at(x1 + over, y0 - over, roofUp), at(x1 + over, y1 + over, roofDown), at(x0 - over, y1 + over, roofDown)]),
+    seams: Array.from({ length: Math.ceil((x1 - x0) / 0.5) }, (_, i) => {
+      const x = x0 + i * 0.5
+      return seg(at(x, y0 - over, roofUp), at(x, y1 + over, roofDown))
+    }).join(''),
     // A band of glass across the downhill face, divided by mullions.
     glass: (xa, xb, za, zb) => poly([at(xa, y1, za), at(xb, y1, za), at(xb, y1, zb), at(xa, y1, zb)]),
     mullions: (xa, xb, za, zb, n) => Array.from({ length: n - 1 }, (_, i) => {
@@ -124,8 +128,8 @@ export const DRAWING = {
   viewBox: `${fmt(vx)} ${fmt(vy)} ${fmt(vw)} ${fmt(vh)}`,
   ratio: vw / vh,
   slabTop, slabRight, slabFront, hatch: HATCH, slope, posts: POSTS, leaders, mullions,
-  studio: { lit: STUDIO.lit, shade: STUDIO.shade, roof: STUDIO.roof },
-  house: { lit: HOUSE.lit, shade: HOUSE.shade, roof: HOUSE.roof, glass: houseGlass },
+  studio: { lit: STUDIO.lit, shade: STUDIO.shade, roof: STUDIO.roof, seams: STUDIO.seams },
+  house: { lit: HOUSE.lit, shade: HOUSE.shade, roof: HOUSE.roof, seams: HOUSE.seams, glass: houseGlass },
   callouts: [
     { text: 'RL 112.40', at: share([TOP[0], TOP[1] - LEAD]), anchor: 'top' },
     { text: 'Fall 1 in 4', at: share([MID[0] + LEAD, MID[1]]), anchor: 'side' },

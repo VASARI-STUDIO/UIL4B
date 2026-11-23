@@ -251,9 +251,11 @@ function Elevation({ at, setAt }) {
   const live = useContext(Live)
   const read = readoutAt(at)
   const cur = CHART.at(at)
+  const section = SEGMENTS.find((segment) => at < segment.to) ?? SEGMENTS[SEGMENTS.length - 1]
   return (
     <figure className="rl-elev">
       <figcaption className="rl-read">
+        <strong className="rl-section">{section.name}</strong>
         <span className="rl-read-km">{read.km} km</span>
         <span>{read.height}</span>
         <span>{read.grade}</span>
@@ -273,7 +275,7 @@ function Elevation({ at, setAt }) {
         {live && (
           <input
             className="rl-range" type="range" min="0" max={SCRUB_MAX} step={SCRUB_STEP} value={Math.min(Math.round(at / SCRUB_STEP) * SCRUB_STEP, SCRUB_MAX)}
-            aria-label="Scrub along the route" aria-valuetext={`${read.km} km, ${read.height}, ${read.grade}`}
+            aria-label="Scrub along the route" aria-valuetext={`${read.km} km, ${read.height}, ${read.grade}, ${section.name}`}
             onChange={(e) => setAt(Math.min(Number(e.target.value), LENGTH))}
           />
         )}

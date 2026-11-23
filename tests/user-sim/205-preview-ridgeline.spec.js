@@ -266,7 +266,8 @@ test.describe('the chart scrub', () => {
     await expect(sc.locator('.rl-read-km')).toHaveText('2.50 km')
     await expect(sc.locator('.rl-read')).toContainText('132 m')
     await expect(sc.locator('.rl-read')).toContainText('Climbing 11%')
-    await expect(scrub(sc)).toHaveAttribute('aria-valuetext', '2.50 km, 132 m, Climbing 11%')
+    await expect(sc.locator('.rl-section')).toHaveText('Simpson Falls Track')
+    await expect(scrub(sc)).toHaveAttribute('aria-valuetext', '2.50 km, 132 m, Climbing 11%, Simpson Falls Track')
   })
 
   test('the arrow keys step the slider by 25 m and Home and End reach the two ends of the route', async ({ page }) => {
