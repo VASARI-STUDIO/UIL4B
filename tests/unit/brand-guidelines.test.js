@@ -195,13 +195,10 @@ test('the scope page is always present and names what the document cannot contai
     assert.match(html, /Tone of voice, motion and iconography/, `${label}: the other absences are not named`)
     assert.match(html, /Not in this document/, `${label}: the absent column has no heading`)
   }
-  // The absent list must actually DIFFER between the two shapes, or it is a
-  // fixed paragraph rather than a description of the document in hand.
-  assert.match(BARE, /A logo section/, 'a document with no logo does not say its logo section is missing')
-  assert.ok(!DOC.includes('A logo section:'),
-    'a document WITH a logo still lists the logo section as missing — the disclosure is boilerplate')
-  assert.ok(BARE.includes('Add your logo in the export panel'),
-    'the missing-logo line does not say how to fix it')
+  // A missing logo is not listed as left out: the logo pages show a placeholder mark until one is added.
+  for (const [label, html] of [['with logo', DOC], ['bare', BARE]]) {
+    assert.ok(!html.includes('A logo section:'), `${label}: the logo pages are listed as left out`)
+  }
 })
 
 test('nothing in it is photography, and nothing in it is fetched', () => {
