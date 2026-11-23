@@ -275,6 +275,35 @@ test('Keynote: the usage card reaches 4.5 on a mid-grey raised colour', async ()
   }
 })
 
+test('Keynote: a long title and body in the usage card are clamped and stay inside the card and its frame', async () => {
+  const original = keynoteGuide.usage
+  const longTitle = 'An extraordinarily long headline that keeps going well past two lines of the card so it has to be cut short'
+  const longBody = 'Body copy that runs on and on, sentence after sentence, far beyond the three lines the card has room for, so the rest must be trimmed away. '.repeat(4)
+  keynoteGuide.usage = (ctx) => { ctx.brand.type.sample = { ...ctx.brand.type.sample, headline: longTitle, paragraph: longBody }; return original(ctx) }
+  try {
+    for (const colors of [undefined, ['#1F4B8E', '#2E7BB8', '#3FA9A0']]) {
+      const { html, left } = await kHtml(colors, 'Northern Rivers Community Credit Union')
+      assert.deepEqual(left.filter((w) => /usage/.test(w)), [], 'the usage page is drawn')
+      const page = html.slice(html.indexOf('data-page="usage"'))
+      const px = (s, k) => +(s.match(new RegExp(`(?:^|;)${k}:(\\d+(?:\\.\\d+)?)px`)) || [])[1]
+      const m = page.match(/<div class="a " style="([^"]*padding:\d+px[^"]*)"><div class="ph-tight" style="([^"]*)">([^<]*)<\/div><div class="ph-tight" style="([^"]*)">([^<]*)<\/div>/)
+      assert.ok(m, 'the usage card is found')
+      const [, card, tStyle, tText, bStyle] = m
+      const clamp = (s) => +(s.match(/-webkit-line-clamp:(\d+)/) || [])[1]
+      assert.ok(clamp(tStyle) <= 2 && clamp(bStyle) <= 3, `clamps ${clamp(tStyle)} and ${clamp(bStyle)}`)
+      assert.match(tStyle, /overflow:hidden/)
+      assert.match(bStyle, /overflow:hidden/)
+      assert.match(tText, /…$/, 'the long title ends in an ellipsis')
+      assert.ok(tText.length < longTitle.length)
+      const edge = +card.match(/border:(\d+)px/)[1], pad = +card.match(/padding:(\d+)px/)[1]
+      assert.ok(px(tStyle, 'height') + 8 + px(bStyle, 'height') + 2 * (edge + pad) <= px(card, 'height'), 'title and body fit the card')
+      const frame = [...page.slice(0, page.indexOf(card)).matchAll(/<div class="a " style="left:[\d.]+px;top:[\d.]+px;width:([\d.]+)px;height:([\d.]+)px;[^"]*outline:1px solid/g)].pop()
+      assert.ok(frame, 'the frame is found')
+      assert.ok(px(card, 'height') <= +frame[2] && px(card, 'width') <= +frame[1], 'the card fits its frame')
+    }
+  } finally { keynoteGuide.usage = original }
+})
+
 test('Keynote: no border token still draws the usage page, and one-colour palettes hold no NaN or Infinity', async () => {
   const original = keynoteGuide.usage
   keynoteGuide.usage = (ctx) => { ctx.borders = ctx.borders.filter((b) => b.token !== 'border-control'); return original(ctx) }

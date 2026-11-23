@@ -89,12 +89,12 @@ export function typePage(ctx) {
   // 01 faces: plates that meet (the display face, the text face, the mono face when there is one)
   const plates = [[d.family, weightName(ctx.weights.heading), 'display'], [b.family, `${weightName(ctx.weights.regular)} and ${weightName(ctx.weights.medium)}`, 'body']];
   if (mo) plates.push([mo.family, weightName(400), 'mono']);
-  const PHt = 96;
+  const PHt = 112;
   const facesSec = { h: SUBH + 8 + PHt, flex: 60, draw: (y, extra = 0) => sec(K, X0, y, CW, '01', 'Faces') + plates.map(([fam, wt, role], i) => {
     const x0 = X0 + Math.round((i * CW) / plates.length), x1 = X0 + Math.round(((i + 1) * CW) / plates.length), pw = x1 - x0;
     const w = role === 'display' ? ctx.weights.heading : 400, fam2 = role === 'display' ? 'var(--display)' : role === 'mono' ? 'var(--bmono)' : 'var(--body)';
     return obj(K, x0, y + SUBH + 8, pw, PHt + extra, R.ground, at(16, 10 + Math.floor(extra / 2), `<span style="font-family:${fam2};font-weight:${w};font-size:40px;line-height:44px">Aa</span>`, { cls: 'gk-nw' })
-      + at(16, 60 + extra, `<div class="gk-h gk-e" style="width:${pw - 32}px">${A(fam)}</div><div class="gk-r gk-q gk-e" style="width:${pw - 32}px">${A(wt)}</div>`), { frame: true });
+      + at(16, 58 + extra, `<div class="gk-h gk-e" style="width:${pw - 32}px">${A(fam)}</div><div class="gk-r gk-q gk-e" style="width:${pw - 32}px">${A(wt)}</div>`), { frame: true });
   }).join('') };
   // 02 the ladder: each step at its own size (a display step over 56 px is shown at 56 and says so), its name and numbers in the first column, a hairline between steps
   const CAP = 56, LW = 168, SX = X0 + LW + 16, SW = XR - SX;

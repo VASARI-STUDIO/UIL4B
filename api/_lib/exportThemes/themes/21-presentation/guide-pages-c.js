@@ -4,26 +4,34 @@ import { r1, hook } from '../../engine/guide-layout.js';
 import { esc as A } from '../../engine/brand.js';
 import { copyOf } from './guide-copy.js';
 import { buttonKit } from './guide-pages-b.js';
-import { X0, XR, CW, SUBH, cap1, numberWord, nLines, stemOf, para, kit, num, at, rect, hr, obj, sec, register, shell, title, flow, sum } from './guide-kit.js';
+import { X0, XR, CW, SUBH, BOT, CH, cap1, numberWord, nLines, clampText, clampCss, stemOf, para, kit, num, at, rect, hr, obj, sec, register, shell, title, flow, sum } from './guide-kit.js';
 
 // ---------------------------------------------------------------- contrast
 export function contrastPage(ctx) {
   const K = kit(ctx), { R } = K, F = contrastFacts(ctx), P = F.pairs;
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
-  const RH = P.length > 10 ? 34 : 40, AX = 360, AW = 170;
-  const pairs = { h: SUBH + 8 + P.length * RH + 1, flex: P.length * 72, draw: (y, extra = 0) => {
-    const rh = RH + Math.floor(extra / Math.max(1, P.length)), sh = Math.max(28, Math.min(56, rh - 12));
+  const RH = P.length > 10 ? 34 : 40, AX = 400, AW = 150, TXW = AX - X0 - 88;
+  // each pair's name wraps to two lines with its usage line under it; when the page cannot hold that, the usage line takes one line, and last the name does too
+  const LEVELS = [[2, 2], [2, 1], [1, 1]];
+  const rowsAt = ([lm, um]) => P.map((p) => {
+    const ln = Math.min(lm, nLines(CH[600], p.label, 15, TXW)), un = p.use ? Math.min(um, nLines(CH[400], p.use, 12, TXW)) : 0;
+    return { ln, un, h: Math.max(RH, ln * 20 + un * 16 + 8) };
+  });
+  const pairs = { rows: [], h: 0, flex: P.length * 72, draw: (y, extra = 0) => {
+    const add = Math.floor(extra / Math.max(1, P.length));
+    let yy = y + SUBH + 8;
     return sec(K, X0, y, CW, '01', 'Pairs', 'ratio of text to ground, out of 21') + P.map((p, i) => {
-      const yy = y + SUBH + 8 + i * rh, fam = p.sample && p.sample.face === 'display' ? 'var(--display)' : 'var(--body)', sz = Math.min((p.sample || {}).size || 15, 20);
-      const mid = Math.floor(rh / 2);
-      return hr(X0, yy, CW, R.hair)
-        + obj(K, X0, yy + Math.floor((rh - sh) / 2), 56, sh, p.bgHex, at(0, 0, `<div style="width:56px;height:${sh}px;display:flex;align-items:center;justify-content:center;font-family:${fam};font-weight:${(p.sample || {}).weight || 400};font-size:${sz}px;line-height:1;color:${p.fgHex}">Aa</div>`))
-        + at(X0 + 72, yy + Math.floor((rh - 34) / 2), `<div class="gk-h gk-e" style="width:${AX - X0 - 88}px">${A(p.label)}</div><div class="gk-r gk-q gk-e" style="width:${AX - X0 - 88}px">${A(p.use || '')}</div>`)
-        + rect(AX, yy + mid, AW, 1, `background:${R.edge}`)
-        + rect(AX, yy + mid - 3, Math.max(1, r1((Math.min(num(p.ratio, 0), 21) / 21) * AW)), 6, `background:${R.ink}`)
-        + at(AX + AW + 16, yy + mid - 8, A(`${p.ratioText}:1`), { w: 60, cls: 'gk-m' })
-        + at(AX + AW + 76, yy + mid - 8, A(p.grade), { w: XR - (AX + AW + 76), cls: 'gk-r gk-e', style: `line-height:16px;color:${R.ink};font-weight:500` });
-    }).join('') + hr(X0, y + SUBH + 8 + P.length * rh, CW, R.hair);
+      const r = pairs.rows[i], rh = r.h + add, sh = Math.max(28, Math.min(56, rh - 12)), top = yy, th = r.ln * 20 + r.un * 16, mid = Math.floor(rh / 2);
+      const fam = p.sample && p.sample.face === 'display' ? 'var(--display)' : 'var(--body)', sz = Math.min((p.sample || {}).size || 15, 20);
+      yy += rh;
+      return hr(X0, top, CW, R.hair)
+        + obj(K, X0, top + Math.floor((rh - sh) / 2), 56, sh, p.bgHex, at(0, 0, `<div style="width:56px;height:${sh}px;display:flex;align-items:center;justify-content:center;font-family:${fam};font-weight:${(p.sample || {}).weight || 400};font-size:${sz}px;line-height:1;color:${p.fgHex}">Aa</div>`))
+        + at(X0 + 72, top + Math.floor((rh - th) / 2), `<div class="gk-h" style="width:${TXW}px;${clampCss(r.ln)}">${A(p.label)}</div>${r.un ? `<div class="gk-r gk-q" style="width:${TXW}px;${clampCss(r.un)}">${A(p.use)}</div>` : ''}`)
+        + rect(AX, top + mid, AW, 1, `background:${R.edge}`)
+        + rect(AX, top + mid - 3, Math.max(1, r1((Math.min(num(p.ratio, 0), 21) / 21) * AW)), 6, `background:${R.ink}`)
+        + at(AX + AW + 16, top + mid - 8, A(`${p.ratioText}:1`), { w: 60, cls: 'gk-m' })
+        + at(AX + AW + 76, top + mid - 8, A(p.grade), { w: XR - (AX + AW + 76), cls: 'gk-r gk-e', style: `line-height:16px;color:${R.ink};font-weight:500` });
+    }).join('') + hr(X0, yy, CW, R.hair);
   } };
   // the tones the guide draws that the palette does not carry
   const brandTone = (hex) => (ctx.brand.tones || []).find((o) => o.hex.toLowerCase() === hex.toLowerCase());
@@ -48,6 +56,10 @@ export function contrastPage(ctx) {
     return hr(x, yy, GW, R.ink) + at(x, yy + 6, `<div class="gk-h">${A(n)}</div><div class="gk-r gk-q">${A(r)}</div>`, { w: GW })
       + rect(x, yy + GH - 14, GW, 1, `background:${R.edge}`) + rect(x + r1((min / 21) * GW), yy + GH - 17, Math.max(3, r1(((next - min) / 21) * GW)), 6, `background:${R.ink}`);
   }).join('') };
+  const others = [tonesSec, noteSec, gradesSec].filter(Boolean), budget = BOT - t.top - sum(others.map((s) => s.h)) - 20 * others.length;
+  const level = LEVELS.find((lv) => SUBH + 8 + sum(rowsAt(lv).map((r) => r.h)) + 1 <= budget) || LEVELS[LEVELS.length - 1];
+  pairs.rows = rowsAt(level);
+  pairs.h = SUBH + 8 + sum(pairs.rows.map((r) => r.h)) + 1;
   return shell(ctx, 'contrast', t.html + flow('contrast', t.top, [pairs, tonesSec, noteSec, gradesSec].filter(Boolean), { gap: 20, maxGap: 40 }));
 }
 
@@ -148,11 +160,11 @@ export function usagePage(ctx) {
   const tSt = cd.title.face === 'display' ? K.st : 1, tStem = stemOf(ctx, cd.title.face, cd.title.weight), bStem = stemOf(ctx, cd.body.face, cd.body.weight);
   // a slot edition prints its compact placeholder here, "Sample headline, 5 to 8 words": measure that
   const slot = ctx.edition === 'slot', mTitle = slot ? 'Sample headline, 5 to 8 words' : cd.titleText;
-  // a big title is drawn at the largest step that holds it to three lines, and the spec says so
-  const tFit = [cd.title.size, 28, 24, 20, 17].filter((s) => s <= cd.title.size).find((s) => nLines(tStem, mTitle, s, tx, tSt) <= 3) || 17, tType = { ...cd.title, size: tFit, line: Math.round((cd.title.line * tFit) / cd.title.size) };
+  // a big title is drawn at the largest step that holds it to two lines, and the spec says so; one that still runs over at the smallest step ends in an ellipsis
+  const tFit = [cd.title.size, 28, 24, 20, 17].filter((s) => s <= cd.title.size).find((s) => nLines(tStem, mTitle, s, tx, tSt) <= 2) || 17, tType = { ...cd.title, size: tFit, line: Math.round((cd.title.line * tFit) / cd.title.size) };
   const cspec = [['Fill', cd.fillName], ['Edge', edgeText, 1], ['Radius', `${cd.radius.token}, ${cd.radius.px} px`, 1], ['Padding', cd.pad.token, 1], ['Title', `${cd.title.name}, ${cd.title.size} / ${cd.title.line}${tFit < cd.title.size ? `, drawn at ${tFit}` : ''}`, 1], ['Text', `${cd.body.name}, ${cd.body.size} / ${cd.body.line}, ${cardInkName}`, 1]];
-  // a brand's own paragraph can run to several sentences: the card shows the first that fits four lines, else the words that do, ending in an ellipsis
-  const fit4 = (s) => nLines(bStem, s, cd.body.size, tx) <= 4, words = String(cd.bodyText).split(/\s+/);
+  // a brand's own paragraph can run to several sentences: the card shows the first that fits three lines, else the words that do, ending in an ellipsis
+  const fit4 = (s) => nLines(bStem, s, cd.body.size, tx) <= 3, words = String(cd.bodyText).split(/\s+/);
   let bodyText = cd.bodyText;
   if (!fit4(bodyText)) {
     const first = (String(cd.bodyText).match(/^.*?[.!?](?=\s|$)/) || [''])[0];
@@ -160,13 +172,15 @@ export function usagePage(ctx) {
     else { let n = words.length; while (n > 1 && !fit4(words.slice(0, n).join(' ') + '…')) n--; bodyText = words.slice(0, n).join(' ').replace(/[,;:\s]+$/, '') + '…'; }
   }
   const mBody = slot ? 'Sample paragraph, 2 to 3 sentences' : bodyText;
-  const ctH = nLines(tStem, mTitle, tFit, tx, tSt) * tType.line, cbH = nLines(bStem, mBody, cd.body.size, tx) * cd.body.line, cardH = 2 * edgePx + 2 * pad + ctH + 8 + cbH;
+  const cardTitle = slot ? cd.titleText : clampText(tStem, cd.titleText, tFit, tx, 2, tSt);
+  const tN = Math.min(2, nLines(tStem, slot ? mTitle : cardTitle, tFit, tx, tSt)), bN = Math.min(3, nLines(bStem, mBody, cd.body.size, tx));
+  const ctH = tN * tType.line, cbH = bN * cd.body.line, cardH = 2 * edgePx + 2 * pad + ctH + 8 + cbH;
   const cH = Math.max(specH(cspec), cardH + 48);
   const cardSec = { h: SUBH + 8 + cH, flex: 80, draw: (y, extra = 0) => {
     const by = y + SUBH + 8, hh = cH + extra;
     return sec(K, X0, y, CW, '04', 'Card') + specReg(X0, by, cspec)
       + obj(K, PLX, by, PLW, hh, R.ground, rect(Math.floor((PLW - cardW) / 2), Math.floor((hh - cardH) / 2), cardW, cardH, `background:${cd.fill};border:${edgePx}px solid ${cd.edgeColour || 'transparent'};padding:${pad}px;border-radius:${cd.radius.px}px`,
-        `<div class="ph-tight" style="${font(tType)}color:${cardInk}">${A(cd.titleText)}</div><div class="ph-tight" style="margin-top:8px;${font(cd.body)}color:${cardInk}">${A(bodyText)}</div>`), { frame: true });
+        `<div class="ph-tight" style="${font(tType)}color:${cardInk};height:${ctH}px;${clampCss(tN)}">${A(cardTitle)}</div><div class="ph-tight" style="margin-top:8px;${font(cd.body)}color:${cardInk};height:${cbH}px;${clampCss(bN)}">${A(bodyText)}</div>`), { frame: true });
   } };
   return shell(ctx, 'usage', t.html + flow('usage', t.top, [buttonSec, statesSec, linkSec, cardSec], { gap: 20, maxGap: 40 }));
 }

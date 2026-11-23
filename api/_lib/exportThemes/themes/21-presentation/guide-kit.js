@@ -52,6 +52,30 @@ export function nLines(stem, text, size, w, st = 1) {
   }
   return n + fold(cur);
 }
+// text cut to at most `max` lines in a box: the whole text when it fits, else the words that do, ending in an ellipsis (a single word wider than the box is cut by letters)
+export function clampText(stem, text, size, w, max, st = 1) {
+  const s = String(text);
+  if (nLines(stem, s, size, w, st) <= max) return s;
+  const words = s.split(/\s+/);
+  let n = words.length;
+  while (n > 1 && nLines(stem, words.slice(0, n).join(' ') + '…', size, w, st) > max) n--;
+  let out = words.slice(0, n).join(' ').replace(/[,;:\s]+$/, '');
+  while (out.length > 1 && nLines(stem, out + '…', size, w, st) > max) out = out.slice(0, -1);
+  return out + '…';
+}
+// a box that shows at most n lines and clips the rest with an ellipsis, whatever the browser's own breaks turn out to be
+export const clampCss = (n) => `display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${n};overflow:hidden;white-space:normal;overflow-wrap:anywhere`;
+// the colours of a palette with each hex once: a role that repeats an earlier colour's hex is added to that colour's role (and its share) rather than drawn as a second field
+export function uniqueColours(F) {
+  const out = [], seen = new Map();
+  for (const f of F) {
+    const k = String(f.hex).toLowerCase(), first = seen.get(k);
+    if (!first) { const c = { ...f }; seen.set(k, c); out.push(c); continue; }
+    if (f.role && !String(first.role).split(', ').includes(f.role)) first.role = `${first.role}, ${f.role}`;
+    if (typeof first.share === 'number' && typeof f.share === 'number') first.share += f.share;
+  }
+  return out;
+}
 export const stemOf = (ctx, role, weight) => {
   const fs = ctx.faces.filter((f) => f.role === role && f.style !== 'italic');
   const f = fs.find((x) => x.weight === weight) || fs.reduce((a, b) => (a && Math.abs(a.weight - weight) <= Math.abs(b.weight - weight) ? a : b), null);
@@ -88,6 +112,12 @@ function palette(ctx) {
     let pick = ctx.textOn(bg, { size, weight, prefer: best });
     if (!ok(pick) || ctx.ratio(pick, bg) < 4.5) pick = cands.concat(['#000000', '#ffffff']).find((h) => ctx.ratio(h, bg) >= 4.5) || best;
     ctx.pair(pick, bg, { size, weight, what: '(Keynote guide text on a field)' });
+    return pick;
+  };
+  // text on a swatch: the nearer to black or to white, whichever has the higher ratio (the brand's own ink and surface count as the black-ish and the white-ish)
+  R.bestInk = (bg, size = 13, weight = 500) => {
+    const cands = [R.ink, L.surface, '#111111', '#ffffff'].filter(ok), pick = cands.reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
+    ctx.pair(pick, bg, { size, weight, what: '(Keynote guide text on a swatch)' });
     return pick;
   };
   // the logo colourway to use on a ground: one drawn on that ground, else the colourway whose name colour reads best on it
