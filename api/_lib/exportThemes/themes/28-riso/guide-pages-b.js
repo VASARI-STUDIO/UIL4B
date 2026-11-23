@@ -4,7 +4,7 @@ import { colourFacts, typeLadder, displayWeightNote, logoFacts } from '../../eng
 import { copyOf } from './guide-copy.js';
 import {
   X0, XR, CW, SUBH, A, r1, faceCss, faceFor, stems, nl, clamp, one, at, rect, hr, chip, para, sub,
-  page, flowTry, logoFit,
+  page, flowTry, logoFit, real, realLines,
 } from './guide-kit.js';
 
 const faceRole = (f) => (f === 'display' ? 'display' : 'body');
@@ -15,9 +15,14 @@ export function appliedPage(ctx) {
   const cs = colourFacts(ctx), LF = logoFacts(ctx), g0 = LF.grounds[0], H = ctx.weights.heading;
   // the signage line is "<object>, <size>: <line>"
   const sg = /^(.+?), ([\d.]+ x [\d.]+ mm): (.+)$/.exec(app.signage || '') || [null, String(app.signage || '').split(':')[0], '', String(app.signage || '').split(':').slice(1).join(':').trim()];
-  const sign = { object: sg[1] || 'Sign', size: sg[2] || '', text: sg[3] || (B.lines && B.lines.primary) || B.name };
-  const posts = (Array.isArray(app.social) ? app.social : []).filter(Boolean).slice(0, 3);
-  const body = (Array.isArray(em.body) ? em.body.join(' ') : em.body) || '';
+  // the brand's own lines; a generic sample only where it has none
+  const own = realLines(ctx).filter((l) => l !== B.name), pick = (i, generic) => own[i] || generic;
+  const sign = { object: sg[1] || 'Sign', size: sg[2] || '', text: real(sg[3]) || pick(0, B.name) };
+  const GEN = ['New this week.', 'Open every day.', 'Thank you for coming.'];
+  const posts = (Array.isArray(app.social) ? app.social : []).filter(Boolean).slice(0, 3).map((p, i) => real(p) || pick(i + 1, GEN[i] || GEN[0]));
+  const body = real(Array.isArray(em.body) ? em.body.join(' ') : em.body) || `Thanks for getting in touch. Here is how to find us, and what happens next.`;
+  const emSubject = real(em.subject) || pick(0, `A note from ${B.name}`);
+  const cardPerson = real(card.person), cardRole = real(card.role);
   const dispStyle = (size, lead) => `${faceCss(ctx, 'display', H)};font-size:${size}px;line-height:${lead}px;letter-spacing:-.01em`;
   // a text in the display face, set in a box: the size steps down until it sets in `max` lines
   // (or `maxH` px tall, whichever allows fewer lines); the smallest size takes the text cut short where it still does not set
@@ -35,7 +40,7 @@ export function appliedPage(ctx) {
       // row one: the business card at its own proportion, and the sign beside it
       const cardSec = { h: SUBH + 8 + cH, draw: (y) => {
         const y0 = y + SUBH + 8, lg = logoFit(ctx, cW * 0.5, cH * 0.22, { colourway: lk, color: gInk }), tx = X0 + 18, tw = cW - 36;
-        const nm = one(S.b6, card.person || B.name, 14, tw), rl = one(S.b4, card.role || '', 12, tw), ct = (Array.isArray(card.contact) ? card.contact : [card.contact]).filter(Boolean).join('  ');
+        const nm = one(S.b6, cardPerson || B.name, 14, tw), rl = one(S.b4, cardRole || '', 12, tw), ct = (Array.isArray(card.contact) ? card.contact : [card.contact]).map(real).filter(Boolean).join('  ');
         const sz = display(sign.text, pw - 36, o.signLines, [36, 32, 28, 24, 20], cH - 36 - 24);
         const ctY = y0 + cH - 16 - 14, rlY = (ct ? ctY - 4 : y0 + cH - 16) - 17, nmY = rlY - 21;
         return sub(S, X0, y, CW, 'Card and sign')
@@ -59,10 +64,10 @@ export function appliedPage(ctx) {
         }).join('');
       } } : null;
       // row three: the email, across the page
-      const pad = 20, tw = CW - 2 * pad, subj = display(em.subject || B.lines.primary || '', tw, 2, [24, 22, 20]), bp = para(S.b4, 0, 0, tw, body, { max: o.bodyMax });
+      const pad = 20, tw = CW - 2 * pad, subj = display(emSubject, tw, 2, [24, 22, 20]), bp = para(S.b4, 0, 0, tw, body, { max: o.bodyMax });
       const eH = pad + 18 + 12 + subj.h + 10 + bp.h + pad;
-      const mailSec = (em.subject || body) ? { h: SUBH + 8 + eH, draw: (y) => {
-        const y0 = y + SUBH + 8, sender = card.person ? `${card.person}${card.role ? `, ${card.role}` : ''}` : B.name;
+      const mailSec = { h: SUBH + 8 + eH, draw: (y) => {
+        const y0 = y + SUBH + 8, sender = cardPerson ? `${cardPerson}${cardRole ? `, ${cardRole}` : ''}` : B.name;
         return sub(S, X0, y, CW, 'Email')
           + rect(X0, y0, CW, eH, 'background:var(--paper);border:1px solid var(--key)')
           + at(X0 + pad, y0 + pad, A(one(S.b6, sender, 11, tw - 150)), { cls: 'c-label nw' })
@@ -70,7 +75,7 @@ export function appliedPage(ctx) {
           + hr(X0 + pad, y0 + pad + 18, tw, 'var(--hair)')
           + at(X0 + pad, y0 + pad + 18 + 12, A(subj.t), { w: tw, cls: 'g-ti', style: `${dispStyle(subj.size, subj.lead)};overflow-wrap:anywhere` })
           + para(S.b4, X0 + pad, y0 + pad + 18 + 12 + subj.h + 10, tw, body, { max: o.bodyMax }).html;
-      } } : null;
+      } };
       return [cardSec, postSec, mailSec];
     };
     return flowTry('applied', top, [
@@ -84,11 +89,14 @@ export function appliedPage(ctx) {
 export function typePage(ctx) {
   const S = stems(ctx), B = ctx.brand, ladder = typeLadder(ctx), sample = (B.type && B.type.sample) || {}, H = ctx.weights.heading;
   const dnote = displayWeightNote(ctx), disp = B.fonts.display, bod = B.fonts.body;
+  // the brand's own headline and paragraph; a generic specimen only where it has none
+  const headText = real(sample.headline) || realLines(ctx)[0] || B.name;
+  const paraText = real(sample.paragraph) || 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs, then sphinx of black quartz, judge my vow.';
   let noteShown = false;
   return page(ctx, 'type', copyOf('type'), (top) => {
     const make = (o) => {
       const rows = ladder.map((t) => {
-        const role = faceRole(t.face), w = t.face === 'display' ? H : t.weight, st = faceFor(ctx, role, w).stem, tw = 548, text = t.face === 'display' ? (sample.headline || B.name) : (sample.paragraph || sample.headline || B.name);
+        const role = faceRole(t.face), w = t.face === 'display' ? H : t.weight, st = faceFor(ctx, role, w).stem, tw = 548, text = t.face === 'display' ? headText : paraText;
         const track = 0, max = t.face === 'display' ? 1 : o.bodyLines, tt = clamp(st, text, t.size, tw, max, track), n = Math.max(1, nl(st, tt, t.size, tw, track));
         return { t, role, w, tt, n, h: Math.max(n * t.line, 30) + o.pad * 2 };
       });
@@ -107,7 +115,7 @@ export function typePage(ctx) {
       let faces = null;
       if (o.faces) {
         const cw = 216, fh = 64;
-        const np = dnote ? para(S.b4, X0, 0, CW, dnote, { size: 12, max: 2 }) : { h: 0 };
+        const np = dnote && !o.setting ? para(S.b4, X0, 0, CW, dnote, { size: 12, max: 2 }) : { h: 0 };
         noteShown = !!dnote;
         faces = { h: SUBH + 8 + fh + 8 + 17 + (np.h ? 8 + np.h : 0), draw: (y) => {
           const y0 = y + SUBH + 8;
@@ -122,10 +130,26 @@ export function typePage(ctx) {
           }).join('') + (np.h ? para(S.b4, X0, y0 + fh + 8 + 17 + 8, CW, dnote, { size: 12, max: 2 }).html : '');
         } };
       } else noteShown = false;
-      return [ladderSec, faces];
+      // how the faces are set: the figures in the values face, and a headline on the plate colour
+      let setting = null;
+      if (o.faces && o.setting) {
+        const sh = 84, hw = CW - 241 - 32, hs = clamp(S.d, headText, 28, hw, 2, -0.01), hn = Math.max(1, nl(S.d, hs, 28, hw, -0.01));
+        const np = dnote ? para(S.b4, X0, 0, CW, dnote, { size: 12, max: 2 }) : { h: 0 };
+        setting = { h: SUBH + 8 + sh + 8 + 17 + (np.h ? 8 + np.h : 0), draw: (y) => {
+          const y0 = y + SUBH + 8;
+          return sub(S, X0, y, CW, 'Setting')
+            + chip(X0, y0, 216, sh, 'var(--paper)') + at(X0 + 16, y0, '0123456789', { cls: 'g-ti nw', style: `font-family:var(--cmono);font-weight:400;font-size:28px;line-height:${sh}px` })
+            + at(X0, y0 + sh + 8, 'Figures: Sono Mono', { cls: 'c-label nw' })
+            + chip(X0 + 241, y0, CW - 241, sh, 'var(--plate)')
+            + at(X0 + 241 + 16, y0 + (sh - hn * 32) / 2, A(hs), { w: hw, cls: 'g-ti', style: `${faceCss(ctx, 'display', H)};font-size:28px;line-height:32px;letter-spacing:-.01em;color:var(--ptxt);overflow-wrap:anywhere` })
+            + at(X0 + 241, y0 + sh + 8, 'Headline on the plate colour', { cls: 'c-label nw' })
+            + (np.h ? para(S.b4, X0, y0 + sh + 8 + 17 + 8, CW, dnote, { size: 12, max: 2 }).html : '');
+        } };
+      }
+      return [ladderSec, setting, faces];
     };
     const out = flowTry('type', top, [
-      { faces: true, bodyLines: 2, pad: 8 }, { faces: true, bodyLines: 1, pad: 8 }, { faces: false, bodyLines: 2, pad: 8 }, { faces: false, bodyLines: 1, pad: 6 }, { faces: false, bodyLines: 1, pad: 3 },
+      { faces: true, setting: true, bodyLines: 3, pad: 10 }, { faces: true, setting: true, bodyLines: 2, pad: 8 }, { faces: true, bodyLines: 3, pad: 10 }, { faces: true, bodyLines: 2, pad: 8 }, { faces: true, bodyLines: 1, pad: 8 }, { faces: false, bodyLines: 2, pad: 8 }, { faces: false, bodyLines: 1, pad: 6 }, { faces: false, bodyLines: 1, pad: 3 },
     ], make, { gap: 28, maxGap: 56 });
     // the file says the weight note only where the page does
     if (dnote && !noteShown) hook(ctx, { displayNote: null });

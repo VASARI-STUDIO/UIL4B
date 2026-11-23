@@ -6,6 +6,7 @@
 import { PAGE, stacker, headLabel, inkFor, logoArt, slotW } from '../../engine/guide-layout.js';
 import { A, r1, inkW, wrap, faceFor, faceCss, inkLayers, pressOf, logoOnPlate } from './sheet.js';
 import { fnv1a } from './press.js';
+import { toOklch, ratio } from '../../engine/color.js';
 
 export const { W, X0, XR, CW, COL, COLW } = PAGE;
 // the lowest y content reaches, a section header's height, and the foot's top
@@ -40,6 +41,17 @@ export function clamp(st, text, size, w, max, track = 0) {
 // a text cut to one line of `w` px, for a cell that never wraps
 export const one = (st, text, size, w, track = 0) => clamp(st, text, size, w, 1, track);
 export const mono = (text, size = 11) => inkW(MONO, String(text), size);
+
+// ---- the brand's own words: the skeleton a brand starts from carries stand-in lines ("Your headline here"), and a page never prints one as a sample ----
+const FILLER = /your (main line goes here|headline here|subject line|name\b|title\b|line here)|^a (second|third) line\b|write this in your own words|^social line \d|^a short (paragraph of ordinary copy|caption)\b|brand\.example|^hi there,?$/i;
+// the text when it is the brand's own, else ''
+export const real = (text) => { const s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim(); return s && !FILLER.test(s) ? s : ''; };
+// the brand's own lines, the main one first; the brand's name when it has no other
+export const realLines = (ctx) => {
+  const B = ctx.brand, L = B.lines || {}, seen = new Set(), out = [];
+  for (const t of [L.primary, ...(Array.isArray(L.others) ? L.others : [])]) { const r = real(t); if (r && !seen.has(r.toLowerCase())) { seen.add(r.toLowerCase()); out.push(r); } }
+  return out.length ? out : [B.name];
+};
 
 // ---- placing ----
 export const at = (x, y, html, { w, cls = '', style = '' } = {}) => `<div class="a ${cls}" style="left:${r1(x)}px;top:${r1(y)}px;${w ? `width:${r1(w)}px;` : ''}${style}">${html}</div>`;
@@ -84,11 +96,22 @@ function foot(ctx, id) {
   return `${bar}<span class="a c-foot nw" style="left:${x + 12}px;top:${FOOT_Y}px">${A(NAME[id])}</span><span class="a c-value nw" style="right:${W - XR}px;top:${FOOT_Y}px">${pad2(f.no)} / ${pad2(f.total)}</span>${reg(24, 1087)}${reg(770, 1087)}`;
 }
 // the whole page: the plate band of height `plateH` (full width), the pass, the hit numeral, and `head` and `body` inside the page's layer
+// a plate with no hue (a grey brand) prints a mid-grey band that the page's type and numeral cannot stand apart from: the darkest ink runs as the band instead, with the paper on it
+function neutralBand(ctx) {
+  if (ctx._g28band !== undefined) return ctx._g28band;
+  const P = pressOf(ctx);
+  let out = '';
+  if (!P.plateScreen && toOklch(P.plate).C < 0.03 && ratio(P.textOnPlate, P.plate) < 7) {
+    const dark = ctx.colours.map((c) => c.hex).sort((a, b) => ratio(a, '#000000') - ratio(b, '#000000'))[0];
+    if (dark && ratio(P.paper, dark) >= 7) out = `--plate:${dark};--ptxt:${P.paper};`;
+  }
+  return (ctx._g28band = out);
+}
 function sheetOf(ctx, id, plateH, head, body, hit) {
   const B = ctx.brand, f = folio(ctx, id);
   const L = inkLayers(ctx, id, { w: W, h: plateH, plate: { x: 0, y: 0, w: W, h: plateH }, pass: { x: 756, y: -8, w: 46, h: 1139 }, hit: { text: pad2(f.no), x: 556, base: plateH - 30, size: 120, maxW: 190, ...(hit || {}) } });
   const fh = fnv1a(`${B.slug}:${id}:fibre`);
-  return `<section class="pg" data-page="${id}" style="--fx:${fh % 512}px;--fy:${(fh >>> 9) % 512}px">${L.html}<div class="lay" style="z-index:3">${head}${body}${foot(ctx, id)}</div></section>`;
+  return `<section class="pg" data-page="${id}" style="${neutralBand(ctx)}--fx:${fh % 512}px;--fy:${(fh >>> 9) % 512}px">${L.html}<div class="lay" style="z-index:3">${head}${body}${foot(ctx, id)}</div></section>`;
 }
 // a page: the head (the running line, the page's name and one sentence, all on the plate), then `draw(top)` for the content under it.
 // `sentences` are candidates, longest first; the first that sets in two lines wins.
