@@ -234,7 +234,7 @@ export function kitSiteFiles(ctx0, T) {
     placeholderCss(ctx), KS.css(ctx),
   ].join('\n');
   put(ctx, files, 'assets/kit.css', css);
-  put(ctx, files, 'assets/kit.js', `${KIT_JS}\n${READER_JS}`);
+  put(ctx, files, 'assets/kit.js', `${KIT_JS}\n${READER_JS}${KS.js ? `\n${KS.js}` : ''}`);
   Object.assign(files, fontFiles(ctx, T));
 
   const pages = ctx.pages.map((p) => ({ ...p, href: kitHref(p.id) }));

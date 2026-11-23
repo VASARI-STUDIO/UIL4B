@@ -38,8 +38,9 @@ export const THEME_ROW_FORMATS = Object.freeze({
   guide: Object.freeze(['pdf', 'html', 'md']),
 })
 
-// Rows a theme has only when its rows list names them. Every other row is on every theme that has no rows list. The style guide is drawn by
-// a theme's own lane (lane-guide.js), so a theme without one must not be offered it. Gating follows the guidelines: free where they are free.
+// Rows a theme has only when it opts in: by a rows list that names them, or by `extraRows` on a theme with no rows list (which keeps every
+// other row). The style guide is drawn by a theme's own lane (lane-guide.js), so a theme without one must not be offered it. Gating follows
+// the guidelines: free where they are free. Swiss Field (27) stays on a rows list because it is guidelines-only (no UI kit, no book).
 const OPT_IN_ROWS = Object.freeze(['guide'])
 
 // The themes whose UI kit a free account can download. Interim: Standards, until the Free pair (Label and Swiss Field) has UI kits
@@ -51,10 +52,16 @@ export const isExportTheme = (theme) => typeof theme === 'string' && EXPORT_THEM
 export const isThemeRowFormat = (row, format) => typeof row === 'string' && typeof format === 'string'
   && Object.hasOwn(THEME_ROW_FORMATS, row) && THEME_ROW_FORMATS[row].includes(format)
 
-/** True when the theme has the row. A theme with no rows list has every row except the opt-in ones. */
+/**
+ * True when a table entry has the row. An entry with a `rows` list has exactly those rows. An entry without one has every row except the
+ * opt-in ones, and gets an opt-in row by naming it in `extraRows` (so opting in never means restating the rows it already has).
+ */
+export const entryHasRow = (t, row) => (t.rows ? t.rows.includes(row) : !OPT_IN_ROWS.includes(row) || (t.extraRows || []).includes(row))
+
+/** True when the theme has the row. */
 export function themeHasRow(theme, row) {
   const t = EXPORT_THEMES.find((x) => x.id === theme)
-  return Boolean(t) && Object.hasOwn(THEME_ROW_FORMATS, row) && (t.rows ? t.rows.includes(row) : !OPT_IN_ROWS.includes(row))
+  return Boolean(t) && Object.hasOwn(THEME_ROW_FORMATS, row) && entryHasRow(t, row)
 }
 
 /** True when downloading the row in the theme needs Pro. Anything that is not a known row and theme, or a row the theme lacks, counts as Pro. */

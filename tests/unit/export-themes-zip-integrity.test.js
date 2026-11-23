@@ -101,6 +101,22 @@ test('two builds of the same project are byte-identical (04 and 26 mint ids as t
   assert.deepEqual(same, [])
 })
 
+// Two builds inside the same 2-second window share a zip timestamp, so the test above can pass while a folder entry is dated now.
+// Every entry, folders included, has to carry the fixed date. Break: drop the explicit folder entries in engine/files.js zipFiles.
+test('every zip entry, folders included, carries the fixed date', { timeout: 300_000 }, async () => {
+  const off = []
+  for (const [theme, row, format] of [['04-standards', 'slides', 'html'], ['04-standards', 'ui-kit', 'zip'], ['26-notebook', 'ui-kit', 'zip']]) {
+    const res = await ask({ theme, row, format, design, projectName: 'Kerbside' })
+    const zip = await JSZip.loadAsync(res.buffer)
+    const dirs = Object.values(zip.files).filter((e) => e.dir)
+    if (!dirs.length) off.push(`${theme} ${row} ${format}: no folder entries`)
+    // DOS time is local wall time, so compare the read-back date with the fixed date as JSZip writes and reads it
+    const want = (await JSZip.loadAsync(await new JSZip().file('x', 'x', { date: new Date('2026-01-01T00:00:00Z') }).generateAsync({ type: 'nodebuffer' }))).files.x.date.getTime()
+    for (const e of Object.values(zip.files)) if (e.date.getTime() !== want) off.push(`${theme} ${row} ${format}: ${e.name} ${e.date.toISOString()}`)
+  }
+  assert.deepEqual(off, [])
+})
+
 test('the 27 guidelines build with the fonts the checkout carries', async () => {
   for (const format of ['html', 'pdf']) {
     const res = await ask({ theme: '27-swissfield', row: 'slides', format, design, projectName: 'Kerbside' })
