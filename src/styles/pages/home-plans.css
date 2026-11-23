@@ -44,13 +44,6 @@
   letter-spacing: -.04em;
   text-wrap: balance;
 }
-.hpl-lead {
-  margin: 24px auto 0;
-  max-width: 54ch;
-  font-size: 18px;
-  line-height: 1.6;
-  color: rgba(var(--sp-ink-rgb), .68);
-}
 
 /* ── Cards ───────────────────────────────────────────────────────────────── */
 .hpl-grid {
@@ -326,7 +319,6 @@
   .hpl-head { text-align: left; }
   .hpl-h2 { margin: 0; max-width: none; font-size: 38px; }
   .hpl-h2 > span { display: block; }
-  .hpl-lead { margin: 16px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
 
   .hpl-grid { margin-top: 32px; gap: 12px; }
   .hpl-card { border-radius: 24px; }

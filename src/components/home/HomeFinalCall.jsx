@@ -9,7 +9,8 @@ import '../../styles/pages/home-footer.css'
 // "Open the toolkit" enters the app directly, with no sign-up gate.
 //
 // Another page can hand in its own `heading`, `lead` and `actions` (the buttons
-// row); without them the homepage's words and single button stand.
+// row); without them the default words and single button stand. A `lead` of
+// null drops the line under the heading (the homepage passes null).
 const HOME_LEAD = 'Free to use, no account needed. Sign up when you want to export files or save projects and come back to them.'
 
 export default function HomeFinalCall({ toolkitTo = '/projects', heading = 'Start your first project today.', lead = HOME_LEAD, actions = null }) {
@@ -17,7 +18,7 @@ export default function HomeFinalCall({ toolkitTo = '/projects', heading = 'Star
     <section id="start" className="hm-close" aria-labelledby="start-h">
       <div className="hm-close-in">
         <h2 id="start-h" tabIndex={-1}>{heading}</h2>
-        <p>{lead}</p>
+        {lead && <p>{lead}</p>}
         {actions ? (
           <div className="hm-close-btns">{actions}</div>
         ) : (

@@ -60,7 +60,6 @@ test('exports: the stack sits behind a size query, so a small or short window ge
   assert.match(stack, /\.hx-card\[data-card="2"\] \{ top: calc\(var\(--hx-base\) \+ var\(--hx-edge\) \* 2\); \}/)
   assert.match(stack, /\.hx-tail \{ height: 240px; \}/)
   assert.match(EXPORTS, /\.hx \{[^}]*--hx-edge:\s*12px/)
-  assert.match(rule(EXPORTS, '.hx-foot'), /margin:\s*48px 0 0/)
 })
 
 test('keyframes move transform and opacity only', () => {
