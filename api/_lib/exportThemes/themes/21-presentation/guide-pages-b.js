@@ -24,7 +24,7 @@ export function appliedPage(ctx) {
   const t = title(ctx, K, 'applied', copyOf(ctx, 'applied', ['The brand in use, on its own surfaces.', 'The brand in use.']));
   const m = /^(.+?), ([\d.]+) x ([\d.]+) mm: (.+)$/.exec(app.signage || '');
   const sg = m ? { name: m[1], mm: `${m[2]} x ${m[3]} mm`, w: +m[2], h: +m[3], line: m[4] } : { name: 'Sign', mm: '', w: 594, h: 841, line: app.signage || B.lines.primary };
-  const OH = 300, sw = Math.max(120, Math.min(250, Math.round((OH * (sg.w || 594)) / (sg.h || 841)))) || 200;
+  const OH = slot ? 280 : 300, sw = Math.max(120, Math.min(250, Math.round((OH * (sg.w || 594)) / (sg.h || 841)))) || 200;
   const cdW = Math.min(XR - X0 - sw - 24, Math.floor((OH * 85) / 54)), cdH = Math.round((cdW * 54) / 85), so = { x: X0, w: sw }, co = { x: X0 + sw + 24, w: cdW };
   // under each object: its width in mm, measured, then its name and size
   const card0 = app.card || {}, DIM = 28;
@@ -36,7 +36,7 @@ export function appliedPage(ctx) {
   const sign = (y0, oh) => obj(K, so.x, y0, sw, oh, R.action, at(16, 16, logoArt(ctx, 'colour', Math.min(sw - 32, lw0), { colourway: swCw, color: sInk, h: slot ? lh0 : undefined })) + at(16, 16 + lh0 + 16, A(sg.line), { w: sw - 32, cls: 'gk-d', style: `font-size:${sSize}px;line-height:${Math.round(sSize * 1.15)}px;color:${sInk}` }), { style: 'overflow:hidden' });
   const cLw = Math.min(cdW - 32, 96), cInk = R.onColour(R.ground, 13, 500);
   const bizcard = (y0) => obj(K, co.x, y0, cdW, cdH, R.ground,
-    at(16, 16, logoArt(ctx, 'colour', cLw, { h: slot ? slotH(cLw) : undefined })) + at(16, cdH - 16 - 54, `<div class="gk-body" style="font-weight:500;color:${cInk}">${A(card0.person || '')}</div><div class="gk-r" style="color:${cInk}">${A(card0.role || '')}</div><div class="gk-m" style="color:${cInk}">${A(card0.contact || '')}</div>`, { w: cdW - 32 }), { frame: true, style: 'overflow:hidden' });
+    at(16, 16, logoArt(ctx, 'colour', cLw, { h: slot ? slotH(cLw) : undefined })) + at(16, cdH - 16 - (slot ? 96 : 54), `<div class="gk-body" style="font-weight:500;color:${cInk}">${A(card0.person || '')}</div><div class="gk-r" style="color:${cInk}">${A(card0.role || '')}</div><div class="gk-m" style="color:${cInk}">${A(card0.contact || '')}</div>`, { w: cdW - 32, cls: 'gk-ap' }), { frame: true, style: 'overflow:hidden' });
   // 01: the sign and the card, each top-aligned with its own width dimension and caption under its own foot
   const rowSec = { h: SUBH + 8 + OH + DIM + capH, flex: 0, draw: (y) => {
     const y0 = y + SUBH + 8, foot = [y0 + OH, y0 + cdH];
@@ -60,15 +60,17 @@ export function appliedPage(ctx) {
   // 03: the order email, across the page
   const em = (B.guideB && B.guideB.email) || {}, emBody = (Array.isArray(em.body) ? em.body.reduce((s, p) => (s && /,$/.test(s) ? s + ' ' + p.charAt(0).toLowerCase() + p.slice(1) : s ? s + ' ' + p : p), '') : em.body) || '', pad = 24, tW = CW - 2 * pad;
   const subject = em.subject || '', subjLines = nLines(S.disp, subject, 22, tW, st), bp = para(emBody, tW, { stem: S.body });
+  // in the template edition each body field is its own stacked chip (18px line, 4px padding, 2px border, 6px gap), so size the email by the chip count
+  const bpH = slot ? Math.max(bp.h, (Array.isArray(em.body) ? em.body.length : 1) * 30) : bp.h;
   const BK = buttonKit(ctx, K);
-  const EH = pad + 20 + 14 + subjLines * 26 + 12 + bp.h + 20 + BK.bh + pad;
+  const EH = pad + 20 + 14 + subjLines * 26 + 12 + bpH + 20 + BK.bh + pad;
   const emSec = { h: SUBH + 8 + EH, flex: 40, draw: (y, extra = 0) => {
-    const ey = y + SUBH + 8, ink = R.onColour(R.ground, 13, 500), by = pad + 34 + subjLines * 26 + 12 + bp.h + 20 + extra;
+    const ey = y + SUBH + 8, ink = R.onColour(R.ground, 13, 500), by = pad + 34 + subjLines * 26 + 12 + bpH + 20 + extra;
     return sec(K, X0, y, CW, '03', 'Order email')
       + obj(K, X0, ey, CW, EH + extra, R.ground, at(pad, pad, `<span class="gk-h">${A(em.to ? `To ${em.to}` : (card0.person || ''))}</span>`, { w: tW - 280, style: `color:${ink}` })
         + at(CW - pad - 260, pad, A(em.time || ''), { w: 260, cls: 'gk-m', style: `text-align:right;color:${ink}` })
         + at(pad, pad + 34, A(subject), { w: tW, cls: 'gk-d', style: `font-size:22px;line-height:26px;color:${ink}` })
-        + at(pad, pad + 34 + subjLines * 26 + 12, A(emBody), { w: tW, cls: 'gk-body', style: `color:${ink}` })
+        + at(pad, pad + 34 + subjLines * 26 + 12, A(emBody), { w: tW, cls: 'gk-body gk-ap', style: `color:${ink}` })
         + rect(pad, by, BK.w1, BK.bh, `background:${BK.bt.fill};color:${BK.bt.label};${BK.bstyle}`, A(BK.vPrimary)), { frame: true });
   } };
   const body = flow('applied', t.top, [rowSec, socSec, emSec].filter(Boolean), { gap: 24, maxGap: 60 });

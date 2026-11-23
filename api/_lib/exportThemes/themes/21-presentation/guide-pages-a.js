@@ -16,8 +16,8 @@ export function cover(ctx) {
   let cols = F.filter((f) => (f.share ?? 0) >= 0.01).slice(0, 6);
   if (!cols.length) cols = F.slice(0, 6);
   const rest = F.filter((f) => !cols.includes(f)).slice(0, 12), ROW2 = rest.length ? 72 : 0, MAIN_H = 360;
-  const lw = Math.min(CW, 240), lh = slot ? slotH(lw) : (lw * G.h) / G.w, logoY = 76;
-  const logo = at(X0, logoY, logoArtK(ctx, 'colour', lw, { colourway: 'reversed', color: R.darkInk, ...(slot ? { h: lh, frame: true } : {}) }));
+  const lw = Math.min(CW, slot ? 320 : 240), lh = slot ? slotH(lw) : (lw * G.h) / G.w, logoY = 76;
+  const logo = at(X0, logoY, logoArtK(ctx, 'colour', lw, { colourway: 'reversed', color: R.darkInk, ...(slot ? { h: lh } : {}) }));
   // the facts: three columns, each under a 2 px rule in the field's ink
   const d = B.fonts.display;
   const facts = [['Date', longDate(B.version.date)], ['Version', String(B.version.number)], ['Format', 'A4 portrait, 210 x 297 mm'], ['Display', `${d.family}, ${weightName(ctx.weights.heading)}`], ['Text', `${B.fonts.body.family}, ${weightName(ctx.weights.regular)} and ${weightName(ctx.weights.medium)}`], B.fonts.mono ? ['Mono', B.fonts.mono.family] : ['Scale', '1 : 1 at 96 dpi']];
@@ -27,7 +27,7 @@ export function cover(ctx) {
   const line = B.lines.primary, stmtY = logoY + lh + 48;
   const room = (size, nl, lineH) => PH - (stmtY + nl * lineH + 40 + factsH + 40);
   let size = 28, lineH = Math.round(size * 1.08), nl = slot ? 0 : nLines(S.disp, line, size, CW, K.st);
-  if (slot) { size = 28; lineH = 30; nl = 3; } else {
+  if (slot) { size = 40; lineH = 44; nl = 4; } else {
     for (const need of [MAIN_H + ROW2, 200 + ROW2]) {
       const s = [120, 104, 92, 80, 68, 58, 48, 40, 34, 28].find((z) => { const n = nLines(S.disp, line, z, CW, K.st); return n <= 4 && room(z, n, Math.round(z * 1.08)) >= need; });
       if (s) { size = s; lineH = Math.round(s * 1.08); nl = nLines(S.disp, line, s, CW, K.st); break; }
@@ -37,7 +37,7 @@ export function cover(ctx) {
   if (avail < 200) throw new Error(`Keynote guide: the cover palette has ${avail} px to stand in`);
   // with a second row the tall row is held to 360 px, standing on the second row at the foot; a palette of six or fewer keeps the whole height
   const stripH = rest.length ? Math.min(MAIN_H, avail) : avail, stripY = PH - ROW2 - stripH;
-  const stmt = at(X0, stmtY, A(line), { w: CW, cls: 'gk-d', style: `font-size:${size}px;line-height:${lineH}px;color:${R.darkInk}` });
+  const stmt = at(X0, stmtY, A(line), { w: CW, cls: 'gk-d gk-cv', style: `font-size:${size}px;line-height:${lineH}px;color:${R.darkInk}` });
   const cells = facts.map(([k, v], i) => {
     const x = X0 + (i % 3) * (fw + gx), y = factsY + (i < 3 ? 0 : rowH[0] + 20);
     return rect(x, y, fw, 2, `background:${R.darkInk}`) + at(x, y + 10, `<div class="gk-hd" style="color:${R.darkInk}">${A(k)}</div><div class="gk-n" style="margin-top:4px;color:${R.darkInk}">${A(v)}</div>`, { w: fw });
@@ -231,7 +231,7 @@ export function rulerPage(ctx) {
   const left = CW - sum(base);
   raw.map((w, i) => ({ i, f: w - Math.floor(w) })).sort((a, b) => b.f - a.f || a.i - b.i).slice(0, Math.max(0, left)).forEach((o) => { base[o.i] += 1; });
   const BAR = 56;
-  const barSec = { h: SUBH + 8 + BAR, flex: 460, draw: (y, extra = 0) => {
+  const barSec = { h: SUBH + 8 + BAR, flex: 184, draw: (y, extra = 0) => {
     let x = 0;
     const by = y + SUBH + 8, bh = BAR + extra;
     const segs = F.map((f, i) => {
@@ -243,7 +243,7 @@ export function rulerPage(ctx) {
       + segs + rect(X0, by, CW, bh, `outline:1px solid ${R.edge};outline-offset:-1px`);
   } };
   // the register
-  const rows = F.slice(0, 8), RH = 28;
+  const rows = F.slice(0, 12), RH = 28;
   const tabSec = { h: SUBH + 8 + rows.length * RH + 1, flex: 8 * rows.length, draw: (y, extra = 0) => {
     const rh = RH + Math.floor(extra / rows.length);
     return sec(K, X0, y, CW, '02', 'Share by colour') + rows.map((f, i) => {

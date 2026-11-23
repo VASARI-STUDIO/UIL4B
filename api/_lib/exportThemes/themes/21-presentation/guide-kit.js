@@ -251,6 +251,11 @@ export function guideCss(ctx) {
 .pg .gk-m{font:400 12px/16px var(--chrome);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
 .pg .gk-fo{font-weight:500}
 .pg .gk-d{font-family:var(--display);font-weight:${W.heading};font-stretch:${num(d.stretch, 100)}%;letter-spacing:-.01em;overflow-wrap:anywhere;text-wrap:balance}
+/* the cover statement in the template edition: the placeholder sets at the statement size, without its dashed box */
+.pg .gk-cv .ph-b{border:0;padding:0}
+.pg .gk-cv .ph-w{font-size:1em;line-height:inherit}
+/* on the applied objects each placeholder field stands on its own line, with room around its words */
+.pg .gk-ap .ph-c{display:block;width:fit-content;max-width:100%;box-sizing:border-box;padding:2px 8px;margin:0 0 6px;line-height:18px}
 .pg .gk-body{font:${W.regular} 13px/20px var(--body);overflow-wrap:anywhere;text-wrap:pretty}
 .pg .gk-bm{font-family:var(--bmono);font-weight:${m ? m.weights[0] : 400};font-size:12px;line-height:16px;white-space:nowrap}
 .pg .gk-q{color:var(--quiet)}
