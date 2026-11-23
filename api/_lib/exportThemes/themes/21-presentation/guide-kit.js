@@ -116,7 +116,10 @@ function palette(ctx) {
   };
   // text on a swatch: the nearer to black or to white, whichever has the higher ratio (the brand's own ink and surface count as the black-ish and the white-ish)
   R.bestInk = (bg, size = 13, weight = 500) => {
-    const cands = [R.ink, L.surface, '#111111', '#ffffff'].filter(ok), pick = cands.reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
+    const cands = [R.ink, L.surface, '#111111', '#ffffff'].filter(ok);
+    let pick = cands.reduce((a, b) => (ctx.ratio(b, bg) > ctx.ratio(a, bg) ? b : a));
+    // a mid-tone swatch can leave every one of those under 4.5 : 1; pure black or white then, whichever reads better
+    if (ctx.ratio(pick, bg) < 4.5) pick = ctx.ratio('#000000', bg) >= ctx.ratio('#ffffff', bg) ? '#000000' : '#ffffff';
     ctx.pair(pick, bg, { size, weight, what: '(Keynote guide text on a swatch)' });
     return pick;
   };
