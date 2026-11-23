@@ -173,7 +173,7 @@ export default function ExportSteps({ cat, file, name, fileProject = '', project
       <>
         <NameLine lead={lead} name={name} project={project} onRenameState={onRenameState} />
         <BrandLogoField />
-        {!hasLogo && <p className="xd-note">Add a logo and the slides gain a logo section.</p>}
+        {!hasLogo && <p className="xd-note">Until you add a logo, the logo slides show a placeholder.</p>}
       </>
     )
   } else if (cat.preview === 'guide') {

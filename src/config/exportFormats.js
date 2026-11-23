@@ -37,7 +37,7 @@
 //          the format, so the request appears next to the thing that needs it
 //          rather than in a settings page nobody visits. It carries no
 //          entitlement meaning: a Pro user with no logo still gets the document,
-//          minus the logo section, and its closing page names what is missing.
+//          with a placeholder mark on the logo pages until a logo is added.
 
 import { EXPORT_THEMES as ROUTE_THEMES, FREE_UI_KIT_THEMES } from '../data/exportThemes.js'
 
