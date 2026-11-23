@@ -19,7 +19,7 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '23-broadsheet', name: 'Front Page' }),
   Object.freeze({ id: '24-standards', name: 'Standards Plate' }),
   Object.freeze({ id: '26-notebook', name: 'Notebook' }),
-  Object.freeze({ id: '28-riso', name: 'Print Shop' }),
+  Object.freeze({ id: '28-riso', name: 'Print Shop', extraRows: Object.freeze(['guide']) }),
   Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet' }),
   Object.freeze({ id: '30-fluted', name: 'Fluted' }),
   Object.freeze({ id: '31-contact', name: 'Contact' }),

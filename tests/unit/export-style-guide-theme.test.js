@@ -46,12 +46,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id), [THEME])
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id), ['28-riso', THEME])
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
-test('the picker offers the style guide only on Swiss Field, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id), [THEME])
+test('the picker offers the style guide only on Swiss Field and Print Shop, in the three formats', () => {
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id), ['28-riso', THEME])
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
@@ -187,6 +187,31 @@ test('a page that throws after writing a markdown hook leaves no trace in the ma
     assert.match(md, /^## 01 · Logo$/m, 'the Logo section is still drawn')
   } finally {
     swissGuide.applied = applied
+    console.warn = keep
+  }
+})
+
+// ---- 28-riso (Print Shop): every page on three palettes and four brand names, and the md keeps its six sections
+test('28-riso: four brands on three palettes draw all nine pages, no page left out, and md keeps its six sections', async () => {
+  const NAMES = ['Kerbside', 'Bright Harbour Studio', 'Wild Tide Collective', 'Northern Rivers Community Credit Union']
+  const PALETTES = [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#777777'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  const keep = console.warn
+  const warned = []
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    for (const colors of PALETTES) {
+      for (const projectName of NAMES) {
+        const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+        warned.length = 0
+        const pdf = await renderThemeExport({ theme: '28-riso', row: 'guide', format: 'pdf', design, projectName })
+        const md = await renderThemeExport({ theme: '28-riso', row: 'guide', format: 'md', design, projectName })
+        const label = `${colors[0]} "${projectName}"`
+        assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${label}: no page left out`)
+        assert.deepEqual(drawnPages(pdf.html), PAGES, `${label}: every page drawn`)
+        assert.deepEqual((md.md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'], `${label}: every md section`)
+      }
+    }
+  } finally {
     console.warn = keep
   }
 })

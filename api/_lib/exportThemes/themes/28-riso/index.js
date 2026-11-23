@@ -52,9 +52,10 @@ ${scr}
 }
 export { guidelines };
 export const uikit = {};
+export const guide = {};
 
 // ---- lane modules (overnight build, 11 Nov): each builder adds lane-<name>.js beside this file, merged in file-name order (engine/lanes.js) ----
-import { mergeLanes as __mergeLanes, laneCss as __laneCss } from '../../engine/lanes.js';
+import { mergeLanes as __mergeLanes, laneCss as __laneCss, laneGuideCss as __laneGuideCss } from '../../engine/lanes.js';
 import * as __bk_ink from './lane-bk-ink.js';
 import * as __bk from './lane-bk.js';
 import * as __g1 from './lane-g1.js';
@@ -62,6 +63,7 @@ import * as __g2 from './lane-g2.js';
 import * as __g3 from './lane-g3.js';
 import * as __g4 from './lane-g4.js';
 import * as __g5 from './lane-g5.js';
+import * as __guide from './lane-guide.js';
 import * as __hg_pages from './lane-hg-pages.js';
 import * as __hg_press from './lane-hg-press.js';
 import * as __hg from './lane-hg.js';
@@ -76,11 +78,13 @@ import * as __u1 from './lane-u1.js';
 import * as __u2 from './lane-u2.js';
 import * as __u3 from './lane-u3.js';
 
-const __L = __mergeLanes([__bk_ink, __bk, __g1, __g2, __g3, __g4, __g5, __hg_pages, __hg_press, __hg, __hk_comp, __hk_css, __hk_found, __hk_lib, __hk_scr, __hk, __kt, __u1, __u2, __u3]);
+const __L = __mergeLanes([__bk_ink, __bk, __g1, __g2, __g3, __g4, __g5, __guide, __hg_pages, __hg_press, __hg, __hk_comp, __hk_css, __hk_found, __hk_lib, __hk_scr, __hk, __kt, __u1, __u2, __u3]);
 Object.assign(guidelines, __L.guidelines);
 Object.assign(uikit, __L.uikit);
+Object.assign(guide, __L.guide);
 if (__L.fonts.length) meta.fonts = [...(meta.fonts || []), ...__L.fonts];
 export const css = __laneCss(baseCss, __L);
+export const guideCss = __laneGuideCss(__L);
 export const brandBook = __L.brandBook || undefined;
 export const bookCss = __L.bookCss || undefined;
 export const readMe = __L.readMe || undefined;
