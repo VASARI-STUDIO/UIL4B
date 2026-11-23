@@ -1,6 +1,6 @@
 // Which rows each export theme has, held against a hard-coded snapshot of the table as it stood before `extraRows` existed.
 //
-//  1. NO THEME LOSES OR GAINS A ROW: every theme's row set equals the snapshot below (27 Swiss Field is slides + guide; 21 Keynote, 22 Stub, 24 Standards Plate and 29 Drawing Sheet are every row plus guide).
+//  1. NO THEME LOSES OR GAINS A ROW: every theme's row set equals the snapshot below (27 Swiss Field and 25 Label are slides + guide; 21 Keynote, 22 Stub, 24 Standards Plate and 29 Drawing Sheet are every row plus guide).
 //     Break: add 'guide' to a theme's extraRows without updating the snapshot, or drop a theme from the table.
 //  2. extraRows OPTS IN WITHOUT RESTATING ROWS: an entry with no rows list and extraRows ['guide'] has guide and every other row; a rows list wins.
 //     Break: make entryHasRow in src/data/exportThemes.js ignore extraRows, or let extraRows add to a rows list.
@@ -14,7 +14,7 @@ const SNAPSHOT = {
   '06-studio': ALL, '07-spec': ALL, '08-monograph': ALL, '09-blueprint': ALL, '10-inuse': ALL,
   '21-presentation': [...ALL, 'guide'], '22-ticket': [...ALL, 'guide'], '23-broadsheet': ALL, '24-standards': [...ALL, 'guide'], '26-notebook': ALL,
   '28-riso': ALL, '29-blueprint': [...ALL, 'guide'], '30-fluted': ALL, '31-contact': ALL, '32-dieline': ALL,
-  '25-label': ['slides'],
+  '25-label': ['slides', 'guide'],
   '27-swissfield': ['slides', 'guide'],
 }
 
