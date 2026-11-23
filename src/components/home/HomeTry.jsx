@@ -301,10 +301,6 @@ export default function HomeTry() {
       <div className="ht-in">
         <header className="ht-head">
           <h2 className="ht-h" id="try-h" tabIndex={-1}>Say hello to UI L4B.</h2>
-          <p className="ht-sub">
-            Build a palette, find an icon, try a font and shrink a photo, right here with no account.
-            Your photo never leaves your browser.
-          </p>
         </header>
 
         <div className="ht-split">

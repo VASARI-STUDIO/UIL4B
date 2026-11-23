@@ -142,13 +142,6 @@ export const PROJECTS = Object.freeze([
   },
 ])
 
-/** The footnote; the "real export" clause is true only once the export themes ship. */
-// ships with the export themes
-export function footnote(live) {
-  const base = 'Kerbside, Two Shores and Shallow End are sample brands, made up for this page.'
-  return live ? `${base} Every page shown is a real export of their palettes and fonts.` : base
-}
-
 /** Card 2's caption under the art. */
 // ships with the export themes
 export function artCaption(live) {

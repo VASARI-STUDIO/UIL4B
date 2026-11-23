@@ -37,8 +37,6 @@
 .ht-in { max-width: 1336px; margin: 0 auto; }
 .ht-h { margin: 0; max-width: 760px; font-size: 40px; font-weight: 600; line-height: 1.02; letter-spacing: -.04em; text-wrap: balance; }
 .ht-h:focus { outline: none; }
-.ht-sub { margin: 24px 0 0; max-width: 56ch; font-size: 18px; line-height: 1.6; color: rgba(var(--ink), .72); text-wrap: balance; }
-@media (max-width: 767px) { .ht-sub { margin-top: 16px; font-size: 16px; } }
 @media (min-width: 768px) { .ht-h { font-size: 48px; } }
 @media (min-width: 1200px) { .ht-h { font-size: 60px; } }
 

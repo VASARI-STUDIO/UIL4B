@@ -13,7 +13,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 import { exportCopy, exportRows, projectsLimit } from '../../src/components/home/homeExportsData.js'
-import { PROJECTS, artCaption, footnote } from '../../src/components/home/homeExportsKit.js'
+import { PROJECTS, artCaption } from '../../src/components/home/homeExportsKit.js'
 import { EXPORT_GROUPS, EXPORT_THEME_EXPORTS, isGroupPro } from '../../src/config/exportFormats.js'
 import { THEME_FACTS, numberWord } from '../../src/config/planFacts.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
@@ -123,14 +123,6 @@ test('with the themes off the copy lists the panel exports and says nothing of t
   assert.match(note, /Pro\.$/)
 })
 
-test('the footnote claims real exports only while the themes are live, and names every sample brand', () => {
-  assert.match(footnote(true), /real export/)
-  assert.doesNotMatch(footnote(false), /real export/)
-  for (const brand of PROJECTS.map((p) => p.name.split(',')[0])) {
-    assert.ok(footnote(false).includes(brand), `the footnote leaves out ${brand}`)
-  }
-})
-
 // ── Card 3's pill ───────────────────────────────────────────────────────────
 
 test('card 3 counts its projects against the real Free limit', () => {
@@ -156,13 +148,11 @@ test('every line that depends on the export themes carries the marker comment', 
   const sites = [
     ['data', 'export function exportRows('],
     ['data', 'export function exportCopy('],
-    ['kit', 'export function footnote('],
     ['kit', 'export function artCaption('],
     ['jsx', 'const OBJECTS = ['],
     ['jsx', '<p>{copy.body}</p>'],
     ['jsx', '<p className="hx-note">{copy.note}</p>'],
     ['jsx', '<p className="hx-cap">{artCaption(live)}</p>'],
-    ['jsx', '<p className="hx-foot">{footnote(live)}</p>'],
   ]
   for (const [file, needle] of sites) {
     assert.ok(markedAbove(RAW[file], needle), `${FILES[file]}: "${needle}" lost its "${MARK}" comment`)
@@ -178,7 +168,6 @@ test('the component reads card 2 through the live switch, not around it', () => 
   assert.match(CODE.jsx, /exportRows\(live\)/)
   assert.match(CODE.jsx, /exportCopy\(live\)/)
   assert.match(CODE.jsx, /artCaption\(live\)/)
-  assert.match(CODE.jsx, /footnote\(live\)/)
   assert.match(CODE.jsx, /live = EXPORT_THEMES_LIVE/)
 })
 
