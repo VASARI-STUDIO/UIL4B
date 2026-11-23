@@ -24,13 +24,23 @@ export function put(ctx, files, name, data) {
 // An entry name that could climb out of the archive: a "..", a leading slash, a drive letter or a backslash.
 export const unsafeZipName = (name) => typeof name !== 'string' || !name || /(^|\/)\.\.(\/|$)|\.\.|^\/|^[A-Za-z]:|\\/.test(name);
 
+// Every entry, folders included, carries this date. JSZip would otherwise add each parent folder itself, dated now,
+// so two builds a second or two apart gave different bytes.
+const ZIP_DATE = new Date('2026-01-01T00:00:00Z');
+
 export async function zipFiles(files, top) {
   const zip = new JSZip();
   if (top !== undefined && top !== '' && unsafeZipName(top)) throw new Error(`zipFiles: unsafe folder name ${JSON.stringify(top)}`);
+  const made = new Set();
   for (const name of Object.keys(files).sort()) {
     if (unsafeZipName(name)) throw new Error(`zipFiles: unsafe entry name ${JSON.stringify(name)}`);
-    const v = files[name];
-    zip.file((top ? top + '/' : '') + name, typeof v === 'string' ? Buffer.from(v, 'utf8') : v, { date: new Date('2026-01-01T00:00:00Z') });
+    const v = files[name], path = (top ? top + '/' : '') + name, parts = path.split('/');
+    // the parent folders, in the same order JSZip would add them, with the fixed date
+    for (let i = 1; i < parts.length; i++) {
+      const dir = parts.slice(0, i).join('/') + '/';
+      if (!made.has(dir)) { made.add(dir); zip.file(dir, null, { dir: true, date: ZIP_DATE, createFolders: false }); }
+    }
+    zip.file(path, typeof v === 'string' ? Buffer.from(v, 'utf8') : v, { date: ZIP_DATE, createFolders: false });
   }
   return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
