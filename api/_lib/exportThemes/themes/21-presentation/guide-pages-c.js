@@ -12,16 +12,16 @@ export function contrastPage(ctx) {
   const t = title(ctx, K, 'contrast', copyOf(ctx, 'contrast', [`${cap1(numberWord(P.length))} pairs the interface uses, each measured.`, 'Every pair the interface uses, measured.']));
   const RH = P.length > 10 ? 34 : 40, AX = 400, AW = 150, TXW = AX - X0 - 88;
   // each pair's name wraps to two lines with its usage line under it; when the page cannot hold that, the usage line takes one line, and last the name does too
-  const LEVELS = [[2, 2], [2, 1], [1, 1], [1, 0]];
-  const rowsAt = ([lm, um]) => P.map((p) => {
+  const LEVELS = [[2, 2, RH], [2, 1, RH], [1, 1, RH], [1, 0, RH], [1, 0, 24]]; let PS = P;
+  const rowsAt = ([lm, um, floor]) => PS.map((p) => {
     const ln = Math.min(lm, nLines(CH[600], p.label, 15, TXW)), un = p.use ? Math.min(um, nLines(CH[400], p.use, 12, TXW)) : 0;
-    return { ln, un, h: Math.max(RH, ln * 20 + un * 16 + (lm > 1 ? 8 : 0)) };
+    return { ln, un, h: Math.max(floor, ln * 20 + un * 16 + (lm > 1 ? 8 : 0)) };
   });
   const pairs = { rows: [], h: 0, flex: P.length * 72, draw: (y, extra = 0) => {
-    const add = Math.floor(extra / Math.max(1, P.length));
+    const add = Math.floor(extra / Math.max(1, PS.length));
     let yy = y + SUBH + 8;
-    return sec(K, X0, y, CW, '01', 'Pairs', 'ratio of text to ground, out of 21') + P.map((p, i) => {
-      const r = pairs.rows[i], rh = r.h + add, sh = Math.max(28, Math.min(56, rh - 12)), top = yy, th = r.ln * 20 + r.un * 16, mid = Math.floor(rh / 2);
+    return sec(K, X0, y, CW, '01', 'Pairs', PS.length < P.length ? `the first ${PS.length} of ${P.length}, ratio out of 21` : 'ratio of text to ground, out of 21') + PS.map((p, i) => {
+      const r = pairs.rows[i], rh = r.h + add, sh = Math.max(Math.min(28, rh - 4), Math.min(56, rh - 12)), top = yy, th = r.ln * 20 + r.un * 16, mid = Math.floor(rh / 2);
       const fam = p.sample && p.sample.face === 'display' ? 'var(--display)' : 'var(--body)', sz = Math.min((p.sample || {}).size || 15, 20);
       yy += rh;
       return hr(X0, top, CW, R.hair)
@@ -57,7 +57,9 @@ export function contrastPage(ctx) {
       + rect(x, yy + GH - 14, GW, 1, `background:${R.edge}`) + rect(x + r1((min / 21) * GW), yy + GH - 17, Math.max(3, r1(((next - min) / 21) * GW)), 6, `background:${R.ink}`);
   }).join('') };
   const others = [tonesSec, noteSec, gradesSec].filter(Boolean), budget = BOT - t.top - sum(others.map((s) => s.h)) - 20 * others.length;
-  const level = LEVELS.find((lv) => SUBH + 8 + sum(rowsAt(lv).map((r) => r.h)) + 1 <= budget) || LEVELS[LEVELS.length - 1];
+  const fits = (lv) => SUBH + 8 + sum(rowsAt(lv).map((r) => r.h)) + 1 <= budget; let level = LEVELS.find(fits);
+  // past the last level the page shows the first pairs it can hold, and says so in the header
+  if (!level) { level = LEVELS[LEVELS.length - 1]; while (PS.length > 1 && !fits(level)) PS = PS.slice(0, -1); }
   pairs.rows = rowsAt(level);
   pairs.h = SUBH + 8 + sum(pairs.rows.map((r) => r.h)) + 1;
   return shell(ctx, 'contrast', t.html + flow('contrast', t.top, [pairs, tonesSec, noteSec, gradesSec].filter(Boolean), { gap: 20, maxGap: 40 }));
@@ -68,7 +70,7 @@ export function tokensPage(ctx) {
   const K = kit(ctx), { R } = K, T = tokenGroups(ctx), L = ctx.roles.light;
   const t = title(ctx, K, 'tokens', copyOf(ctx, 'tokens', ['Spacing, corners and edges, as set.', 'The spacing, corners and edges.']));
   const maxPx = Math.max(...T.space.map((s) => num(s.px, 0)), 1), BW = 200, spRow = 28;
-  const base = Math.min(...T.space.map((s) => num(s.px, 4))) || 4;
+  const base = T.space.length ? Math.min(...T.space.map((s) => num(s.px, 4))) || 4 : 4;
   const times = (v) => `${+(num(v, 0) / base).toFixed(2)}×`;
   const spaceSec = { h: SUBH + 8 + T.space.length * spRow + 1, flex: T.space.length * 20, draw: (y, extra = 0) => {
     const rh = spRow + Math.floor(extra / Math.max(1, T.space.length));
@@ -123,7 +125,7 @@ export function usagePage(ctx) {
   } };
   // the states
   const states = [['Rest', `background:${bt.fill};color:${bt.label}`], ['Hover', `background:${L.actionHover};color:${bt.label}`], ...(L.actionPressed ? [['Pressed', `background:${L.actionPressed};color:${bt.label}`]] : []), ['Focus', `background:${bt.fill};color:${bt.label};outline:${bt.border ? bt.border.px : 1.5}px solid ${L.focus};outline-offset:2px`], ['Disabled', `background:${L.disabledBg};color:${L.disabledText}`]];
-  const nSt = states.length, perRow = Math.floor((CW - 48 - nSt * w1) / (nSt - 1)) >= 12 ? nSt : Math.ceil(nSt / 2), stRows = Math.ceil(nSt / perRow), stGap = perRow > 1 ? Math.min(32, Math.floor((CW - 48 - perRow * w1) / (perRow - 1))) : 0;
+  const nSt = states.length, perRow = [nSt, Math.ceil(nSt / 2), 2, 1].find((k) => k === 1 || Math.floor((CW - 48 - k * w1) / (k - 1)) >= 12), stRows = Math.ceil(nSt / perRow), stGap = perRow > 1 ? Math.min(32, Math.floor((CW - 48 - perRow * w1) / (perRow - 1))) : 0;
   const stRowH = bh + 8 + 16 + 16, sH = 24 + stRows * stRowH - 16 + 8;
   const statesSec = { h: SUBH + 8 + sH, draw: (y) => sec(K, X0, y, CW, '02', 'States', 'the button, each way it shows') + obj(K, X0, y + SUBH + 8, CW, sH, R.ground, states.map(([n, css], i) => {
     const x = 24 + (i % perRow) * (w1 + stGap), by = 24 + Math.floor(i / perRow) * stRowH;

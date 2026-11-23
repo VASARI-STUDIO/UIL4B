@@ -218,7 +218,7 @@ export function colourPage(ctx) {
 
 // ---------------------------------------------------------------- proportion
 export function rulerPage(ctx) {
-  const K = kit(ctx), { R } = K, B = ctx.brand, F = colourFacts(ctx).slice().sort((a, b) => (b.share ?? 0) - (a.share ?? 0));
+  const K = kit(ctx), { R } = K, B = ctx.brand, F = uniqueColours(colourFacts(ctx)).sort((a, b) => (b.share ?? 0) - (a.share ?? 0));
   const top0 = F[0];
   const t = title(ctx, K, 'ruler', copyOf(ctx, 'ruler', [top0 && typeof top0.share === 'number' ? `${top0.name} holds ${pct(top0.share)}. The rest is held back.` : 'How much of each colour a page carries.', 'How much of each colour a page carries.']));
   // the bar: widths by share, no segment under 6 px (the shortfall comes off the widest), rounded by largest remainder to the full width

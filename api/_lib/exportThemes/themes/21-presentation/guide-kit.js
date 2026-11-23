@@ -21,7 +21,7 @@ export const numberWord = (n) => NUMBER_WORDS[n] || String(n);
 const WEIGHT_NAMES = { 100: 'Thin', 200: 'Extralight', 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Extrabold', 900: 'Black' };
 export const weightName = (w) => WEIGHT_NAMES[w] || String(w);
 export const listAnd = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
-export const longDate = (iso) => { const d = new Date(iso + 'T00:00:00Z'); return Number.isNaN(+d) ? String(iso) : d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); };
+export const longDate = (iso) => { if (!iso) return ''; const d = new Date(iso + 'T00:00:00Z'); return Number.isNaN(+d) ? String(iso) : d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); };
 // a length printed as the true size it is
 export const px = (n) => `${+(+n).toFixed(1)} px`;
 // a number that must be finite: the fallback stands when a token parses to nothing
@@ -71,7 +71,7 @@ export function uniqueColours(F) {
   for (const f of F) {
     const k = String(f.hex).toLowerCase(), first = seen.get(k);
     if (!first) { const c = { ...f }; seen.set(k, c); out.push(c); continue; }
-    if (f.role && !String(first.role).split(', ').includes(f.role)) first.role = `${first.role}, ${f.role}`;
+    if (f.role && !String(first.role).split(', ').includes(f.role)) first.role = first.role ? `${first.role}, ${f.role}` : f.role;
     if (typeof first.share === 'number' && typeof f.share === 'number') first.share += f.share;
   }
   return out;
