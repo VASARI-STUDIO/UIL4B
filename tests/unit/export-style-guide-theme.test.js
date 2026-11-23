@@ -7,7 +7,7 @@
 //     Break: change the folder E.fontFiles writes to, so a page links a font the zip does not hold.
 //  3. NOTHING THIRD-PARTY: no origin in any file, and the print document keeps its CSP meta and holds no script.
 //     Break: add a Google Fonts link to guideCss in themes/27-swissfield/lane-guide.js.
-//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Swiss Field and Keynote are offered it.
+//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Swiss Field, Keynote and Stub are offered it.
 //     Break: make themeHasRow in src/data/exportThemes.js ignore OPT_IN_ROWS.
 //  5. A THEME WITHOUT THE ROW IS REFUSED like any other missing row: 400 unknown_row.
 //     Break: drop the themeHasRow line in themeRequestProblem.
@@ -50,12 +50,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, ...IDS].sort())
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
-test('the picker offers the style guide only on Standards Plate, Swiss Field and Keynote, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, ...IDS].sort())
+test('the picker offers the style guide only on Standards Plate, Swiss Field, Keynote and Stub, in the three formats', () => {
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
@@ -260,6 +260,80 @@ test('24-standards: a one-colour and an all-the-same palette hold no NaN or Infi
       assert.ok(drawnPages(html).includes(id) || left.some((w) => w.includes(id)), `${id} drawn or named for ${colors}`)
     }
   }
+})
+
+// ---- 22-ticket (Stub): keyed on data-page and its own folio class (tk-fo), never another theme's classes
+const STUB = '22-ticket'
+const stubPage = (html, id) => (html.split(`data-page="${id}"`)[1] || '').split('</section>')[0]
+const stubRun = async (opts, formats = ['pdf', 'md']) => {
+  const warned = []
+  const keep = console.warn
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    const got = {}
+    for (const format of formats) got[format] = await renderThemeExport({ theme: STUB, row: 'guide', format, ...opts })
+    return { ...got, warned }
+  } finally {
+    console.warn = keep
+  }
+}
+
+test('22-ticket: has the guide row, in the three formats', () => {
+  assert.equal(themeHasRow(STUB, 'guide'), true)
+  assert.deepEqual([...THEME_ROW_FORMATS.guide].sort(), ['html', 'md', 'pdf'])
+})
+
+test('22-ticket: four brands on three palettes draw all nine pages, no page left out, and md keeps its six sections', async () => {
+  const NAMES = ['Kerbside', 'Bright Harbour Studio', 'Wild Tide Collective', 'Northern Rivers Community Credit Union']
+  const PALETTES = [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#F96B76'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  for (const colors of PALETTES) {
+    for (const projectName of NAMES) {
+      const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+      const { pdf, md, warned } = await stubRun({ design, projectName })
+      const label = `${colors[0]} "${projectName}"`
+      assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${label}: no page left out`)
+      assert.deepEqual(warned.filter((w) => /at the foot/.test(w)), [], `${label}: no large gap at a page foot`)
+      assert.deepEqual(drawnPages(pdf.html), PAGES, `${label}: every page drawn`)
+      assert.deepEqual((md.md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'], `${label}: every md section`)
+      assert.equal((pdf.html.match(/class="a tk-fo"/g) || []).length, 9, `${label}: a folio on every page`)
+    }
+  }
+})
+
+test('22-ticket: an over-long single word drops only the logo page, and the md then numbers 01 to 05', async () => {
+  const { pdf, md, warned } = await stubRun({ projectName: 'A'.repeat(36) })
+  assert.deepEqual(drawnPages(pdf.html), PAGES.filter((p) => p !== 'logo'))
+  assert.ok(warned.some((w) => w.includes('guide page logo left out')), 'the warning names the page')
+  assert.deepEqual(md.md.match(/^## \d\d · .+$/gm), ['## 01 · Colour', '## 02 · Typography', '## 03 · Contrast', '## 04 · Tokens', '## 05 · Usage'])
+})
+
+test('22-ticket: a mid-tone swatch where neither #111 nor white reaches 4.5 : 1 still draws the cover and colour pages', async () => {
+  for (const colors of [['#777777'], ['#D63B9C'], ['#5eebde', '#6b6dd1'], ['#1a8508', '#ea1347', '#0ee103', '#52ad0f']]) {
+    const { pdf, warned } = await stubRun({ design: { palette: { base: colors[0], harmony: 'auto', colors } }, projectName: 'Kerbside' }, ['pdf'])
+    assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${colors[0]}: no page left out`)
+    assert.deepEqual(drawnPages(pdf.html), PAGES, `${colors[0]}: every page drawn`)
+  }
+})
+
+test('22-ticket: the placeholder logo is the UIL4B watermark, the colour proportion bar has a keyline, and the type page fills to its foot', async () => {
+  const { pdf, warned } = await stubRun({}, ['pdf'])
+  assert.match(stubPage(pdf.html, 'logo'), /aria-label="Logo placeholder"/)
+  assert.match(stubPage(pdf.html, 'ruler'), /outline:1px solid [^;]+;outline-offset:-1px/)
+  assert.deepEqual(warned.filter((w) => /at the foot/.test(w)), [])
+})
+
+test('22-ticket: the html zip holds a page each, style-guide.md and the phone reflow', async () => {
+  const { zip, name } = await renderThemeExport({ theme: STUB, row: 'guide', format: 'html' })
+  assert.match(name, /^[a-z0-9-]+-style-guide-22-ticket\.zip$/)
+  const z = await JSZip.loadAsync(zip)
+  const files = Object.keys(z.files).filter((f) => !z.files[f].dir)
+  const top = files[0].split('/')[0]
+  const rel = files.map((f) => f.slice(top.length + 1))
+  for (const p of PAGES) assert.ok(rel.includes(p + '.html'), p + '.html')
+  assert.ok(rel.includes('style-guide.md'), 'style-guide.md')
+  const text = (await Promise.all(files.filter((x) => /\.(html|css)$/.test(x)).map((x) => z.file(x).async('string')))).join('\n')
+  assert.match(text, /max-width:\s*841px/, 'the phone reflow')
+  assert.ok(!/https?:\/\/(?!www\.w3\.org)/i.test(text), 'no origin')
 })
 
 // Keynote (21-presentation). Each test names the change that makes it fail.
