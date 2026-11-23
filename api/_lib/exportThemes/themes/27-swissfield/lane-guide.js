@@ -4,7 +4,7 @@
 // colour id, a hex or a brand. The pages place everything with absolute coordinates and measure text with the fonts' own metrics: a page that does not fit throws.
 import { A, nb, nbu, textWidth, wrapU as wrap, faceStem, model, fmtShare, hexOf, cap1, spell, weightName, longDate, twoTone, firstSentence, box, at } from './swiss.js';
 import { colourFacts, typeLadder, contrastFacts, logoFacts, tokenGroups, usageFacts, GRADE_NOTE } from '../../engine/styleguide.js';
-import { PAGE, PAGE_IDS, r1, sum, hook, hookAdd, withHooks, pageSection, makeGuide, stacker, headLabel, drawWithFewer, SLOT_MIN_H, slotW, logoArt } from '../../engine/guide-layout.js';
+import { PAGE, PAGE_IDS, r1, sum, hook, hookAdd, withHooks, pageSection, makeGuide, stacker, headLabel, drawWithFewer, inkFor, SLOT_MIN_H, slotW, logoArt } from '../../engine/guide-layout.js';
 import { copyOf, copyRaw } from './guide-copy.js';
 
 // The guide speaks in the brand's own faces: its text face (Medium and Regular) for titles, labels and notes, its mono face for literal values. These are the stems the
@@ -51,7 +51,7 @@ const dispWeights = (ctx) => [...new Set(typeLadder(ctx).filter((t) => t.face ==
 const dispNames = (ctx) => [...new Set([ctx.weights.logo, ...dispWeights(ctx)])].sort((a, z) => z - a).map(weightName).join(' and ');
 // the display face as its Google family and the width axis it is drawn at ("Archivo, wdth 125"): the engine's "Archivo Expanded" is no family a reader can install
 const dispFace = (f) => (f.stretch && f.stretch !== 100 ? `${f.family}, wdth ${f.stretch}` : f.family);
-const inkOn = (ctx, hex) => { const L = ctx.roles.light; return ctx.C.ratio(L.text, hex) >= ctx.C.ratio(L.surface, hex) ? L.text : L.surface; };
+const inkOn = inkFor;
 
 // ---- the portrait ruler: the model's cut, redone for a page of `total` px ----
 function cutRuler(ctx, total, min) {
@@ -186,7 +186,16 @@ function cover(ctx) {
   const rowH = 30, fy = 1010 - facts.length * rowH - 1;
   // the key column is as wide as the longest name needs (never under 80 px), so a brand's own colour names fit
   const kw = Math.min(160, Math.max(80, Math.ceil(Math.max(...facts.map(([k]) => textWidth(CHROME[500], k, 13)))) + 8));
-  const rows = facts.map(([k, v0, raw], i) => {
+  // a generated colour name can be wider than the 160 px column ("Sun-Bleached Conservatory"): it is cut at a word, or at a letter, with an ellipsis
+  const clip = (k) => {
+    if (textWidth(CHROME[500], k, 13) <= kw - 8) return k;
+    const words = k.split(/(?<=[s-])/);
+    for (let n = words.length - 1; n > 0; n--) { const c = words.slice(0, n).join('').replace(/[s-]+$/, '') + '…'; if (textWidth(CHROME[500], c, 13) <= kw - 8) return c; }
+    for (let n = k.length - 1; n > 0; n--) { const c = k.slice(0, n).trimEnd() + '…'; if (textWidth(CHROME[500], c, 13) <= kw - 8) return c; }
+    return '…';
+  };
+  const rows = facts.map(([k0, v0, raw], i) => {
+    const k = clip(k0);
     const v = Array.isArray(v0) ? (v0.find((o) => textWidth(CHROME[400], o, 13) <= cw - kw) ?? v0[v0.length - 1]) : v0;
     if (textWidth(CHROME[500], k, 13) > kw - 8) throw new Error(`Swiss Field guide: the cover fact name "${k}" does not fit`);
     if (!raw && textWidth(CHROME[400], v, 13) > cw - kw) throw new Error(`Swiss Field guide: the cover fact "${v}" does not fit`);
@@ -595,14 +604,22 @@ function contrastPage(ctx) {
   const seen = new Set(), bad = ctx.unusedPairs.filter((p) => { const k = [p.fgHex, p.bgHex].map((x) => x.toLowerCase()).sort().join('|'); if (seen.has(k)) return false; seen.add(k); return true; }), bName = (p) => `${ctx.byId[p.fg].name} on ${ctx.byId[p.bg].name}`;
   // each cell is as wide as the widest pair name under its chip, so the names say which pair to avoid
   const cellW = Math.max(120, ...bad.map((p) => Math.ceil(textWidth(CHROME[400], bName(p), 13)))) + 16, perRow = Math.max(1, Math.floor((CW + 16) / cellW)), bRows = Math.ceil(bad.length / perRow);
-  const failSec = bad.length ? { h: SUBH + 16 + bRows * 62 - 14, draw: (y) => sub(X0, y, CW, 'Pairs that fail') + bad.map((p, i) => {
+  const failSecOf = (shown) => (shown.length ? { h: SUBH + 16 + Math.ceil(shown.length / perRow) * 62 - 14, draw: (y) => sub(X0, y, CW, 'Pairs that fail', shown.length < bad.length ? `the first ${shown.length} of ${bad.length}` : '') + shown.map((p, i) => {
     const x = X0 + (i % perRow) * cellW, yy = y + SUBH + 16 + Math.floor(i / perRow) * 62;
     return box(`left:${x}px;top:${yy}px;width:56px;height:28px;background:${p.bgHex};box-sizing:border-box;border:1px solid var(--hair)`, box(`left:10px;top:11px;width:34px;height:4px;background:${p.fgHex}`))
       + mono(x + 64, yy + 6, `${p.ratioText}:1`, { size: 11 }) + at(x, yy + 34, A(bName(p)), { cls: 'sg-n', style: 'color:var(--quiet);white-space:nowrap' });
-  }).join('') } : null;
+  }).join('') } : null);
   const np = para(0, 0, CW, GRADE_NOTE);
   const notesSec = { h: np.h + 2, draw: (y) => para(X0, y, CW, GRADE_NOTE, { style: 'color:var(--quiet)' }).html };
-  return shell(ctx, 'contrast', { body: t.html + flow('contrast', t.top, [pairsSec, tonesSec, failSec, notesSec].filter(Boolean), { gap: 16 }) });
+  // a palette with many failing pairs (six colours can give twenty) would push the page over: the failing pairs are cut a row at a time,
+  // the section saying how many it shows, down to one row. The pairs in use and the tones are never cut
+  const counts = [bad.length];
+  for (let n = bad.length - (bad.length % perRow || perRow); n >= perRow; n -= perRow) counts.push(n);
+  for (let i = 0; ; i++) {
+    try {
+      return shell(ctx, 'contrast', { body: t.html + flow('contrast', t.top, [pairsSec, tonesSec, failSecOf(bad.slice(0, counts[i])), notesSec].filter(Boolean), { gap: 16 }) });
+    } catch (err) { if (err.code !== 'too_tall' || i >= counts.length - 1) throw err; }
+  }
 }
 
 // ---------------------------------------------------------------- tokens
