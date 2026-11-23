@@ -17,6 +17,9 @@
  *   PAGE_IDS, makeGuide(pages, opts)  the nine page ids in reading order, and the `guide` export a theme's index.js merges.
  *   stacker({theme, bottom, footWarn, gapStretch})  returns flow(id, top, sections, {gap, maxGap}): stacks sections down a page and shares the
  *                         spare height by weight (see below). Throws when the sections do not fit; warns when much is left at the foot.
+ *   inkFor(ctx, hex, {size, weight})  text on a colour the user chose: the brand's light text or surface, whichever reads better, and when
+ *                         neither reaches the ratio the size needs, the engine's readableOn fallback (#111, #FAFAFA, then pure black or white).
+ *                         Every swatch, tile and chip a guide writes on uses this, so no palette leaves a page without a passing ink.
  *   firstFit(candidates, fits)  the first candidate that fits, or undefined: a theme says what it does then (throw, shorten, drop).
  *   headLabel(name, fits, tail) the running head's left text: "<name> <tail>", then the name, then the name cut short with an ellipsis.
  *   drawWithFewer(draw, start)  re-draws a page with fewer logo tiles when it is too tall (see below).
@@ -46,6 +49,7 @@
  */
 import { colourFacts, typeLadder, contrastFacts, logoFacts, tokenGroups, usageFacts, GRADE_NOTE } from './styleguide.js';
 import { esc } from './brand.js';
+import { readableOn } from './color.js';
 
 export const PAGE = { W: 794, H: 1123, X0: 48, XR: 746, CW: 698, COL: [48, 289, 530], COLW: 216 };
 
@@ -72,7 +76,7 @@ export function stacker({ theme, bottom, footWarn = 70, gapStretch = 1 }) {
   return function flow(id, top, sections, { gap = 28, maxGap = 60 } = {}) {
     const n = sections.length, nat = sum(sections.map((s) => s.h)) + gap * (n - 1);
     let slack = bottom - top - nat;
-    if (slack < 0) throw new Error(`${theme} guide: ${id} is ${Math.ceil(-slack)} px too tall (top ${top}, sections ${sections.map((s) => Math.round(s.h)).join(', ')})`);
+    if (slack < 0) throw Object.assign(new Error(`${theme} guide: ${id} is ${Math.ceil(-slack)} px too tall (top ${top}, sections ${sections.map((s) => Math.round(s.h)).join(', ')})`), { code: 'too_tall' });
     const flexTotal = sum(sections.map((s) => s.flex || 0)), extra = sections.map(() => 0);
     if (flexTotal) { const give = Math.min(slack, flexTotal); sections.forEach((s, i) => { extra[i] = Math.floor(((s.flex || 0) / flexTotal) * give); }); slack -= sum(extra); }
     const g = n > 1 ? Math.min(maxGap * gapStretch, gap + Math.floor(slack / (n - 1))) : gap;
@@ -155,7 +159,11 @@ body.stack:has(.sg-screen){padding:0}
 `;
 }
 
-const inkFor = (ctx, hex) => { const L = ctx.roles.light; return ctx.C.ratio(L.text, hex) >= ctx.C.ratio(L.surface, hex) ? L.text : L.surface; };
+// the better of the brand's light text and surface, kept when it reads; otherwise readableOn's fallback, ending on pure black or white
+export const inkFor = (ctx, hex, o) => {
+  const L = ctx.roles.light, textFirst = ctx.C.ratio(L.text, hex) >= ctx.C.ratio(L.surface, hex);
+  return readableOn(hex, textFirst ? [L.text, L.surface] : [L.surface, L.text], o);
+};
 const li = (...rows) => `<li>${rows.join('')}</li>`;
 const row = (a, b) => `<div class="sg-row"><span>${a}</span><span>${b}</span></div>`;
 const faceVar = (face) => `var(--${face === 'display' ? 'display' : 'body'})`;

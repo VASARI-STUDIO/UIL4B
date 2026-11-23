@@ -431,9 +431,9 @@ function AppHeader() {
     stateRef.current.sheet = sheet
   }, [open, menu, sheet])
 
-  // From 980px wide all three menus share one frame: right-anchored 24px clear of the
-  // viewport, wherever the trigger is, and opening from the same point (CSS
-  // transform-origin). Below 980px the panel's left edge sits under the open trigger,
+  // From 980px wide all three menus share one frame: centred in the viewport (its width
+  // is CSS, about 90% of the viewport), wherever the trigger is, and opening from the same
+  // point (CSS transform-origin). Below 980px the panel's left edge sits under the open trigger,
   // held 10px clear, and grows from the trigger. Placed after render and again on resize.
   useLayoutEffect(() => {
     if (!open) return undefined
@@ -442,7 +442,7 @@ function AppHeader() {
       if (!panel) return
       const vw = window.innerWidth
       if (vw >= 980) {
-        panel.style.left = `${Math.max(24, vw - 24 - panel.offsetWidth)}px`
+        panel.style.left = `${Math.max(24, (vw - panel.offsetWidth) / 2)}px`
         panel.style.transformOrigin = ''
         return
       }

@@ -44,8 +44,8 @@ const FREE_SLIDES_THEMES = ['25-label', '27-swissfield']
 const FREE_UI_KIT_THEME = '04-standards'
 const GUIDELINES_ONLY = new Set(FREE_SLIDES_THEMES)
 
-// The themes with a style guide of their own, by hand. The guide is gated like the guidelines, so Swiss Field's is free and Standards Plate's is Pro.
-const GUIDE_THEMES = new Set(['24-standards', '27-swissfield'])
+// The themes with a style guide of their own, by hand. The guide is gated like the guidelines, so Swiss Field's is free and Standards Plate's and Keynote's are Pro.
+const GUIDE_THEMES = new Set(['24-standards', '27-swissfield', '21-presentation'])
 
 // What a Free account may have, by hand: slides in a free theme and its style guide, the UI kit of Standards, nothing else. A 400 where
 // the theme lacks the row.
