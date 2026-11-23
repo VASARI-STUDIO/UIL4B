@@ -156,12 +156,12 @@ export const hr = (x, y, w, col) => rect(x, y, w, 1, `border-top:1px dotted ${co
 export const obj = (K, x, y, w, h, hex, inner = '', { frame = false, style = '' } = {}) => rect(x, y, w, h, `background:${hex};${frame || K.R.near(hex) ? `outline:1px solid ${K.R.edge};outline-offset:-1px;` : ''}${style}`, inner);
 // a section header: a field chip with the number, the name beside it, a dotted rule running out to a quiet note at the right
 export function sec(K, x, y, w, no, name, note = '') {
-  const R = K.R, nameW = Math.ceil(tw(CH[600], name, 15)), noteW = note ? Math.ceil(tw(CH[400], note, 12)) : 0, lead0 = x + 38 + nameW + 12;
+  const R = K.R, nameW = Math.ceil(tw(CH[600], name, 15)), noteW = note ? Math.ceil(tw(CH[400], note, 12, 0.01)) + 2 : 0, lead0 = x + 38 + nameW + 12;
   const showNote = note && x + w - noteW - 12 - lead0 >= 24, ruleEnd = showNote ? x + w - noteW - 12 : x + w;
   return rect(x, y, 28, 22, `background:${R.field}`, `<div class="tk-m" style="line-height:22px;text-align:center;font-weight:500;color:${R.fieldInk}">${A(no)}</div>`)
     + at(x + 38, y + 1, A(name), { cls: 'tk-h' })
     + (ruleEnd - lead0 >= 16 ? rect(lead0, y + 10, ruleEnd - lead0, 2, `border-top:2px dotted ${R.ink}`) : '')
-    + (showNote ? at(x + w - noteW, y + 3, A(note), { cls: 'tk-r tk-q tk-nw' }) : '');
+    + (showNote ? at(x + w - noteW - 24, y + 3, A(note), { w: noteW + 24, cls: 'tk-r tk-q tk-nw', style: 'text-align:right' }) : '');
 }
 // a register: rows ruled with hairlines, a key in the first column and a value in the second. rows: [[key, valueHtml, height]]
 export function register(K, x, y, w, rows, { kw = 88 } = {}) {
@@ -243,15 +243,15 @@ export const flow = stacker({ theme: 'Stub', bottom: BOT });
 
 export function guideCss(ctx) {
   const W = ctx.weights, d = ctx.brand.fonts.display, b = ctx.brand.fonts.body, m = ctx.brand.fonts.mono, R = palette(ctx);
-  const nm = String(ctx.brand.name).replace(/["'\\n\r]/g, '');
+  const nm = String(ctx.brand.name).replace(/["'\\\r\n]/g, '');
   return `/* Stub style guide: A4 portrait. A paper plate on the bar top, a perforation and a stub with the serial and the barcode, dotted rules, numbered chips. */
 section.pg[data-page]{--ink:${R.ink};--quiet:${R.quiet};--hair:${R.hair};--bmono:'${(m || b).family}',monospace}
 .pg .a{position:absolute;box-sizing:border-box}
-.pg .tk-h{font:600 15px/20px var(--chrome);white-space:nowrap}
-.pg .tk-hd{font:500 12px/16px var(--chrome);letter-spacing:.01em;white-space:nowrap}
-.pg .tk-r{font:400 12px/16px var(--chrome);letter-spacing:.01em;text-wrap:pretty}
-.pg .tk-n{font:400 13px/20px var(--chrome);overflow-wrap:anywhere;text-wrap:pretty}
-.pg .tk-v{font:500 13px/18px var(--chrome)}
+.pg .tk-h{font:600 15px/20px var(--chrome);white-space:nowrap;color:var(--ink)}
+.pg .tk-hd{font:500 12px/16px var(--chrome);letter-spacing:.01em;white-space:nowrap;color:var(--ink)}
+.pg .tk-r{font:400 12px/16px var(--chrome);letter-spacing:.01em;text-wrap:pretty;color:var(--ink)}
+.pg .tk-n{font:400 13px/20px var(--chrome);overflow-wrap:anywhere;text-wrap:pretty;color:var(--ink)}
+.pg .tk-v{font:500 13px/18px var(--chrome);color:var(--ink)}
 .pg .tk-m{font:400 12px/16px var(--chrome);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
 .pg .tk-fo{white-space:nowrap}
 .pg .tk-no{font-family:var(--display);font-weight:${W.heading};font-stretch:${num(d.stretch, 100)}%;font-size:44px;line-height:48px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
