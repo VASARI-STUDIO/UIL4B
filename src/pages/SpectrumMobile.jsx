@@ -126,7 +126,7 @@ export default function SpectrumMobile() {
           </div>
         </section>
 
-        <HomeFinalCall toolkitTo="/projects" lead={null} />
+        <HomeFinalCall toolkitTo="/projects" />
       </main>
       <SpectrumFooter toolkitTo="/projects" home pageColumn={false} />
     </div>

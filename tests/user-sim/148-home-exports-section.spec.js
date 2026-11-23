@@ -465,7 +465,8 @@ test('a covered card is inert and a tab stop is never behind a card', async ({ b
       if (!card) return null
       const r = el.getBoundingClientRect()
       const top = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).find((e) => e.closest('.hx-card'))
-      return { inertCard: card.inert, hidden: !top || !el.contains(top), onScreen: r.top >= 0 && r.bottom <= window.innerHeight }
+      // A stop the browser scrolls into view lands flush with the bottom edge, give or take a fraction of a pixel.
+      return { inertCard: card.inert, hidden: !top || !el.contains(top), onScreen: r.top >= -1 && r.bottom <= window.innerHeight + 1 }
     })
     // Tab forward: every stop is in a card that is not inert and is not hit-tested as covered.
     const forward = []
