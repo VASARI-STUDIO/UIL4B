@@ -49,7 +49,7 @@ export default function FillStylePicker({ styles, value, onChange, stops, paint,
         aria-label={`Fill style: ${current.label}`}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="grd-fill-trigger-text">{current.label}</span>
+        <span className="grd-fill-trigger-text">{current.id === 'plain' ? 'Fill style' : current.label}</span>
         <ToolIcon name="caret-down" size={12} />
       </button>
       {open && createPortal(

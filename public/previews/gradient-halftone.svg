@@ -1,5 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
   <defs>
+    <style>
+      #swatch { display: none }
+      #swatch:target { display: inline }
+      #swatch:target + rect { display: none }
+    </style>
     <!-- The screen angle and dot pitch stay fixed. The underlying tone opens
          and closes the dots across the sheet, from broken ink to solid coverage. -->
     <radialGradient id="dot">
@@ -8,6 +13,7 @@
     <pattern id="screen" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-17)">
       <circle cx="6" cy="6" r="6" fill="url(#dot)"/>
     </pattern>
+    <pattern id="coarse" href="#screen" patternTransform="rotate(-17) scale(2.8)"/>
     <radialGradient id="tone" cx=".82" cy="1" r=".95">
       <stop stop-color="#2a2a2a"/><stop offset=".38" stop-color="#555"/><stop offset=".63" stop-color="#888"/>
       <stop offset=".8" stop-color="#aaa"/><stop offset="1" stop-color="#656565"/>
@@ -19,6 +25,7 @@
   </defs>
   <g filter="url(#ink)">
     <rect width="720" height="420" fill="url(#tone)"/>
+    <rect id="swatch" width="720" height="420" fill="url(#coarse)"/>
     <rect width="720" height="420" fill="url(#screen)"/>
   </g>
 </svg>

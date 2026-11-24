@@ -1223,6 +1223,9 @@
 .grd .grd-fx[data-fx="halftone"] .grd-fx-material {
   mask: url('/previews/gradient-halftone.svg') center / cover no-repeat;
 }
+.grd .grd-fill-thumb .grd-fx[data-fx="halftone"] .grd-fx-material {
+  mask-image: url('/previews/gradient-halftone.svg#swatch');
+}
 .grd .grd-fx-slice {
   mask-image: repeating-linear-gradient(90deg,
     transparent 0 calc(var(--k) * var(--fx-slice)),
