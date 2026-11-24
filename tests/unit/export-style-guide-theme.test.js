@@ -7,7 +7,7 @@
 //     Break: change the folder E.fontFiles writes to, so a page links a font the zip does not hold.
 //  3. NOTHING THIRD-PARTY: no origin in any file, and the print document keeps its CSP meta and holds no script.
 //     Break: add a Google Fonts link to guideCss in themes/27-swissfield/lane-guide.js.
-//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Label, Swiss Field, Drawing Sheet, Keynote and Stub are offered it.
+//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Label, Swiss Field, Drawing Sheet, Print Shop, Keynote and Stub are offered it.
 //     Break: make themeHasRow in src/data/exportThemes.js ignore OPT_IN_ROWS.
 //  5. A THEME WITHOUT THE ROW IS REFUSED like any other missing row: 400 unknown_row.
 //     Break: drop the themeHasRow line in themeRequestProblem.
@@ -52,12 +52,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', ...IDS].sort())
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
-test('the picker offers the style guide only on Standards Plate, Label, Swiss Field, Drawing Sheet, Keynote and Stub, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
+test('the picker offers the style guide only on Standards Plate, Label, Swiss Field, Drawing Sheet, Print Shop, Keynote and Stub, in the three formats', () => {
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', ...IDS].sort())
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
@@ -337,6 +337,31 @@ test('25-label: no page leaves a gap at the foot, for any name or palette', asyn
         const at = warned.length
         await renderThemeExport({ theme: '25-label', row: 'guide', format: 'pdf', design, projectName })
         assert.deepEqual(warned.slice(at).filter((w) => w.includes('at the foot') || w.includes('left out')), [], `${colors ? colors[0] : 'default'} "${projectName}"`)
+      }
+    }
+  } finally {
+    console.warn = keep
+  }
+})
+
+// ---- 28-riso (Print Shop): every page on three palettes and four brand names, and the md keeps its six sections
+test('28-riso: four brands on three palettes draw all nine pages, no page left out, and md keeps its six sections', async () => {
+  const NAMES = ['Kerbside', 'Bright Harbour Studio', 'Wild Tide Collective', 'Northern Rivers Community Credit Union']
+  const PALETTES = [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#777777'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  const keep = console.warn
+  const warned = []
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    for (const colors of PALETTES) {
+      for (const projectName of NAMES) {
+        const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+        warned.length = 0
+        const pdf = await renderThemeExport({ theme: '28-riso', row: 'guide', format: 'pdf', design, projectName })
+        const md = await renderThemeExport({ theme: '28-riso', row: 'guide', format: 'md', design, projectName })
+        const label = `${colors[0]} "${projectName}"`
+        assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${label}: no page left out`)
+        assert.deepEqual(drawnPages(pdf.html), PAGES, `${label}: every page drawn`)
+        assert.deepEqual((md.md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'], `${label}: every md section`)
       }
     }
   } finally {

@@ -19,7 +19,7 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '23-broadsheet', name: 'Front Page' }),
   Object.freeze({ id: '24-standards', name: 'Standards Plate', extraRows: Object.freeze(['guide']) }),
   Object.freeze({ id: '26-notebook', name: 'Notebook' }),
-  Object.freeze({ id: '28-riso', name: 'Print Shop' }),
+  Object.freeze({ id: '28-riso', name: 'Print Shop', extraRows: Object.freeze(['guide']) }),
   Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet', extraRows: Object.freeze(['guide']) }),
   Object.freeze({ id: '30-fluted', name: 'Fluted' }),
   Object.freeze({ id: '31-contact', name: 'Contact' }),
@@ -40,7 +40,7 @@ export const THEME_ROW_FORMATS = Object.freeze({
 
 // Rows a theme has only when it opts in: by a rows list that names them, or by `extraRows` on a theme with no rows list (which keeps every
 // other row). The style guide is drawn by a theme's own lane (lane-guide.js), so a theme without one must not be offered it. Gating follows
-// the guidelines: free where they are free. Standards Plate (24), Keynote (21), Stub (22) and Drawing Sheet (29) opt in with extraRows and keep every other row;
+// the guidelines: free where they are free. Standards Plate (24), Keynote (21), Stub (22), Drawing Sheet (29) and Print Shop (28) opt in with extraRows and keep every other row;
 // Keynote's and Stub's are Pro only. Label (25) and Swiss Field (27) stay on a rows list because they are guidelines-only (no UI kit, no book).
 const OPT_IN_ROWS = Object.freeze(['guide'])
 
