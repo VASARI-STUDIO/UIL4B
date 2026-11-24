@@ -178,10 +178,10 @@ header,footer,.caption-line{display:flex;justify-content:space-between;align-ite
 
 
 .application-plate.physical-pair{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr);background:var(--accent);color:var(--on-accent)}
-.physical-pair .scene-photo{min-width:0;object-fit:cover}.print-detail{display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:20px;border-left:1px solid}
+.physical-pair{grid-template-rows:minmax(0,1fr)}.physical-pair .scene-photo{min-width:0;min-height:0;object-fit:cover}.physical-pair .print-detail{min-width:0;min-height:0;background:var(--accent);color:var(--on-accent)}.print-detail{display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:20px;border-left:1px solid}
 .print-detail strong{font:var(--hw) clamp(27px,3.5cqw,46px)/.98 var(--head);letter-spacing:-.045em}.print-detail span{font-size:15px}
 .flyleaf .application .physical-pair img{object-fit:cover}.flyleaf .physical-pair{grid-template-columns:1fr .74fr}
-.set-square .physical-pair,.dispatch .physical-pair{grid-template-columns:1fr;grid-template-rows:1fr auto}
+.set-square .physical-pair,.dispatch .physical-pair{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
 .set-square .print-detail,.dispatch .print-detail{border:0;border-top:1px solid;display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:12px}
 .set-square .print-detail strong,.dispatch .print-detail strong{font-size:23px}.doorlist .physical-pair{grid-template-columns:1fr 1fr}
 .market-day .physical-pair{grid-template-columns:1.5fr 1fr}.market-day .print-detail{border:4px double;text-align:center;align-items:center;margin:14px}
