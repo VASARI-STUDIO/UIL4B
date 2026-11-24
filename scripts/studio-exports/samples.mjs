@@ -6,7 +6,10 @@ import * as catalogue from '../../api/_lib/exportThemes/themes/05-specimen/index
 import * as blueprint from '../../api/_lib/exportThemes/themes/09-blueprint/index.js';
 import * as presentation from '../../api/_lib/exportThemes/themes/01-presentation/index.js';
 
-const editions = { aphrodite: catalogue, athena: blueprint, hermes: presentation };
+import * as poster from '../../api/_lib/exportThemes/themes/02-poster/index.js';
+import * as broadsheet from '../../api/_lib/exportThemes/themes/03-broadsheet/index.js';
+
+const editions = { flyleaf: catalogue, 'set-square': blueprint, dispatch: presentation, doorlist: poster, 'market-day': broadsheet };
 
 export function sampleProject(theme) {
   const original = editions[theme];
@@ -35,7 +38,10 @@ export function sampleProject(theme) {
     headline: brand.lines.primary,
     application: brand.product,
     action: screen.form.book,
+    items: screen.deliveries.map(({to, when, price}) => ({title: to, detail: when, price})),
+    applicationLine: brand.applications.social[1],
+    voice: brand.voice.principles.map(p => p.title + '. “' + p.example + '”').slice(0,2).join(' '),
     icons: brand.ui.icons,
-    ...(theme === 'hermes' ? { photo: 'data:image/webp;base64,' + readFileSync(new URL('../../public/home-exports/kerbside-evening-960.webp', import.meta.url)).toString('base64'), photoAlt: 'Kerbside courier at the end of a shift' } : {}),
+    ...(theme === 'dispatch' ? { photo: 'data:image/webp;base64,' + readFileSync(new URL('../../public/home-exports/kerbside-evening-960.webp', import.meta.url)).toString('base64'), photoAlt: 'Kerbside courier at the end of a shift' } : {}),
   };
 }
