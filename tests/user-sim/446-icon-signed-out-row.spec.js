@@ -13,6 +13,7 @@
 //   isFreeRowPack drops its tierOf(pack) === 'free' test (so Pro packs pass)      -> "every tile is from a free pack"
 //   the row is rendered after the IconEndBand blocks, or the band is not shown   -> "the sign-in band sits below the row"
 //   isFreeRowPack drops its isBlockedPack / isAnimatedPack tests                  -> "no request asks for a blocked or animated pack"
+//   the row's onPick opens the sign-in gate instead of the customiser             -> "a free-row tile opens the customiser"
 //
 // Artwork is served from the Iconify fixture (tests/user-sim/iconify-stub.js).
 import { test, expect } from './base.js'
@@ -70,7 +71,7 @@ for (const width of [1440, 390]) {
     for (const p of packs) expect(isNever(p), `${p} is never offered`).toBe(false)
     await expect(row.locator('.ic svg, .ic img').first(), 'the row paints').toBeVisible({ timeout: 20_000 })
 
-    // The sign-in band sits below the row, and a tile opens the sign-in prompt.
+    // The sign-in band sits below the row.
     const rowBox = await row.boundingBox()
     const bandBox = await band.boundingBox()
     expect(bandBox.y, 'the sign-in band sits below the row').toBeGreaterThanOrEqual(rowBox.y + rowBox.height - 1)
@@ -87,5 +88,10 @@ for (const width of [1440, 390]) {
     }
     const asked = urls.filter((u) => /\/[^/?]+\.json\?icons=/.test(u)).map((u) => u.match(/\/([^/?]+)\.json\?icons=/)[1])
     for (const p of asked) expect(isNever(p), `a glyph request for ${p}, a pack a signed-out visitor never gets`).toBe(false)
+
+    // A tile opens the customiser, not a sign-in prompt: sign-in comes at save or export.
+    await tiles.first().click()
+    await expect(page.locator('.ied-ground'), 'a free-row tile opens the customiser').toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ied-pri'), 'copy works signed out').toBeEnabled({ timeout: 20_000 })
   })
 }

@@ -5408,9 +5408,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       })
     }
   }, [freeRowShown, freeRowIcons])
-  // A tile in the row opens the sign-in prompt: these packs need an account, so
-  // there is nothing to customise or copy until there is one.
-  const onPickFreeRow = useCallback(() => openGate('free'), [openGate])
 
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
@@ -6074,7 +6071,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             )}
 
             {/* The signed-out free row (see freeRowIcons): one row of matches from
-                free-account packs, directly above the sign-in band. */}
+                free-account packs, directly above the sign-in band. A tile opens the
+                customiser like any other; sign-in comes at save or export. */}
             {freeRowShown && (
               <div
                 className="ig-free-row"
@@ -6093,7 +6091,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     picked={false}
                     ghost={0}
                     idx={idx}
-                    onPick={onPickFreeRow}
+                    onPick={onPick}
                     onWarm={noWarm}
                     onGlyphError={noteGlyphFailure}
                   />
