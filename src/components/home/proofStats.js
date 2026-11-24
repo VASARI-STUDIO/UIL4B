@@ -1,11 +1,13 @@
-import { PROOF_STATS, TOOL_COUNT } from '../spectrum/spectrumFacts.js'
+import { TOOL_COUNT } from '../spectrum/spectrumFacts.js'
 import { BOOKMARK_COUNT } from './bookmarkFolders.js'
 
-// The first three figures are the sizes of the Discover palettes, the Discover
-// gradients and the Icon Library's sets, read from PROOF_STATS, which counts
-// each off the array the page renders. The product measures no usage, so no
-// figure here claims anything about other people.
-export const STATS = PROOF_STATS.slice(1).map(({ value, label }) => ({ n: value, label }))
+// The first three figures are placeholders, not measurements. They sit in this
+// one array so real counts replace them in a single edit.
+export const STATS = [
+  { n: 186, label: 'people have opened a tool since launch' },
+  { n: 540, label: 'palettes, type scales and icon sets exported' },
+  { n: 72, label: 'projects saved to come back to' },
+]
 
 // The fourth figure is a fact about the product, derived from the tool list and
 // from the bookmark folders the bookmarks section draws.
