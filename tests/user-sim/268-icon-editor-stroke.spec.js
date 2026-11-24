@@ -178,12 +178,19 @@ test.describe('the Stroke control follows the artwork', () => {
     await expect(page.locator('#ied-sec-stroke')).toBeVisible()
   })
 
-  test('a filled glyph has no Stroke control and no Line style', async ({ page }) => {
+  test('a filled glyph has its Stroke control and Line style locked, with the reason', async ({ page }) => {
     await openEditor(page, { sampleName: 'fill-disc-256', pack: 'ph' })
     await expect(code(page)).toContainText('M128 40')
-    await expect(page.locator('#ied-sec-stroke')).toHaveCount(0)
-    await expect(page.locator('#ied-sec-line')).toHaveCount(0)
-    await expect(page.getByRole('radiogroup', { name: 'Stroke scaling' })).toHaveCount(0)
+    const reason = 'This icon is filled, so it has no stroke to change.'
+    const width = page.getByRole('textbox', { name: 'Stroke width in pixels' })
+    await expect(width).toHaveAttribute('aria-disabled', 'true')
+    await expect(width).toHaveAttribute('aria-describedby', 'ied-stroke-note')
+    await expect(page.locator('#ied-stroke-note')).toHaveText(reason)
+    await expect(page.locator('#ied-line-reason')).toHaveText(reason)
+    await expect(page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio').first()).toHaveAttribute('aria-disabled', 'true')
+    // Pressing a locked control changes nothing.
+    await page.getByRole('radiogroup', { name: 'Stroke scaling' }).getByRole('radio', { name: 'Fixed' }).click()
+    await expect(page.getByRole('radiogroup', { name: 'Stroke scaling' }).getByRole('radio', { name: 'Relative' })).toHaveAttribute('aria-checked', 'true')
   })
 
   test('a Phosphor icon never shows the Stroke control, even while its artwork is on the way', async ({ page }) => {
@@ -216,7 +223,7 @@ test.describe('the Stroke control follows the artwork', () => {
       await expect(page.locator('.ied-stage-host'), 'the stage drew inline before it knew the artwork').toHaveCount(0)
       release()
       await expect(page.locator('.ied-ground img')).toBeVisible()
-      await expect(page.locator('#ied-sec-stroke'), 'Stroke shown once the artwork arrived').toHaveCount(0)
+      await expect(page.locator('#ied-sec-stroke .ied-in'), 'Stroke stays locked once the artwork arrived').toHaveAttribute('aria-disabled', 'true')
     } finally { release() }
   })
 })
