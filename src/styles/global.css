@@ -4229,6 +4229,22 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
    it, which is the divergence this component was extracted to end. It is one
    rule now. */
 .lbry-toolbar{position:sticky;top:calc(var(--nav-clear) + 8px);z-index:45;display:flex;flex-direction:column;gap:10px;margin:0 0 clamp(28px,4vw,52px);padding:10px;background:color-mix(in srgb,var(--bg-0) 88%,transparent);border:1px solid var(--border);border-radius:var(--radius-pill);box-shadow:0 14px 42px rgba(10,10,18,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+/* THE BACKING. The bar pins itself `--lbry-gap` BELOW the fixed nav
+   (`--nav-clear` + 8px, 16px from the nav's bottom edge), so that strip is bare
+   page and cards, headings and sections slid through it and past the pill's top
+   edge. MEASURED on /discover/palettes and /discover/gradients, dark, 1440 and
+   390, scrolled: every point sampled in the strip hit page content, at the
+   centre. This fills the strip with the page ground, from the nav's bottom edge
+   to the bar's top edge, a full viewport wide. `z-index:-1` keeps it under the
+   bar's own surface (the bar's z-index makes it a stacking context, so the
+   backing cannot reach out over what sits beside the bar). It is a real box, not
+   a shadow, so it also takes the hit-test: nothing in the strip can be clicked
+   through the bar's edge. The gap is read from the same two tokens the sticky
+   offset is built from, so the two cannot drift apart. */
+.lbry-toolbar{--lbry-gap:calc(var(--nav-clear) + 8px - var(--chrome-h))}
+.lbry-toolbar::before{content:"";position:absolute;z-index:-1;bottom:100%;left:50%;width:100vw;margin-left:-50vw;height:var(--lbry-gap);background:var(--bg-0);pointer-events:auto}
+/* The icon and emoji libraries set their bar inside a band that is already flush under the nav on the page ground (pages/icon-emoji-library.css, same media query), so they need no backing. */
+@media(min-width:641px) and (min-height:560px){.ig-band .lbry-toolbar::before{display:none}}
 /* Wrapped onto a second row on a phone the bar steps down to a pill-ended box
    (26px), as the palette and gradient bars already do, so its corners stay clear
    of the search field and chips inset inside it. */
@@ -4364,6 +4380,9 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      results heading under it ("Colours worth building with" clipped). With
      the offset gone it is 24px above and 28px clear below. */
   .lbry-toolbar{position:relative;top:auto;gap:8px;padding:8px}
+  /* A resting bar is in the page, with nothing pinned above it: no backing. The peeking bar is fixed `--nav-clear` under the nav, 8px clear of it. */
+  .lbry-toolbar:not([data-peek])::before{display:none}
+  .lbry-toolbar[data-peek]{--lbry-gap:calc(var(--nav-clear) - var(--chrome-h))}
   /* Brought back by scrolling up (LibraryToolbar.jsx, useToolbarPeek.js): fixed
      under the nav at the width and left edge it had in the page, sliding in from
      under the nav and out the same way. A spacer holds its place meanwhile. */
