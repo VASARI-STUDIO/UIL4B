@@ -5,7 +5,7 @@
 //      rest. The mark is a pseudo-element, so there is no `.ic-edit` node (432 still holds) and it is not read out.
 //   3. On touch (hover: none) the mark shows on the picked tile only.
 //
-// Item 1 of the notes (a free row for a signed-out search) is not built: see the commit message.
+// Item 1 of the notes (a free row for a signed-out search) is covered by 446-icon-signed-out-row.spec.js.
 //
 // HOW TO SEE EACH FAIL (src/):
 //   handleCategory returns early when next === category              -> "pressing Editable again"

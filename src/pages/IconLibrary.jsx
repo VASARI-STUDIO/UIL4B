@@ -65,7 +65,7 @@ import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
 import {
-  SEARCH_TEASE_COPY, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
+  SEARCH_TEASE_COPY, freeRowCandidates, isFreeRowPack, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
 } from '../utils/iconSearchTease'
 // The closing arrow shared with the homepage's closing band.
 import PhGlyph from '../components/spectrum/PhGlyph'
@@ -577,6 +577,9 @@ const askedFor = (pack) => {
   if (!s) { s = new Set(); GLYPH_ASKED.set(pack, s) }
   return s
 }
+
+// The free row's tiles never warm anything: their drawings are asked for once, in a batch.
+const noWarm = () => {}
 
 // A batch that fails while the others succeed (one big flag pack timing out, say)
 // must not leave its cells blank for the session. Its names come out of the asked
@@ -4328,11 +4331,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   /* ── THE MATCHES THIS VIEWER CANNOT OPEN YET ─────────────────────────────
      Called once the viewer's own search has answered. A viewer below Pro gets
-     ONE more /search, scoped to the packs they may not browse, and only its
-     COUNT is used: the ids are reduced to a summary (counts and pack labels)
-     and dropped. Nothing here fetches a glyph for those packs, so the rule in
-     src/utils/lockedPreview.js (a locked thing's payload never reaches the
-     browser) holds; the band that reads the summary draws built-in glyphs only.
+     ONE more /search, scoped to the packs they may not browse. The ids are
+     reduced to a summary (counts and pack labels) and dropped, with one
+     exception: a signed-out viewer keeps up to 24 NAMES from free-tier packs
+     for the one free row (freeRowIcons). Nothing here fetches a glyph; the row
+     asks for its own few, from free-tier packs only, and the band draws
+     built-in glyphs only. Pro, brand, blocked and animated packs' drawings
+     still never reach the browser (src/utils/lockedPreview.js).
 
      No request for Pro, for a single pack filter, or once the icon service has
      failed. It is guarded by `reqId` like the search itself, so an answer for a
@@ -4351,10 +4356,18 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       packs: ALL_PACKS, tier, packFilter, groupPacks: groupKey ? ICON_GROUPS[groupKey].packs : null,
     })
     const finish = (probeIds) => {
-      const summary = summariseLockedMatches({
+      const counted = summariseLockedMatches({
         probeIds, probed, mainIds, tier, limit: API_LIMIT, labelOf: packLabel,
         accept: (p, n) => matchesWeight(p, n, weight),
       })
+      // A signed-out visitor also gets the NAMES of matches in free-account packs,
+      // for the one free row above the band (see freeRowIcons). Names only: the
+      // drawings are asked for later, for the few the row shows, and for no other
+      // locked pack.
+      const row = tier === 'anon'
+        ? freeRowCandidates({ probeIds, probed, accept: (p, n) => matchesWeight(p, n, weight) })
+        : []
+      const summary = counted && row.length ? { ...counted, row } : counted
       if (SEARCH_TEASE_CACHE.size >= SEARCH_TEASE_CACHE_MAX) SEARCH_TEASE_CACHE.delete(SEARCH_TEASE_CACHE.keys().next().value)
       SEARCH_TEASE_CACHE.set(key, summary)
       if (rid === reqId.current) { land(summary); setTeasePending(false) }
@@ -5357,6 +5370,48 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     })
   }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee, builtin])
 
+  /* THE FREE ROW. A signed-out search that found matches in free-account packs
+     shows ONE row of them above the sign-in band: exactly `gridCols` tiles, so
+     it is a whole row at every width, or no row at all. It is drawn from the
+     names the locked-pack probe already returned (see probeLockedMatches),
+     from packs in the 'free' tier only (isFreeRowPack): never a blocked set,
+     never an animated one, never a Pro or brand pack. Only these few tiles'
+     drawings are asked for, below, and no other locked pack's.
+
+     It is also held back when the sample grid is already at its signed-out cap
+     (anonCap), so the page never shows more than the cap plus this one row. */
+  const freeRowIcons = useMemo(() => {
+    if (tier !== 'anon' || source !== 'search' || !gridCols || !searchTease?.row) return []
+    if (teaseBand !== 'empty' && teaseBand !== 'anon') return []
+    if (searchTease.row.length < gridCols) return []
+    if (icons.length + gridCols > anonCap) return []
+    return searchTease.row
+      .filter((r) => isFreeRowPack(r.pack))
+      .slice(0, gridCols)
+      .map((r) => ({ id: r.id, pack: r.pack, name: r.name, cdn: true }))
+  }, [tier, source, gridCols, searchTease, teaseBand, icons, anonCap])
+  const freeRowShown = freeRowIcons.length > 0 && freeRowIcons.length === gridCols
+  useEffect(() => {
+    if (!freeRowShown || cdnOk.current === false) return
+    const byPack = new Map()
+    for (const { pack, name } of freeRowIcons) {
+      if (!isFreeRowPack(pack) || GLYPH_BODY.has(svgKey(pack, name)) || askedFor(pack).has(name)) continue
+      if (!byPack.has(pack)) byPack.set(pack, [])
+      byPack.get(pack).push(name)
+    }
+    for (const [pack, names] of byPack) {
+      const asked = askedFor(pack)
+      for (const n of names) asked.add(n)
+      loadGlyphBatchOutcome(pack, names).then((r) => {
+        if (!r.ok) for (const n of names) asked.delete(n)
+        if (mountedRef.current) setGlyphTick((n) => n + 1)
+      })
+    }
+  }, [freeRowShown, freeRowIcons])
+  // A tile in the row opens the sign-in prompt: these packs need an account, so
+  // there is nothing to customise or copy until there is one.
+  const onPickFreeRow = useCallback(() => openGate('free'), [openGate])
+
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
   // band starts to stick, and that sets data-stuck. The band's height goes to a
@@ -6015,6 +6070,34 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* The signed-out free row (see freeRowIcons): one row of matches from
+                free-account packs, directly above the sign-in band. */}
+            {freeRowShown && (
+              <div
+                className="ig-free-row"
+                role="group"
+                aria-label={`Matches in sets a free account opens: ${freeRowIcons.length} shown`}
+                style={{ '--ig-free-cols': gridCols }}
+              >
+                {freeRowIcons.map((icon, idx) => (
+                  <IconCell
+                    key={`free:${icon.id}`}
+                    icon={icon}
+                    src={glyphSrc(icon.pack, icon.name)}
+                    gone={GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
+                    showPack
+                    packInName={false}
+                    picked={false}
+                    ghost={0}
+                    idx={idx}
+                    onPick={onPickFreeRow}
+                    onWarm={noWarm}
+                    onGlyphError={noteGlyphFailure}
+                  />
+                ))}
               </div>
             )}
 
