@@ -1,11 +1,11 @@
 import { esc } from './specimens.mjs';
 
 export function libraryPage(editions, planned) {
-  const index=editions.map(({id,name})=>`<a href="#${id}"><img src="${id}/brand/cover.jpg" alt=""><span>${name}</span></a>`).join('');
+  const index=editions.map(({id,name})=>`<a href="#${id}"><img width="1280" height="720" src="${id}/brand/cover.jpg" alt=""><span>${name}</span></a>`).join('');
   const sections=editions.map(({id,name,discipline,project,guides})=>{
     const rows=guides.map(({product,title,stem,detailPage,colourPage})=>{
       const dir=id+'/'+product+'/';
-      const preview=(label,jpg,page)=>`<a href="${dir}deck.html#page-${page}"><img loading="lazy" src="${dir}${jpg}.jpg" alt="${esc(name)} ${esc(label)}"><span>${label}</span></a>`;
+      const preview=(label,jpg,page)=>`<a href="${dir}deck.html#page-${page}"><img width="1280" height="720" loading="lazy" src="${dir}${jpg}.jpg" alt="${esc(name)} ${esc(label)}"><span>${label}</span></a>`;
       return `<article><div class="spread">${preview(title,'cover',1)}${preview(product==='brand'?'Brand application':'Component states','detail',detailPage)}${preview('Colour in use','colour',colourPage)}</div><div class="guide-links"><h3>${title}</h3><p><a href="${dir}a4.html">A4 HTML</a><a href="${dir}deck.html">Deck HTML</a><a href="${dir}a4.pdf">A4 PDF</a><a href="${dir}deck.pdf">Deck PDF</a></p><a class="zip" href="${dir}${stem}.zip" download>Download ZIP</a></div></article>`;
     }).join('');
     return `<section id="${id}"><header><h2>${name}</h2><p>${discipline}<br>${esc(project)}</p></header>${rows}<a class="back" href="#collection">Back to collection</a></section>`;
