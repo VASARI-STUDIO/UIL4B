@@ -97,6 +97,16 @@ async function setSize(page, n) {
   await expect(code(page)).toContainText(`width="${n}" height="${n}"`)
 }
 
+/**
+ * What the written SVG measures in pixels: its stroke-width in units, times the export Size over the
+ * written viewBox width (the viewBox grows to hold a heavy edit, so raw units move with it).
+ */
+async function writtenStrokePx(page, size) {
+  const text = await code(page).innerText()
+  const vb = /viewBox="([^"]+)"/.exec(text)[1].trim().split(/[\s,]+/).map(Number)
+  return Number(await writtenStrokeWidth(page)) * size / vb[2]
+}
+
 /** The one stroke-width the written SVG carries (every element must agree); null when it carries none. */
 async function writtenStrokeWidth(page) {
   const text = await code(page).innerText()
@@ -189,7 +199,7 @@ test.describe('the Stroke control follows the artwork', () => {
     await expect(page.locator('#ied-line-reason')).toHaveText(reason)
     await expect(page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio').first()).toHaveAttribute('aria-disabled', 'true')
     // Pressing a locked control changes nothing.
-    await page.getByRole('radiogroup', { name: 'Stroke scaling' }).getByRole('radio', { name: 'Fixed' }).click()
+    await page.getByRole('radiogroup', { name: 'Stroke scaling' }).getByRole('radio', { name: 'Fixed' }).click({ force: true }) // aria-disabled: Playwright will not click it unforced
     await expect(page.getByRole('radiogroup', { name: 'Stroke scaling' }).getByRole('radio', { name: 'Relative' })).toHaveAttribute('aria-checked', 'true')
   })
 
@@ -294,10 +304,10 @@ test.describe('the SVG the pop-up writes', () => {
   test('24 grid, Fixed: the stroke-width is 2 over the scale, so it measures 2px at every Size', async ({ page }) => {
     await openEditor(page, { sampleName: 'stroke-line-24' })
     await modeRadio(page, 'Fixed').click()
-    // 2px at 16 over a 16/24 scale is 3 units; at 24 it is 2; at 512 over 512/24 it is 0.09375.
-    for (const [n, units] of [[16, '3'], [24, '2'], [512, '0.09375']]) {
+    // Whatever the viewBox is, units x Size / viewBox width is 2px at every Size.
+    for (const n of [16, 24, 512]) {
       await setSize(page, n)
-      expect(await writtenStrokeWidth(page), `Fixed at ${n}`).toBe(units)
+      expect(Math.abs(await writtenStrokePx(page, n) - 2), `Fixed at ${n}`).toBeLessThan(0.01)
     }
   })
 
@@ -309,12 +319,12 @@ test.describe('the SVG the pop-up writes', () => {
     }
   })
 
-  test('256 grid, Fixed: 2px is 32 units at 16 and 1 unit at 512', async ({ page }) => {
+  test('256 grid, Fixed: the written units measure 2px at 16 and at 512', async ({ page }) => {
     await openEditor(page, { sampleName: 'stroke-line-256' })
     await modeRadio(page, 'Fixed').click()
-    for (const [n, units] of [[16, '32'], [512, '1']]) {
+    for (const n of [16, 512]) {
       await setSize(page, n)
-      expect(await writtenStrokeWidth(page), `Fixed at ${n}`).toBe(units)
+      expect(Math.abs(await writtenStrokePx(page, n) - 2), `Fixed at ${n}`).toBeLessThan(0.01)
     }
   })
 
@@ -325,8 +335,8 @@ test.describe('the SVG the pop-up writes', () => {
     const shown = await writtenStrokeWidth(page)
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download SVG', exact: true }).click()])
     const file = fs.readFileSync(await download.path(), 'utf8')
-    expect(shown).toBe('0.09375')
-    expect([...file.matchAll(/stroke-width="([^"]+)"/g)].map((m) => m[1])).toContain('0.09375')
+    expect(Math.abs(await writtenStrokePx(page, 512) - 2)).toBeLessThan(0.01)
+    expect([...file.matchAll(/stroke-width="([^"]+)"/g)].map((m) => m[1])).toContain(shown)
   })
 })
 

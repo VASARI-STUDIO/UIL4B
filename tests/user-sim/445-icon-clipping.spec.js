@@ -233,6 +233,6 @@ test('a filled icon keeps Stroke and Line style on screen, locked, with the reas
   await expect(page.locator('#ied-line-reason')).toHaveText(reason)
   const tile = page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio').nth(1)
   await expect(tile).toHaveAttribute('aria-disabled', 'true')
-  await tile.click()
+  await tile.click({ force: true }) // aria-disabled: Playwright will not click it unforced
   await expect(page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio').first(), 'a press changes nothing').toHaveAttribute('aria-checked', 'true')
 })
