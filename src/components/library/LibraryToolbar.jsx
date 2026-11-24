@@ -6,6 +6,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import usePopover from '../../hooks/usePopover'
 import useToolbarPeek from './useToolbarPeek'
+import './LibraryToolbar.css'
 
 // The control block that sits between a Library masthead and its grid: search,
 // then any number of filter groups, then an optional action.
