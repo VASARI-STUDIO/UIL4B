@@ -11,6 +11,9 @@ import { hexToOklchRaw } from '../components/tool/oklch.js'
 
 /** The styles, in switcher order. `as` completes the canvas's spoken name. */
 export const PREVIEW_STYLES = [
+  { id: 'satin', label: 'Satin', as: ', shown on satin' },
+  { id: 'folds', label: 'Folded paper', as: ', shown on folded paper' },
+  { id: 'halftone', label: 'Halftone', as: ', shown as halftone ink' },
   { id: 'grain', label: 'Grain', as: ', shown as grain' },
   { id: 'fluted', label: 'Fluted glass', as: ', shown as fluted glass' },
   { id: 'ring', label: 'Glow ring', as: ', shown as a glow ring' },
@@ -35,7 +38,7 @@ export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
 /** The fill styles, in picker order. Plain is the canvas as it is. */
 export const FILL_STYLES = [
   { id: 'plain', label: 'Plain', as: '' },
-  ...['grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+  ...['satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
 ]
 export const isFillStyle = (id) => FILL_STYLES.some((s) => s.id === id)
 

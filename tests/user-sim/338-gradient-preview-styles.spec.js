@@ -1,5 +1,5 @@
 // /create/gradient: the places (Fill, Hero, Card, Button, Poster, Spec card, App icon, Phone)
-// on the preview switch, and the fill styles (Plain, Grain, Fluted glass, Glow ring, Streak,
+// on the preview switch, and the fill styles (Plain, Satin, Folded paper, Halftone, Grain, Fluted glass, Glow ring, Streak,
 // Soft glow, Fade, Mesh, Waves) in the Fill style picker at the end of the switch on Fill.
 //
 // What a designer relies on:
@@ -27,7 +27,11 @@ import { go, watch } from './helpers.js'
 
 const KEY = 'vs-gradient-preview'
 const FILL_KEY = 'vs-gradient-fill'
-const STYLES = [['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'], ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade']]
+const STYLES = [
+  ['satin', 'Satin'], ['folds', 'Folded paper'], ['halftone', 'Halftone'],
+  ['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'],
+  ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade'],
+]
 const PLACES = ['Fill', 'Hero', 'Card', 'Button', 'Poster', 'Spec card', 'App icon', 'Phone']
 const FILL_NAMES = ['Plain', ...STYLES.map(([, n]) => n), 'Mesh', 'Waves']
 
@@ -95,6 +99,29 @@ test.describe('the preview styles', () => {
       expect(one.blue, `${name}: no blue anywhere`).toBeLessThan(0.002)
     })
   }
+
+  test('material finishes follow geometry edits on the stage and in the picker', async ({ page }) => {
+    await startOn(page, 'satin')
+    await withStops(page, '#163951', '#E7A777')
+    await open(page)
+    const type = page.getByRole('group', { name: 'Gradient type' })
+    for (const [id, name] of STYLES.slice(0, 3)) {
+      await triggerOf(page).click()
+      const tile = pickerOf(page).getByRole('button', { name, exact: true })
+      await tile.click()
+      await page.keyboard.press('Escape')
+      const material = fxOf(page, `[data-fx="${id}"]`).locator('.grd-fx-material')
+      await page.getByRole('spinbutton', { name: 'Gradient angle in degrees' }).fill('35')
+      await page.getByRole('spinbutton', { name: 'Gradient angle in degrees' }).press('Enter')
+      await expect(material).toHaveCSS('background-image', /linear-gradient\(35deg/)
+      await type.getByRole('button', { name: 'Radial', exact: true }).click()
+      await expect(material).toHaveCSS('background-image', /radial-gradient/)
+      await triggerOf(page).click()
+      await expect(tile.locator('.grd-fx-material')).toHaveCSS('background-image', /radial-gradient/)
+      await page.keyboard.press('Escape')
+      await type.getByRole('button', { name: 'Linear', exact: true }).click()
+    }
+  })
 
   test('the switch lists the places and the Fill style picker lists the styles, by keyboard', async ({ page }) => {
     await startOn(page, 'grain')

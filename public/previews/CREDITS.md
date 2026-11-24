@@ -109,3 +109,7 @@ The unprinted coffee pouch and hardware window display are AI-generated illustra
 
 - `coffee-pouch.webp`
 - `hardware-window.webp`
+
+## Gradient fills
+
+`gradient-satin.webp` is an AI-generated greyscale textile lighting texture. The generator supplies the colour from the current gradient. The paper folds and halftone screen are original vector drawings.

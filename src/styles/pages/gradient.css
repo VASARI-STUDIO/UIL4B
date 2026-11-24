@@ -1198,26 +1198,31 @@
   opacity: .3;
 }
 
-/* Grain: the gradient seen through three overlapping, uneven ellipses whose edges dissolve
-   into the ground, under a fine, soft film grain. */
-.grd .grd-fx-blob {
-  background: var(--fx-paint);
-  filter: blur(clamp(2px, .6cqmin, 6px));
-  mask-image:
-    radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 30% 38% at 78% 60%, #000 25%, transparent 100%);
-  -webkit-mask-image:
-    radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 30% 38% at 78% 60%, #000 25%, transparent 100%);
-}
-.grd .grd-fx[data-fx="grain"] .grd-fx-grain { opacity: .34; }
+/* Full-bleed grain preserves the same field and stop positions as Plain. */
+.grd .grd-fx[data-fx="grain"] .grd-fx-grain { opacity: .42; }
 
 /* Fluted glass and Glow ring: the scene is repeated in thin slices of every flute, each
    copy shifted a little further across, so a flute shows a reversed sweep of the scene
    around it. The last slice is held to the flute's pitch so the rhythm does not drift. */
 .grd .grd-fx-fill { position: absolute; inset: 0; background: var(--fx-paint); }
+
+/* Lighting and ink coverage sit over the same paint used by Plain. */
+.grd .grd-fx-material { background-image: var(--fx-paint); }
+.grd .grd-fx[data-fx="satin"] .grd-fx-material {
+  background-image: url('/previews/gradient-satin.webp'), var(--fx-paint);
+  background-position: center;
+  background-size: cover;
+  background-blend-mode: hard-light;
+}
+.grd .grd-fx[data-fx="folds"] .grd-fx-material {
+  background-image: url('/previews/gradient-folds.svg'), var(--fx-paint);
+  background-size: 100% 100%;
+  background-blend-mode: hard-light;
+}
+.grd .grd-fx[data-fx="halftone"] { --fx-ground: #f3f1eb; }
+.grd .grd-fx[data-fx="halftone"] .grd-fx-material {
+  mask: url('/previews/gradient-halftone.svg') center / cover no-repeat;
+}
 .grd .grd-fx-slice {
   mask-image: repeating-linear-gradient(90deg,
     transparent 0 calc(var(--k) * var(--fx-slice)),
@@ -1301,21 +1306,21 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: 50%;
-  filter: blur(clamp(16px, 6cqmin, 40px));
+  filter: blur(clamp(2px, 2cqmin, 18px));
 }
 .grd .grd-fx-orb--heart {
-  left: 50%; top: 52%; width: 78cqmin;
+  left: 33%; top: 49%; width: 90cqw;
   background: radial-gradient(closest-side, var(--fx-heart) 0, color-mix(in srgb, var(--fx-heart) 70%, transparent) 45%, transparent 100%);
 }
 .grd .grd-fx-orb--low {
-  left: 38%; top: 62%; width: 96cqmin;
+  left: 58%; top: 64%; width: 85cqw;
   background: radial-gradient(closest-side, var(--fx-low) 0, color-mix(in srgb, var(--fx-low) 60%, transparent) 45%, transparent 100%);
 }
 .grd .grd-fx-orb--high {
-  left: 63%; top: 42%; width: 92cqmin;
+  left: 82%; top: 31%; width: 70cqw;
   background: radial-gradient(closest-side, var(--fx-high) 0, color-mix(in srgb, var(--fx-high) 60%, transparent) 45%, transparent 100%);
 }
-.grd .grd-fx-vignette { background: radial-gradient(ellipse closest-side at 50% 50%, transparent 52%, var(--fx-ground) 100%); }
+.grd .grd-fx-vignette { background: radial-gradient(ellipse farthest-corner at 46% 50%, transparent 45%, rgb(0 0 0 / .38)); }
 .grd .grd-fx[data-fx="glow"] .grd-fx-grain { opacity: .2; }
 
 /* Fade: a wash from the light ground down through the stops. */
@@ -1372,7 +1377,7 @@
   left: var(--select-left, 8px); top: var(--select-top, 0px); right: auto; bottom: auto;
   z-index: var(--select-layer, 130);
   box-sizing: border-box;
-  width: 344px; min-width: 0; max-width: calc(100vw - 16px);
+  width: 468px; min-width: 0; max-width: calc(100vw - 16px);
   max-height: var(--pop-max-h, 100dvh);
   padding: 10px 12px 12px;
   isolation: isolate;
@@ -1389,7 +1394,7 @@
   touch-action: manipulation;
 }
 .grd .grd-fill-done:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
-.grd .grd-fill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+.grd .grd-fill-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 8px; }
 .grd .grd-fill-tile {
   display: grid; gap: 6px; min-width: 0; padding: 0;
   border: 0; background: none; color: var(--tl-dim);
@@ -1438,7 +1443,7 @@
   .grd .grd-fill-pop::before { content: ''; display: block; width: 36px; height: 4px; margin: 0 auto 12px; border-radius: 999px; background: var(--tl-line); }
   .grd .grd-fill-title { font-size: 15px; }
   .grd .grd-fill-done { min-height: 44px; padding: 0 16px; font-size: 13px; }
-  .grd .grd-fill-grid { gap: 14px 10px; }
+  .grd .grd-fill-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
   .grd .grd-fill-tile { font-size: 13px; }
   /* Above the tab bar, which already carries the home-indicator inset. */
   html.has-tabbar .grd .grd-fill-pop { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding-bottom: 16px; max-height: min(85dvh, calc(100dvh - var(--chrome-h) - var(--tabbar-h) - env(safe-area-inset-bottom) - 16px)); }

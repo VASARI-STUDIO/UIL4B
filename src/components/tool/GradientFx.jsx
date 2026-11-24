@@ -25,15 +25,19 @@ function Flutes({ children }) {
 // Slit-scan columns: three layers of the same colours, each cut into thin columns of its
 // own pitch and faded at its own top and bottom, so the streaks differ in length and weight.
 const STREAKS = [
-  { pitch: '7px', bar: '3px', from: '6%', to: '94%', alpha: 0.95 },
-  { pitch: '11px', bar: '2px', from: '22%', to: '100%', alpha: 0.75 },
-  { pitch: '17px', bar: '4px', from: '0%', to: '70%', alpha: 0.6 },
+  { pitch: 'clamp(3px, .9cqw, 7px)', bar: 'clamp(1px, .4cqw, 3px)', from: '6%', to: '94%', alpha: 0.95 },
+  { pitch: 'clamp(5px, 1.4cqw, 11px)', bar: 'clamp(1px, .26cqw, 2px)', from: '22%', to: '100%', alpha: 0.75 },
+  { pitch: 'clamp(8px, 2.2cqw, 17px)', bar: 'clamp(2px, .52cqw, 4px)', from: '0%', to: '70%', alpha: 0.6 },
 ]
 
 function Scene({ id, stops, oklch, name }) {
   switch (id) {
+    case 'satin':
+    case 'folds':
+    case 'halftone':
+      return <div className="grd-fx-material" />
     case 'grain':
-      return (<><div className="grd-fx-blob" /><div className="grd-fx-grain" /></>)
+      return (<><div className="grd-fx-fill" /><div className="grd-fx-grain" /></>)
     case 'fluted':
       return (<><div className="grd-fx-fill" /><Flutes><div className="grd-fx-fill" /></Flutes></>)
     case 'ring':
