@@ -53,8 +53,8 @@ const THEMES = Object.freeze({
   '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
 })
 
-async function loadEngine() {
-  const [brandMod, pages, doc, files, book, loaders, validate] = await Promise.all([
+export async function loadEngine() {
+  const [brandMod, pages, doc, files, book, loaders, validate, styleguide, guideLayout] = await Promise.all([
     import('./exportThemes/brandFromProject.js'),
     import('./exportThemes/engine/pages.js'),
     import('./exportThemes/engine/doc.js'),
@@ -62,8 +62,10 @@ async function loadEngine() {
     import('./exportThemes/engine/book.js'),
     import('./exportThemes/node-loaders.js'),
     import('./exportThemes/engine/validate.js'),
+    import('./exportThemes/engine/styleguide.js'),
+    import('./exportThemes/engine/guide-layout.js'),
   ])
-  return { ...brandMod, ...pages, ...doc, ...files, ...book, loaders: loaders.default, BrandInputError: validate.BrandInputError }
+  return { ...brandMod, ...pages, ...doc, ...files, ...book, loaders: loaders.default, BrandInputError: validate.BrandInputError, styleGuideMarkdown: styleguide.styleGuideMarkdown, screenGuide: guideLayout.screenGuide }
 }
 
 const dataUrl = (E) => (f) => `data:font/woff2;base64,${Buffer.from(E.loaders.fontFile(f.stem, 'woff2')).toString('base64')}`
@@ -79,6 +81,13 @@ function withCsp(html) {
   return `${html.slice(0, end)}<meta http-equiv="Content-Security-Policy" content="${PRINT_CSP}">${html.slice(end)}`
 }
 
+// A page that throws because its layout cannot hold this brand's words is left out. A font file the deploy lacks is not a fit problem: left out
+// quietly it would hollow the document out and end as a bare 500, so it goes on up as font_missing (a 422 with that code, serveThemeExport).
+function leaveOut(err, what) {
+  if (err && err.code === 'font_missing') throw err
+  console.warn(`[export] ${what} left out (${err?.name || 'Error'})`)
+}
+
 // One document of every page, for printing (fonts embedded) or for a zip (fonts beside it).
 function pagesDoc(E, T, ctx, kind, standalone, only) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
@@ -91,32 +100,55 @@ function pagesDoc(E, T, ctx, kind, standalone, only) {
   const pages = []
   for (const p of list) {
     if (typeof T[kind]?.[p.id] !== 'function') continue
-    try { pages.push(T[kind][p.id](ctx)) } catch (err) { console.warn(`[export] ${kind} page ${p.id} left out (${err?.name || 'Error'})`) }
+    try { pages.push(T[kind][p.id](ctx)) } catch (err) { leaveOut(err, `${kind} page ${p.id}`) }
   }
   if (!pages.length) throw new Error(`no ${kind} page could be drawn`)
   const title = `${ctx.brand.name} ${kind === 'uikit' ? 'UI kit' : 'brand guidelines'}`
   return E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
 }
 
+// The themed style guide: one A4 page per id in the theme's own order, then style-guide.md (built last, because the pages set the
+// wording it reads). A page whose layout cannot hold this brand's words is left out; no page at all is a failed build.
+function styleGuide(E, T, ctx, standalone) {
+  if (typeof T.guide !== 'object' || !T.guide) throw new Error('theme has no style guide')
+  if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
+  const pages = []
+  for (const id of E.guideOrder(T, ctx.edition)) {
+    if (typeof T.guide[id] !== 'function') continue
+    // a page that throws may have written its markdown hooks already: put them back so the md never describes a page left out
+    const hooks = ctx.mdHooks
+    try { pages.push({ id, html: T.guide[id](ctx) }) } catch (err) {
+      ctx.mdHooks = hooks
+      leaveOut(err, `guide page ${id}`)
+    }
+  }
+  if (!pages.length) throw new Error('no guide page could be drawn')
+  // the markdown describes only the pages that were drawn
+  ctx.pagesDrawn = pages.map((p) => p.id)
+  const doc = (title, list, stack) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  // the site documents also carry the phone edition (the print document does not): the whole guide in index.html, a page's own section in its html
+  const site = (title, list, ids) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack: !ids, screen: E.screenGuide(ctx, ids), ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  return { pages, doc, site, ctx, md: E.styleGuideMarkdown(ctx) }
+}
+
 // The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
 // A site that cannot be laid out for this brand gives null, and the caller serves the stacked document instead.
-async function premiumSite(kind, ctx, T, dirs) {
+async function premiumSite(kind, ctx, T) {
   try {
     const files = kind === 'kit' ? (await import('./exportThemes/engine/kit-site-build.js')).kitSiteFiles(ctx, T)
       : (await import('./exportThemes/engine/guide-site-build.js')).guideSiteFiles(ctx, T)
-    return relinkSites(files, dirs)
+    return dropSiblingLinks(files)
   } catch (err) { console.warn(`[export] ${kind} site not built (${err?.name || 'Error'}); serving the single document`); return null }
 }
 
 // The themes link the guide and the kit to each other as sibling folders named ui-kit-html and guidelines-html (the engine's
-// layout). Each export is its own zip with its own top folder, so those links are pointed at the other zip's top folder: they
-// work when both zips are unpacked in the same place, which is where a browser saves them.
-export function relinkSites(files, { guide, kit }) {
+// layout). Each export is its own zip holding one format, so the sibling is never in it: a link to it would be dead on arrival.
+// Every anchor into a sibling folder is written as a span with the same classes and text, so the name stays and the dead href goes.
+const SIBLING_LINK = /<a\b([^>]*?)\shref="\.\.\/(?:ui-kit-html|guidelines-html)\/[^"]*"([^>]*)>([\s\S]*?)<\/a>/g
+export function dropSiblingLinks(files) {
   const out = {}
   for (const [path, body] of Object.entries(files)) {
-    out[path] = typeof body === 'string' && /\.html$/.test(path)
-      ? body.replaceAll('../ui-kit-html/', `../${kit}/`).replaceAll('../guidelines-html/', `../${guide}/`)
-      : body
+    out[path] = typeof body === 'string' && /\.html$/.test(path) ? body.replace(SIBLING_LINK, '<span$1$2>$3</span>') : body
   }
   return out
 }
@@ -157,16 +189,27 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   const dirs = { guide: `${slug}-brand-guidelines-${theme}`, kit: `${slug}-ui-kit-${theme}` }
   if (row === 'ui-kit') {
     const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, T.kitSite ? siteBrand(brand) : brand)
-    const site = T.kitSite ? await premiumSite('kit', ctx, T, dirs) : null
+    const site = T.kitSite ? await premiumSite('kit', ctx, T) : null
     const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), ...(site || { 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }) }
     return { name: `${dirs.kit}.zip`, zip: await zipOf(E, files, dirs.kit) }
   }
   if (row === 'slides') {
     if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand), 'guidelines', true)) }
     const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, T.guideSite ? siteBrand(brand) : brand)
-    const site = T.guideSite ? await premiumSite('guide', ctx, T, dirs) : null
+    const site = T.guideSite ? await premiumSite('guide', ctx, T) : null
     const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
     return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
+  }
+  if (row === 'guide') {
+    // Free where the guidelines are free (a theme's rows list names it, src/data/exportThemes.js); the access check is unchanged.
+    const name = `${slug}-style-guide-${theme}`
+    const g = styleGuide(E, T, E.makeCtx(T, 'slot', 'guide', E.loaders, brand), format === 'pdf')
+    const title = `${brand.name} style guide`
+    if (format === 'pdf') return { html: withCsp(g.doc(title, g.pages.map((x) => x.html), true)) }
+    if (format === 'md') return { md: g.md, name: `${name}.md` }
+    const files = { ...E.fontFiles(g.ctx, T), 'index.html': g.site(title, g.pages.map((x) => x.html), null), 'style-guide.md': g.md }
+    for (const x of g.pages) files[`${x.id}.html`] = g.site(`${title}: ${x.id}`, [x.html], [x.id])
+    return { name: `${name}.zip`, zip: await zipOf(E, files, name) }
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
   const { files } = await bookSite(E, T, brand, slug)
@@ -271,6 +314,11 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
       res.setHeader('Content-Type', 'application/zip')
       res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)
       return res.status(200).send(out.zip)
+    }
+    if (typeof out.md === 'string' && out.md) {
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)
+      return res.status(200).send(out.md)
     }
     if (typeof out.html !== 'string' || !out.html) throw new Error('empty document')
     return res.status(200).json({ ok: true, theme, row, format, html: out.html })

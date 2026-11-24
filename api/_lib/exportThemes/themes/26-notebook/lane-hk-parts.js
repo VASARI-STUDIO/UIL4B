@@ -9,8 +9,9 @@ export const ut = (ctx, token) => ctx.uiType.find((t) => t.token === token);
 export const E = (ctx, s) => ctx.esc(s == null ? '' : String(s));
 export { ratioText };
 
-let n = 0;
-export const uid = (p) => `hk-${p}-${++n}`;
+// ids for one document, counted per build (per ctx), so two builds of the same project are byte-identical
+const counts = new WeakMap();
+export const uid = (ctx, p) => { const n = (counts.get(ctx) || 0) + 1; counts.set(ctx, n); return `hk-${p}-${n}`; };
 
 export const tapeTab = (ctx, text) => `<span class="hk-tape">${E(ctx, text)}</span>`;
 export const note = (ctx, text) => `<p class="hk-note">${E(ctx, text)}</p>`;

@@ -60,9 +60,9 @@ function logoVersions(ctx, id) {
 }
 
 function clearSpace(ctx, id) {
-  // the logo and its clear space together must fit the sheet at each drawn size, so the logo is drawn only as large as leaves room for the space
+  // the logo and its clear space together must fit the sheet less the figure's 24 px dimension column at each drawn size, so a deep clear space narrows the logo
   const B = ctx.brand, L = ctx.logo, g = L.geos.colour, cs = L.clearShare / 100, base = { w: 560, m: 448, n: 264 };
-  const W = map3((k) => Math.min(base[k], Math.floor(CW[k] / (1 + (2 * cs * g.h) / g.w)))), H = map3((k) => (W[k] * g.h) / g.w), pad = map3((k) => H[k] * cs);
+  const W = map3((k) => Math.min(base[k], Math.floor((CW[k] - 24) / (1 + (2 * cs * g.h) / g.w)))), H = map3((k) => (W[k] * g.h) / g.w), pad = map3((k) => H[k] * cs);
   const box = `<div class="hg-clear" style="${sv('cs', pad)}"><div class="hg-hz" style="${sv('hz', W)}">${logoMode(ctx, 'colour', 560, B.name + ' logo')}</div></div>`;
   const hero = fig(box, { h: lab(ctx, map3((k) => W[k] + 2 * pad[k])), v: lab(ctx, map3((k) => H[k] + 2 * pad[k])), cls: 'hg-fig--clear', cap: `The dashed box is the clear space: ${L.clearShare}% of the logo's height on every side. Nothing enters it.` });
   return top(ctx, id, `Keep ${L.clearShare}% of the logo's height clear on every side.`) + hero + foot(ctx, 'cl', live(24, map3((k) => W[k] + 2 * pad[k])));

@@ -13,7 +13,6 @@ import {
   artCaption,
   byteLength,
   dockTop,
-  footnote,
   iconSvg,
   iconsBytes,
   photoCells,
@@ -500,7 +499,6 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
       <div className="hx-wrap">
         <div className="hx-head">
           <h2 id="exports-h" className="hx-h2" tabIndex={-1}>For All Your Design Tasks</h2>
-          <p className="hx-lead">Covering all your design needs, from one palette to a whole design system. Every file leaves the browser looking like a studio made it.</p>
         </div>
 
         <div className="hx-stack">
@@ -519,9 +517,6 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
             </div>
           </div>
         </div>
-
-        {/* ships with the export themes */}
-        <p className="hx-foot">{footnote(live)}</p>
       </div>
     </section>
   )

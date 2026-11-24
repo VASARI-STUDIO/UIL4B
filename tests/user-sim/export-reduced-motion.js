@@ -25,8 +25,8 @@ export const motionState = (page) => page.evaluate(() => ({
 }))
 
 /**
- * Choose a template from the keyboard, with the dialog on the free account's default template (Standards, the first card of the
- * grid): open "View templates", focus the chosen card, Tab reaches the next card (the first of the Pro ones, Presentation), and
+ * Choose a template from the keyboard, with the dialog on the free account's default template (Standards, the first card after the ten
+ * premium ones): open "View templates", focus the chosen card, Tab reaches the next card (Presentation), and
  * Enter chooses it and goes back to the preview.
  */
 export async function chooseThemeWithKeys(page, panel) {
@@ -37,7 +37,7 @@ export async function chooseThemeWithKeys(page, panel) {
   await expect(chosen).toBeFocused()
 
   await page.keyboard.press('Tab')
-  const next = grid.locator('.xd-tpl-card').nth(1)
+  const next = chosen.locator('xpath=../following-sibling::li[1]//button')
   await expect(next, 'Tab takes focus to the next card').toBeFocused()
   await expect(next).toContainText('Presentation')
   await expect(chosen, 'focus alone chooses nothing').toContainText('Standards')

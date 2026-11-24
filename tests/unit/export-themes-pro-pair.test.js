@@ -36,9 +36,11 @@ const BAD = new RegExp(String.raw`\[object Object\]|\bundefined\b|\bNaN\b|[${PRI
 
 const rows = (theme) => Object.entries(THEME_ROW_FORMATS).flatMap(([row, formats]) => (themeHasRow(theme, row) ? formats.map((format) => [row, format]) : []))
 
-// The text of an export: the print document, or every text file in the zip
+// The text of an export: the markdown guide, the print document, or every text file in the zip
 async function textsOf(out) {
+  if (typeof out.md === 'string') return [['guide.md', out.md]]
   if (typeof out.html === 'string') return [['print', out.html]]
+  if (typeof out.md === 'string') return [['guide.md', out.md]]
   const zip = await JSZip.loadAsync(out.zip)
   const list = []
   for (const name of Object.keys(zip.files)) {
@@ -53,7 +55,8 @@ test('every ported theme is in the table as a Pro theme with all three rows', ()
     const t = EXPORT_THEMES.find((x) => x.id === id)
     assert.ok(t, `${id} is not in EXPORT_THEMES`)
     assert.ok(!t.free, `${id} must be Pro`)
-    for (const row of Object.keys(THEME_ROW_FORMATS)) {
+    // the style guide is opt in, drawn only by a theme with a guide lane of its own
+    for (const row of Object.keys(THEME_ROW_FORMATS).filter((r) => r !== 'guide')) {
       assert.ok(themeHasRow(id, row), `${id} lacks ${row}`)
       assert.equal(isThemeExportPro(row, id), true, `${id} ${row} must need Pro`)
     }
@@ -77,7 +80,7 @@ for (const [theme, sample] of Object.entries(PAIR)) {
       const out = await renderThemeExport({ theme, row, format, design: DESIGN, projectName: PROJECT })
       const texts = await textsOf(out)
       assert.ok(texts.length > 0 && texts.every(([, t]) => t.length > 0), 'an empty export')
-      assert.ok(typeof out.html === 'string' ? out.html.length > 2000 : out.zip.length > 2000, 'the export is too small to be a document')
+      assert.ok((out.md ?? out.html ?? out.zip).length > 2000, 'the export is too small to be a document')
       const problems = []
       for (const [name, text] of texts) {
         const bad = BAD.exec(text)

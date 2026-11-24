@@ -16,7 +16,7 @@ const logoSpan = (ctx, mode) => {
 function states(ctx) {
   const S = sc(ctx), F = S.form, X = ex(ctx), ui = ctx.ui, M = kitColours(ctx, 'light'), D = kitColours(ctx, 'dark'), r = (a, b) => ratio(ctx, a, b);
   const fv = [[F.pickup, F.pickupValue], [F.dropoff, F.dropoffValue]].filter((x) => x[0])[0] || [F.ready, F.readyValue];
-  const row = (st, o) => piece(ctx, 'light', wrapIn((o.p === false ? '' : ui.btn(F.book, { state: st })) + ui.btn(X.secondary, { variant: 'secondary', state: st, disabled: o.dis }) + fieldCell(ui.field({ id: uid('st'), label: fv[0], value: fv[1] || '', state: o.fs, disabled: o.dis }))));
+  const row = (st, o) => piece(ctx, 'light', wrapIn((o.p === false ? '' : ui.btn(F.book, { state: st })) + ui.btn(X.secondary, { variant: 'secondary', state: st, disabled: o.dis }) + fieldCell(ui.field({ id: uid(ctx, 'st'), label: fv[0], value: fv[1] || '', state: o.fs, disabled: o.dis }))));
   const ring = ctx.borders[2] ? ctx.borders[2].px : 2;
   const rows = [
     ['Rest', row(undefined, {}), 'Action fill with its label on it.', `--action ${M.action}, label ${r(M['action-label'], M.action)}`],
@@ -25,7 +25,7 @@ function states(ctx) {
     ['Pressed', row('pressed', {}), 'Action goes to its pressed fill and the button scales to 0.97. Fields do not change.', `--action-pressed ${M['action-pressed']}, label ${r(M['action-label'], M['action-pressed'])}`],
     ['Disabled', row(undefined, { dis: true, p: false }), `The primary is never disabled. It stays live and says what is missing: ${F.bookWhy || ''}`.trim(), `--disabled-bg ${M['disabled-bg']}, type ${r(M['disabled-text'], M['disabled-bg'])}`],
   ].map(([n, p, w, v]) => [p, says(ctx, n, w, v)]);
-  const dk = piece(ctx, 'dark', wrapIn(ui.btn(F.book, { state: 'focus' }) + ui.btn(X.secondary, { variant: 'secondary', state: 'focus' }) + fieldCell(ui.field({ id: uid('st'), label: fv[0], value: fv[1] || '', state: 'focus' }))), { label: 'Focus, dark' });
+  const dk = piece(ctx, 'dark', wrapIn(ui.btn(F.book, { state: 'focus' }) + ui.btn(X.secondary, { variant: 'secondary', state: 'focus' }) + fieldCell(ui.field({ id: uid(ctx, 'st'), label: fv[0], value: fv[1] || '', state: 'focus' }))), { label: 'Focus, dark' });
   return body(note(ctx, 'Each state is the shipped CSS, forced by its class or by the disabled attribute, so the kit shows exactly what the product draws.'), ladder(rows), sec(ctx, '', `${dk}${note(ctx, `In dark the ring is --focus ${D.focus}, ${r(D.focus, D.surface)} on the dark surface.`)}`));
 }
 
@@ -49,12 +49,12 @@ function inputs(ctx) {
   const S = sc(ctx), F = S.form, X = ex(ctx), ui = ctx.ui, M = kitColours(ctx, 'light'), r = (a, b) => ratio(ctx, a, b), cap_ = ut(ctx, 'caption');
   const f = (h) => piece(ctx, 'light', h);
   const rows = [
-    ['Focus', ui.field({ id: uid('in'), label: F.pickup, value: F.pickupValue || '', state: 'focus' }), 'The edge turns to the text colour and the ring sits outside it.', `--focus ${M.focus}, ${r(M.focus, M.surface)}`],
-    ['Filled', ui.field({ id: uid('in'), label: F.dropoff, value: F.dropoffValue || '' }), `The value in the text colour at ${ut(ctx, 'control').size} px, on a ${ctx.brand.ui.border} px edge.`, `--edge ${M.edge}, ${r(M.edge, M.surface)}`],
-    ['Select', ui.field({ id: uid('in'), label: F.size, kind: 'select', options: F.sizes || [], value: (F.sizes || [])[1] }), 'The same field, with a chevron in the quiet colour.', `--quiet ${M.quiet}, ${r(M.quiet, M.surface)}`],
-    ['Error', ui.field({ id: uid('in'), label: F.ready, value: F.readyValue || '', error: F.readyError }), 'The edge and the message take the danger colour. The message says what to do.', `--danger ${M.danger}, ${r(M.danger, M.surface)}`],
-    ['Hint', ui.field({ id: uid('in'), label: F.notes, kind: 'textarea', help: F.notesHelp }), `A hint sits under the field at ${cap_.size} px and gives way to the error.`, `--quiet ${M.quiet}, ${r(M.quiet, M.surface)}`],
-    ['Disabled', ui.field({ id: uid('in'), label: X.account, value: ctx.brand.name, disabled: true }), 'The disabled ground, its type, and no edge.', `--disabled-bg ${M['disabled-bg']}, type ${r(M['disabled-text'], M['disabled-bg'])}`],
+    ['Focus', ui.field({ id: uid(ctx, 'in'), label: F.pickup, value: F.pickupValue || '', state: 'focus' }), 'The edge turns to the text colour and the ring sits outside it.', `--focus ${M.focus}, ${r(M.focus, M.surface)}`],
+    ['Filled', ui.field({ id: uid(ctx, 'in'), label: F.dropoff, value: F.dropoffValue || '' }), `The value in the text colour at ${ut(ctx, 'control').size} px, on a ${ctx.brand.ui.border} px edge.`, `--edge ${M.edge}, ${r(M.edge, M.surface)}`],
+    ['Select', ui.field({ id: uid(ctx, 'in'), label: F.size, kind: 'select', options: F.sizes || [], value: (F.sizes || [])[1] }), 'The same field, with a chevron in the quiet colour.', `--quiet ${M.quiet}, ${r(M.quiet, M.surface)}`],
+    ['Error', ui.field({ id: uid(ctx, 'in'), label: F.ready, value: F.readyValue || '', error: F.readyError }), 'The edge and the message take the danger colour. The message says what to do.', `--danger ${M.danger}, ${r(M.danger, M.surface)}`],
+    ['Hint', ui.field({ id: uid(ctx, 'in'), label: F.notes, kind: 'textarea', help: F.notesHelp }), `A hint sits under the field at ${cap_.size} px and gives way to the error.`, `--quiet ${M.quiet}, ${r(M.quiet, M.surface)}`],
+    ['Disabled', ui.field({ id: uid(ctx, 'in'), label: X.account, value: ctx.brand.name, disabled: true }), 'The disabled ground, its type, and no edge.', `--disabled-bg ${M['disabled-bg']}, type ${r(M['disabled-text'], M['disabled-bg'])}`],
   ].map(([n, h, w, v]) => [f(h), says(ctx, n, w, v)]);
   return body(ladder(rows), note(ctx, 'The label always sits above the field.'));
 }
@@ -63,11 +63,11 @@ function inputs(ctx) {
 function choices(ctx) {
   const S = sc(ctx), F = S.form, X = ex(ctx), ui = ctx.ui, M = kitColours(ctx, 'light'), r = (a, b) => ratio(ctx, a, b);
   const grp = (t, items) => `<div class="hk-cell">${cap(ctx, t)}${items}</div>`;
-  const use = `<div class="hk-stack" style="gap:24px">${grp('Checkbox', (X.checks || []).slice(0, 3).map((c, i) => ui.check(c, { checked: i === 0, disabled: i === 2 })).join(''))}${grp('Radio', (X.radios || []).slice(0, 2).map((c, i) => ui.check(c, { type: 'radio', name: uid('set'), checked: i === 0 })).join(''))}${grp('Switch', (X.switches || []).slice(0, 2).map((c, i) => ui.switch(c, { checked: i === 0 })).join(''))}<div class="hk-cell"><p class="ui-label">${E(ctx, F.size)}</p>${ui.segmented(F.sizes || [], 1)}</div></div>`;
+  const use = `<div class="hk-stack" style="gap:24px">${grp('Checkbox', (X.checks || []).slice(0, 3).map((c, i) => ui.check(c, { checked: i === 0, disabled: i === 2 })).join(''))}${grp('Radio', (X.radios || []).slice(0, 2).map((c, i) => ui.check(c, { type: 'radio', name: uid(ctx, 'set'), checked: i === 0 })).join(''))}${grp('Switch', (X.switches || []).slice(0, 2).map((c, i) => ui.switch(c, { checked: i === 0 })).join(''))}<div class="hk-cell"><p class="ui-label">${E(ctx, F.size)}</p>${ui.segmented(F.sizes || [], 1)}</div></div>`;
   const short = (a) => [...a].sort((p, q) => p.length - q.length)[0];
   const ck = short(X.checks || ['On']), rd = short(X.radios || ['On']), sw = short(X.switches || ['On']);
   const st = [['Off', {}], ['On', { checked: true }], ['Focus', { checked: true, state: 'focus' }], ['Disabled', { disabled: true }], ['Disabled, on', { disabled: true, checked: true }]];
-  const rows = st.map(([n, o]) => [piece(ctx, 'light', wrapIn(`${ui.check(ck, o)}${ui.check(rd, { ...o, type: 'radio', name: uid('r') })}${ui.switch(sw, o)}`)), says(ctx, n, '', '')]);
+  const rows = st.map(([n, o]) => [piece(ctx, 'light', wrapIn(`${ui.check(ck, o)}${ui.check(rd, { ...o, type: 'radio', name: uid(ctx, 'r') })}${ui.switch(sw, o)}`)), says(ctx, n, '', '')]);
   const lines = [
     ['Checked', 'A checkbox or radio fills with the text colour; a switch fills with the action colour and its knob takes the text colour.', `--text ${M.text}, --action ${M.action}`],
     ['Disabled', 'The disabled ground with no edge, and the label in the disabled type.', `type ${r(M['disabled-text'], M.surface)} on the surface`],

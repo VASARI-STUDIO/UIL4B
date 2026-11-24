@@ -39,7 +39,7 @@ import { SITE_ORIGIN, canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
 import { prerenderRoutes } from './route-matrix.mjs'
 import { DEFAULT_CARD, HOME_CARD, cardFor, cardUrl, twitterCardUrl } from './share-cards.mjs'
 import { articleJsonLd, breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
-import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
+import { JSONLD_MARKER, PRICING_MARKER, homeGraphJsonLd, ladderOffers } from './site-pricing.mjs'
 import { buildLlmsTxt } from './llms-txt.mjs'
 import { HOME_SHELL_ROUTES, applyHomeShell, assertHomeShellApplied } from './home-shell.mjs'
 import { applyPageShell, assertPageShellApplied, guideFor, shellContentFor, wantsPageShell } from './page-shell.mjs'
@@ -184,7 +184,7 @@ export function rewriteHead(html, { title, shareTitle = title, description, robo
   // description as the head, so the two cannot describe different products.
   if (keepNoscript) {
     sub('noscript heading', /(<noscript>\s*<div[^>]*>\s*)<h1>[^<]*<\/h1>/,
-      (_, open) => `${open}<h1>${text(title)}</h1><p>${text(description)}</p>`)
+      (_, open) => `${open}<p><strong>${text(title)}</strong></p><p>${text(description)}</p>`)
   } else {
     html = html.replace(
       /<noscript>[\s\S]*?<\/noscript>/,
@@ -313,6 +313,7 @@ async function main() {
     description: PAGE_DESCRIPTIONS['/'] || DEFAULT_DESCRIPTION,
     canonical: canonicalUrl('/'),
     card: HOME_CARD,
+    schema: homeGraphJsonLd(),
     keepNoscript: true,
   })
   homeHead.misses.forEach(m => allMisses.add(m))

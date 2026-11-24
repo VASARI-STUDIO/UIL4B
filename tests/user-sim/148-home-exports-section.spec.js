@@ -450,21 +450,6 @@ test('at 1440 the finished pile holds still for 240px of scroll, then closes up 
   }
 })
 
-for (const [width, height, gap] of [[1440, 900, 48], [390, 844, 32]]) {
-  test(`at ${width} the footnote sits ${gap}px or more below the last card`, async ({ browser }) => {
-    const { ctx, page } = await open(browser, { width, height, touch: width < 500 })
-    try {
-      // Red if .hx-foot loses its top margin, or a tail pushes the footnote against the card.
-      await expect.poll(async () => {
-        await page.evaluate(() => window.scrollTo(0, document.querySelector('#exports .hx-foot').getBoundingClientRect().top + window.scrollY - window.innerHeight + 80))
-        return page.evaluate(() => Math.round(document.querySelector('#exports .hx-foot').getBoundingClientRect().top - document.querySelector('#exports .hx-card[data-card="2"]').getBoundingClientRect().bottom))
-      }, { timeout: 10_000 }).toBeGreaterThanOrEqual(gap)
-    } finally {
-      await ctx.close()
-    }
-  })
-}
-
 test('a covered card is inert and a tab stop is never behind a card', async ({ browser }) => {
   const { ctx, page } = await open(browser)
   try {
@@ -480,7 +465,8 @@ test('a covered card is inert and a tab stop is never behind a card', async ({ b
       if (!card) return null
       const r = el.getBoundingClientRect()
       const top = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).find((e) => e.closest('.hx-card'))
-      return { inertCard: card.inert, hidden: !top || !el.contains(top), onScreen: r.top >= 0 && r.bottom <= window.innerHeight }
+      // A stop the browser scrolls into view lands flush with the bottom edge, give or take a fraction of a pixel.
+      return { inertCard: card.inert, hidden: !top || !el.contains(top), onScreen: r.top >= -1 && r.bottom <= window.innerHeight + 1 }
     })
     // Tab forward: every stop is in a card that is not inert and is not hit-tested as covered.
     const forward = []

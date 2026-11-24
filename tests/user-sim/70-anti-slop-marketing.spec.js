@@ -100,7 +100,7 @@ test.describe('the homepage below the hero', () => {
     await expect(page.locator('.sp-plan'), 'a plan card is back on the landing').toHaveCount(0)
   })
 
-  test('ends on the final call: its own headline and line, one free way in, none of the old band', async ({ page }) => {
+  test('ends on the final call: its own headline, one free way in, none of the old band', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page, '/')
@@ -110,9 +110,8 @@ test.describe('the homepage below the hero', () => {
     await expect(close, 'the final call is not the last section of the page').toHaveCount(1)
     expect(await page.locator('#main > section').last().getAttribute('id')).toBe('start')
     await expect(close.getByRole('heading', { level: 2 })).toHaveText('Start your first project today.')
-    await expect(close.locator('p')).toHaveText(
-      'Free to use, no account needed. Sign up when you want to export files or save projects and come back to them.',
-    )
+    // The heading stands alone on the homepage: no line under it.
+    await expect(close.locator('p'), 'a line is back under the final call heading').toHaveCount(0)
 
     // One way in, and it is free: the toolkit, no sign-up form in the way.
     await expect(close.getByRole('link'), 'the final call offers more than one way in').toHaveCount(1)

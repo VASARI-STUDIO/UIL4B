@@ -100,10 +100,13 @@ export async function exportAs(page, id) {
   return download
 }
 
+/** The gallery's grid. The premium strip in the main view is a .xd-tpl-grid too (.xd-prem-grid), so it is left out here. */
+export const GALLERY = '.xd-tpl-grid:not(.xd-prem-grid)'
+
 /** Open "View templates" (the grid of templates in the dialog) if it is not open, and return the grid. */
 export async function openTemplates(panelOrPage) {
   const panel = rootOf(panelOrPage)
-  const grid = panel.locator('.xd-tpl-grid')
+  const grid = panel.locator(GALLERY)
   if (!(await grid.count())) await panel.getByRole('button', { name: 'View templates' }).click()
   await grid.waitFor()
   return grid
@@ -111,7 +114,7 @@ export async function openTemplates(panelOrPage) {
 
 /** A template card by the template's own name (its label reads "<name>, <brand> sample brand[, Pro][, chosen]"). */
 export const templateCard = (panelOrPage, name) => rootOf(panelOrPage)
-  .locator('.xd-tpl-card')
+  .locator(`${GALLERY} .xd-tpl-card`)
   .filter({ has: rootOf(panelOrPage).page().locator('.xd-tpl-n').getByText(name, { exact: true }) })
 
 /** Choose a template the way a person does: View templates, then the card. The dialog returns to the preview with it chosen. */
@@ -119,7 +122,7 @@ export async function chooseTemplate(panelOrPage, name) {
   const panel = rootOf(panelOrPage)
   await openTemplates(panel)
   await templateCard(panel, name).click()
-  await panel.locator('.xd-tpl-grid').waitFor({ state: 'detached' })
+  await panel.locator(GALLERY).waitFor({ state: 'detached' })
 }
 
 /** The template in use: open the grid, read the pressed card, and go back to the preview. */

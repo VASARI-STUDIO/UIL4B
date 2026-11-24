@@ -10,8 +10,8 @@
 //     Break: write a page with fs-style put() skipped (a file map entry that bypasses put() in guide-site-build.js or kit-site-build.js).
 //  4. A THEME WITH NO SITE KEEPS THE DOCUMENT.
 //     Break: serve a site for every theme without checking T.guideSite / T.kitSite.
-//  5. THE GUIDE AND THE KIT LINK TO EACH OTHER ACROSS THEIR ZIPS: a link out of one zip names the other zip's top folder and a
-//     page that is in it, so both work when unpacked side by side. Break: drop relinkSites() in exportThemeRoute.js.
+//  5. NO LINK LEAVES ITS ZIP: the guide and the kit zips are separate downloads, so a page names the other product as plain text, with no
+//     href to a folder that may not be there. Break: put the ../ui-kit-html/ links back (drop dropSiblingLinks() in exportThemeRoute.js).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
@@ -108,24 +108,12 @@ test('a theme with no site keeps the single document in both rows', async () => 
   assert.ok(!('index.html' in kit))
 })
 
-test('the guide and the UI kit link to each other by the top folder of the other zip', async () => {
+test('no page in the guide or the UI kit links out of its own zip', async () => {
   for (const theme of ['28-riso', '32-dieline']) {
-    const guide = await exportZip(theme, 'slides', true)
-    const kit = await exportZip(theme, 'ui-kit', true)
-    const out = (from, other) => {
-      const seen = []
-      for (const p of htmlPages(from.files)) {
-        for (const m of from.files[p].matchAll(/\b(?:href|src)="\.\.\/([^"#?]+)/g)) {
-          const [dir, ...rest] = m[1].split('/')
-          seen.push(m[1])
-          assert.equal(dir, other.top, `${theme} ${p} -> ../${m[1]}`)
-          assert.ok(rest.join('/') in other.files, `${theme} ${p} -> ../${m[1]} is not in the other zip`)
-        }
-      }
-      return seen
+    for (const row of ['slides', 'ui-kit']) {
+      const zip = await exportZip(theme, row, true)
+      for (const p of htmlPages(zip.files)) assert.ok(!/\b(?:href|src)="\.\.\//.test(zip.files[p]), `${theme} ${row} ${p} links out of the zip`)
     }
-    assert.ok(out(guide, kit).length > 0, `${theme}: the guide links to the kit`)
-    assert.ok(out(kit, guide).length > 0, `${theme}: the kit links to the guide`)
   }
 })
 
@@ -761,4 +749,33 @@ test('theme 21 disabled choice edge in dark is not in another theme', async () =
   const mine = await exportZip('21-presentation', 'ui-kit'), other = await exportZip('22-ticket', 'ui-kit')
   assert.match(mine['components.css'], /\[data-theme="dark"\] \.ui-choice input:disabled:not\(\.ui-switch\)/)
   assert.doesNotMatch(other['components.css'], /\[data-theme="dark"\] \.ui-choice input:disabled:not\(\.ui-switch\)/)
+})
+
+// Design review (theme 21), N35: the kit's orders table sorts by column. Every header is a real button in a th that carries aria-sort once
+// sorted; the script ships only with this theme's kit and sorts on each cell's data-v, so the orders themselves are untouched.
+//     Break: render the headers as plain text (th() in the table page, lane-ht-kit.js), or drop `js: SORT_JS` from kitSite.
+test('theme 21 kit orders table: header buttons sort the rows, and another theme ships no sort script', async () => {
+  const vm = await import('node:vm')
+  const mine = await exportZip('21-presentation', 'ui-kit'), other = await exportZip('22-ticket', 'ui-kit')
+  assert.doesNotMatch(other['assets/kit.js'] || '', /data-sortable/, 'another theme ships the sort script')
+  for (const body of [{ projectName: 'Tide & Co.', design: DESIGN }, { design: {} }]) {
+    const page = (await pagesFor('ui-kit', body))['table.html']
+    assert.match(page, /<table class="ui-table" data-sortable>/)
+    assert.ok((page.match(/<th scope="col"[^>]*><button type="button">[^<]+<\/button><\/th>/g) || []).length >= 2, 'the headers are not buttons')
+    assert.doesNotMatch(page, /<th[^>]*aria-sort/, 'aria-sort is only set by a sort')
+  }
+  // run the shipped script on a stand-in table: Order sorts A to Z, then Z to A, with aria-sort following
+  const rows = ['b', 'c', 'a'].map((v) => ({ v, cells: [{ getAttribute: () => v, textContent: v }] }))
+  const tbody = { rows, appendChild(r) { this.rows.splice(this.rows.indexOf(r), 1); this.rows.push(r) } }
+  const th = { _a: {}, getAttribute(k) { return k === 'data-type' ? 'text' : this._a[k] ?? null }, setAttribute(k, v) { this._a[k] = v }, removeAttribute(k) { delete this._a[k] } }
+  const button = { closest: (s) => (s === 'thead th button' ? button : th) }
+  let click
+  const table = { tBodies: [tbody], querySelectorAll: () => [th], addEventListener: (_, f) => { click = f }, contains: () => true }
+  const js = mine['assets/kit.js']
+  assert.ok(js.includes("table[data-sortable]"), 'the kit script has no sort')
+  vm.runInNewContext(js.slice(js.lastIndexOf("(function () {\n  document.querySelectorAll('table[data-sortable]')")), { document: { querySelectorAll: () => [table] } })
+  click({ target: button })
+  assert.deepEqual(tbody.rows.map((r) => r.v), ['a', 'b', 'c']); assert.equal(th._a['aria-sort'], 'ascending')
+  click({ target: button })
+  assert.deepEqual(tbody.rows.map((r) => r.v), ['c', 'b', 'a']); assert.equal(th._a['aria-sort'], 'descending')
 })

@@ -170,16 +170,18 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 @media(hover:hover){.pnav-pop-item[aria-disabled="true"]:hover{background:none}}
 
 /* ── The mega menus ────────────────────────────────────────────────────── */
-.pnav-menu{top:calc(var(--chrome-h) + 8px);left:24px;right:auto;width:min(1120px,calc(100vw - 48px));border:0;border-radius:16px;background:var(--v3-raised);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 0 0 1px var(--v3-hair),var(--v3-mgsh);isolation:isolate;transform-origin:0 0;animation:v3-mg-in 180ms var(--v3-ease) both}
+.pnav-menu{top:calc(var(--chrome-h) + 8px);left:24px;right:auto;width:min(1120px,calc(100vw - 48px));border:0;border-radius:16px;background:var(--v3-raised);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 0 0 1px var(--v3-hair),var(--v3-mgsh);isolation:isolate;transform-origin:0 0;transition:none;animation:v3-mg-in 180ms var(--v3-ease) both}
 @keyframes v3-mg-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
 @keyframes v3-mg-fade{from{opacity:0}to{opacity:1}}
 .pnav-menu-body{padding:20px}
+@media(min-width:980px){.pnav-menu-body{padding:32px 40px}}
 .pnav-menu-cols{flex-wrap:wrap;gap:0}
 /* One frame for all three menus: the same width, and on desktop the same height, so switching menus never jumps. */
-@media(min-width:980px){.pnav-menu-cols{min-height:348px;flex-wrap:nowrap}}
-/* 980-1023: the brand kit pane wraps to more lines, so every menu takes its taller height. */
-@media(min-width:980px) and (max-width:1023px){.pnav-menu-cols{min-height:384px}}
+@media(min-width:980px){.pnav-menu-cols{min-height:396px;flex-wrap:nowrap}}
+/* 980-1199: the frame is at its narrowest (976px or less), so the brand kit and Discover panes wrap to more lines; every menu takes the taller height. */
+@media(min-width:980px) and (max-width:1199px){.pnav-menu-cols{min-height:420px}}
 .pnav-grid{flex:1 1 auto;gap:12px}
+@media(min-width:980px){.pnav-grid{gap:16px 40px}}
 .pnav-menu[data-menu="create"] .pnav-grid[data-cols]{grid-template-columns:minmax(176px,1fr) minmax(176px,1fr) minmax(240px,1.3fr)}
 .pnav-menu[data-menu="discover"] .pnav-grid{flex:0 0 auto}
 .pnav-menu[data-menu="discover"] .pnav-grid[data-cols]{grid-template-columns:240px}
@@ -187,6 +189,7 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 .pnav-colstack{padding:0;border-right:0}
 .pnav-col{margin-bottom:0}
 .pnav-col + .pnav-col{margin-top:24px}
+@media(min-width:980px){.pnav-col + .pnav-col{margin-top:32px}.pnav-col-label{padding-bottom:12px}.pnav-toollist{gap:6px}.pnav-tool{min-height:40px;padding:10px 14px;gap:12px}.pnav-reco-link{padding:10px 14px}}
 .pnav-col-label{padding:0 0 8px 10px;font-size:12px;line-height:16px;font-weight:500;color:var(--v3-t56)}
 .pnav-toollist{gap:4px}
 .pnav-tool{position:relative;gap:10px;min-height:36px;padding:8px 10px;border-radius:8px;color:var(--v3-ink);font-size:14px;line-height:20px;transition:background-color 100ms linear}
@@ -202,10 +205,10 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 }
 .pnav-tool:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
 .pnav-tool:active{background:var(--v3-rowp);transition:none}
-.pnav-tool[aria-current="page"]{background:var(--v3-rowc);color:var(--v3-ink)}
+.pnav-tool[aria-current="page"]{background:color-mix(in oklch,var(--v3-ink) 16%,transparent);color:var(--v3-ink)}
 .pnav-tool[aria-current="page"]::before{content:"";position:absolute;left:0;top:50%;width:2px;height:16px;margin-top:-8px;border-radius:1px;background:var(--v3-ink)}
-@media(hover:hover){.pnav-tool[aria-current="page"]:hover{background:var(--v3-rowhc)}}
-.pnav-tool[aria-current="page"]:focus-visible{background:var(--v3-rowc)}
+@media(hover:hover){.pnav-tool[aria-current="page"]:hover{background:color-mix(in oklch,var(--v3-ink) 20%,transparent)}}
+.pnav-tool[aria-current="page"]:focus-visible{background:color-mix(in oklch,var(--v3-ink) 16%,transparent)}
 .pnav-tool[aria-current="page"] .pnav-tool-ico{color:var(--v3-ink)}
 .pnav-tool[aria-current="page"] .pnav-tool-label{font-weight:500}
 .pnav-tool-here{color:var(--v3-ink)}
@@ -257,6 +260,13 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 
 /* The foot. */
 .pnav-menu-foot{min-height:52px;gap:24px;padding:8px 20px;border-top:1px solid var(--v3-hair)}
+/* The foot lines up with the body's own 40px side padding. */
+@media(min-width:980px){.pnav-menu-foot{padding:12px 40px}}
+/* On desktop the foot holds a two-line readout in every menu, so it takes that height even when the line is one; the
+   readout sheds its own reserved box and centres, so a one-line note sits level with the link. */
+@media(min-width:980px){.pnav-menu-foot{min-height:61px}.pnav-menu[data-menu] .pnav-menu-readout{min-height:0;align-self:center;-webkit-line-clamp:2;line-clamp:2}.pnav-menu{transform-origin:50% 0}}
+/* From 980px the frame is centred (PillNav places it) and takes 90% of the viewport: never narrower than 976px (the 24px gutters at 1024), never wider than 1440px. */
+@media(min-width:980px){.pnav-menu{width:min(1440px,max(90vw,min(976px,calc(100vw - 48px))))}}
 .pnav-menu-foot-note{align-self:center;margin:0;font-size:13px;line-height:18px;color:var(--v3-sec)}
 .pnav-menu-readout{font-size:13px;line-height:18px;color:var(--v3-sec)}
 .pnav-menu-readout b{font-weight:500;color:var(--v3-ink)}
@@ -276,6 +286,9 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
   .pnav-editorial{flex:1 1 100%;margin:20px 0 0;padding:20px 0 0;border-left:0;border-top:1px solid var(--v3-hair)}
 }
 
+/* From 980px the pane sits further from the columns and takes more of the wider frame. */
+@media(min-width:980px){.pnav-editorial{margin-left:40px;padding-left:40px}.pnav-editorial-blurb{margin-top:12px}}
+@media(min-width:1241px){.pnav-editorial{flex-basis:400px}}
 /* On a tablet the create menu spans the screen less a 10px margin each side. */
 @media(min-width:768px) and (max-width:979px){.pnav-menu{width:calc(100vw - 20px)}}
 

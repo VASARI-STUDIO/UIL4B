@@ -164,7 +164,7 @@ function writeFolder(dir, map) {
 }
 
 export async function writePreviews(themeIds, { tmp, quality = 0.8 } = {}) {
-  const { EXPORT_THEMES } = await import(href(path.join(ROOT, 'src/data/exportThemes.js')))
+  const { EXPORT_THEMES, entryHasRow } = await import(href(path.join(ROOT, 'src/data/exportThemes.js')))
   const { renderThemeExport } = await import(href(path.join(ROOT, 'api/_lib/exportThemeRoute.js')))
   const { pickerTheme } = await import(href(path.join(ROOT, 'src/config/exportThemePicker.js')))
   const state = { sample: null, kept: null }
@@ -190,7 +190,7 @@ export async function writePreviews(themeIds, { tmp, quality = 0.8 } = {}) {
       const T = await import(href(path.join(ET, 'themes', id, 'index.js')))
       state.sample = engine.BRANDS[T.meta.brand].data
       if (state.sample.name !== pickerTheme(id).brand) problems.push(`${id}: the picker names the sample brand ${pickerTheme(id).brand}, the theme draws ${state.sample.name}`)
-      const hasKit = !entry.rows
+      const hasKit = entryHasRow(entry, 'ui-kit')
       const dir = path.join(work, id)
       const size = pictureSize(T.meta.guidelinesPage)
       const scan = (label, text) => { const m = BAD.exec(text); if (m) problems.push(`${id} ${label}: prints ${JSON.stringify(m[0])} near ${JSON.stringify(text.slice(Math.max(0, m.index - 40), m.index + 40))}`) }
@@ -300,7 +300,7 @@ export async function writePagePreviews(themeIds, opts = {}) {
     manifestPath = path.join(ROOT, 'src/config/exportPreviewPages.js'),
   } = opts
   const et = path.join(engineRoot, 'api/_lib/exportThemes')
-  const { EXPORT_THEMES, isThemeExportPro } = await import(href(path.join(ROOT, 'src/data/exportThemes.js')))
+  const { EXPORT_THEMES, entryHasRow, isThemeExportPro } = await import(href(path.join(ROOT, 'src/data/exportThemes.js')))
   const { renderThemeExport } = await import(href(path.join(engineRoot, 'api/_lib/exportThemeRoute.js')))
   const state = { sample: null, kept: null }
   const engine = await loadEngine(state, et)
@@ -405,7 +405,8 @@ export async function writePagePreviews(themeIds, opts = {}) {
         await store(row, shots)
       }
 
-      for (const row of entry.rows || Object.keys(ROW_FORMAT)) {
+      // The rows this walk draws (ROW_FORMAT's), that the theme has. The style guide has no preview pictures yet, so it is not among them.
+      for (const row of Object.keys(ROW_FORMAT).filter((r) => entryHasRow(entry, r))) {
         const map = await filesOf(renderThemeExport, engine, state, id, row, ROW_FORMAT[row])
         if (row === 'book') {
           const dir = path.join(work, id, row)

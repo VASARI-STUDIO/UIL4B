@@ -69,7 +69,7 @@ export const PRO_GATE = {
     gate: 'brand-guidelines-export',
     eyebrow: 'UI L4B Pro',
     title: 'Export the brand guidelines',
-    subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
+    subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Its logo pages show a placeholder until you add a logo. The style guide stays free.',
     features: [
       'A cover and numbered section openings, with a rationale beside every page',
       'Each swatch with its name, hex and the ink that reads on it',
@@ -404,7 +404,7 @@ export default function useExportRunner() {
       if (themed) {
         // A themed file: the server builds it in the chosen theme. A zip is saved under the name the dialog lists (themedZipName); a print row is written
         // into the reserved window and printed from here (utils/exportThemeRequest.js), never opened from a blob.
-        activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
+        activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'guide' ? 'style-guide' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
         setStage(themed.format === 'pdf' ? 'document' : 'building')
         labelPrintWindow(printWin, 'Preparing your document…')
         // A Pro kit is named for the identity name typed in the panel, in the request and on the zip; any other file keeps the project's name.
@@ -419,6 +419,9 @@ export default function useExportRunner() {
         }
         if (answer.zip) {
           savedFile = download(answer.zip, themedZipName(kitName || fileProject, format, theme) || answer.name)
+        } else if (answer.file) {
+          // A single file such as the Markdown style guide: saved under the server's name.
+          savedFile = download(answer.file, answer.name)
         } else {
           const file = formatFileName(fileProject, format, { saved: true })
           opened = printInWindow(printWin, answer.html, { title: formatFileName(fileProject, format).replace(/\.pdf$/, '') })

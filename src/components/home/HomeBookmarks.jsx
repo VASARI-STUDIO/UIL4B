@@ -57,9 +57,6 @@ export default function HomeBookmarks() {
       <div className="bm-wide">
         <div className="bm-head">
           <h2 id="bm-h" className="bm-h" tabIndex={-1}>Say goodbye to bookmark folders.</h2>
-          <p className="bm-sub">
-            {TOOL_COUNT} tools that would otherwise be {BOOKMARK_COUNT} tabs and a folder you stopped opening.
-          </p>
         </div>
 
         {/* Below 1024px: the folders, pairs and toolkit for a thumb */}

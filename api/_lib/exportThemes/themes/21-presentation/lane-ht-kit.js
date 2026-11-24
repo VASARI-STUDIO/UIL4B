@@ -121,7 +121,10 @@ const PAGES = {
   },
   table: (ctx) => {
     const S = SC(ctx), u = ctx.ui, d = ordersByDue(ctx), when = (t) => A(t).replace(/\d{1,2}:\d{2} ?[ap]m/gi, (m) => `<span class="ui-time">${m}</span>`);
-    const h = `<table class="ui-table"><thead><tr><th scope="col">Order</th><th scope="col">Status</th>${noPrices(ctx) ? '' : `<th scope="col" class="is-num">${A(S.paidLabel)}</th>`}</tr></thead><tbody>${d.map((x) => `<tr><td><strong>${A(x.to)}</strong><br>${when(x.when)}</td><td>${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
+    // each header is a button that sorts the rows by its column (SORT_JS); a cell's data-v is the value it sorts on, so the orders stay as they are
+    const th = (label, type, cls = '') => `<th scope="col"${cls ? ` class="${cls}"` : ''} data-type="${type}"><button type="button">${A(label)}</button></th>`;
+    const money = (p) => String(parseFloat(String(p).replace(/[^0-9.]/g, '')) || 0);
+    const h = `<table class="ui-table" data-sortable><thead><tr>${th('Order', 'text')}${th('Status', 'text')}${noPrices(ctx) ? '' : th(S.paidLabel, 'num', 'is-num')}</tr></thead><tbody>${d.map((x) => `<tr><td data-v="${A(x.to)}"><strong>${A(x.to)}</strong><br>${when(x.when)}</td><td data-v="${A(stateLabel(ctx, x.status))}">${u.statusChip(x.status)}</td>${noPrices(ctx) ? '' : `<td class="is-num ui-num" data-v="${money(x.price)}">${A(x.price)}</td>`}</tr>`).join('')}</tbody></table>`;
     return { lede: 'Rows of orders, numbers aligned to the right.', live: `<div class="hk-col">${item(h, 'Orders table', 'hk-i--w')}</div>`, code: [['Table', h]] };
   },
   empty: (ctx) => { const E = SC(ctx).empty, h = `<div class="ui-empty"><h3 class="ui-empty__title">${A(E.title)}</h3><p class="ui-empty__text">${A(E.body)}</p>${ctx.ui.btn(E.cta)}</div>`; return { lede: 'An empty screen says what goes here and how to start.', live: `<div class="hk-col">${item(h, 'Empty state', 'hk-i--w hk-i--full')}</div>`, code: [['Empty state', h]] }; },
@@ -235,8 +238,24 @@ ${nextField(ctx, { next: nx(next), prev: nx(K.prev), cover: 'index.html' })}
 </div>`;
 }
 
+// the orders table sorts from its header buttons: a click sorts that column up, the next one down; aria-sort on the th says which; equal rows keep their order
+const SORT_JS = `(function () {
+  document.querySelectorAll('table[data-sortable]').forEach(function (t) {
+    var heads = [].slice.call(t.querySelectorAll('thead th'));
+    t.addEventListener('click', function (e) {
+      var b = e.target.closest('thead th button'); if (!b || !t.contains(b)) return;
+      var th = b.closest('th'), i = heads.indexOf(th), up = th.getAttribute('aria-sort') !== 'ascending', num = th.getAttribute('data-type') === 'num';
+      var body = t.tBodies[0];
+      var v = function (r) { var c = r.cells[i], x = c.getAttribute('data-v'); x = x === null ? c.textContent : x; return num ? parseFloat(x) || 0 : x.toLowerCase(); };
+      [].slice.call(body.rows).map(function (r, n) { return { r: r, k: v(r), n: n }; }).sort(function (a, c) { var d = a.k < c.k ? -1 : a.k > c.k ? 1 : 0; return (up ? d : -d) || a.n - c.n; }).forEach(function (o) { body.appendChild(o.r); });
+      heads.forEach(function (h) { h.removeAttribute('aria-sort'); });
+      th.setAttribute('aria-sort', up ? 'ascending' : 'descending');
+    });
+  });
+})();`;
+
 export const kitSite = {
-  prepare: servedCtx, css: (ctx) => htCss(ctx) + kitCss(ctx), shell, unscroll: '.ht-bar{position:static!important}',
+  js: SORT_JS, prepare: servedCtx, css: (ctx) => htCss(ctx) + kitCss(ctx), shell, unscroll: '.ht-bar{position:static!important}',
   fallback: (ctx, K) => (PAGES[K.page.id] ? body(ctx, K) : `<section class="hk-code"><p class="ht-p">${A(K.page.title)}</p></section>`),
   pages: { cover, contents: (ctx, K) => contents(ctx, K) },
 };

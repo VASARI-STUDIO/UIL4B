@@ -2,7 +2,7 @@
 // the Free rule are src/data/exportThemes.js's (the one table the server reads too); this adds the sample brand each preview is
 // drawn from, the page shape, and the picture paths. No theme code is here: the previews are pictures of the sample brands' pages.
 
-import { EXPORT_THEMES, isThemeExportPro, themeHasRow } from '../data/exportThemes.js'
+import { EXPORT_THEMES, entryHasRow, isThemeExportPro, themeHasRow } from '../data/exportThemes.js'
 import { fileName } from '../utils/exportFileName.js'
 
 // Page counts of the two documents, checked against the engine's page lists by tests/unit/export-theme-picker.test.js.
@@ -45,7 +45,7 @@ export const PICKER_THEMES = Object.freeze(EXPORT_THEMES.map((t) => Object.freez
   brand: SAMPLE[t.id][0],
   shape: SAMPLE[t.id][1],
   free: !isThemeExportPro('ui-kit', t.id),
-  guidePages: t.rows ? GUIDELINES_ONLY_PAGES : GUIDELINES_PAGES,
+  guidePages: entryHasRow(t, 'ui-kit') ? GUIDELINES_PAGES : GUIDELINES_ONLY_PAGES,
 })))
 
 export const pickerTheme = (id) => PICKER_THEMES.find((t) => t.id === id) || PICKER_THEMES[0]
@@ -57,6 +57,9 @@ export const THEMED_FILES = Object.freeze({
   'book-html': Object.freeze({ row: 'book', format: 'html' }),
   guidelines: Object.freeze({ row: 'slides', format: 'pdf' }),
   'guidelines-html': Object.freeze({ row: 'slides', format: 'html' }),
+  'style-guide': Object.freeze({ row: 'guide', format: 'pdf' }),
+  'style-guide-html': Object.freeze({ row: 'guide', format: 'html' }),
+  'style-guide-md': Object.freeze({ row: 'guide', format: 'md' }),
 })
 export const themedFile = (fileId) => (Object.hasOwn(THEMED_FILES, fileId) ? THEMED_FILES[fileId] : null)
 
@@ -82,7 +85,7 @@ export const themeFitsFile = (themeId, fileId) => {
 }
 
 // The zips a themed file downloads as, by file id. The PDF rows save nothing: the document opens in the print window.
-const THEMED_ZIPS = Object.freeze({ kit: 'ui-kit', 'book-html': 'brand-book', 'guidelines-html': 'brand-guidelines' })
+const THEMED_ZIPS = Object.freeze({ kit: 'ui-kit', 'book-html': 'brand-book', 'guidelines-html': 'brand-guidelines', 'style-guide-html': 'style-guide' })
 
 /** `lumen-ui-kit-04-standards.zip` from ('Lumen', 'kit', '04-standards'), or '' for a file that is not a themed zip. */
 export const themedZipName = (project, fileId, themeId) => (
@@ -93,6 +96,24 @@ export const themedZipName = (project, fileId, themeId) => (
 export const themedFileIsPro = (fileId, themeId) => {
   const t = themedFile(fileId)
   return t ? isThemeExportPro(t.row, themeId) : false
+}
+
+/** A premium theme for this file: one of the new themes (21 up) that is Pro for this file. Independent of the account. */
+export function isPremiumTheme(fileId, id) {
+  return parseInt(id, 10) >= 21 && themedFileIsPro(fileId, id)
+}
+
+/** The file's premium themes, in id order (21, 22, 23, 24, 26, 28, 29, 30, 31, 32). */
+export function premiumThemesFor(fileId) {
+  return pickerThemesFor(fileId)
+    .filter((t) => isPremiumTheme(fileId, t.id))
+    .sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10))
+}
+
+/** Every theme for the file in the order the picker shows: premium first, then the themes free for this file, then the rest in list order. */
+export function orderedThemesFor(fileId) {
+  const rest = pickerThemesFor(fileId).filter((t) => !isPremiumTheme(fileId, t.id))
+  return [...premiumThemesFor(fileId), ...rest.filter((t) => !themedFileIsPro(fileId, t.id)), ...rest.filter((t) => themedFileIsPro(fileId, t.id))]
 }
 
 /**

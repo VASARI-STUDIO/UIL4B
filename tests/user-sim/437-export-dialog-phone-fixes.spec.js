@@ -15,7 +15,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { chooseFormat, exportPanel, openTemplates, typeRadio } from './export-rows.js'
+import { GALLERY, chooseFormat, exportPanel, openTemplates, typeRadio } from './export-rows.js'
 
 const ROUTE = '/projects/harbour/export'
 const PHONES = [[360, 740], [375, 667], [390, 844]]
@@ -61,7 +61,7 @@ for (const [width, height] of PHONES) {
       const before = await scrolled(panel)
       expect(before.col + before.body, 'the grid is long enough to scroll at this size').toBeGreaterThan(0)
       await last.click()
-      await expect(panel.locator('.xd-tpl-grid'), 'choosing a card returns to the preview').toHaveCount(0)
+      await expect(panel.locator(GALLERY), 'choosing a card returns to the preview').toHaveCount(0)
       await expect.poll(() => scrolled(panel), { message: 'the preview opens at its top, not where the grid was' }).toEqual({ col: 0, body: 0 })
       // The picture's top edge and the Pro chip are on screen, below the tab bar.
       const stage = panel.locator('.xd-box img, .xd-box iframe').first()
