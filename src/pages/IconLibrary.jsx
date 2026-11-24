@@ -36,7 +36,7 @@ import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
-import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke } from '../utils/iconEditable'
+import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
@@ -1205,6 +1205,8 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       ref={cellRef}
       className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
       data-ic={ghost ? undefined : iconCellKey(icon)}
+      // The pencil on hover is drawn by CSS from this flag (see `.ic[data-editable]::after`): decorative, never named.
+      data-editable={!ghost && isGalleryEditable(icon) ? '' : undefined}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
@@ -4755,7 +4757,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // remembered (weightRef is left alone) and comes back with All; the style choice inside the category starts empty.
   // The current pack stays when the new category can hold it, otherwise the scope goes to "All packs".
   const handleCategory = (next) => {
-    if (next === category) return
+    // Pressing the pressed category (not All) turns it off, back to All.
+    if (next === category) { if (next !== 'all') handleCategory('all'); return }
     clearTimeout(timer.current)
     const allowed = categoryPacks(next)
     let nextPack = pack && pack !== 'custom' && (!allowed || allowed.includes(pack)) ? pack : ''
