@@ -1168,7 +1168,8 @@ html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
 }
 .lib-surface .ig .ic[data-editable]:focus-visible::after{opacity:1}
 @media (hover:none){
-  .lib-surface .ig .ic[data-editable].is-picked::after{opacity:1}
+  .lib-surface .ig .ic[data-editable].is-picked::after,
+  .lib-surface .ig .ic[data-editable]:active::after{opacity:1}
 }
 html[data-reduced-motion="true"] .lib-surface .ig .ic[data-editable]::after{transition:none}
 @media (prefers-reduced-motion:reduce){
