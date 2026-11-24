@@ -1,28 +1,28 @@
 export const themes = {
   flyleaf: {
     name: 'Flyleaf', discipline: 'Editorial folio',
-    brand: ['cover','application','logo','colour','type','strategy','reference'],
-    ui: ['cover','components','feedback','colour','tints','type','icons','handoff'],
+    brand: ['cover','application','digital','logo','colour','specimen','type','strategy','composition','reference'],
+    ui: ['cover','interface','components','feedback','colour','tints','contrast','type','icons','handoff'],
   },
   'set-square': {
     name: 'Set Square', discipline: 'Standards manual',
-    brand: ['cover','reference','logo','type','colour','application','strategy'],
-    ui: ['cover','colour','type','tints','components','feedback','icons','handoff'],
+    brand: ['cover','composition','reference','logo','specimen','type','colour','application','digital','strategy'],
+    ui: ['cover','interface','colour','type','tints','contrast','components','feedback','icons','handoff'],
   },
   dispatch: {
     name: 'Dispatch', discipline: 'Courier field guide',
-    brand: ['cover','application','colour','logo','type','reference','strategy'],
-    ui: ['cover','components','feedback','icons','type','colour','tints','handoff'],
+    brand: ['cover','application','digital','colour','logo','specimen','type','composition','reference','strategy'],
+    ui: ['cover','interface','components','feedback','icons','type','colour','tints','contrast','handoff'],
   },
   doorlist: {
     name: 'Doorlist', discipline: 'Gig poster and ticket stub',
-    brand: ['cover','type','application','colour','logo','strategy','reference'],
-    ui: ['cover','feedback','components','type','colour','tints','icons','handoff'],
+    brand: ['cover','specimen','type','application','digital','colour','logo','strategy','composition','reference'],
+    ui: ['cover','interface','feedback','components','type','colour','tints','contrast','icons','handoff'],
   },
   'market-day': {
     name: 'Market Day', discipline: 'Produce market circular',
-    brand: ['cover','colour','application','reference','type','logo','strategy'],
-    ui: ['cover','colour','icons','components','feedback','tints','type','handoff'],
+    brand: ['cover','colour','application','digital','composition','reference','specimen','type','logo','strategy'],
+    ui: ['cover','interface','colour','icons','components','feedback','tints','contrast','type','handoff'],
   },
 };
 

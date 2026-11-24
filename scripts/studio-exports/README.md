@@ -4,11 +4,11 @@ The two downloads are **Brand guidelines** and **UI style guide**. Each ZIP cont
 
 | Theme | Sample project | Design |
 | --- | --- | --- |
-| Flyleaf | Margin | Book jackets, a centred editorial title and double-rule stationery |
-| Set Square | Plumbline | A construction grid, a ruled specification table and a drawing title block |
-| Dispatch | Kerbside | Courier photography, a dispatch slip and a two-column colour card |
-| Doorlist | Encore | A gig poster, perforated ticket stub and box office listing |
-| Market Day | Saltbush | A produce circular with a masthead, counter prices and ruled listings |
+| Flyleaf | Margin | A plum book cover, a jacket photographed in hand and an editorial type specimen |
+| Set Square | Plumbline | A bound technical manual, a site hoarding and ruled specification sheets |
+| Dispatch | Kerbside | Full-bleed rider photography, a street billboard and high-contrast wayfinding layouts |
+| Doorlist | Encore | A venue poster, a ticket-style colour spread and a mobile box office |
+| Market Day | Saltbush | A produce circular, market photography, a jar label and round colour samples |
 
 Every brand guide includes a one-page identity sheet. Every UI guide has a keyboard-operable form with error and success states, also included as `form-example.html` in the ZIP. The sample applications use the corresponding project’s titles, prices and details. Provide `items` as an array of `{ "title", "detail", "price" }` records to populate them for another project.
 
@@ -21,6 +21,8 @@ From the repository root, with the project dependencies, Playwright Chromium and
 ```sh
 node scripts/studio-exports/build.mjs --out ./studio-exports
 ```
+
+The builder locates the workspace’s `export-systems/engine/scenes` directory. For an independent checkout, pass `--scenes <path-to-scenes>`. It fits the project artwork to the photographed surfaces using their saved coordinates and embeds the finished images in the guides.
 
 Open `index.html` in the output directory. Each guide also has a directly openable PDF and HTML file for each layout. Individual page images are inside the ZIP. The two guides embed their font faces and work offline. Keep the standalone form example beside the bundled stylesheets when extracting it. The code download links in the UI guide work offline as well.
 

@@ -9,31 +9,36 @@ import { parseArgs } from 'node:util';
 import { chromium } from '@playwright/test';
 import { zipFiles } from '../../api/_lib/exportThemes/engine/files.js';
 import { sampleProject } from './samples.mjs';
-import { renderTemplate, esc } from './document.mjs';
+import { renderTemplate } from './document.mjs';
+import { libraryPage, saveComparison } from './gallery.mjs';
+import { makePhotographs, findScenes } from './photography.mjs';
 import { themes, plannedThemes } from './themes.mjs';
 
-const {values}=parseArgs({options:{out:{type:'string'},theme:{type:'string'},project:{type:'string'}}});
+const {values}=parseArgs({options:{out:{type:'string'},theme:{type:'string'},project:{type:'string'},scenes:{type:'string'}}});
 if (!values.out) throw new Error('Pass --out followed by the output directory.');
 if (values.theme && !Object.hasOwn(themes,values.theme)) throw new Error('Unknown theme '+values.theme);
 const root=path.resolve(values.out);
 const project=values.project && JSON.parse(await readFile(values.project,'utf8'));
 const selected=values.theme?[values.theme]:Object.keys(themes);
 const titles={brand:'Brand guidelines',ui:'UI style guide'};
+const sceneRoot=await findScenes(values.scenes);
 const browser=await chromium.launch({channel:'chromium'});
-const cards=[];
+const editions=[];
 const run=promisify(execFile);
 const scratch=await mkdtemp(path.join(tmpdir(),'uil4b-exports-'));
 try {
   for (const id of selected) {
     const data=project || sampleProject(id), theme=themes[id];
+    const edition={id,name:theme.name,discipline:theme.discipline,project:data.name,guides:[]};
+    editions.push(edition);
+    const photographs=await makePhotographs(browser,sceneRoot,id,data);
     for (const [product,title] of Object.entries(titles)) {
       const dir=path.join(root,id,product);
       await mkdir(dir,{recursive:true});
       const files={};
-      let detailPage;
-      const detailLabel=product==='brand'?'Brand application':'Form feedback';
+      let detailPage,colourPage;
       for (const layout of ['deck','a4']) {
-        const {html,files:code,license}=renderTemplate(data,id,product,layout);
+        const {html,files:code,license}=renderTemplate(data,id,product,layout,photographs);
         Object.assign(files,code,{'LICENSES.txt':license});
         files[layout+'.html']=html;
         const htmlPath=path.join(dir,layout+'.html');
@@ -59,9 +64,10 @@ try {
             files[file]=await readFile(path.join(scratch,'page-'+number+'.png'));
           }
           if(layout==='deck'){
-            const detail=page.locator('main>.sheet.'+(product==='brand'?'application':'feedback'));
+            const detail=page.locator('main>.sheet.'+(product==='brand'?'application':'components'));
             detailPage=Number((await detail.getAttribute('id')).slice(5));
-            for(const [label,number] of [['cover',1],['detail',detailPage]]){
+            colourPage=Number((await page.locator('main>.sheet.colour').first().getAttribute('id')).slice(5));
+            for(const [label,number] of [['cover',1],['detail',detailPage],['colour',colourPage]]){
               await run('pdftoppm',['-f',String(number),'-l',String(number),'-singlefile','-r','96','-jpeg',pdfPath,path.join(dir,label)]);
             }
           }
@@ -69,11 +75,10 @@ try {
       }
       const stem=id+'-'+(product==='brand'?'brand-guidelines':'ui-style-guide');
       await writeFile(path.join(dir,stem+'.zip'),await zipFiles(files,stem));
-      const prefix=id+'/'+product+'/';
-      cards.push(`<article><a href="${prefix}deck.html"><img src="${prefix}cover.jpg" alt="${esc(data.name)} ${title.toLowerCase()}, ${theme.name} cover"></a><h3>${title}</h3><a class="detail" href="${prefix}deck.html#page-${detailPage}"><img loading="lazy" src="${prefix}detail.jpg" alt=""><span>${detailLabel} ↗</span></a><p><a href="${prefix}a4.html">A4 HTML</a> · <a href="${prefix}deck.html">Deck HTML</a></p><p><a href="${prefix}a4.pdf">A4 PDF</a> · <a href="${prefix}deck.pdf">Deck PDF</a></p><a class="download" href="${prefix}${stem}.zip" download>Download ZIP</a></article>`);
+      edition.guides.push({product,title,stem,detailPage,colourPage});
       console.log(theme.name+' / '+title+' complete');
     }
   }
+  await saveComparison(browser,root,editions);
 } finally {await browser.close();await rm(scratch,{recursive:true,force:true});}
-const sections=selected.map((id,i)=>`<section id="${id}"><h2>${themes[id].name}</h2><p>${themes[id].discipline} · ${esc((project || sampleProject(id)).name)}</p><div class="pair">${cards.slice(i*2,i*2+2).join('')}</div></section>`);
-await writeFile(path.join(root,'index.html'),`<!doctype html><html lang="en-AU"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UIL4B export templates</title><style>nav{display:flex;flex-wrap:wrap;gap:6px 20px;border-block:1px solid #aaa;padding:12px 0}a.detail{display:flex;gap:12px;align-items:center;margin:6px 0 14px}a.detail img{width:115px}.pair article>p{font-size:15px}section{scroll-margin-top:16px}*{box-sizing:border-box}body{margin:0;background:#f8f7f3;color:#242322;font:17px/1.5 system-ui,sans-serif}main{max-width:1140px;margin:auto;padding:48px 5vw}h1,h2,h3,p{margin:0}h1,h2{font:normal clamp(44px,7vw,88px)/1 Georgia,serif;letter-spacing:-.055em}h2{font-size:clamp(36px,5vw,62px)}h1+p{max-width:62ch;margin:18px 0}section{margin:50px 0;border-top:1px solid;padding-top:22px}section>p{margin:8px 0 18px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:28px}img{display:block;width:100%;height:auto;border:1px solid #c6c2b9}h3{margin:14px 0 5px}a{color:inherit;text-underline-offset:3px}.download{display:inline-block;background:#242322;color:white;padding:9px 15px;margin-top:10px}footer{border-top:1px solid;padding-top:18px}@media(max-width:640px){.pair{grid-template-columns:1fr}}</style><main><h1>Export templates</h1><p>Choose a theme and open a guide. Each ZIP contains both layouts as HTML, PDF and individual PNG pages. The UI style guide also includes the fonts and implementation files.</p><nav aria-label="Themes">${selected.map(id=>`<a href="#${id}">${themes[id].name}</a>`).join('')}</nav>${sections.join('')}<footer><b>Planned themes</b><p>${plannedThemes.join(' · ')}</p></footer></main></html>`);
+await writeFile(path.join(root,'index.html'),libraryPage(editions,plannedThemes));

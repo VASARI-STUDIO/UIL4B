@@ -42,6 +42,7 @@ export function sampleProject(theme) {
     applicationLine: brand.applications.social[1],
     voice: brand.voice.principles.map(p => p.title + '. “' + p.example + '”').slice(0,2).join(' '),
     icons: brand.ui.icons,
+    ...(theme === 'market-day' ? { photo: 'data:image/webp;base64,' + readFileSync(new URL('./saltbush-quandongs.webp', import.meta.url)).toString('base64'), photoAlt:'Fresh quandongs on a stone market counter' } : {}),
     ...(theme === 'dispatch' ? { photo: 'data:image/webp;base64,' + readFileSync(new URL('../../public/home-exports/kerbside-evening-960.webp', import.meta.url)).toString('base64'), photoAlt: 'Kerbside courier at the end of a shift' } : {}),
   };
 }

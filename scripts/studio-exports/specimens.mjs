@@ -21,9 +21,9 @@ export function coverArtwork(id, project, mark, photo) {
   }
 }
 
-export function appSpecimen(project, mark) {
+export function appSpecimen(project, mark, interactive=false) {
   const items=(project.items || []).slice(0,2);
-  return `<div class="mock">${mark}<strong>${esc(project.screenTitle || project.name)}</strong><p>${esc(project.screenDetail || project.headline)}</p><div class="mock-list">${items.map(listing).join('')}</div><span class="action">${esc(project.action || 'Save changes')}</span></div>`;
+  return `<div class="mock">${mark}<strong>${esc(project.screenTitle || project.name)}</strong><p>${esc(project.screenDetail || project.headline)}</p><div class="mock-list">${items.map(listing).join('')}</div>${interactive?'<a class="action" href="#try-feedback">'+esc(project.action || 'Save changes')+'</a>':'<span class="action">'+esc(project.action || 'Save changes')+'</span>'}</div>`;
 }
 
 export function applicationSpecimen(id, project, mark) {
@@ -43,7 +43,7 @@ export function identityReference(project, design, mark) {
 
 export function formExample(project) {
   const label=esc(project.formLabel || 'Project name');
-  return `<form class="ui-demo feedback-form" novalidate><label>${label}<input name="entry" required autocomplete="off" aria-describedby="field-response"></label><button type="submit">${esc(project.action || 'Save changes')}</button><output id="field-response" aria-live="polite"></output></form>`;
+  return `<form id="try-feedback" class="ui-demo feedback-form" novalidate><label>${label}<input name="entry" required autocomplete="off" aria-describedby="field-response"></label><button type="submit">${esc(project.action || 'Save changes')}</button><output id="field-response" aria-live="polite"></output></form>`;
 }
 export const formScript = `for(const form of document.querySelectorAll('.feedback-form')){
   const field=form.elements.entry, response=form.querySelector('output');

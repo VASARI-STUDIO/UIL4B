@@ -19,8 +19,8 @@ for (const id of Object.keys(themes)) {
       for (const c of colours) assert.ok(brand.html.includes(c));
       assert.deepEqual(Object.keys(ui.files).sort(),['components.css','fonts.css','form-example.html','tailwind.css','tokens.css','tokens.json']);
       assert.doesNotThrow(()=>JSON.parse(ui.files['tokens.json']));
-      assert.equal(brand.pages,7);
-      assert.equal(ui.pages,8);
+      assert.equal(brand.pages,10);
+      assert.equal(ui.pages,10);
     }
   });
 }
@@ -52,5 +52,29 @@ test('the five interactive guides fit a phone and validate the example offline',
       await form.locator('input').press('Enter');
       assert.equal(await form.locator('output').innerText(),'Example submitted.',id);
     }
+  } finally { await browser.close(); }
+});
+
+test('the five deck covers keep distinct layouts for the same project', async t => {
+  const { chromium } = await import('@playwright/test');
+  let browser;
+  try { browser = await chromium.launch({channel:'chromium'}); }
+  catch { return t.skip('Chromium is unavailable'); }
+  try {
+    const page = await browser.newPage({viewport:{width:1280,height:720}});
+    await page.emulateMedia({media:'print'});
+    const project = sampleProject('flyleaf');
+    const layouts = new Set();
+    for (const id of Object.keys(themes)) {
+      const {html} = renderTemplate(project,id,'brand','deck');
+      await page.setContent(html);
+      await page.evaluate(() => document.fonts.ready);
+      const title = page.locator('.cover h1');
+      assert.equal(await title.innerText(), project.name);
+      const position = await title.boundingBox();
+      assert.ok(position.x >= 0 && position.x + position.width <= 1281,id);
+      layouts.add([position.x,position.y,position.width].map(n=>Math.round(n/32)).join(','));
+    }
+    assert.equal(layouts.size, Object.keys(themes).length);
   } finally { await browser.close(); }
 });
