@@ -10,6 +10,7 @@ The two downloads are **Brand guidelines** and **UI style guide**. Each ZIP cont
 | Doorlist | Encore | A venue poster, a ticket-style colour spread and a mobile box office |
 | Market Day | Saltbush | A produce circular, market photography, a jar label and round colour samples |
 | Contact Sheet | Long Room | Paired gallery prints, an exhibition panel and a visitor screen |
+| Workbench | Offcut | A clipboard quote with a tear-off job summary |
 
 Every brand guide includes a one-page identity sheet. Every UI guide has a keyboard-operable form with error and success states, also included as `form-example.html` in the ZIP. The sample applications use the corresponding project’s titles, prices and details. Provide `items` as an array of `{ "title", "detail", "price" }` records to populate them for another project.
 

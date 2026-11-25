@@ -8,6 +8,13 @@ export const editions = {
     ui:['cover','interface','icons','colour','contrast','tints','type','components','feedback','handoff'],
     controls:'.ui-demo{border:0;border-block:1px solid currentColor}.ui-demo button,.ui-demo input:not([type=checkbox]){border-radius:0}.ui-demo button{padding-inline:22px}',
   },
+  workbench: {
+    name:'Workbench',discipline:'Workshop job card', scenes:['bench-clipboard-toolbox','laptop-desk-light'],
+    contexts:['The job sheet','The quote desk'],detail:'Job sheet detail',screen:'Quotes and invoices',
+    brand:['cover','reference','application','composition','digital','type','specimen','logo','colour','strategy'],
+    ui:['cover','interface','feedback','components','type','icons','colour','contrast','tints','handoff'],
+    controls:'.ui-demo{border:2px solid currentColor;border-left-width:9px}.ui-demo button,.ui-demo input:not([type=checkbox]){border-radius:0;border-width:2px}',
+  },
 };
 
 export function editionCover(id,p,title,isUI,images,primary,fallback) {
