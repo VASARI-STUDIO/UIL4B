@@ -22,6 +22,13 @@ export const editions = {
     ui:['cover','interface','colour','contrast','icons','components','feedback','tints','type','handoff'],
     controls:'.ui-demo{border:0;border-top:7px solid var(--color-on-surface)}.ui-demo button{border-radius:2px;padding-inline:24px}.ui-demo label{border-bottom:1px solid var(--color-border);padding-bottom:6px}',
   },
+  hearth: {
+    name:'Hearth',discipline:'Residential energy handbook',scenes:['letterhead-linen','room-kitchen-phone'],
+    contexts:['The household letter','The home energy screen'],detail:'Letterhead detail',screen:'Installation overview',
+    brand:['cover','strategy','application','digital','logo','specimen','type','colour','composition','reference'],
+    ui:['cover','interface','type','components','feedback','colour','tints','contrast','icons','handoff'],
+    controls:'.ui-demo{border-radius:22px;padding:28px}.ui-demo button{border-radius:24px;padding-inline:24px}.ui-demo input:not([type=checkbox]){border-radius:10px}',
+  },
 };
 
 export function editionCover(id,p,title,isUI,images,primary,fallback) {
