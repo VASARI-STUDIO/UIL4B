@@ -15,6 +15,13 @@ export const editions = {
     ui:['cover','interface','feedback','components','type','icons','colour','contrast','tints','handoff'],
     controls:'.ui-demo{border:2px solid currentColor;border-left-width:9px}.ui-demo button,.ui-demo input:not([type=checkbox]){border-radius:0;border-width:2px}',
   },
+  soundings: {
+    name:'Soundings',discipline:'Wharf departure board',scenes:['wharf-sign','phone-hand'],
+    contexts:['The wharf sign','The departure screen'],detail:'Sign detail',screen:'Departures',
+    brand:['cover','colour','composition','application','digital','logo','type','specimen','reference','strategy'],
+    ui:['cover','interface','colour','contrast','icons','components','feedback','tints','type','handoff'],
+    controls:'.ui-demo{border:0;border-top:7px solid var(--color-on-surface)}.ui-demo button{border-radius:2px;padding-inline:24px}.ui-demo label{border-bottom:1px solid var(--color-border);padding-bottom:6px}',
+  },
 };
 
 export function editionCover(id,p,title,isUI,images,primary,fallback) {
