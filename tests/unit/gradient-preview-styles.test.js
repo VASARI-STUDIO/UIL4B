@@ -21,7 +21,7 @@ import assert from 'node:assert/strict'
 import {
   PREVIEW_STYLES, isPreviewStyle, stopList, linearThrough, glowColours, styleVars,
   FILL_STYLES, PREVIEW_PLACES, FIXED_SHAPE_STYLES, previewId, splitPreview,
-  MESH_TABLE, meshPoints, meshGround, meshBackground, waveBands, wavePath, WAVE_COUNT, phoneButton,
+  MESH_TABLE, meshPoints, meshGround, meshBackground, meshCss, waveBands, wavePath, WAVE_COUNT, phoneButton,
 } from '../../src/utils/gradientPreviewStyles.js'
 import { colourAt } from '../../src/utils/gradientScore.js'
 import { hexToOklchRaw } from '../../src/components/tool/oklch.js'
@@ -31,7 +31,7 @@ const STOPS = [{ color: '#2b59ff', position: 100 }, { color: '#ff7a1a', position
 test('the styles are named plainly and in order', () => {
   assert.deepEqual(
     PREVIEW_STYLES.map((s) => s.label),
-    ['Satin', 'Folded paper', 'Halftone', 'Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'],
+    ['Aperture', 'Satin', 'Folded paper', 'Halftone', 'Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'],
   )
   assert.equal(new Set(PREVIEW_STYLES.map((s) => s.id)).size, PREVIEW_STYLES.length)
   assert.ok(isPreviewStyle('mesh') && isPreviewStyle('waves') && isPreviewStyle('icon') && isPreviewStyle('phone'))
@@ -73,7 +73,7 @@ const SEVEN = ['#FFD84D', '#F0436A', '#6C2BD9', '#101830', '#2BD9A1', '#FF7A1A',
 const hexOf = (s) => s.color.toUpperCase()
 
 test('the Mesh puts one point per stop on the fixed table', () => {
-  assert.deepEqual(MESH_TABLE, [[20, 24], [80, 20], [52, 56], [18, 84], [84, 80]])
+  assert.deepEqual(MESH_TABLE, [[-6, 14], [88, 96], [66, 8], [12, 92], [49, 65]])
   for (const n of [2, 3, 4]) {
     const points = meshPoints(FOUR.slice(0, n), true)
     assert.equal(points.length, n, `${n} stops give ${n} points`)
@@ -106,7 +106,7 @@ test("changing one stop moves only that point's colour", () => {
   })
 })
 
-test("the Mesh's ground is the darkest stop by OKLCH lightness, and the points are soft circles of the stops", () => {
+test("the Mesh's ground is the darkest stop by OKLCH lightness, and the points are soft elliptical pools of the stops", () => {
   assert.equal(meshGround(FOUR), '#101830')
   assert.equal(meshGround([...FOUR].reverse()), '#101830')
   assert.equal(meshGround(SEVEN), '#101830')
@@ -118,8 +118,16 @@ test("the Mesh's ground is the darkest stop by OKLCH lightness, and the points a
   for (const s of FOUR) assert.ok(vars['--fx-mesh'].includes(`${hexOf(s)} 0`), `the mesh carries ${hexOf(s)}`)
   assert.equal(
     meshBackground([{ x: 20, y: 24, color: '#AAAAAA' }]),
-    'radial-gradient(circle at 20% 24%, #AAAAAA 0, transparent 58cqmax)',
+    'radial-gradient(ellipse 95% 104% at 20% 24%, #AAAAAA 0 25%, transparent 100%)',
   )
+})
+
+test('mesh background CSS is standalone and uses the same paint as the preview', () => {
+  const vars = styleVars('mesh', { stops: FOUR, oklch: true })
+  const css = meshCss(FOUR, true)
+  assert.ok(css.includes(`background-color: ${vars['--fx-ground']};`))
+  assert.ok(css.includes(`background-image: ${vars['--fx-mesh']};`))
+  assert.doesNotMatch(css, /var\(|cqmax|cqw|cqh/)
 })
 
 test("the Waves' seven bands are the ramp at k/6, as the canvas blends", () => {
@@ -157,7 +165,7 @@ test("the Phone's button is the most chromatic stop, whatever the list order", (
 
 test('the places and fill styles split the old list with nothing lost or doubled', () => {
   assert.deepEqual(PREVIEW_PLACES.map((p) => p.id), ['fill', 'hero', 'card', 'button', 'poster', 'spec', 'icon', 'phone'])
-  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'])
+  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'])
   const styleIds = new Set([...PREVIEW_PLACES, ...FILL_STYLES].map((x) => x.id))
   for (const s of PREVIEW_STYLES) assert.ok(styleIds.has(s.id), s.id)
   for (const id of FIXED_SHAPE_STYLES) assert.ok(FILL_STYLES.some((s) => s.id === id), id)

@@ -41,7 +41,7 @@ import GradientFx from '../components/tool/GradientFx'
 import GradientText from '../components/tool/GradientText'
 import useMeasured from '../components/tool/useMeasured'
 import PreviewSwitch from '../components/tool/PreviewSwitch'
-import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
+import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, meshCss, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
 import FillStylePicker from '../components/tool/FillStylePicker'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
@@ -56,6 +56,7 @@ import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pe
 // nothing depends on import order.
 // tool-shell.css is the shared tool shell the other tool pages load too.
 import '../styles/deferred/tool-shell.css'
+import '../styles/pages/gradient-fill.css'
 import '../styles/pages/gradient.css'
 
 // ── Gradient ──
@@ -708,10 +709,15 @@ function PreviewSample({ id, paint, stops, type, angle }) {
   if (id !== 'card') return null
   return (
     <div className="grd-ctx-view grd-ctx-ground" aria-hidden="true">
-      <div className="grd-ctx-card">
-        <div className="grd-ctx-card-head" style={{ background: paint }} />
-        <p className="grd-ctx-card-t">Quote on site. Paid by Friday.</p>
-        <p className="grd-ctx-card-p">Write a quote on site, turn it into an invoice with one tap, and see who has paid.</p>
+      <div className="grd-ctx-card" style={{ '--statement-fill': paint }}>
+        <div className="grd-statement-copy">
+          <span>Offcut Studio</span>
+          <div><p>Invoices paid</p><strong>$7,296</strong></div>
+          <small>March statement</small>
+        </div>
+        <div className="grd-statement-art">
+          <i /><i /><i />
+        </div>
       </div>
     </div>
   )
@@ -921,8 +927,11 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setPreview((p) => ({ ...p, fill }))
     writeSession(FILL_KEY, fill)
   }
+  const stageRef = useRef(null)
+  const [drawingFill, setDrawingFill] = useState(false)
   // The one scene the stage draws: the place, or on Fill the fill style.
   const previewAs = previewId(previewPlace, fillStyle)
+  const styledFill = previewPlace === 'fill' && fillStyle !== 'plain'
   const previewAsLabel = (previewPlace === 'fill' ? FILL_STYLES : PREVIEW_PLACES).find((c) => c.id === (previewPlace === 'fill' ? fillStyle : previewPlace))
   // A fill style that draws its own shape ignores Type and Angle; Shape says so.
   const shapeMoot = previewPlace === 'fill' && FIXED_SHAPE_STYLES.includes(fillStyle) ? previewAsLabel?.label : null
@@ -1525,6 +1534,31 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setTimeout(() => URL.revokeObjectURL(url), 4000)
   }
 
+  const downloadFill = async () => {
+    if (drawingFill || previewPlace !== 'fill') return
+    if (!isPro) {
+      openProModal({
+        gate: 'gradient-fill-image',
+        title: 'Export your fill as an image',
+        subtitle: 'Download the selected finish as a PNG for layouts, slides or print.',
+      })
+      return
+    }
+    const artwork = stageRef.current?.querySelector('.grd-fx') ||
+      stageRef.current?.querySelector('.grd-canvas')
+    if (!artwork) return
+    setDrawingFill(true)
+    try {
+      const { saveFillPng } = await import('../utils/gradientFillImage')
+      await saveFillPng(artwork, fillStyle, fileName(savedName || design?.name, `gradient-${fillStyle}`, 'png'))
+      closeSave('item')
+    } catch {
+      toast?.('Couldn’t create the fill image. Try the download again.', 'error')
+    } finally {
+      setDrawingFill(false)
+    }
+  }
+
   // The account is asked for BEFORE the name, as on the palette: a signed-out
   // visitor pressing Save with an empty name meets the sign-in, not a refusal
   // about the name.
@@ -2083,11 +2117,16 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           )}
           exports={(
             <>
-              {/* Seams, no rows yet: "Copy CSS with finishes" (a finish is on),
-                  Curtains and Beams (their own CSS and the SVG refusal), and
-                  "Download image" (Pro). */}
-              <SaveShareItem onClick={() => copyExport(gradientCssText(type, angle, stops, space))}>Copy CSS</SaveShareItem>
-              <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>Copy Tailwind class</SaveShareItem>
+              {previewPlace === 'fill' && (
+                <SaveShareItem icon="download" onClick={downloadFill} disabled={drawingFill} busy={drawingFill} hint={isPro ? '2048 px' : 'Pro'}>
+                  {drawingFill ? 'Rendering fill…' : `Download ${previewAsLabel.label} PNG`}
+                </SaveShareItem>
+              )}
+              {previewAs === 'mesh' && (
+                <SaveShareItem onClick={() => copyExport(meshCss(stops, fxOklch))}>Copy mesh background CSS</SaveShareItem>
+              )}
+              <SaveShareItem onClick={() => copyExport(gradientCssText(type, angle, stops, space))}>{styledFill ? 'Copy base gradient CSS' : 'Copy CSS'}</SaveShareItem>
+              <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>{styledFill ? 'Copy base Tailwind class' : 'Copy Tailwind class'}</SaveShareItem>
               <SaveShareItem
                 icon="download"
                 onClick={downloadSvg}
@@ -2095,7 +2134,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 reason="SVG can't draw a conic gradient"
                 hint={user ? undefined : 'Needs a free account'}
               >
-                Download SVG
+                {styledFill ? 'Download base gradient SVG' : 'Download SVG'}
               </SaveShareItem>
             </>
           )}
@@ -2143,7 +2182,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </p>
           )}
           {/* The stage is the canvas's fixed slot. */}
-          <div className="grd-stage" data-ctx={previewAs}>
+          <div ref={stageRef} className="grd-stage" data-ctx={previewAs}>
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
             <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
             {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
@@ -2499,7 +2538,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
             {/* Always drawn so a screen reader hears the line when it appears. */}
             <div className="grd-geo-live" aria-live="polite">
-              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. They still apply to the export.</p>}
+              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. They apply to the base gradient’s CSS and SVG.</p>}
             </div>
             <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
               <ToolPills

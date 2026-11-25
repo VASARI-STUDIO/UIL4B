@@ -27,8 +27,9 @@ import { go, watch } from './helpers.js'
 
 const KEY = 'vs-gradient-preview'
 const FILL_KEY = 'vs-gradient-fill'
+const MATERIALS = [['satin', 'Satin'], ['folds', 'Folded paper'], ['halftone', 'Halftone']]
 const STYLES = [
-  ['satin', 'Satin'], ['folds', 'Folded paper'], ['halftone', 'Halftone'],
+  ['aperture', 'Aperture'], ...MATERIALS,
   ['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'],
   ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade'],
 ]
@@ -105,7 +106,7 @@ test.describe('the preview styles', () => {
     await withStops(page, '#163951', '#E7A777')
     await open(page)
     const type = page.getByRole('group', { name: 'Gradient type' })
-    for (const [id, name] of STYLES.slice(0, 3)) {
+    for (const [id, name] of MATERIALS) {
       await triggerOf(page).click()
       const tile = pickerOf(page).getByRole('button', { name, exact: true })
       await tile.click()

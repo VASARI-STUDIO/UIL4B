@@ -3,7 +3,7 @@ import { styleVars, specHexes, waveBands, wavePath, CAPTION_NARROW_HEXES } from 
 // The Gradient Generator's preview styles, drawn over the canvas slot. Everything is CSS
 // (gradients, masks, blur and an SVG noise tile) so it is vector-crisp at any pixel
 // density and is painted once per gradient change, never per frame. The rules live in
-// gradient.css under "PREVIEW STYLES".
+// gradient-fill.css, which the PNG export also uses.
 //
 // Fluted glass and Glow ring are seen through reeded glass: the scene is drawn several
 // times, each copy shifted a little sideways and masked to one narrow slice of every
@@ -32,6 +32,8 @@ const STREAKS = [
 
 function Scene({ id, stops, oklch, name }) {
   switch (id) {
+    case 'aperture':
+      return <><div className="grd-fx-aperture"><div className="grd-fx-lamp" /><Flutes><div className="grd-fx-lamp" /></Flutes></div><div className="grd-fx-grain" /></>
     case 'satin':
     case 'folds':
     case 'halftone':

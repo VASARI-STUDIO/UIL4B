@@ -1,5 +1,4 @@
-// The Gradient Generator's preview styles: Grain, Fluted glass, Glow ring, Streak,
-// Soft glow, Fade, Poster, Spec card, Mesh, Waves, App icon and Phone. Each is a real-time CSS render of the person's
+// The Gradient Generator’s fill styles and object scenes render the person’s
 // own stops (see GradientFx.jsx); this module is the part that is plain data and string
 // building, so the colours a style draws can be checked without a browser.
 //
@@ -11,6 +10,7 @@ import { hexToOklchRaw } from '../components/tool/oklch.js'
 
 /** The styles, in switcher order. `as` completes the canvas's spoken name. */
 export const PREVIEW_STYLES = [
+  { id: 'aperture', label: 'Aperture', as: ', shown through an optical aperture' },
   { id: 'satin', label: 'Satin', as: ', shown on satin' },
   { id: 'folds', label: 'Folded paper', as: ', shown on folded paper' },
   { id: 'halftone', label: 'Halftone', as: ', shown as halftone ink' },
@@ -38,7 +38,7 @@ export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
 /** The fill styles, in picker order. Plain is the canvas as it is. */
 export const FILL_STYLES = [
   { id: 'plain', label: 'Plain', as: '' },
-  ...['satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+  ...['aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
 ]
 export const isFillStyle = (id) => FILL_STYLES.some((s) => s.id === id)
 
@@ -53,7 +53,7 @@ export const PREVIEW_PLACES = [
 export const isPreviewPlace = (id) => PREVIEW_PLACES.some((p) => p.id === id)
 
 /** Fill styles that draw their own shape, so the gradient's Type and Angle don't change them. */
-export const FIXED_SHAPE_STYLES = ['streak', 'glow', 'fade', 'mesh', 'waves']
+export const FIXED_SHAPE_STYLES = ['aperture', 'streak', 'glow', 'fade', 'mesh', 'waves']
 
 /** The one id the stage renders: the place, or under Fill the fill style ('fill' when Plain). */
 export function previewId(place, fill) {
@@ -117,6 +117,7 @@ export function glowColours(stops) {
  */
 export function styleVars(id, { stops, paint, oklch }) {
   switch (id) {
+    case 'aperture': return { '--fx-spectrum': stopList(stops), '--fx-space': oklch ? 'in oklch' : 'in srgb' }
     case 'streak': return { '--fx-row': linearThrough(90, stops, oklch) }
     case 'fade': return { '--fx-wash': linearThrough(180, stops, oklch) }
     case 'glow': {
@@ -168,9 +169,9 @@ export const specSampledNote = (stops) => (stops.length < SPEC_FULL_STOPS ? 'Sam
 export const specName = (savedName, type) => String(savedName ?? '').trim() || `${type} gradient`
 
 /** Where the Mesh's soft points sit, as [x, y] percent of the stage. A fixed table, never noise. */
-export const MESH_TABLE = [[20, 24], [80, 20], [52, 56], [18, 84], [84, 80]]
-/** How far each Mesh point's colour reaches before it is clear. */
-export const MESH_REACH = '58cqmax'
+export const MESH_TABLE = [[-6, 14], [88, 96], [66, 8], [12, 92], [49, 65]]
+// Elliptical pools can cross the crop. Each holds a solid centre and feathers at its own rate.
+const MESH_POOLS = [[95, 104, 25], [80, 70, 22], [68, 83, 16], [68, 61, 26], [70, 50, 14]]
 /** The ramp positions the Mesh samples when there are more stops than points, in percent. */
 export const MESH_POSITIONS = [0, 25, 50, 75, 100]
 
@@ -191,8 +192,16 @@ export function meshGround(stops) {
   return byPosition(stops).reduce((low, s) => (hexToOklchRaw(s.color)[0] < hexToOklchRaw(low.color)[0] ? s : low)).color.toUpperCase()
 }
 
-/** The Mesh's points as one `background` value: a soft circle of colour at each point, the first on top. */
-export const meshBackground = (points) => points.map((p) => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0, transparent ${MESH_REACH})`).join(', ')
+export const meshBackground = (points) => points.map((p, index) => {
+  const [width, height, core] = MESH_POOLS[index]
+  return `radial-gradient(ellipse ${width}% ${height}% at ${p.x}% ${p.y}%, ${p.color} 0 ${core}%, transparent 100%)`
+}).join(', ')
+
+// A responsive CSS background for sites. The PNG also includes the grain layer.
+export function meshCss(stops, oklch) {
+  const vars = styleVars('mesh', { stops, oklch })
+  return `background-color: ${vars['--fx-ground']};\nbackground-image: ${vars['--fx-mesh']};`
+}
 
 /** How many bands the Waves draw, how tall a crest is (percent of the height) and how far each band's phase steps (degrees). */
 export const WAVE_COUNT = 7
