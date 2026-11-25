@@ -13,6 +13,7 @@ The two downloads are **Brand guidelines** and **UI style guide**. Each ZIP cont
 | Workbench | Offcut | A clipboard quote with a tear-off job summary |
 | Soundings | Two Shores | A wharf sign, a departure board and a mobile fare screen |
 | Hearth | Northern Current | Household stationery, an arched photographic window and a home energy guide |
+| Offprint | Shallow End | A pool bulletin with a diagonal photo crop and a lesson schedule |
 
 Every brand guide includes a one-page identity sheet. Every UI guide has a keyboard-operable form with error and success states, also included as `form-example.html` in the ZIP. The sample applications use the corresponding project’s titles, prices and details. Provide `items` as an array of `{ "title", "detail", "price" }` records to populate them for another project.
 
@@ -51,6 +52,6 @@ node scripts/studio-exports/build.mjs --theme flyleaf --project ./project.json -
 }
 ```
 
-Supply the saved logo as `design.logo.src`, a supported base64 image. Optional fields include `date` (ISO date), `headline`, `application`, `mission`, `voice`, `paletteNames`, `colourUses`, `screenTitle`, `screenDetail`, `formLabel`, `formValue` and `action`. See `samples.mjs` for complete project inputs and `themes.mjs` for the page order and studio collection. Fonts come from the local UIL4B font collection. The build reports an unavailable family or weight.
+Supply the saved logo as `design.logo.src`, a supported base64 image. Optional fields include `date` (ISO date), `headline`, `application`, `mission`, `voice`, `paletteNames`, `colourUses`, `screenTitle`, `screenDetail`, `formLabel`, `formValue` and `action`. See `samples.mjs` for complete project inputs and `themes.mjs` for the page order and ten-theme collection. Fonts come from the local UIL4B font collection. The build reports an unavailable family or weight.
 
 The local builder produces the product files directly. The live export picker uses the existing format registry.

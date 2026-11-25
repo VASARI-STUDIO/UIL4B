@@ -29,6 +29,13 @@ export const editions = {
     ui:['cover','interface','type','components','feedback','colour','tints','contrast','icons','handoff'],
     controls:'.ui-demo{border-radius:22px;padding:28px}.ui-demo button{border-radius:24px;padding-inline:24px}.ui-demo input:not([type=checkbox]){border-radius:10px}',
   },
+  offprint: {
+    name:'Offprint',discipline:'Poolside print bulletin',scenes:['pool-tile-sign','phone-pool-edge'],
+    contexts:['The poolside sign','The lesson screen'],detail:'Sign lettering',screen:'Lesson schedule',
+    brand:['cover','specimen','composition','colour','application','digital','type','logo','reference','strategy'],
+    ui:['cover','interface','type','icons','components','feedback','tints','colour','contrast','handoff'],
+    controls:'.ui-demo{border:0;border-block:4px double currentColor}.ui-demo button{border-radius:0 16px 0 0}.ui-demo input:not([type=checkbox]){border-radius:0;border-bottom-width:3px}',
+  },
 };
 
 export function editionCover(id,p,title,isUI,images,primary,fallback) {
