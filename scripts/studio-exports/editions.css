@@ -1,0 +1,104 @@
+
+/* Gallery catalogue. Two mounted prints make a contact sheet. */
+.contact-front{background:var(--dark);color:var(--on-dark);padding:24px 42px;grid-template-rows:auto 1fr auto;gap:20px}
+.contact-label,.contact-title{display:flex;justify-content:space-between;align-items:end;gap:18px}
+.contact-label{font-size:15px;border-bottom:1px solid;padding-bottom:9px}
+.exposures{display:grid;grid-template-columns:1.45fr 1fr;gap:15px;min-height:0}
+.exposures figure{background:#e9e5dc;border:8px solid #e9e5dc}
+.contact-title h1{font-size:calc(10.2cqw * var(--title-fit))}.contact-title p{max-width:17ch;font-size:22px}
+.contact-sheet .sheet{--paper:#f8f6f1}.contact-sheet header{border-bottom:0}
+.contact-sheet :is(.colour,.icons,.specimen){background:var(--dark);color:var(--on-dark)}
+.contact-sheet .inside{grid-template-columns:minmax(0,.55fr) minmax(0,1.45fr);gap:36px}
+.contact-sheet :is(.colour,.icons,.type) .inside{grid-template-columns:1fr}
+.contact-sheet :is(.colour,.icons,.type) .heading{display:flex;justify-content:space-between;align-items:end;gap:18px}
+.contact-sheet :is(.colour,.icons,.type) .heading p{max-width:42ch}
+.contact-sheet .swatches{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.contact-sheet .swatch{display:flex;min-height:180px;justify-content:end;align-items:start;flex-direction:column;border:5px solid #f4f1ec;padding:12px}
+.contact-sheet .readings,.contact-sheet .application-plate{border:8px solid #dedbd3}
+.contact-sheet .icons .content>.icons>div{border:1px solid;padding:10px}
+
+/* Workshop docket. Job details occupy the tear-off strip. */
+.bench-front{background:var(--dark);color:var(--on-dark);grid-template-columns:1fr 28%;grid-template-rows:auto 1fr;padding:22px;gap:14px}
+.bench-top{grid-column:1/-1;display:flex;align-items:end;justify-content:space-between;gap:15px;border-bottom:4px solid;padding-bottom:12px}
+.bench-top h1{font-size:calc(9.6cqw * var(--title-fit))}.bench-top .edition-title{font-size:21px}
+.work-order{background:var(--accent);color:var(--on-accent);padding:24px;display:flex;flex-direction:column;justify-content:space-between;gap:15px;border-left:3px dashed}
+.work-order p{font:var(--hw) 3.0cqw/1.08 var(--head);letter-spacing:-.04em}.work-order b{font:var(--hw) 3cqw/1 var(--head);border-top:1px solid;padding-top:12px}
+.workbench .sheet{--paper:#f3f2ee}.workbench header{border-bottom:4px solid}
+.workbench .sheet:not(.cover){border-right:10px solid var(--accent)}
+.workbench .inside{grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:22px}
+.workbench h2{font-size:3cqw}.workbench :is(.reference,.components,.type,.colour) .inside{grid-template-columns:1fr;gap:18px}
+.workbench :is(.reference,.components,.type,.colour) .heading{display:flex;justify-content:space-between;align-items:end;gap:16px}
+.workbench .swatch{grid-template-columns:minmax(125px,.8fr) .7fr 1fr 1.6fr;align-items:center}.workbench .swatch p,.workbench .swatch small{grid-column:auto}
+.workbench .prompt,.workbench .response-key>div{border-top:2px dashed}.workbench .type .content{grid-template-columns:1fr 1.35fr}.workbench .typepair{grid-template-columns:1fr}
+.workbench .logo-board{border:4px solid}.workbench .application-plate{border-bottom:6px solid var(--accent)}
+
+/* Transport wayfinding. Schedule and photograph share a vertical axis. */
+.harbour-front{background:var(--dark);color:var(--on-dark);grid-template-columns:48% 1fr;grid-template-rows:auto 1fr;padding:24px 28px;gap:24px}
+.harbour-head{grid-row:1;grid-column:1;padding-bottom:12px;border-bottom:4px solid}
+.harbour-head h1{margin-top:14px;font-size:calc(8.9cqw * var(--title-fit))}
+.departure-panel{align-self:end;padding-bottom:10px}.departure-panel p{font:var(--hw) 3.2cqw/1.02 var(--head)}
+.departure-panel ul{list-style:none;margin:20px 0 0;padding:0}
+.departure-panel li{padding:9px 0;display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid;gap:10px}
+.departure-panel li strong{font:var(--hw) 22px/1 var(--head)}.departure-panel li span{font-size:16px}
+.harbour-front .main-shot{grid-column:2;grid-row:1/3;border-radius:160px 160px 0 0}
+.soundings .sheet{--paper:#f2f3ec}.soundings :is(.colour,.components,.icons){background:var(--dark);color:var(--on-dark)}
+.soundings .inside{grid-template-columns:minmax(0,.65fr) minmax(0,1.35fr);gap:25px}
+.soundings .heading{border-top:8px solid;padding-top:14px}.soundings h2{font-size:4.5cqw}
+.soundings .swatch{border-left:9px solid;display:grid;grid-template-columns:1fr auto auto;align-items:baseline}
+.soundings .swatch small{grid-column:auto}.soundings .reading-sample{border-radius:100px 100px 0 0;padding:35px 40px}
+.soundings .interface-study .listing{border-top:3px solid}.soundings .signal,.soundings .prompt{border-top-width:3px}
+
+/* A domestic handbook. The window and low baseline recur through the guide. */
+.hearth-front{background:var(--accent);color:var(--on-accent);padding:24px 38px;grid-template-rows:auto 1fr auto;gap:12px}
+.hearth-front>.edition-title{justify-self:center}.hearth-window{justify-self:center;width:66%;min-height:0;display:grid;border-radius:250px 250px 12px 12px;overflow:hidden}
+.hearth-title{display:flex;align-items:end;justify-content:space-between;gap:24px;border-top:1px solid;padding-top:13px}
+.hearth-title p{font:var(--bw) 23px/1.15 var(--body);max-width:16ch}.hearth-title h1{max-width:80%;text-align:right;font-size:calc(9.8cqw * var(--title-fit))}
+.hearth .sheet{--paper:#faf6ed}.hearth header{border:0}.hearth .inside{grid-template-columns:1fr}
+.hearth .heading{display:flex;align-items:end;justify-content:space-between;gap:20px}.hearth .heading p{max-width:34ch}
+.hearth .swatches{display:flex;gap:8px}.hearth .swatch{display:flex;align-items:start;justify-content:end;flex-direction:column;flex:1;min-width:0;padding:35px 12px 15px;border-radius:95px 95px 5px 5px;min-height:200px}
+.hearth :is(.type,.strategy,.components,.feedback,.handoff) .inside{grid-template-columns:minmax(0,.6fr) minmax(0,1.4fr)}
+.hearth :is(.type,.strategy,.components,.feedback,.handoff) .heading{display:block}
+.hearth :is(.specimen,.feedback){background:var(--accent);color:var(--on-accent)}
+.hearth .logo-board{border:0;border-radius:90px 90px 12px 12px}.hearth .application-plate{border-radius:32px 32px 2px 2px}
+.hearth .prompt,.hearth .identity-reference{border-radius:16px;background:#fff;color:var(--dark);padding:18px}
+
+/* Pool bulletin. The diagonal crop is paired with a registration-colour band. */
+.offprint-front{background:var(--spot);color:var(--on-spot);padding:20px 30px;grid-template-columns:28% 1fr;grid-template-rows:1fr auto;gap:18px}
+.print-mast{display:flex;flex-direction:column;justify-content:space-between;gap:15px;padding:12px 0}
+.print-mast p{font:var(--hw) 3.5cqw/.98 var(--head);letter-spacing:-.045em}
+.print-image{min-height:0;display:grid;clip-path:polygon(7% 0,100% 0,93% 100%,0 100%)}
+.print-name{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;align-items:end;gap:10px;border-top:5px double;padding-top:12px}
+.print-name h1{font-size:calc(10.8cqw * var(--title-fit))}.print-name span{font-size:16px;max-width:18ch}
+.offprint .sheet{--paper:#f8f5ed}.offprint header{border-bottom:3px double}.offprint .inside{grid-template-columns:1fr}
+.offprint .heading{display:flex;align-items:end;justify-content:space-between;gap:16px}.offprint .heading p{max-width:37ch;margin:0}
+.offprint :is(.colour,.specimen,.icons){background:var(--spot);color:var(--on-spot)}.offprint .swatches{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.offprint .swatch{border:0;border-radius:0 30px 0 0}.offprint .sheet.type .content{grid-template-columns:1fr 1.25fr}.offprint .typepair{grid-template-columns:1fr}
+.offprint :is(.application,.digital,.reference,.components,.feedback) .inside{grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr)}
+.offprint :is(.application,.digital,.reference,.components,.feedback) .heading{display:block}.offprint h2{font-size:3.9cqw}
+.offprint .reading-sample{border-left:18px solid var(--accent)}.offprint .screen-bar,.offprint .prompt{border-bottom:3px double}
+.a4 .bench-front{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}.a4 .work-order{flex-direction:row;align-items:center;border-left:0;border-top:3px dashed}.a4 .work-order p{max-width:16ch}
+.a4 .bench-front .main-shot img{object-position:86% center}
+.a4 .hearth-window{width:100%;aspect-ratio:1.26;align-self:center;border-radius:36% 36% 12px 12px}.a4 .hearth-window .main-shot img{object-position:37% center}
+.a4 .hearth-front .hearth-title h1{font-size:calc(14cqw * var(--title-fit))}.a4 .hearth-title{flex-direction:column;align-items:center}.a4 .hearth-title h1{text-align:center;max-width:100%}
+.a4 .offprint-front{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}.a4 .print-mast{flex-direction:row;align-items:end}.a4 .print-mast p{max-width:15ch}
+.a4 .contact-title{display:block}.a4 .contact-title p{margin-top:10px}.a4 .exposures{grid-template-columns:1fr;grid-template-rows:1.3fr .7fr}
+.a4 .harbour-front{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}.a4 .harbour-front .main-shot{grid-column:1;grid-row:2}.a4 .departure-panel{grid-row:3}
+.a4 .sheet .heading{display:block}.a4 .sheet h2{font-size:6.8cqw}.a4 .sheet .swatches{display:grid;grid-template-columns:1fr 1fr}
+.a4.workbench .swatch{grid-template-columns:1fr auto}.a4.workbench .swatch p,.a4.workbench .swatch small{grid-column:1/-1}
+.a4 .sheet.type .content{grid-template-columns:1fr}.a4.hearth .swatch{min-height:150px}
+@media screen and (max-width:850px){
+ body .sheet .inside{display:flex;flex-direction:column;align-items:stretch;gap:20px}body .sheet .heading{display:block}
+ body .sheet .heading p{margin:10px 0 0}.sheet .heading h2,body.a4 .sheet .heading h2{font-size:clamp(30px,7cqw,49px)}
+ body .sheet .swatches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}body .sheet.type .content{grid-template-columns:1fr}
+ .workbench .swatch,.soundings .swatch{grid-template-columns:1fr auto}.workbench .swatch p,.workbench .swatch small,.soundings .swatch small{grid-column:1/-1}
+ .bench-top,.contact-title,.hearth-title,.print-name{display:block}.bench-top h1,.contact-title h1,.hearth-title h1,.print-name h1{margin:8px 0}
+ .exposures{min-height:230px}.departure-panel li{display:grid;gap:3px}.work-order{padding:12px}
+ .hearth-title h1{text-align:left;max-width:100%}.harbour-front,.offprint-front,.contact-front,.bench-front,.hearth-front{padding:16px;gap:12px}
+}
+@media screen and (max-width:520px){
+ body .sheet .swatches{grid-template-columns:1fr}.harbour-front,.bench-front,.offprint-front{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+ .harbour-front .main-shot{grid-row:2;grid-column:1;border-radius:50px 50px 0 0}.departure-panel{grid-row:3}.departure-panel ul{margin-top:8px}
+ .departure-panel p,.print-mast p,.work-order p{font-size:24px}.departure-panel li{display:flex}.contact-label{align-items:start;gap:12px}
+ .contact-title p,.hearth-title p{font-size:18px}.hearth-window{width:100%;min-height:210px}.print-mast{gap:8px}
+ .contact-sheet .swatch,.hearth .swatch{min-height:80px}.hearth .swatch{border-radius:24px 24px 5px 5px;padding:18px}
+}

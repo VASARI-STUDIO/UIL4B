@@ -10,9 +10,11 @@ import { ICONS, ICONS_LICENCE } from '../../api/_lib/exportThemes/icons.js';
 import { themes } from './themes.mjs';
 
 import { esc, appSpecimen, applicationSpecimen, coverArtwork, identityReference, formExample, formScript } from './specimens.mjs';
+import { editions } from './editions.mjs';
 import { frontispiece, appliedImage, composition, liveSpecimen, interfaceStudy, componentStyles } from './masters.mjs';
 export { esc };
 const stylesheet = fs.readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
+const additionalStyles = fs.readFileSync(new URL('./editions.css', import.meta.url), 'utf8');
 const fontDir = new URL('../../api/_lib/exportThemes/fonts/', import.meta.url);
 const faces = Object.values(BRANDS).flatMap(b => Object.values(b.data.fonts));
 const b64 = text => Buffer.from(text).toString('base64');
@@ -131,6 +133,6 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   const spot=d.palette.find(c=>ratio(c,accent)>=3 && c!==dark && ratio(c,'#fff')>=2.4) || accent;
   const variables=`:root{--head:"${d.heading}";--body:"${d.body}";--hw:${d.headingWeight};--bw:${d.bodyWeight};--accent:${accent};--on-accent:${onAccent};--dark:${dark};--on-dark:${ink(dark,d.palette)};--spot:${spot};--on-spot:${ink(spot,d.palette)};--title-fit:${Math.min(1,10/Math.max(1,(project.name||'Your brand').length))};--w:${layout==='deck'?'1280':'794'}px;--h:${layout==='deck'?'720':'1122'}px}@page{size:${layout==='deck'?'1280px 720px':'A4 portrait'};margin:0}`;
   const nav='<nav class="contents" aria-label="Guide sections">'+pages.map((p,i)=>i && pages[i-1].id!==p.id?'<a href="#page-'+(i+1)+'">'+p.heading+'</a>':'').join('')+'</nav>';
-  const html=`<!doctype html><html lang="en-AU"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name} · ${title} · ${theme.name}</title><style>${fontCss}\n${files['tokens.css'].replaceAll('<','\\\\3c ')}\n${variables}\n${stylesheet}\n\n${componentCss}</style><body class="${themeId} ${layout} ${product}-guide">${nav}<main>${pages.map(sheet).join('')}</main>${product==='ui'?`<script>${formScript}</script>`:''}</body></html>`;
+  const html=`<!doctype html><html lang="en-AU"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name} · ${title} · ${theme.name}</title><style>${fontCss}\n${files['tokens.css'].replaceAll('<','\\\\3c ')}\n${variables}\n${stylesheet}${editions[themeId]?additionalStyles:''}\n\n${componentCss}</style><body class="${themeId} ${layout} ${product}-guide">${nav}<main>${pages.map(sheet).join('')}</main>${product==='ui'?`<script>${formScript}</script>`:''}</body></html>`;
   return {html,pages:pages.length,files:product==='ui'?files:{},license:license+(product==='ui' && iconIds.length?'\n'+ICONS_LICENCE:'')};
 }

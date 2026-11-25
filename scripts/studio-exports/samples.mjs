@@ -9,7 +9,13 @@ import * as presentation from '../../api/_lib/exportThemes/themes/01-presentatio
 import * as poster from '../../api/_lib/exportThemes/themes/02-poster/index.js';
 import * as broadsheet from '../../api/_lib/exportThemes/themes/03-broadsheet/index.js';
 
-const editions = { flyleaf: catalogue, 'set-square': blueprint, dispatch: presentation, doorlist: poster, 'market-day': broadsheet };
+import * as monograph from '../../api/_lib/exportThemes/themes/08-monograph/index.js';
+import * as studio from '../../api/_lib/exportThemes/themes/06-studio/index.js';
+import * as standards from '../../api/_lib/exportThemes/themes/04-standards/index.js';
+import * as spec from '../../api/_lib/exportThemes/themes/07-spec/index.js';
+import * as inUse from '../../api/_lib/exportThemes/themes/10-inuse/index.js';
+
+const editions = { 'contact-sheet':monograph, workbench:studio, soundings:standards, hearth:spec, offprint:inUse, flyleaf: catalogue, 'set-square': blueprint, dispatch: presentation, doorlist: poster, 'market-day': broadsheet };
 
 export function sampleProject(theme) {
   const original = editions[theme];

@@ -12,7 +12,7 @@ import { sampleProject } from './samples.mjs';
 import { renderTemplate } from './document.mjs';
 import { libraryPage, saveComparison } from './gallery.mjs';
 import { makePhotographs, findScenes } from './photography.mjs';
-import { themes, plannedThemes } from './themes.mjs';
+import { themes } from './themes.mjs';
 
 const {values}=parseArgs({options:{out:{type:'string'},theme:{type:'string'},project:{type:'string'},scenes:{type:'string'}}});
 if (!values.out) throw new Error('Pass --out followed by the output directory.');
@@ -81,4 +81,4 @@ try {
   }
   await saveComparison(browser,root,editions);
 } finally {await browser.close();await rm(scratch,{recursive:true,force:true});}
-await writeFile(path.join(root,'index.html'),libraryPage(editions,plannedThemes));
+await writeFile(path.join(root,'index.html'),libraryPage(editions));

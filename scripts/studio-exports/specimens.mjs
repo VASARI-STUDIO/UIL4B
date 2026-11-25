@@ -8,6 +8,7 @@ export function coverArtwork(id, project, mark, photo) {
   const name=esc(project.name), headline=esc(project.headline || project.name);
   const [lead]=project.items || [];
   switch (id) {
+    default:return `<div class="art"><small>${name}</small><strong>${headline}</strong>${mark}</div>`;
     case 'flyleaf':
       return `<div class="art jacket"><div class="bookback"></div><div class="bookfront"><small>${name}</small><strong>${esc(lead?.title || project.headline || project.name)}</strong><i aria-hidden="true"></i></div></div>`;
     case 'set-square':
@@ -33,7 +34,7 @@ export function applicationSpecimen(id, project, mark) {
   const heading=esc(items[0]?.title || project.applicationLine || project.headline || project.name);
   const more=id==='market-day'?items.slice(1,2):[];
   const details=items[0]?`<div class="purchase-line"><span>${esc(items[0].detail)}</span><b>${esc(items[0].price)}</b></div>`:'';
-  return `<figure class="stationery">${mark}<strong>${heading}</strong>${details}${more.map(listing).join('')}</figure><div class="note"><small>${labels[id]}</small><p>${esc(items.length ? instructions[id] : (project.application || 'Use the mark and selected type together on the same customer touchpoint.'))}</p></div>`;
+  return `<figure class="stationery">${mark}<strong>${heading}</strong>${details}${more.map(listing).join('')}</figure><div class="note"><small>${labels[id] || 'Artwork detail'}</small><p>${esc(items.length && instructions[id] ? instructions[id] : (project.application || 'Use the mark and selected type together on the same customer touchpoint.'))}</p></div>`;
 }
 
 export function identityReference(project, design, mark) {

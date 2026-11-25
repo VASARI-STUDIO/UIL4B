@@ -32,7 +32,7 @@ test('entered mission and voice survive export as text',()=>{
   assert.ok(!html.includes('One sentence, 12 to 20 words'));
 });
 
-test('the five interactive guides fit a phone and validate the example offline', async t => {
+test('the interactive guides fit a phone and validate the example offline', async t => {
   const { chromium } = await import('@playwright/test');
   let browser;
   try { browser = await chromium.launch({channel:'chromium'}); }
@@ -55,7 +55,7 @@ test('the five interactive guides fit a phone and validate the example offline',
   } finally { await browser.close(); }
 });
 
-test('the five deck covers keep distinct layouts for the same project', async t => {
+test('the studio deck covers keep distinct layouts for the same project', async t => {
   const { chromium } = await import('@playwright/test');
   let browser;
   try { browser = await chromium.launch({channel:'chromium'}); }

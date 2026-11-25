@@ -1,3 +1,5 @@
+import { editions } from './editions.mjs';
+
 export const themes = {
   flyleaf: {
     name: 'Flyleaf', discipline: 'Editorial folio',
@@ -24,6 +26,5 @@ export const themes = {
     brand: ['cover','colour','application','digital','composition','reference','specimen','type','logo','strategy'],
     ui: ['cover','interface','colour','icons','components','feedback','tints','contrast','type','handoff'],
   },
+  ...editions,
 };
-
-export const plannedThemes = ['Contact Sheet','Workbench','Soundings','Hearth','Offprint'];
