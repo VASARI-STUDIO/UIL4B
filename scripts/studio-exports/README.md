@@ -4,16 +4,16 @@ The two downloads are **Brand guidelines** and **UI style guide**. Each ZIP cont
 
 | Theme | Sample project | Design |
 | --- | --- | --- |
-| Flyleaf | Margin | A plum book cover, a jacket photographed in hand and an editorial type specimen |
-| Set Square | Plumbline | A bound technical manual, a site hoarding and ruled specification sheets |
+| Flyleaf | Margin | A ruled spine, a folded-leaf drawing and a photographed jacket |
+| Set Square | Plumbline | A stepped architectural drawing, a site hoarding and ruled specification sheets |
 | Dispatch | Kerbside | Full-bleed rider photography, a street billboard and high-contrast wayfinding layouts |
-| Doorlist | Encore | A venue poster, a ticket-style colour spread and a mobile box office |
+| Doorlist | Encore | A radial concert bill, perforated colour proofs and a box office ticket |
 | Market Day | Saltbush | A produce circular, market photography, a jar label and round colour samples |
-| Contact Sheet | Long Room | Paired gallery prints, an exhibition panel and a visitor screen |
-| Workbench | Offcut | A clipboard quote with a tear-off job summary |
-| Soundings | Two Shores | A wharf sign, a departure board and a mobile fare screen |
+| Contact Sheet | Long Room | A vertical catalogue title, a wall label and aperture studies |
+| Workbench | Offcut | A folding rule, a clipboard quote and an itemised estimate |
+| Soundings | Two Shores | Crossing lines, a wharf sign and a live departure list |
 | Hearth | Northern Current | Household stationery, an arched photographic window and a home energy guide |
-| Offprint | Shallow End | A pool bulletin with a diagonal photo crop and a lesson schedule |
+| Offprint | Shallow End | A lane-turn drawing, poolside signage and a lesson roster |
 
 Every brand guide includes a one-page identity sheet. Every UI guide has a keyboard-operable form with error and success states, also included as `form-example.html` in the ZIP. The sample applications use the corresponding project’s titles, prices and details. Provide `items` as an array of `{ "title", "detail", "price" }` records to populate them for another project.
 
@@ -29,7 +29,7 @@ node scripts/studio-exports/build.mjs --out ./studio-exports
 
 The builder locates the workspace’s `export-systems/engine/scenes` directory. For an independent checkout, pass `--scenes <path-to-scenes>`. It fits the project artwork to the photographed surfaces using their saved coordinates and embeds the finished images in the guides.
 
-Open `index.html` in the output directory. Each guide also has a directly openable PDF and HTML file for each layout. Individual page images are inside the ZIP. The two guides embed their font faces and work offline. Keep the standalone form example beside the bundled stylesheets when extracting it. The code download links in the UI guide work offline as well.
+Open `index.html` in the output directory. The two comparison sheets show brand and UI spreads rendered from the PDFs. Each guide also has a directly openable PDF and HTML file for each layout. Individual page images are inside the ZIP. The two guides embed their font faces and work offline. Keep the standalone form example beside the bundled stylesheets when extracting it. The code download links in the UI guide work offline as well.
 
 To generate one theme for another project, supply a JSON file. Use a separate output directory for each collection.
 

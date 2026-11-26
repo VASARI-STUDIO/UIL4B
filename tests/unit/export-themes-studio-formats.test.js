@@ -78,3 +78,32 @@ test('the studio deck covers keep distinct layouts for the same project', async 
     assert.equal(layouts.size, Object.keys(themes).length);
   } finally { await browser.close(); }
 });
+
+test('each layout diagram and interface keep their own structure for the same project', async () => {
+  const { gridProof, interfaceProof } = await import('../../scripts/studio-exports/grid-proofs.mjs');
+  const project = sampleProject('flyleaf');
+  const grids = new Set();
+  const interfaces = new Set();
+  for (const id of Object.keys(themes)) {
+    const diagram = gridProof(id,project,'<b>Mark</b>');
+    grids.add([...diagram.matchAll(/grid-column:([^"]+)/g)].map(match=>match[1]).join(','));
+    const screen = interfaceProof(id,project);
+    assert.match(screen,/href="#try-feedback"/);
+    assert.ok(screen.includes(project.action));
+    interfaces.add(screen.match(/class="app-body([^"]*)"/)[1]);
+  }
+  assert.equal(grids.size,Object.keys(themes).length);
+  assert.equal(interfaces.size,Object.keys(themes).length);
+});
+
+test('each colour proof draws with the colours listed on that page', () => {
+  const project = sampleProject('set-square');
+  const palette = ['#110011','#220022','#330033','#440044','#550055','#660066','#770077','#880088'];
+  project.design.palette = {base:palette[0],colors:palette};
+  const result = renderTemplate(project,'set-square','brand','deck');
+  const plates = [...result.html.matchAll(/<div class="ink-study"><figure>(.*?)<\/figure>/gs)].map(match=>match[1]);
+  assert.equal(plates.length,2);
+  assert.ok(plates[0].includes(palette[0]));
+  assert.ok(plates[1].includes(palette[6]));
+  assert.ok(!plates[1].includes(palette[0]));
+});

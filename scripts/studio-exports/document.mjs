@@ -11,10 +11,10 @@ import { themes } from './themes.mjs';
 
 import { esc, appSpecimen, applicationSpecimen, identityReference, formExample, formScript } from './specimens.mjs';
 import { editions } from './editions.mjs';
-import { contexts, appliedImage, liveSpecimen, interfaceStudy, componentStyles } from './masters.mjs';
-import { gridProof } from './grid-proofs.mjs';
+import { contexts, appliedImage, liveSpecimen, componentStyles } from './masters.mjs';
+import { gridProof, interfaceProof } from './grid-proofs.mjs';
 import { jacket, portraitJacketStyles } from './jackets.mjs';
-import { printStudy, paletteStudy } from './print-studies.mjs';
+import { printStudy, paletteStudy, actionProof } from './print-studies.mjs';
 export { esc };
 const stylesheet = fs.readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
 const additionalStyles = fs.readFileSync(new URL('./editions.css', import.meta.url), 'utf8');
@@ -106,12 +106,12 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     specimen:()=>liveSpecimen(project,d,product==='ui'),
     composition:()=>gridProof(themeId,project,mark),
     digital:()=>appliedImage(images.digital,project,themeId,true,appSpecimen(project,mark)),
-    interface:()=>interfaceStudy(themeId,project,mark),
+    interface:()=>images.digital ? `<div class="screen-pair"><figure><img src="${images.digital}" alt="${esc(contexts[themeId][1])}"></figure>${interfaceProof(themeId,project)}</div>` : interfaceProof(themeId,project),
     logo:()=>`<figure class="logo-board">${mark}</figure>${logo?`<div class="mark-proof"><div>${mark}</div><small>Print proof · 30 mm wide</small></div>`:''}${project.logoNote?`<p class="note">${esc(project.logoNote)}</p>`:''}`,
     type:()=>typeContent,
     application:()=>appliedImage(images.physical,project,themeId,false,applicationSpecimen(themeId,project,mark)),
     strategy:()=> (project.mission ? '<div class="prompt"><h3>Mission</h3><p>'+esc(project.mission)+'</p></div>' : prompt('Mission','Write who you serve and the change you make for them.','One sentence, 12 to 20 words.','We make everyday services easier to use for people opening their first business.'))+(project.voice ? '<div class="prompt"><h3>Tone of voice</h3><p>'+esc(project.voice)+'</p></div>' : prompt('Tone of voice','Choose two qualities. Show how one changes a customer message.','Two qualities and one short example.','Clear and considerate. “We’ll email you when your order is ready.”')),
-    components:()=>controls,
+    components:()=>actionProof(project,art,['flyleaf','set-square','market-day','contact-sheet','hearth'].includes(themeId)?images.digital:'',contexts[themeId][1])+controls,
     feedback:()=>formExample(project)+'<div class="response-key"><div><small>Required field</small><p>Enter a value to continue.</p></div><div><small>Success</small><p>Example submitted.</p></div></div>',
     reference:()=>identityReference(project,d,mark)+(project.imageryNote?'<div class="note"><small>Photography</small><p>'+esc(project.imageryNote)+'</p></div>':''),
     tints:()=>`<h3>Primary scale</h3><div class="ramp">${tokens.filter(t=>t.type==='color' && /^color\.primary\.\d+$/.test(t.path.join('.'))).map(t=>`<div style="background:${t.value};color:${ink(t.value,d.palette)}">${t.path.at(-1)}</div>`).join('')}</div><h3>Semantic colour</h3><div class="signals">${['success','warning','error','info'].map(r=>contrastTiles(r,500)).join('')}</div>`,
@@ -132,7 +132,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.contrast,content:contrastProof(d.palette.slice(i,i+6))});
     } else if(id==='icons' && iconIds.length>20) {
       for(let i=0;i<iconIds.length;i+=20) pages.push({id,heading:headings.icons,content:section.icons(iconIds.slice(i,i+20))});
-    } else pages.push({id,heading:id==='application'?contexts[themeId][0]:id==='digital'?contexts[themeId][1]:headings[id] || title,content:section[id]()});
+    } else pages.push({id,heading:id==='interface'?contexts[themeId][1]:id==='application'?contexts[themeId][0]:id==='digital'?contexts[themeId][1]:headings[id] || title,content:section[id]()});
   }
   const sheet=(pg,i)=>{
     const folio='<footer><span>Made with UI L4B</span><span>'+String(i+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0')+'</span></footer>';

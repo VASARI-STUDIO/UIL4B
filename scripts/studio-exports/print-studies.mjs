@@ -53,3 +53,9 @@ export const studyNames = {
 export function paletteStudy(art, id, rows) {
   return `<div class="ink-study"><figure>${art}<figcaption>${studyNames[id]}</figcaption></figure><dl>${rows.map(({name,hex,foreground,ratio,usage})=>`<div style="--sample:${hex};--sample-ink:${foreground}"><dt><i style="background:${hex}"></i>${esc(name)}</dt><dd><code>${hex}</code><small>${ratio}:1 · ${foreground}</small>${usage?`<p>${esc(usage)}</p>`:''}</dd></div>`).join('')}</dl></div>`;
 }
+
+export function actionProof(project,art,photo,caption) {
+  const first=project.items?.[0];
+  return `<aside class="action-proof"><div class="action-art">${photo?`<img src="${photo}" alt="${esc(caption)}">`:art}</div><div class="action-copy"><small>${esc(project.screenTitle || project.name)}</small><strong>${esc(first?.title || project.headline || project.name)}</strong>${first?.detail?`<p>${esc(first.detail)}</p>`:''}</div></aside>`;
+}
+

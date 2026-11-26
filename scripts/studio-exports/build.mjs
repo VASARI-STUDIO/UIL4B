@@ -36,7 +36,7 @@ try {
       const dir=path.join(root,id,product);
       await mkdir(dir,{recursive:true});
       const files={};
-      let detailPage,colourPage;
+      let detailPage,colourPage,interfacePage;
       for (const layout of ['deck','a4']) {
         const {html,files:code,license}=renderTemplate(data,id,product,layout,photographs);
         Object.assign(files,code,{'LICENSES.txt':license});
@@ -67,7 +67,12 @@ try {
             const detail=page.locator('main>.sheet.'+(product==='brand'?'application':'components'));
             detailPage=Number((await detail.getAttribute('id')).slice(5));
             colourPage=Number((await page.locator('main>.sheet.colour').first().getAttribute('id')).slice(5));
-            for(const [label,number] of [['cover',1],['detail',detailPage],['colour',colourPage]]){
+            const previews=[['cover',1],['detail',detailPage],['colour',colourPage]];
+            if(product==='ui'){
+              interfacePage=Number((await page.locator('main>.sheet.interface').getAttribute('id')).slice(5));
+              previews.push(['interface',interfacePage]);
+            }
+            for(const [label,number] of previews){
               await run('pdftoppm',['-f',String(number),'-l',String(number),'-singlefile','-r','96','-jpeg',pdfPath,path.join(dir,label)]);
             }
           }
@@ -75,7 +80,7 @@ try {
       }
       const stem=id+'-'+(product==='brand'?'brand-guidelines':'ui-style-guide');
       await writeFile(path.join(dir,stem+'.zip'),await zipFiles(files,stem));
-      edition.guides.push({product,title,stem,detailPage,colourPage});
+      edition.guides.push({product,title,stem,detailPage,colourPage,interfacePage});
       console.log(theme.name+' / '+title+' complete');
     }
   }

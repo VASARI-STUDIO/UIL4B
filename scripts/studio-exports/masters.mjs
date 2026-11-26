@@ -1,4 +1,4 @@
-import { esc, appSpecimen } from './specimens.mjs';
+import { esc } from './specimens.mjs';
 
 import { editions } from './editions.mjs';
 
@@ -32,11 +32,6 @@ export function appliedImage(source, project, id, digital, fallback) {
   return `<figure class="application-plate">${plate(source,label) || fallback}</figure><div class="application-caption"><small>${esc(project.name)}</small><p>${esc(caption)}</p></div>`;
 }
 
-
-export function interfaceStudy(id,project,mark) {
-  const label=editions[id]?.screen || {flyleaf:'Book detail','set-square':'Project overview',dispatch:'Delivery status',doorlist:'Box office','market-day':'Market listings'}[id];
-  return '<div class="interface-study"><div class="screen-bar"><span>'+esc(project.name)+'</span><span>'+label+'</span></div>'+appSpecimen(project,mark,true)+'</div>';
-}
 
 export const componentStyles = {
   ...Object.fromEntries(Object.entries(editions).map(([id,e])=>[id,e.controls])),
