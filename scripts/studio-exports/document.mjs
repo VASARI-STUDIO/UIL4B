@@ -9,12 +9,16 @@ import { oflText } from '../../api/_lib/exportThemes/engine/files.js';
 import { ICONS, ICONS_LICENCE } from '../../api/_lib/exportThemes/icons.js';
 import { themes } from './themes.mjs';
 
-import { esc, appSpecimen, applicationSpecimen, coverArtwork, identityReference, formExample, formScript } from './specimens.mjs';
+import { esc, appSpecimen, applicationSpecimen, identityReference, formExample, formScript } from './specimens.mjs';
 import { editions } from './editions.mjs';
-import { frontispiece, appliedImage, composition, liveSpecimen, interfaceStudy, componentStyles } from './masters.mjs';
+import { contexts, appliedImage, liveSpecimen, interfaceStudy, componentStyles } from './masters.mjs';
+import { gridProof } from './grid-proofs.mjs';
+import { jacket, portraitJacketStyles } from './jackets.mjs';
+import { printStudy, paletteStudy } from './print-studies.mjs';
 export { esc };
 const stylesheet = fs.readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
 const additionalStyles = fs.readFileSync(new URL('./editions.css', import.meta.url), 'utf8');
+const printStyles = ['jackets.css','studies.css'].map(file => fs.readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
 const fontDir = new URL('../../api/_lib/exportThemes/fonts/', import.meta.url);
 const faces = Object.values(BRANDS).flatMap(b => Object.values(b.data.fonts));
 const b64 = text => Buffer.from(text).toString('base64');
@@ -24,7 +28,7 @@ const headings = {specimen:'Type in use',digital:'Digital application',compositi
 const introductions = {
   reference:'Keep this sheet beside a proof to check the mark, type pair and colour values before release.',
   feedback:'Submit the example with an empty field, then enter a value and try again. The HTML example runs entirely on your device.',
-  logo:'Use the supplied artwork at its original proportions. The ruled frame shows its placement on a neutral ground.',
+  logo:'Use the supplied artwork at its original proportions.',
   colour:'Read each saved colour with the ink shown on it. The ratio is measured for that pair.',
   type:'Use the two selected faces at their assigned weights. The scale gives the sizes to carry into the interface.',
   strategy:'Complete these fields with the people who own the brand. The examples illustrate the length and level of detail.',
@@ -56,8 +60,11 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   const license = oflText({faces:[{family:d.heading},{family:d.body}]});
   const logo = readLogo(design);
   const mark = logo ? `<img class="mark" src="${logo.src}" alt="${name} logo">` : '<div class="mark-slot"><b>UI L4B</b><span>Your logo goes here</span></div>';
-  const photo = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(project.photo || '') ? `<img class="photo" src="${project.photo}" alt="${esc(project.photoAlt || '')}">` : '';
-  const art=coverArtwork(themeId,project,mark,photo);
+  const art = printStudy(themeId,d.palette,ink);
+  const projectPhoto = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(project.photo || '') ? project.photo : '';
+  const hasCoverPhoto = product==='brand' && projectPhoto && ['dispatch','market-day'].includes(themeId);
+  const coverPhoto = hasCoverPhoto ? projectPhoto : images[product==='ui'?'digital':'physical'];
+  const coverCaption = hasCoverPhoto ? project.photoAlt || '' : contexts[themeId][product==='ui'?1:0];
   const accent=d.base || d.palette[0], onAccent=ink(accent,d.palette);
   const opts={projectName:project.name || 'Your brand', watermark:true, date:new Date(project.date || 0), modes:true};
   const files={'tokens.css':buildTokensCss(design,opts),'tokens.json':buildTokensJson(design,opts),'tailwind.css':buildTailwindCss(design,opts)};
@@ -70,10 +77,11 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   }
   const colourRows=d.palette.map((hex,i)=>{
     const fg=ink(hex,d.palette);
-    return `<div class="swatch" style="--sw:${hex};--sw-ink:${fg}"><span>${esc(project.paletteNames?.[i] || paletteRole(i))}</span><code>${hex}</code><small>${fmt(pair(fg,hex))}:1 · ${fg}</small>${project.colourUses?.[i]?`<p>${esc(project.colourUses[i])}</p>`:''}</div>`;
+    return {name:project.paletteNames?.[i] || paletteRole(i),hex,foreground:fg,ratio:fmt(pair(fg,hex)),usage:project.colourUses?.[i]};
   });
   const ladder=typeLadder(d);
-  const typeContent=`<div class="typepair"><div><small>Heading · ${d.headingWeight}</small><strong>${esc(d.heading)}</strong></div><div><small>Body · ${d.bodyWeight}</small><b>${esc(d.body)}</b></div></div><div class="ladder">${ladder.map(s=>`<div><span>${esc(s.name)}</span><b style="font-family:var(${s.exp>0?'--head':'--body'});font-size:${s.px}px;font-weight:var(${s.exp>0?'--hw':'--bw'})">${s.exp>0?'Ag':'Aa'}</b><code>${s.px} px</code></div>`).join('')}</div>`;
+  const specimenWord=esc((project.name || 'Type').split(/\s+/)[0].slice(0,10));
+  const typeContent=`<div class="typepair"><div><small>Heading · ${d.headingWeight}</small><strong>${esc(d.heading)}</strong></div><div><small>Body · ${d.bodyWeight}</small><b>${esc(d.body)}</b></div></div><div class="ladder">${ladder.map(s=>`<div><span>${esc(s.name)}</span><b class="type-word" style="font-family:var(${s.exp>0?'--head':'--body'});font-size:${s.px}px;font-weight:var(${s.exp>0?'--hw':'--bw'})">${specimenWord}</b><code>${s.px} px</code></div>`).join('')}</div>`;
   const contrastTiles=(role,step)=>{
     const hex=colourValue('color.'+role+'.'+step), fg=ink(hex,d.palette);
     return `<div style="background:${hex};color:${fg}"><b>${role}</b><code>${hex}</code></div>`;
@@ -94,12 +102,12 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   }
   const section={
     contrast:()=>contrastProof(d.palette),
-    cover:()=>frontispiece(themeId,project,title,product==='ui',images,photo,product==='ui'?appSpecimen(project,mark):art),
+    cover:()=>jacket(themeId,project,title,art,coverPhoto,coverCaption),
     specimen:()=>liveSpecimen(project,d,product==='ui'),
-    composition:()=>composition(project,mark),
+    composition:()=>gridProof(themeId,project,mark),
     digital:()=>appliedImage(images.digital,project,themeId,true,appSpecimen(project,mark)),
     interface:()=>interfaceStudy(themeId,project,mark),
-    logo:()=>`<figure class="logo-board">${mark}</figure><div class="caption-line"><span>Original artwork</span><span>${name}</span></div>${project.logoNote?`<p class="note">${esc(project.logoNote)}</p>`:''}`,
+    logo:()=>`<figure class="logo-board">${mark}</figure>${logo?`<div class="mark-proof"><div>${mark}</div><small>Print proof · 30 mm wide</small></div>`:''}${project.logoNote?`<p class="note">${esc(project.logoNote)}</p>`:''}`,
     type:()=>typeContent,
     application:()=>appliedImage(images.physical,project,themeId,false,applicationSpecimen(themeId,project,mark)),
     strategy:()=> (project.mission ? '<div class="prompt"><h3>Mission</h3><p>'+esc(project.mission)+'</p></div>' : prompt('Mission','Write who you serve and the change you make for them.','One sentence, 12 to 20 words.','We make everyday services easier to use for people opening their first business.'))+(project.voice ? '<div class="prompt"><h3>Tone of voice</h3><p>'+esc(project.voice)+'</p></div>' : prompt('Tone of voice','Choose two qualities. Show how one changes a customer message.','Two qualities and one short example.','Clear and considerate. “We’ll email you when your order is ready.”')),
@@ -115,17 +123,21 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     if(id==='reference' && d.palette.length>6) {
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.reference,content:identityReference({...project,paletteNames:project.paletteNames?.slice(i,i+6)},{...d,palette:d.palette.slice(i,i+6)},mark)});
     } else if(id==='colour') {
-      for(let i=0;i<colourRows.length;i+=6)pages.push({id:'colour',heading:headings.colour,content:'<div class="swatches">'+colourRows.slice(i,i+6).join('')+'</div>'});
+      for(let i=0;i<colourRows.length;i+=6){
+        const rows=colourRows.slice(i,i+6);
+        const illustration=colourRows.length<=6?art:printStudy(themeId,rows.map(row=>row.hex),ink);
+        pages.push({id:'colour',heading:headings.colour,content:paletteStudy(illustration,themeId,rows)});
+      }
     } else if(id==='contrast' && d.palette.length>6){
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.contrast,content:contrastProof(d.palette.slice(i,i+6))});
     } else if(id==='icons' && iconIds.length>20) {
       for(let i=0;i<iconIds.length;i+=20) pages.push({id,heading:headings.icons,content:section.icons(iconIds.slice(i,i+20))});
-    } else pages.push({id,heading:headings[id] || title,content:section[id]()});
+    } else pages.push({id,heading:id==='application'?contexts[themeId][0]:id==='digital'?contexts[themeId][1]:headings[id] || title,content:section[id]()});
   }
   const sheet=(pg,i)=>{
     const folio='<footer><span>Made with UI L4B</span><span>'+String(i+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0')+'</span></footer>';
     if(pg.id==='cover')return '<section class="sheet cover" id="page-1">'+pg.content+folio+'</section>';
-    const note=introductions[pg.id] || '';
+    const note=pg.id==='strategy' && project.voice && project.mission ? '' : introductions[pg.id] || '';
     return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header><div class="inside"><div class="heading"><h2>${pg.heading}</h2>${note?'<p>'+note+'</p>':''}</div><div class="content">${pg.content}</div></div>${folio}</section>`;
   };
   const editorialInk=d.palette.reduce((a,b)=>ratio(a,'#ffffff')>ratio(b,'#ffffff')?a:b);
@@ -133,6 +145,6 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   const spot=d.palette.find(c=>ratio(c,accent)>=3 && c!==dark && ratio(c,'#fff')>=2.4) || accent;
   const variables=`:root{--head:"${d.heading}";--body:"${d.body}";--hw:${d.headingWeight};--bw:${d.bodyWeight};--accent:${accent};--on-accent:${onAccent};--dark:${dark};--on-dark:${ink(dark,d.palette)};--spot:${spot};--on-spot:${ink(spot,d.palette)};--title-fit:${Math.min(1,10/Math.max(1,(project.name||'Your brand').length))};--w:${layout==='deck'?'1280':'794'}px;--h:${layout==='deck'?'720':'1122'}px}@page{size:${layout==='deck'?'1280px 720px':'A4 portrait'};margin:0}`;
   const nav='<nav class="contents" aria-label="Guide sections">'+pages.map((p,i)=>i && pages[i-1].id!==p.id?'<a href="#page-'+(i+1)+'">'+p.heading+'</a>':'').join('')+'</nav>';
-  const html=`<!doctype html><html lang="en-AU"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name} · ${title} · ${theme.name}</title><style>${fontCss}\n${files['tokens.css'].replaceAll('<','\\\\3c ')}\n${variables}\n${stylesheet}${editions[themeId]?additionalStyles:''}\n\n${componentCss}</style><body class="${themeId} ${layout} ${product}-guide">${nav}<main>${pages.map(sheet).join('')}</main>${product==='ui'?`<script>${formScript}</script>`:''}</body></html>`;
+  const html=`<!doctype html><html lang="en-AU"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name} · ${title} · ${theme.name}</title><style>${fontCss}\n${files['tokens.css'].replaceAll('<','\\\\3c ')}\n${variables}\n${stylesheet}${editions[themeId]?additionalStyles:''}\n\n${componentCss}\n${printStyles}${layout==='a4'?portraitJacketStyles[themeId] || '':''}</style><body class="${themeId} ${layout} ${product}-guide">${nav}<main>${pages.map(sheet).join('')}</main>${product==='ui'?`<script>${formScript}</script>`:''}</body></html>`;
   return {html,pages:pages.length,files:product==='ui'?files:{},license:license+(product==='ui' && iconIds.length?'\n'+ICONS_LICENCE:'')};
 }

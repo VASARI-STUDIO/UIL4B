@@ -4,24 +4,6 @@ function listing(item) {
   return `<div class="listing"><div><b>${esc(item.title)}</b><span>${esc(item.detail)}</span></div><strong>${esc(item.price)}</strong></div>`;
 }
 
-export function coverArtwork(id, project, mark, photo) {
-  const name=esc(project.name), headline=esc(project.headline || project.name);
-  const [lead]=project.items || [];
-  switch (id) {
-    default:return `<div class="art"><small>${name}</small><strong>${headline}</strong>${mark}</div>`;
-    case 'flyleaf':
-      return `<div class="art jacket"><div class="bookback"></div><div class="bookfront"><small>${name}</small><strong>${esc(lead?.title || project.headline || project.name)}</strong><i aria-hidden="true"></i></div></div>`;
-    case 'set-square':
-      return `<div class="art drawing"><div class="drawing-mark">${mark}</div><div class="drawing-title"><strong>${headline}</strong></div></div>`;
-    case 'dispatch':
-      return `<div class="art dispatch">${photo}<div class="dispatch-slip"><small>${name}</small><strong>${headline}</strong></div></div>`;
-    case 'doorlist':
-      return `<div class="art gig"><div class="gig-face"><small>${name}</small><strong>${esc(lead?.title || project.name)}</strong><p>${esc(lead?.detail || project.headline)}</p></div><div class="gig-stub"><span>${esc(project.action || project.name)}</span><b>${esc(lead?.price)}</b></div></div>`;
-    case 'market-day':
-      return `<div class="art broadside"><div class="masthead">${esc(project.applicationLine || project.name)}</div><div class="broadside-lead"><strong>${esc(lead?.title || project.headline || project.name)}</strong><span>${esc(lead?.price)}</span></div><p>${esc(lead?.detail || project.headline)}</p></div>`;
-  }
-}
-
 export function appSpecimen(project, mark, interactive=false) {
   const items=(project.items || []).slice(0,2);
   return `<div class="mock">${mark}<strong>${esc(project.screenTitle || project.name)}</strong><p>${esc(project.screenDetail || project.headline)}</p><div class="mock-list">${items.map(listing).join('')}</div>${interactive?'<a class="action" href="#try-feedback">'+esc(project.action || 'Save changes')+'</a>':'<span class="action">'+esc(project.action || 'Save changes')+'</span>'}</div>`;

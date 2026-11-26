@@ -1,6 +1,6 @@
 import { esc, appSpecimen } from './specimens.mjs';
 
-import { editions, editionCover } from './editions.mjs';
+import { editions } from './editions.mjs';
 
 export const contexts = {
   ...Object.fromEntries(Object.entries(editions).map(([id,e])=>[id,e.contexts])),
@@ -15,43 +15,21 @@ export function plate(src, alt) {
   return src ? `<img class="scene-photo" src="${src}" alt="${esc(alt)}">` : '';
 }
 
-export function frontispiece(id, project, title, isUI, images, photo, fallback) {
-  const name=esc(project.name || 'Your brand'), line=esc(project.headline || ''), lead=project.items?.[0] || {};
-  const pic=plate(isUI?images.digital:images.physical,contexts[id][isUI?1:0]) || fallback;
-  const product=`<span class="edition-title">${title}</span>`;
-  if(editions[id]) return editionCover(id,project,title,isUI,images,pic,fallback);
-  switch(id){
-    case 'flyleaf':
-      return `<div class="front folio-front"><div class="folio-text">${product}<h1>${name}</h1><p>${line}</p></div><figure>${pic}</figure></div>`;
-    case 'set-square':
-      return `<div class="front building-front"><div class="binder">${title}</div><h1>${name}</h1><div class="drawing-window">${pic}</div><div class="building-record"><strong>${esc(lead.title || project.screenTitle || project.name)}</strong><p>${esc(lead.detail || project.application)}</p><b>${esc(lead.price)}</b></div><div class="building-caption"><p>${line}</p><small>${contexts[id][isUI?1:0]}</small></div></div>`;
-    case 'dispatch':
-      return `<div class="front street-front"><figure>${isUI?pic:(photo || pic)}</figure><div class="street-tab">${product}</div><div class="street-band"><h1>${name}</h1><p>${line}</p></div></div>`;
-    case 'doorlist':
-      return `<div class="front poster-front"><div class="poster-top">${product}<span>${esc(isUI?project.screenTitle:lead.detail)}</span></div><h1>${name}</h1><div class="poster-bottom"><p>${esc(isUI?project.action:project.headline)}</p><figure>${pic}</figure></div></div>`;
-    case 'market-day':
-      return `<div class="front market-front"><div class="market-mast"><h1>${name}</h1>${product}</div><div class="market-columns"><div><p>${line}</p><small>${esc(isUI?project.screenTitle:project.applicationLine)}</small></div><figure>${isUI?pic:(photo || pic)}</figure></div></div>`;
-  }
-}
-
 export function liveSpecimen(project, design, isUI) {
   const lead=project.items?.[0] || {};
   const line=esc((isUI?project.screenTitle:lead.title) || project.headline || project.name);
-  return `<div class="reading-sample"><small>${esc(design.heading)} · ${design.headingWeight}</small><strong>${line}</strong><p>${esc(lead.detail || project.application || design.body)}</p><span>${esc(design.body)} · ${design.bodyWeight}</span></div>`;
-}
-
-export function composition(project, mark) {
-  return `<div class="layout-proof"><div class="proof-grid" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="proof-content">${mark}<strong>${esc(project.headline || project.name)}</strong><p>${esc(project.application || project.screenTitle)}</p></div></div><p class="note">Align the mark and headline to the same column. Use the neighbouring column for the supporting text.</p>`;
+  return `<div class="reading-sample"><small>${esc(design.heading)} · ${design.headingWeight}</small><strong>${line}</strong><div class="alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz &amp; 0123456789</div><div class="credits"><p>${esc(lead.detail || project.application || design.body)}</p><span>${esc(design.body)} · ${design.bodyWeight}</span></div></div>`;
 }
 
 export function appliedImage(source, project, id, digital, fallback) {
   const label=contexts[id][digital?1:0];
-  const lead=project.items?.[0] || {};
-  const formatNames={flyleaf:'Jacket detail','set-square':'Hoarding detail',dispatch:'Billboard detail',doorlist:'Poster detail','market-day':'Label detail'};
-  const itemFirst=['flyleaf','doorlist','contact-sheet','workbench','soundings'].includes(id);
-  const words=itemFirst?lead.title:id==='market-day'?project.name:project.headline;
-  const flat=source && !digital?`<div class="print-detail"><small>${editions[id]?.detail || formatNames[id]}</small><strong>${esc(words || project.name)}</strong><span>${esc(id==='market-day'?project.headline:(itemFirst?lead.detail:project.name))}</span></div>`:'';
-  return `<figure class="application-plate${flat?' physical-pair':''}">${plate(source,label) || fallback}${flat}</figure><div class="application-caption"><h3>${label}</h3><p>${esc(digital?(project.screenDetail || project.screenTitle):(project.applicationLine || project.headline))}</p></div>`;
+  const caption=digital?(project.screenDetail || project.screenTitle):(project.applicationLine || project.headline);
+  if(!digital && source){
+    const item=project.items?.[0];
+    const message=project.applicationLine || project.headline || item?.title || project.name;
+    return `<div class="usage-proof"><figure class="application-plate">${plate(source,label)}</figure><div class="caption-copy"><small>${esc(project.name)}</small><h3>${esc(message)}</h3>${project.imageryNote?`<p>${esc(project.imageryNote)}</p>`:''}</div></div>`;
+  }
+  return `<figure class="application-plate">${plate(source,label) || fallback}</figure><div class="application-caption"><small>${esc(project.name)}</small><p>${esc(caption)}</p></div>`;
 }
 
 
