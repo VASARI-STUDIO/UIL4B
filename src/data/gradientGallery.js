@@ -35,7 +35,7 @@ export function gradientCss(type, angle, stops) {
 //   sd  seed              fx  finishes
 //   src 'link' on a link someone copied from the tool, so it opens as their own
 //       editable gradient; a library hand-off leaves it off
-// Callers do not pass st, sp, sd or fx yet; the decoder reads none of them yet either.
+// The generator validates the mesh/orb style and geometry after the base stops decode.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
   const optional = [['gn', g.name], ['gi', g.gi], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx], ['src', g.src]]

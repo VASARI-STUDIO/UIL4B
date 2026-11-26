@@ -10,6 +10,7 @@ import { hexToOklchRaw } from '../components/tool/oklch.js'
 
 /** The styles, in switcher order. `as` completes the canvas's spoken name. */
 export const PREVIEW_STYLES = [
+  { id: 'orb', label: 'Orb', as: ', shown as a gradient orb' },
   { id: 'aperture', label: 'Aperture', as: ', shown through an optical aperture' },
   { id: 'satin', label: 'Satin', as: ', shown on satin' },
   { id: 'folds', label: 'Folded paper', as: ', shown on folded paper' },
@@ -38,7 +39,7 @@ export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
 /** The fill styles, in picker order. Plain is the canvas as it is. */
 export const FILL_STYLES = [
   { id: 'plain', label: 'Plain', as: '' },
-  ...['aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+  ...['mesh', 'orb', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
 ]
 export const isFillStyle = (id) => FILL_STYLES.some((s) => s.id === id)
 
@@ -53,7 +54,7 @@ export const PREVIEW_PLACES = [
 export const isPreviewPlace = (id) => PREVIEW_PLACES.some((p) => p.id === id)
 
 /** Fill styles that draw their own shape, so the gradient's Type and Angle don't change them. */
-export const FIXED_SHAPE_STYLES = ['aperture', 'streak', 'glow', 'fade', 'mesh', 'waves']
+export const FIXED_SHAPE_STYLES = ['orb', 'aperture', 'streak', 'glow', 'fade', 'mesh', 'waves']
 
 /** The one id the stage renders: the place, or under Fill the fill style ('fill' when Plain). */
 export function previewId(place, fill) {
@@ -115,8 +116,19 @@ export function glowColours(stops) {
  * that show the gradient as the canvas draws it; Streak and Fade lay the same stops
  * along their own axis (across for Streak, down for Fade) because their look needs it.
  */
-export function styleVars(id, { stops, paint, oklch }) {
+export function styleVars(id, { stops, paint, oklch, layout }) {
   switch (id) {
+    case 'orb': {
+      const [point] = artworkPoints(id, stops, oklch, layout)
+      return {
+        '--fx-x': `${point.x}%`, '--fx-y': `${point.y}%`, '--fx-diameter': `${point.size}cqmin`,
+        '--fx-orb-paint': [
+          'radial-gradient(ellipse 70% 57% at 29% 18%, rgb(255 255 255 / .61), transparent 68%)',
+          'radial-gradient(ellipse at 38% 32%, transparent 37%, rgb(8 9 18 / .42) 75%, rgb(255 255 255 / .23) 96%)',
+          `radial-gradient(ellipse at 33% 26%${oklch ? ' in oklch' : ''}, ${stopList(stops)})`,
+        ].join(', '),
+      }
+    }
     case 'aperture': return { '--fx-spectrum': stopList(stops), '--fx-space': oklch ? 'in oklch' : 'in srgb' }
     case 'streak': return { '--fx-row': linearThrough(90, stops, oklch) }
     case 'fade': return { '--fx-wash': linearThrough(180, stops, oklch) }
@@ -124,7 +136,7 @@ export function styleVars(id, { stops, paint, oklch }) {
       const c = glowColours(stops)
       return { '--fx-heart': c.heart, '--fx-low': c.low, '--fx-high': c.high }
     }
-    case 'mesh': return { '--fx-ground': meshGround(stops), '--fx-mesh': meshBackground(meshPoints(stops, oklch)) }
+    case 'mesh': return { '--fx-ground': meshGround(stops), '--fx-mesh': meshBackground(artworkPoints(id, stops, oklch, layout)) }
     default: return { '--fx-paint': paint }
   }
 }
@@ -192,15 +204,59 @@ export function meshGround(stops) {
   return byPosition(stops).reduce((low, s) => (hexToOklchRaw(s.color)[0] < hexToOklchRaw(low.color)[0] ? s : low)).color.toUpperCase()
 }
 
+export const isArtwork = id => id === 'mesh' || id === 'orb'
+
+// Store only geometry. Colours continue to come from the current gradient.
+export function cleanLayout(kind, raw) {
+  if (!isArtwork(kind) || !Array.isArray(raw)) return []
+  const limit = kind === 'orb' ? 1 : MESH_TABLE.length
+  const bounded = (value, low, high) => Math.max(low, Math.min(high, Math.round(value)))
+  return raw.slice(0, limit).map(point => {
+    if (!point || ![point.x, point.y, point.size].every(Number.isFinite)) return null
+    return { x: bounded(point.x, -10, 110), y: bounded(point.y, -10, 110), size: bounded(point.size, 20, 160) }
+  })
+}
+
+export function artworkPoints(kind, stops, oklch, layout) {
+  const base = kind === 'orb'
+    ? [{ x: 50, y: 50, color: byPosition(stops)[0].color, size: 74 }]
+    : meshPoints(stops, oklch).map(p => ({ ...p, size: 100 }))
+  const clean = cleanLayout(kind, layout)
+  return base.map((point, i) => ({ ...point, ...clean[i] }))
+}
+
 export const meshBackground = (points) => points.map((p, index) => {
   const [width, height, core] = MESH_POOLS[index]
-  return `radial-gradient(ellipse ${width}% ${height}% at ${p.x}% ${p.y}%, ${p.color} 0 ${core}%, transparent 100%)`
+  const scale = (p.size ?? 100) / 100
+  return `radial-gradient(ellipse ${Math.round(width * scale)}% ${Math.round(height * scale)}% at ${p.x}% ${p.y}%, ${p.color} 0 ${core}%, transparent 100%)`
 }).join(', ')
 
 // A responsive CSS background for sites. The PNG also includes the grain layer.
-export function meshCss(stops, oklch) {
-  const vars = styleVars('mesh', { stops, oklch })
+export function meshCss(stops, oklch, layout) {
+  const vars = styleVars('mesh', { stops, oklch, layout })
   return `background-color: ${vars['--fx-ground']};\nbackground-image: ${vars['--fx-mesh']};`
+}
+
+// Apply the class to an empty element. Its aspect ratio can be set by the host layout.
+export function orbCss(stops, oklch, layout) {
+  const vars = styleVars('orb', { stops, oklch, layout })
+  return `.orb-field {
+  position: relative;
+  container-type: size;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+.orb-field::before {
+  content: "";
+  position: absolute;
+  left: ${vars['--fx-x']};
+  top: ${vars['--fx-y']};
+  width: ${vars['--fx-diameter']};
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: ${vars['--fx-orb-paint']};
+}`
 }
 
 /** How many bands the Waves draw, how tall a crest is (percent of the height) and how far each band's phase steps (degrees). */

@@ -41,7 +41,8 @@ import GradientFx from '../components/tool/GradientFx'
 import GradientText from '../components/tool/GradientText'
 import useMeasured from '../components/tool/useMeasured'
 import PreviewSwitch from '../components/tool/PreviewSwitch'
-import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, meshCss, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
+import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, isArtwork, artworkPoints, cleanLayout, meshCss, orbCss, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
+import GradientArtworkEditor from '../components/tool/GradientArtworkEditor'
 import FillStylePicker from '../components/tool/FillStylePicker'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
@@ -859,7 +860,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return () => { mountedRef.current = false }
   }, [])
   useEffect(() => { saveOpenRef.current = saveOpen }, [saveOpen])
-  const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
+  const [fmt, setFmt] = useState('auto') // Follow the selected artwork until a format is chosen.
   // The code well's Copy button swaps to "Copied" for a beat after a press.
   const [copied, setCopied] = useState(false)
   const copiedTimer = useRef(0)
@@ -918,12 +919,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // The name of the project this gradient was saved as, for the Spec card.
   const savedName = (projects || []).find((p) => p.id === design?.source?.projectId)?.name
   // Where the gradient is previewed and, on Fill, how the fill is drawn.
-  const [{ place: previewPlace, fill: fillStyle }, setPreview] = useState(() => splitPreview(readSession(PREVIEW_KEY), readSession(FILL_KEY)))
+  const savedArt = !carriedPalette && design?.gradient?.artwork
+  const [layouts, setLayouts] = useState(() => ({
+    mesh: cleanLayout('mesh', savedArt?.mesh),
+    orb: cleanLayout('orb', savedArt?.orb),
+  }))
+  const [{ place: previewPlace, fill: fillStyle }, setPreview] = useState(() =>
+    isArtwork(savedArt?.active) ? { place: 'fill', fill: savedArt.active } : splitPreview(readSession(PREVIEW_KEY), readSession(FILL_KEY)))
   const choosePlace = (place) => {
     setPreview((p) => ({ ...p, place }))
     writeSession(PREVIEW_KEY, place)
   }
   const chooseFill = (fill) => {
+    if (isArtwork(fill)) setFmt('auto')
     setPreview((p) => ({ ...p, fill }))
     writeSession(FILL_KEY, fill)
   }
@@ -931,6 +939,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [drawingFill, setDrawingFill] = useState(false)
   // The one scene the stage draws: the place, or on Fill the fill style.
   const previewAs = previewId(previewPlace, fillStyle)
+  const artKind = isArtwork(previewAs) ? previewAs : null
   const styledFill = previewPlace === 'fill' && fillStyle !== 'plain'
   const previewAsLabel = (previewPlace === 'fill' ? FILL_STYLES : PREVIEW_PLACES).find((c) => c.id === (previewPlace === 'fill' ? fillStyle : previewPlace))
   // A fill style that draws its own shape ignores Type and Angle; Shape says so.
@@ -938,22 +947,35 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   // Export code for the copy panel. SVG only applies to linear/radial, so a
   // conic gradient falls back to CSS even if SVG was the last-picked format.
-  const effFmt = fmt === 'svg' && type === 'Conic' ? 'css' : fmt
+  const formats = artKind ? [{ id: 'art', label: artKind === 'mesh' ? 'Mesh CSS' : 'Orb CSS' }, ...EXPORT_FORMATS] : EXPORT_FORMATS
+  const effFmt = fmt === 'auto' || fmt === 'art' ? (artKind ? 'art' : 'css') : fmt === 'svg' && type === 'Conic' ? 'css' : fmt
+  const artworkCss = useMemo(() => {
+    if (artKind === 'mesh') return meshCss(stops, fxOklch, layouts.mesh)
+    if (artKind === 'orb') return orbCss(stops, fxOklch, layouts.orb)
+    return ''
+  }, [artKind, stops, fxOklch, layouts])
   const exportCode = useMemo(() => {
+    if (effFmt === 'art') return artworkCss
     if (effFmt === 'tailwind') return tailwindValue(css)
     if (effFmt === 'svg') return gradientSvg(type, angle, stops, space)
     return gradientCssText(type, angle, stops, space)
-  }, [effFmt, css, type, angle, stops, space])
+  }, [effFmt, artworkCss, css, type, angle, stops, space])
 
   // Persist to the shared design so the gradient follows the user across tools.
   // `source` travels with it so the Pro gate on gallery gradients survives a
   // remount/refresh and stays consistent with ColorStudio's gradient editor.
-  useEffect(() => {
+  useLayoutEffect(() => {
     // The stop locks travel with the design so they survive a trip to another tool;
     // the export and share paths drop them again (documentDesign, the gallery sanitiser).
-    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position, lockColour: !!s.lockColour, lockPosition: !!s.lockPosition })), angle, type, space, source: fromLibrary ? 'gallery' : 'own' })
+    const artwork = artKind || layouts.mesh.length || layouts.orb.length
+      ? { ...layouts, active: artKind }
+      : null
+    setGradient({
+      stops: stops.map(s => ({ color: s.color, position: s.position, lockColour: !!s.lockColour, lockPosition: !!s.lockPosition })),
+      angle, type, space, artwork, source: fromLibrary ? 'gallery' : 'own',
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stops, angle, type, space, fromLibrary])
+  }, [stops, angle, type, space, fromLibrary, artKind, layouts])
 
   // Commit the Palette Builder hand-off. Effects only run for a committed tree,
   // so this empties the slot exactly once — a remount, a Back/Forward navigation
@@ -990,7 +1012,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // Back and Redo: the looks a roll, a preset, Reset or an edit replaced (utils/gradientHistory).
   // `lookRef` holds the look on screen, so the push needs no stale closure.
   const lookRef = useRef(null)
-  useLayoutEffect(() => { lookRef.current = { stops, type, angle, space } })
+  useLayoutEffect(() => { lookRef.current = { stops, type, angle, space, layouts } })
   const historyRef = useRef(emptyHistory())
   const [canBack, setCanBack] = useState(false)
   const [canForward, setCanForward] = useState(false)
@@ -1029,6 +1051,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     burst.at = now
   }, [pushHistory])
 
+  function editArtwork(index, patch, gesture) {
+    if (!artKind || !guardEdit()) return
+    beginEdit(`art-${artKind}-${index}-${gesture}`)
+    setLayouts(previous => {
+      const points = [...previous[artKind]]
+      const defaults = artworkPoints(artKind, stops, fxOklch, points)
+      const { x, y, size } = defaults[index]
+      while (points.length <= index) points.push(null)
+      points[index] = { x, y, size, ...patch }
+      return { ...previous, [artKind]: points }
+    })
+  }
+
   const applyPreset = useCallback((p) => {
     // A preset replaces the stops, so stop locks clear; the geometry locks are the
     // person's settings and stay on (a locked angle keeps the one the preset set).
@@ -1058,6 +1093,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       // A link copied from the tool is someone's own gradient; only a library
       // hand-off (no src marker) opens locked.
       setFromLibrary(!incoming.link)
+      const kind = searchParams.get('st')
+      const fresh = { mesh: [], orb: [] }
+      if (isArtwork(kind)) {
+        const params = searchParams.get('sp') || '[]'
+        if (params.length < 1024) {
+          try { fresh[kind] = cleanLayout(kind, JSON.parse(params)) } catch { /* Use the default composition. */ }
+        }
+        setPreview({ place: 'fill', fill: kind })
+        writeSession(PREVIEW_KEY, 'fill')
+        writeSession(FILL_KEY, kind)
+      }
+      setLayouts(fresh)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
       const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
@@ -1065,7 +1112,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
     }
     const next = new URLSearchParams(searchParams)
-    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi', 'src'].forEach(k => next.delete(k))
+    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi', 'src', 'st', 'sp'].forEach(k => next.delete(k))
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1075,6 +1122,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setType(look.type)
     setAngle(look.angle)
     setSpace(look.space)
+    setLayouts(look.layouts || { mesh: [], orb: [] })
     selectOnly(0)
     setFromLibrary(false)
     burstRef.current.key = null
@@ -1188,7 +1236,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       const gap = sorted[i + 1].position - sorted[i].position
       if (gap > widest) { widest = gap; gapMid = (sorted[i].position + sorted[i + 1].position) / 2 }
     }
-    addStopAt(gapMid)
+    if (addStopAt(gapMid) == null) return null
+    return sorted.filter(s => s.position <= Math.round(gapMid)).length
   }, [stops, addStopAt])
 
   // The selection follows the rows: removing a row above the active one moves
@@ -1390,7 +1439,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
 
   // Reset clears every lock: the stops are replaced and the geometry locks go too.
-  const reset = useCallback(() => { applyPreset(PRESETS[0]); setLocks(NO_GEOMETRY_LOCKS) }, [applyPreset])
+  const reset = useCallback(() => { applyPreset(PRESETS[0]); setLayouts({ mesh: [], orb: [] }); setLocks(NO_GEOMETRY_LOCKS) }, [applyPreset])
 
   // ── Import colours: the live Palette Builder palette + saved projects ──
   // A source needs 2+ real hex colours to make a gradient; capped at 5 stops so
@@ -1511,7 +1560,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // No name yet (it comes with the generated name), so `gn` is left off. A
     // gradient of the person's own carries src=link so it opens editable; one still
     // sourced from the library stays a library hand-off and opens locked.
-    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space, src: fromLibrary ? undefined : 'link' })}`
+    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space, st: artKind, sp: artKind && layouts[artKind].length ? JSON.stringify(layouts[artKind]) : undefined, src: fromLibrary ? undefined : 'link' })}`
     try {
       await navigator.clipboard.writeText(url)
       toast?.('Link copied')
@@ -1979,7 +2028,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       </button>
     )
   }
-  const fmtLabel = EXPORT_FORMATS.find((f) => f.id === effFmt)?.label || 'CSS'
+  const fmtLabel = formats.find((f) => f.id === effFmt)?.label || 'CSS'
 
   // Escape anywhere in the controls panel (stop list, hex input, chips) clears
   // the selection. Something open in front of it closes first: a popover or menu
@@ -2122,8 +2171,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   {drawingFill ? 'Rendering fill…' : `Download ${previewAsLabel.label} PNG`}
                 </SaveShareItem>
               )}
-              {previewAs === 'mesh' && (
-                <SaveShareItem onClick={() => copyExport(meshCss(stops, fxOklch))}>Copy mesh background CSS</SaveShareItem>
+              {artKind && (
+                <SaveShareItem onClick={() => copyExport(artworkCss)}>Copy {artKind} background CSS</SaveShareItem>
               )}
               <SaveShareItem onClick={() => copyExport(gradientCssText(type, angle, stops, space))}>{styledFill ? 'Copy base gradient CSS' : 'Copy CSS'}</SaveShareItem>
               <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>{styledFill ? 'Copy base Tailwind class' : 'Copy Tailwind class'}</SaveShareItem>
@@ -2181,20 +2230,22 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               <span>Gallery gradient: free to preview and copy. Editing it is Pro. Press Reset or Random to start one of your own.</span>
             </p>
           )}
-          {/* The stage is the canvas's fixed slot. */}
-          <div ref={stageRef} className="grd-stage" data-ctx={previewAs}>
-            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
-            <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
-            {isTextStyle(previewAs) && <GradientText id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
+          <div className="grd-preview-bar">
             <PreviewSwitch
               options={PREVIEW_OPTIONS}
               value={previewPlace}
               onChange={choosePlace}
               label="Preview as"
               moreLabel="More previews"
-              after={previewPlace === 'fill' ? <FillStylePicker styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
+              after={previewPlace === 'fill' ? <FillStylePicker layouts={layouts} styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
             />
+          </div>
+          {/* The stage is the canvas's fixed slot. */}
+          <div ref={stageRef} className="grd-stage" data-ctx={previewAs}>
+            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
+            <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
+            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} layout={layouts[previewAs]} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
+            {isTextStyle(previewAs) && <GradientText id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
@@ -2262,7 +2313,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-code" onKeyDown={onCodeKeyDown}>
             <div className="grd-fmt">
               <div className="grd-fmt-tabs" role="tablist" aria-label="Export format">
-                {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                {formats.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
                   <button
                     key={f.id}
                     type="button"
@@ -2285,14 +2336,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   <CopyFace icon="copy" className="grd-copy-idle">Copy<span className="grd-copy-fmt"> {fmtLabel}</span></CopyFace>
                   <CopyFace icon="check" className="grd-copy-done">Copied</CopyFace>
                   {/* Hidden faces that hold the width at the widest label. */}
-                  {EXPORT_FORMATS.map((f) => (
+                  {formats.map((f) => (
                     <CopyFace key={f.id} icon="copy" className="grd-copy-size">Copy<span className="grd-copy-fmt"> {f.label}</span></CopyFace>
                   ))}
                   <CopyFace icon="check" className="grd-copy-size">Copied</CopyFace>
                 </span>
               </button>
             </div>
-            <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}${effFmt === 'css' ? ' grd-code-text--wrap' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
+            <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}${effFmt === 'css' || effFmt === 'art' ? ' grd-code-text--wrap' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
           </div>
         </ToolMain>
 
@@ -2300,6 +2351,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           {/* Two columns at tablet width (Random and Stops, then Stop N and Shape);
               everywhere else the wrappers dissolve and the sections stack. */}
           <div className="grd-col">
+          {artKind && <GradientArtworkEditor key={artKind} kind={artKind} layout={layouts[artKind]}
+            stops={stops} oklch={fxOklch} onEdit={editArtwork} onAddPoint={addStop} onColour={updateStop} locked={editLocked} />}
           <GenSection
             filters={filters}
             setFilters={setFilters}

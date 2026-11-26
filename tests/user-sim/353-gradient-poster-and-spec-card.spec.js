@@ -34,7 +34,7 @@ const SCENES = [
   { id: 'spec', name: 'Spec card', as: ', shown as a spec card' },
 ]
 const VIEWS = [
-  { w: 1440, h: 900, stage: [1046, 550], poster: [376, 470], spec: [352, 470] },
+  { w: 1440, h: 900, stage: [1046, 502], poster: [336, 420], spec: [352, 420] },
   { w: 768, h: 1024, stage: [720, 360], poster: null, spec: [600, 264] },
   { w: 390, h: 844, stage: [366, 274.5], poster: null, spec: [342, 198], touch: true },
 ]
@@ -84,11 +84,11 @@ for (const theme of ['light', 'dark']) {
           expect(label.endsWith(s.as), label).toBe(true)
           const order = await page.evaluate(() => {
             const kids = [...document.querySelector('.grd-stage').children]
-            return [kids.findIndex((el) => el.classList.contains('grd-fx')), kids.findIndex((el) => el.classList.contains('grd-txt')), kids.findIndex((el) => el.classList.contains('grd-ctx'))]
+            return [kids.findIndex((el) => el.classList.contains('grd-fx')), kids.findIndex((el) => el.classList.contains('grd-txt')), document.querySelector('.grd-ctx').getBoundingClientRect().bottom <= document.querySelector('.grd-stage').getBoundingClientRect().top]
           })
           expect(order[0], 'the fx layer is there').toBeGreaterThanOrEqual(0)
           expect(order[1], 'the text layer is after the fx layer').toBeGreaterThan(order[0])
-          expect(order[2], 'the switch is after both').toBeGreaterThan(order[1])
+          expect(order[2], 'the switch sits above the artwork').toBe(true)
         })
 
         test(`${s.name}: the stage and the scene have their sizes`, async ({ page }) => {

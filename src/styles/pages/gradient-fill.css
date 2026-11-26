@@ -230,3 +230,12 @@
     linear-gradient(90deg, transparent calc(52% - .5px), rgb(255 255 255 / .24) 52%, transparent calc(52% + .5px));
 }
 .grd .grd-fx[data-fx="aperture"] .grd-fx-grain { opacity: .12; }
+
+.grd .grd-fx[data-fx="orb"] { background: transparent; }
+.grd .grd-fx > .grd-fx-sphere {
+  inset: auto;
+  left: var(--fx-x, 50%); top: var(--fx-y, 50%);
+  width: var(--fx-diameter, 74cqmin); aspect-ratio: 1;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: var(--fx-orb-paint, linear-gradient(#ddd, #575761));
+}

@@ -32,6 +32,7 @@ const STREAKS = [
 
 function Scene({ id, stops, oklch, name }) {
   switch (id) {
+    case 'orb': return <div className="grd-fx-sphere" />
     case 'aperture':
       return <><div className="grd-fx-aperture"><div className="grd-fx-lamp" /><Flutes><div className="grd-fx-lamp" /></Flutes></div><div className="grd-fx-grain" /></>
     case 'satin':
@@ -109,9 +110,9 @@ function Caption({ name, stops }) {
  * `oklch` says whether it blends in OKLCH, so a style reads colour as the canvas does;
  * `name` is the caption's name on Mesh and Waves.
  */
-export default function GradientFx({ id, stops, paint, oklch, name }) {
+export default function GradientFx({ id, stops, paint, oklch, name, layout }) {
   return (
-    <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch })}>
+    <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch, layout })}>
       <Scene id={id} stops={stops} oklch={oklch} name={name} />
     </div>
   )

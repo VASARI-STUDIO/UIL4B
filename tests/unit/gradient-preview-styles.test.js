@@ -19,7 +19,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  PREVIEW_STYLES, isPreviewStyle, stopList, linearThrough, glowColours, styleVars,
+  PREVIEW_STYLES, isPreviewStyle, cleanLayout, artworkPoints, orbCss, stopList, linearThrough, glowColours, styleVars,
   FILL_STYLES, PREVIEW_PLACES, FIXED_SHAPE_STYLES, previewId, splitPreview,
   MESH_TABLE, meshPoints, meshGround, meshBackground, meshCss, waveBands, wavePath, WAVE_COUNT, phoneButton,
 } from '../../src/utils/gradientPreviewStyles.js'
@@ -31,7 +31,7 @@ const STOPS = [{ color: '#2b59ff', position: 100 }, { color: '#ff7a1a', position
 test('the styles are named plainly and in order', () => {
   assert.deepEqual(
     PREVIEW_STYLES.map((s) => s.label),
-    ['Aperture', 'Satin', 'Folded paper', 'Halftone', 'Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'],
+    ['Orb', 'Aperture', 'Satin', 'Folded paper', 'Halftone', 'Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'],
   )
   assert.equal(new Set(PREVIEW_STYLES.map((s) => s.id)).size, PREVIEW_STYLES.length)
   assert.ok(isPreviewStyle('mesh') && isPreviewStyle('waves') && isPreviewStyle('icon') && isPreviewStyle('phone'))
@@ -165,7 +165,7 @@ test("the Phone's button is the most chromatic stop, whatever the list order", (
 
 test('the places and fill styles split the old list with nothing lost or doubled', () => {
   assert.deepEqual(PREVIEW_PLACES.map((p) => p.id), ['fill', 'hero', 'card', 'button', 'poster', 'spec', 'icon', 'phone'])
-  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'])
+  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'mesh', 'orb', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'waves'])
   const styleIds = new Set([...PREVIEW_PLACES, ...FILL_STYLES].map((x) => x.id))
   for (const s of PREVIEW_STYLES) assert.ok(styleIds.has(s.id), s.id)
   for (const id of FIXED_SHAPE_STYLES) assert.ok(FILL_STYLES.some((s) => s.id === id), id)
@@ -186,4 +186,19 @@ test('an old stored style id comes back as Fill with that style', () => {
   assert.deepEqual(splitPreview('spec'), { place: 'spec', fill: 'plain' })
   assert.deepEqual(splitPreview(null, null), { place: 'fill', fill: 'plain' })
   assert.deepEqual(splitPreview('gone', 'gone'), { place: 'fill', fill: 'plain' })
+})
+
+test('authored layouts keep only bounded geometry and retain missing point slots', () => {
+  const raw = [null, { x: 29.6, y: -280, size: 999, color: 'ignored' }, { x: '20', y: 10, size: 90 }]
+  const points = artworkPoints('mesh', FOUR, true, raw)
+  assert.equal(points[0].x, MESH_TABLE[0][0])
+  assert.deepEqual([points[1].x, points[1].y, points[1].size], [30, -10, 160])
+  assert.equal(points[1].color, meshPoints(FOUR)[1].color)
+  assert.equal(points[2].size, 100)
+  assert.equal(cleanLayout('orb', raw).length, 1)
+  assert.deepEqual(cleanLayout('orb', {}), [])
+  const orb = orbCss(FOUR, true, [{ x: 65, y: 32, size: 82 }])
+  assert.match(orb, /left: 65%;/)
+  assert.match(orb, /width: 82cqmin;/)
+  assert.ok(orb.includes(styleVars('orb', { stops: FOUR, oklch: true })['--fx-orb-paint']))
 })

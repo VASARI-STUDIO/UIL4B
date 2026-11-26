@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import MenuSelect from './MenuSelect'
 import ToolIcon from './ToolIcon'
 
-// The row of preview choices on the canvas. It never wraps and never scrolls sideways: it
+// The row of preview choices above the canvas. It never wraps and never scrolls sideways: it
 // shows as many choices as fit the canvas's width and the rest go behind a "More" menu
 // (MenuSelect: a popover on desktop, a bottom sheet under 768px). Fit is measured, not
 // guessed, from a hidden copy of the row set in the same classes, so a late font or a
@@ -38,7 +38,7 @@ export default function PreviewSwitch({ options, value, onChange, label, moreLab
       const gap = parseFloat(style.columnGap) || 0
       const tail = afterRef.current
       const tailWidth = tail ? tail.getBoundingClientRect().width + (parseFloat(getComputedStyle(tail).marginLeft) || 0) + gap : 0
-      const room = stage.clientWidth - 2 * (parseFloat(style.left) || 0) - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0) - tailWidth
+      const room = stage.clientWidth - 2 * (parseFloat(style.left) || 0) - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0) - (parseFloat(style.borderLeftWidth) || 0) - (parseFloat(style.borderRightWidth) || 0) - tailWidth
       const used = (count) => widths.slice(0, count).reduce((a, b) => a + b, 0) + gap * Math.max(count - 1, 0)
       let count = options.length
       if (used(count) > room) {
