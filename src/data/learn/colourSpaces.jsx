@@ -85,7 +85,7 @@ export default function ColourSpaces() {
           eight, from a coordinate that reported no difference at all.
         </p>
         <p>
-          The damage shows up in tonal ramps. Build a 50&ndash;950 scale by
+          The damage shows up in tonal ramps. Build a 50 to 950 scale by
           stepping HSL lightness in even increments. The steps look even in the
           neutrals and badly uneven in the saturated hues. The same lightness
           change moves a yellow much further than it moves a blue. This is one
