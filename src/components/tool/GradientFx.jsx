@@ -32,6 +32,12 @@ const STREAKS = [
 
 function Scene({ id, stops, oklch, name }) {
   switch (id) {
+    case 'fresnel':
+      return (<><div className="grd-lens-ground" />{Array.from({ length: 10 }, (_, ring) => (
+        <div key={ring} className="grd-lens-band" style={{ '--ring': ring, '--scale': `${135 + ring * 13}%`, '--radius': `${98 - ring * 9}%`, '--offset': `${ring * 14}%` }} />
+      ))}</>)
+    case 'riso':
+      return (<><div className="grd-press-sheet" /><div className="grd-press-ink" /><div className="grd-fx-grain" /></>)
     case 'aperture':
       return <><div className="grd-fx-aperture"><div className="grd-fx-lamp" /><Flutes><div className="grd-fx-lamp" /></Flutes></div><div className="grd-fx-grain" /></>
     case 'satin':
@@ -107,10 +113,11 @@ function Caption({ name, stops }) {
  * `oklch` says whether it blends in OKLCH, so a style reads colour as the canvas does;
  * `name` is the caption's name on Waves.
  */
-export default function GradientFx({ id, stops, paint, oklch, name }) {
+export default function GradientFx({ id, stops, paint, oklch, name, strength = 100 }) {
   return (
     <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch })}>
       <Scene id={id} stops={stops} oklch={oklch} name={name} />
+      {strength < 100 && <div className="grd-finish-mix" style={{ background: paint, opacity: 1 - strength / 100 }} />}
     </div>
   )
 }

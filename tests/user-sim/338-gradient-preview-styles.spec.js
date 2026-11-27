@@ -144,16 +144,16 @@ test.describe('the preview styles', () => {
       await expect(picker.getByRole('button', { name, exact: true }), `${name} is a named tile`).toHaveAttribute('aria-pressed', /true|false/)
     }
     await expect(picker.getByRole('button', { name: 'Grain', exact: true })).toBeFocused()
-    await page.keyboard.press('ArrowRight')
-    await expect(picker.getByRole('button', { name: 'Fluted glass', exact: true })).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(picker.getByRole('button', { name: 'Folded paper', exact: true })).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(picker.getByRole('button', { name: 'Fluted glass', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(picker.getByRole('button', { name: 'Folded paper', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(picker.getByRole('button', { name: 'Grain', exact: true })).toHaveAttribute('aria-pressed', 'false')
-    await expect(fxOf(page)).toHaveAttribute('data-fx', 'fluted')
+    await expect(fxOf(page)).toHaveAttribute('data-fx', 'folds')
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
     await expect(triggerOf(page)).toBeFocused()
-    await expect(triggerOf(page)).toHaveAccessibleName('Fill style: Fluted glass')
+    await expect(triggerOf(page)).toHaveAccessibleName('Fill style: Folded paper')
   })
 
   test('the style picker is only offered on Fill', async ({ page }) => {

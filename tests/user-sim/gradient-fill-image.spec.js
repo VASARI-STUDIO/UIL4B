@@ -3,7 +3,7 @@ import { test, expect } from './base.js'
 import { go, signIn } from './helpers.js'
 
 const finishes = {
-  plain: 'Plain', aperture: 'Aperture', satin: 'Satin', folds: 'Folded paper',
+  plain: 'Plain', fresnel: 'Fresnel lens', riso: 'Risograph', aperture: 'Aperture', satin: 'Satin', folds: 'Folded paper',
   halftone: 'Halftone', grain: 'Grain', fluted: 'Fluted glass', ring: 'Glow ring',
   streak: 'Streak', glow: 'Soft glow', fade: 'Fade', mesh: 'Mesh', waves: 'Waves',
 }
@@ -11,11 +11,14 @@ const finishes = {
 const cases = Object.entries(finishes).map(([id, label]) => ({ id, label }))
 cases.push({ id: 'mesh', label: 'Mesh', mobile: true })
 
-for (const { id, label, mobile } of cases) {
-  test(`${label} PNG reproduces the active fill${mobile ? ' on mobile' : ''}`, async ({ page }, testInfo) => {
+cases.push({ id: 'riso', label: 'Risograph', strength: 42 })
+
+for (const { id, label, mobile, strength } of cases) {
+  test(`${label} PNG reproduces the active fill${strength ? ' at ' + strength + '%' : ''}${mobile ? ' on mobile' : ''}`, async ({ page }, testInfo) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 })
     await signIn(page, { plan: 'pro' })
     await page.addInitScript(style => sessionStorage.setItem('vs-gradient-fill', style), id)
+    if (strength) await page.addInitScript(value => sessionStorage.setItem('vs-gradient-finish-strength', String(value)), strength)
     await go(page, '/create/gradient?gs=F5AB66-0_D84674-38_403174-68_173E50-100&gt=' + (id === 'mesh' ? 'mesh' : 'conic') + '&ga=48')
     await expect(page.getByRole('button', { name: `Fill style: ${id === 'mesh' ? 'Plain' : label}` })).toBeVisible()
     const stage = page.locator('.grd-stage')

@@ -1,3 +1,4 @@
+import { openRandomSettings } from './gradient-controls.js'
 // /create/gradient: Hue, Back, the Pro gate on Use and Base colour, and the toolbar
 // with Random narrowed and Back enabled.
 //
@@ -19,7 +20,7 @@ import { go, signIn, watch } from './helpers.js'
 
 const ROUTE = '/create/gradient'
 const panelOf = (page) => page.getByRole('complementary', { name: 'Gradient controls' })
-const genOf = (page) => panelOf(page).locator('.grd-gen')
+const genOf = (page) => page.locator('.grd-gen')
 const radio = (page, group, name) => genOf(page).getByRole('radiogroup', { name: group === 'Use' ? /^Use( Pro)?$/ : group, exact: group !== 'Use' }).getByRole('radio', { name, exact: true })
 const toolbar = (page) => page.locator('[data-tool-toolbar]')
 const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
@@ -28,6 +29,7 @@ async function open(page) {
   await go(page, ROUTE)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(panelOf(page)).toBeVisible()
+  await openRandomSettings(page)
   await page.evaluate(() => document.fonts.ready)
   await settle(page)
 }

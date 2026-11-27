@@ -1,3 +1,4 @@
+import { openRandomSettings, openGeometry } from './gradient-controls.js'
 // /create/gradient: what Random is told to make (Type and Stops under More options, the
 // Colours row and its Pick… checklist), selecting several stops, and chip presses on a
 // selection.
@@ -92,6 +93,7 @@ async function open(page) {
   await go(page, ROUTE)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(panelOf(page)).toBeVisible()
+  await openRandomSettings(page)
   await page.evaluate(() => document.fonts.ready)
   await settle(page)
 }
@@ -107,7 +109,7 @@ const said = (page) => page.evaluate(() => [...document.querySelectorAll('[role=
 
 // ── the Random section ───────────────────────────────────────────────────────
 
-const genOf = (page) => panelOf(page).locator('.grd-gen')
+const genOf = (page) => page.locator('.grd-gen')
 
 const moreButton = (page) => page.locator('[data-tl-more] button').first()
 const menuOpen = (page) => page.locator('.tl-menu-row').first().isVisible().catch(() => false)
@@ -501,6 +503,7 @@ for (const w of [390, 360]) {
 
     test('the angle lock in Shape is a 44px touch target', async ({ page }) => {
       await open(page)
+      await openGeometry(page)
       const box = await page.getByRole('button', { name: /^Keep the angle \(\d+°\) when you press Random$/ }).boundingBox()
       expect(box.height, 'the angle lock is 44px tall').toBeGreaterThanOrEqual(44)
       expect(box.width, 'the angle lock is 44px wide').toBeGreaterThanOrEqual(44)

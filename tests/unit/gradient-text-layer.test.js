@@ -22,7 +22,7 @@ import { boxWithin, inkFor, sceneInks, lowestInk, sceneBadge, badgeText } from '
 import { INK_DARK, INK_LIGHT } from '../../src/utils/gradientInk.js'
 import { contrastRatio } from '../../src/utils/colors.js'
 import {
-  PREVIEW_STYLES, POSTER_COPY, PHONE_COPY, ICON_GLYPH, ICON_INK_BOX, TEXT_STYLES, isTextStyle, styleVars, specStrip, specHexes, fitHexes, specTypeLine, specSampledNote, specName,
+  PREVIEW_STYLES, POSTER_COPY, PHONE_COPY, ICON_INK_BOX, TEXT_STYLES, isTextStyle, styleVars, specStrip, specHexes, fitHexes, specTypeLine, specSampledNote, specName,
 } from '../../src/utils/gradientPreviewStyles.js'
 
 const BW = [{ color: '#000000', position: 0 }, { color: '#FFFFFF', position: 100 }]
@@ -82,7 +82,7 @@ test('Poster and Spec card sit before Waves, App icon and Phone, named and spoke
 })
 
 test("the Poster sets Shallow End's own words", () => {
-  assert.deepEqual(POSTER_COPY, { brand: 'Shallow End', display: 'Lessons that fit after school.', footer: 'Pool 2, Sandy Bay. Tuesdays at 4:15.' })
+  assert.deepEqual(POSTER_COPY, { brand: 'Shallow End', display: 'Night swim.', footer: 'Friday 19:30  /  Pool 2, Sandy Bay' })
 })
 
 test("Poster and Spec card paint the canvas's own gradient and invent no colour", () => {
@@ -130,11 +130,10 @@ test('the Sampled at line is there when there are fewer than five stops, and onl
   assert.equal(specSampledNote(some(12)), null)
 })
 
-test("the Phone sets Offcut's own words and the icon is Tenner's T", () => {
+test("the phone ticket contains the route, departure and validation action", () => {
   assert.deepEqual(PHONE_COPY, {
-    line: 'Quote on site. Paid by Friday.', heading: 'Sign in to Offcut', email: 'mel@offcut.example', label: 'Email', button: 'Continue', link: 'Create an account',
+    line: 'Boarding pass', heading: 'Brooke St → Bellerive', departure: '08:40  /  Pier 1', label: 'Departure', button: 'Show ticket',
   })
-  assert.equal(ICON_GLYPH, 'T')
 })
 
 test("the App icon's ink is chosen over the centre of a square", () => {

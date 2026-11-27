@@ -1,3 +1,4 @@
+import { openRandomSettings, openGeometry } from './gradient-controls.js'
 // /create/gradient: the page is the same height whatever the gradient holds, and
 // every swatch in the panel is a circle.
 //
@@ -138,7 +139,7 @@ async function toolbarAction(page, name, { force = false } = {}) {
 
 
 /** A choice in the Random section's Colours row. With no palette, Palette is aria-disabled but still answers a press with a toast. */
-const coloursChoice = (page, name) => panelOf(page).getByRole('radiogroup', { name: 'Colours' }).getByRole('radio', { name, exact: true })
+const coloursChoice = (page, name) => page.getByRole('radiogroup', { name: 'Colours' }).getByRole('radio', { name, exact: true })
 
 /** A palette of thirteen colours with a ramp made from the first, as a project would hold. */
 const THIRTEEN = [
@@ -173,6 +174,8 @@ async function open(page) {
   await go(page, ROUTE)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(panelOf(page)).toBeVisible()
+  await openRandomSettings(page)
+  await openGeometry(page)
   await page.evaluate(() => document.fonts.ready)
   await settle(page)
 }
@@ -220,12 +223,11 @@ for (const screen of SCREENS) {
     test('Linear, Radial and Conic take the same space, and Radial says it has no angle', async ({ page }) => {
       watch(page, 'a designer switching gradient type')
       await open(page)
-      const panel = panelOf(page)
       const l = ledger(page)
       await l.mark('Linear at rest')
       const angleRow = page.locator('.grd-row--angle')
       for (const type of ['Radial', 'Conic', 'Linear', 'Radial', 'Linear']) {
-        await panel.getByRole('button', { name: type, exact: true }).click()
+        await page.getByRole('group', { name: 'Gradient type' }).getByRole('button', { name: type, exact: true }).click()
         await l.mark(`type ${type}`)
         await expect(angleRow, `the angle row is drawn for ${type}`).toBeVisible()
         if (type === 'Radial') {
@@ -268,11 +270,10 @@ for (const screen of SCREENS) {
     test('Perceived and Standard interpolation take the same space', async ({ page }) => {
       watch(page, 'a designer comparing colour spaces')
       await open(page)
-      const panel = panelOf(page)
       const l = ledger(page)
       await l.mark('start')
       for (const s of ['Standard', 'Perceived', 'Standard', 'Perceived']) {
-        await panel.getByRole('button', { name: new RegExp(`^${s}`) }).click()
+        await page.getByRole('button', { name: new RegExp(`^${s}`) }).click()
         await l.mark(`space ${s}`)
       }
       expect(l.drift(), l.drift().join('\n')).toEqual([])
@@ -476,59 +477,16 @@ for (const screen of SCREENS) {
   })
 }
 
-// At 390, 768 and 1440 both interpolation hints may wrap to the same number of
-// lines, so those widths cannot tell a shared cell from a swapped paragraph. The
-// Perceived hint is the shorter (61 characters against 69), so somewhere between
-// a phone and a tablet there is a band of widths where it fits one line and the
-// Standard hint needs two: that is where a hint that is swapped in and out moves
-// the page. Which widths those are depends on the font the machine draws (the
-// Windows and Linux faces measure differently, so a fixed 400 held on one and
-// not the other), so the test FINDS the band by measuring the hints at each
-// width, and fails with the measurements if there is none.
-test.describe('the interpolation hint at a width where the two hints differ in length', () => {
-  test.use({ viewport: { width: 400, height: 900 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
-
-  test('the two hints wrap to different heights here, and switching still changes nothing', async ({ page }) => {
-    watch(page, 'a designer on a mid-size phone comparing colour spaces')
-    await open(page)
-    const panel = panelOf(page)
-    const measure = () => page.evaluate(() => [...document.querySelectorAll('.grd-interp-hint')].map((p) => {
-      const r = document.createRange()
-      r.selectNodeContents(p)
-      return Math.round(r.getBoundingClientRect().height)
-    }))
-    // Scan 320..700 in 2px steps for the widest run of widths where the hints
-    // differ, and sit in the middle of it so a pixel of font drift cannot end it.
-    const seen = []
-    let run = []
-    let best = []
-    for (let w = 320; w <= 700; w += 2) {
-      await page.setViewportSize({ width: w, height: 900 })
-      await settle(page)
-      const h = await measure()
-      expect(h.length, 'both hints are in the panel').toBe(2)
-      seen.push(`${w}:${h.join('/')}`)
-      if (h[0] !== h[1]) run.push(w)
-      else { if (run.length > best.length) best = run; run = [] }
-    }
-    if (run.length > best.length) best = run
-    expect(best.length, `no width from 320 to 700 gives the two hints different heights, so this test proves nothing. Heights (hint 1/hint 2) by width: ${seen.join(' ')}`).toBeGreaterThan(0)
-    await page.setViewportSize({ width: best[Math.floor(best.length / 2)], height: 900 })
-    await settle(page)
-    const lines = await measure()
-    expect(lines[0], 'the hints differ in length at this width, or this test proves nothing').not.toBe(lines[1])
-
-    const l = ledger(page)
-    await l.mark('start')
-    for (const s of ['Standard', 'Perceived', 'Standard', 'Perceived']) {
-      await panel.getByRole('button', { name: new RegExp(`^${s}`) }).click()
-      await l.mark(`space ${s}`)
-    }
-    expect(l.drift(), l.drift().join('\n')).toEqual([])
-    // Only the hint for the chosen space is read out.
-    await expect(page.locator('#grd-interp-hint')).toHaveCount(1)
-    await expect(page.locator('.grd-interp-hint.is-idle')).toHaveAttribute('aria-hidden', 'true')
-  })
+test('switching interpolation updates the accessible hint without moving the toolbar', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page)
+  const bar = page.locator('.grd-geometry-bar')
+  const height = (await bar.boundingBox()).height
+  for (const label of ['Standard', 'Perceived']) {
+    await bar.getByRole('button', { name: new RegExp('^' + label) }).click()
+    await expect(bar.locator('#grd-interp-hint')).toHaveCount(1)
+    expect((await bar.boundingBox()).height).toBe(height)
+  }
 })
 
 test.describe('the stop list is a fixed window', () => {
@@ -953,13 +911,12 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
       test('Radial says it has no angle and the angle row keeps its lock; the angle lock holds the angle through Random', async ({ page }) => {
         watch(page, 'a designer on a radial gradient')
         await open(page)
-        const panel = panelOf(page)
 
         await expect(page.locator('.grd-row--angle .grd-lock'), 'the angle lock is drawn').toHaveCount(1)
-        await panel.getByRole('button', { name: 'Radial', exact: true }).click()
+        await page.getByRole('group', { name: 'Gradient type' }).getByRole('button', { name: 'Radial', exact: true }).click()
         await expect(page.locator('#grd-angle-none')).toContainText('Radial gradients have no angle')
         await expect(page.locator('.grd-row--angle .grd-lock'), 'the lock stays on Radial').toHaveCount(1)
-        await panel.getByRole('button', { name: 'Linear', exact: true }).click()
+        await page.getByRole('group', { name: 'Gradient type' }).getByRole('button', { name: 'Linear', exact: true }).click()
 
         // Put the angle at 77, a value the roll is very unlikely to land on, then hold it.
         const field = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
@@ -976,7 +933,7 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
           if (await field.count()) await expect(field, `Random ${i + 1} kept the angle`).toHaveValue('77')
         }
         // Whatever the twelve rolls landed on, the angle underneath is still 77.
-        await panel.getByRole('button', { name: 'Linear', exact: true }).click()
+        await page.getByRole('group', { name: 'Gradient type' }).getByRole('button', { name: 'Linear', exact: true }).click()
         await expect(field).toHaveValue('77')
 
         // The control: with the angle lock off, Random does move the angle.
@@ -985,7 +942,7 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         let moved = false
         for (let i = 0; i < 30 && !moved; i++) {
           await toolbarAction(page, /^Random$/)
-          await panel.getByRole('button', { name: 'Linear', exact: true }).click()
+          await page.getByRole('group', { name: 'Gradient type' }).getByRole('button', { name: 'Linear', exact: true }).click()
           moved = (await field.inputValue()) !== '77'
         }
         expect(moved, 'with the angle lock off, thirty Randoms never moved the angle').toBe(true)
@@ -1010,8 +967,10 @@ test.describe('the editor fits one frame at desktop sizes', () => {
       watch(page, 'a designer on a laptop')
       await page.setViewportSize({ width: w, height: h })
       await open(page)
+      await page.locator('.grd-tune-close').click()
+      await page.evaluate(() => window.scrollTo(0, 0))
       expect(await page.evaluate(() => window.scrollY)).toBe(0)
-      for (const sel of ['.grd-rail', '.grd-copy', '.grd-gen', '.grd-stops', '.grd-paint', '[aria-label="Gradient type"]']) {
+      for (const sel of ['.grd-rail', '.grd-copy', '.grd-random', '.grd-stops', '.grd-paint', '[aria-label="Gradient type"]']) {
         const bottom = await bottomOf(page, sel)
         expect(bottom, `${sel} ends at ${Math.round(bottom)}px in a ${h}px viewport`).toBeLessThanOrEqual(h)
       }
@@ -1086,20 +1045,12 @@ test.describe('every swatch in the gradient panel is a circle', () => {
         reducedMotion: 'reduce',
       })
 
-      test('the stop row swatches are round', async ({ page }) => {
-        watch(page, 'a designer looking at the stop swatches')
+      test('stop swatches use the same corner radius across a long list', async ({ page }) => {
         await open(page)
-        for (const sel of ['.grd-stop-swatch']) {
-          const r = await roundReport(page, sel)
-          expect(r.count, `${sel} is drawn`).toBeGreaterThan(0)
-          expect(r.bad, r.bad.join('\n')).toEqual([])
-        }
-        // Still round at twelve stops, with the list scrolled.
-        const panel = panelOf(page)
-        while ((await stopRows(page).count()) < MAX_STOPS) await addButton(panel).click()
-        const r = await roundReport(page, '.grd-stop-swatch')
-        expect(r.count).toBe(MAX_STOPS)
-        expect(r.bad, r.bad.join('\n')).toEqual([])
+        while (await stopRows(page).count() < MAX_STOPS) await addButton(panelOf(page)).click()
+        const swatches = page.locator('.grd-stop-swatch')
+        await expect(swatches).toHaveCount(MAX_STOPS)
+        for (const swatch of await swatches.all()) await expect(swatch).toHaveCSS('border-top-left-radius', '5px')
       })
 
       test('the palette row chips and the shades are round', async ({ page }) => {

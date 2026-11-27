@@ -676,10 +676,12 @@ function PreviewHero({ stops, type, angle, mesh }) {
   const flip = ink.css === INK_DARK.css ? INK_LIGHT.css : INK_DARK.css
   return (
     <div className="grd-ctx-view grd-ctx-hero" ref={ref}>
+      <div className="grd-hero-photo"><img src="/previews/ferry/ferry-morning-640.webp" alt="" /></div>
       <div className="grd-ctx-sample" data-box aria-hidden="true" style={{ color: ink.css }}>
-        <p className="grd-ctx-h">Lessons that fit after school.</p>
-        <p className="grd-ctx-p">Week by week, length by length.</p>
-        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Book lessons</span>
+        <span className="grd-hero-name">Channel Ferry Co.</span>
+        <p className="grd-ctx-h">The harbour<br /><em>by water.</em></p>
+        <p className="grd-ctx-p">Crossings from Brooke Street Pier.</p>
+        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Find a sailing ↗</span>
       </div>
       <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{badgeText(ink)}</span>
     </div>
@@ -688,13 +690,15 @@ function PreviewHero({ stops, type, angle, mesh }) {
 
 function PreviewButtons({ paint, stops, type, angle, mesh }) {
   const [ref, spots] = useMeasured(measureButtons)
-  const sizes = [32, 40, 48]
+  const ink = inkFor(stops, type, angle, spots?.[0], mesh)
   return (
     <div className="grd-ctx-view grd-ctx-ground grd-ctx-btns" aria-hidden="true" ref={ref}>
-      {sizes.map((h, i) => {
-        const ink = inkFor(stops, type, angle, spots?.[i], mesh)
-        return <span key={h} data-box className="grd-ctx-btn" title={badgeText(ink)} style={{ background: paint, color: ink.css, height: h }}>Save limits</span>
-      })}
+      <div className="grd-booking">
+        <header><span>Channel Ferry Co.</span><span>Booking</span></header>
+        <div className="grd-booking-trip"><small>One way · Passenger</small><strong>Brooke St <i>→</i> Bellerive</strong></div>
+        <div className="grd-booking-total"><span>1 adult · 08:40 sailing</span><b>$6.80</b></div>
+        <span data-box className="grd-ctx-btn" title={badgeText(ink)} style={{ background: paint, color: ink.css }}>Book crossing <i>↗</i></span>
+      </div>
     </div>
   )
 }
@@ -727,15 +731,12 @@ function PreviewSample({ id, paint, stops, type, angle, mesh }) {
   if (id !== 'card') return null
   return (
     <div className="grd-ctx-view grd-ctx-ground" aria-hidden="true">
-      <div className="grd-ctx-card" style={{ '--statement-fill': paint }}>
-        <div className="grd-statement-copy">
-          <span>Offcut Studio</span>
-          <div><p>Invoices paid</p><strong>$7,296</strong></div>
-          <small>March statement</small>
+      <div className="grd-pass" style={{ '--pass-paint': paint }}>
+        <div className="grd-pass-face">
+          <div className="grd-pass-print" />
+          <div className="grd-pass-type"><small>Channel Ferry Co.</small><strong>Harbour<br /><em>Pass</em></strong></div>
         </div>
-        <div className="grd-statement-art">
-          <i /><i /><i />
-        </div>
+        <div className="grd-pass-stub"><span>Passenger / 01</span><i /><b>CF—0840</b></div>
       </div>
     </div>
   )
@@ -949,6 +950,15 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const cssCode = gradientCssText(type, angle, stops, space, layouts.mesh)
   const [{ place: previewPlace, fill: fillStyle }, setPreview] = useState(() =>
     splitPreview(readSession(PREVIEW_KEY), readSession(FILL_KEY)))
+  const [strength, setStrength] = useState(() => {
+    const saved = readSession('vs-gradient-finish-strength')
+    const value = Number(saved)
+    return saved && Number.isInteger(value) && value >= 0 && value <= 100 ? value : 100
+  })
+  function changeStrength(value) {
+    setStrength(value)
+    writeSession('vs-gradient-finish-strength', String(value))
+  }
   const choosePlace = (place) => {
     setPreview((p) => ({ ...p, place }))
     writeSession(PREVIEW_KEY, place)
@@ -2007,6 +2017,23 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       'Button gradients that keep text readable',
     ],
   })
+  const [geometryOpen, setGeometryOpen] = useState(false)
+  const [tuneOpen, setTuneOpen] = useState(() => readSession('vs-gradient-tune-open') === '1')
+  function toggleTune() {
+    writeSession('vs-gradient-tune-open', tuneOpen ? '0' : '1')
+    setTuneOpen(!tuneOpen)
+  }
+  const tuneRef = useRef(null)
+  const tuneTrigger = useRef(null)
+  useEffect(() => {
+    if (tuneOpen) tuneRef.current?.focus()
+  }, [tuneOpen])
+  const closeTune = () => {
+    writeSession('vs-gradient-tune-open', '0')
+    setTuneOpen(false)
+    const trigger = tuneTrigger.current || document.querySelector('.grd [data-tl-more] button')
+    trigger?.focus()
+  }
   const [moreOpen, setMoreOpen] = useState(() => { try { return sessionStorage.getItem('vs-gradient-gen-more') === '1' } catch { return false } })
   const toggleMore = () => setMoreOpen((o) => { try { sessionStorage.setItem('vs-gradient-gen-more', o ? '0' : '1') } catch { /* private mode */ } return !o })
   // The rail reads the stops left to right, so it is always a 90deg ramp in the
@@ -2096,6 +2123,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           // A dot on the icon says a filter narrows what Random makes.
           render: () => <ToolButton icon="shuffle" className={narrowed ? 'grd-random is-narrowed' : 'grd-random'} onClick={pressRandom} title={randomTitle}>Random</ToolButton>,
           menu: { label: 'Random', icon: 'shuffle', onSelect: pressRandom, title: randomTitle },
+        },
+        {
+          id: 'tune', priority: 3,
+          render: () => <ToolButton ref={tuneTrigger} icon="sliders-horizontal" collapse aria-label="Random settings" aria-expanded={tuneOpen}
+            aria-controls={tuneOpen ? 'grd-random-settings' : undefined} onClick={toggleTune}>Random settings</ToolButton>,
+          menu: { label: 'Random settings', icon: 'sliders-horizontal', pressed: tuneOpen, onSelect: toggleTune },
+        },
+        {
+          id: 'reverse', priority: 2,
+          render: () => <ToolButton icon="arrows-left-right" collapse onClick={flip} aria-label="Flip the stops">Reverse</ToolButton>,
+          menu: { label: 'Flip the stops', icon: 'arrows-left-right', onSelect: flip },
         },
         {
           id: 'back', priority: 2, inline: !phoneBar,
@@ -2228,6 +2266,85 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <span className="plb-submit-sw" style={{ background: paintCss }} />
         </CommunitySubmitDialog>
       )}
+      <div className={`grd-geometry-bar${geometryOpen ? ' is-expanded' : ''}`}>
+          <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
+            {/* Always drawn so a screen reader hears the line when it appears. */}
+            <div className="grd-geo-live" aria-live="polite">
+              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. The CSS export uses the underlying gradient.</p>}
+            </div>
+            <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
+              <ToolPills
+                label="Gradient type"
+                describedBy={shapeMoot ? 'grd-geo-why' : undefined}
+                options={GRAD_TYPES}
+                value={type}
+                onChange={(t) => { if (t !== type && guardEdit()) { beginEdit(false); setType(t) } }}
+              />
+              <LockBtn on={locks.type} onClick={() => toggleGeometryLock('type')} className="grd-geo-lock" label={keepLabel(locks.type, 'the type')} />
+            </div>
+            <button type="button" className="grd-geom-more" aria-expanded={geometryOpen}
+              aria-label="Angle and interpolation" onClick={() => setGeometryOpen(open => !open)}>
+              <ToolIcon name="sliders-horizontal" size={16} />
+            </button>
+            {/* The row is always drawn, at the wheel's height; a radial gradient
+                says it has no angle in the same space instead of removing it. */}
+            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`} role={shapeMoot ? 'group' : undefined} aria-label={shapeMoot ? 'Angle' : undefined} aria-describedby={shapeMoot ? 'grd-geo-why' : undefined}>
+              {angleActive ? (
+                <AngleWheel
+                  label="Angle"
+                  ariaLabel="Gradient angle"
+                  numberLabel="Gradient angle in degrees"
+                  value={angle}
+                  onChange={(v) => { if (v !== angle && guardEdit()) { beginEdit('angle'); setAngle(v) } }}
+                  locked={editLocked}
+                  onLockedPress={guardEdit}
+                />
+              ) : (
+                <p className="grd-angle-none" id="grd-angle-none">{type} gradients have no angle</p>
+              )}
+              <LockBtn on={locks.angle} onClick={() => toggleGeometryLock('angle')} className="grd-geo-lock grd-angle-lock" label={keepLabel(locks.angle, `the angle (${Math.round(angle)}°)`)} />
+            </div>
+            <div className="grd-interp">
+              <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
+              <div className="grd-interp-ctl">
+                <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={(v) => { if (v !== space) { beginEdit(false); setSpace(v) } }} />
+                {RANDOM_DRAWS_SPACE && <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />}
+              </div>
+              {/* Both hints sit in one grid cell, the idle one hidden, so the
+                  cell is as tall as the longer hint whichever is showing. */}
+              <div className="grd-interp-hints">
+                {SPACES.map((o) => (
+                  o.value === space
+                    ? <p key={o.value} className="grd-interp-hint" id="grd-interp-hint">{o.hint}</p>
+                    : <p key={o.value} className="grd-interp-hint is-idle" aria-hidden="true">{o.hint}</p>
+                ))}
+              </div>
+            </div>
+          </ToolSection>
+      </div>
+      {tuneOpen && (
+        <section className="grd-tune-tray" id="grd-random-settings" aria-label="Random settings"
+          ref={tuneRef} tabIndex={-1} onKeyDown={event => {
+            if (event.key === 'Escape' && !event.defaultPrevented && !event.target.closest('[role="dialog"]')) closeTune()
+          }}>
+          <GenSection
+            filters={filters}
+            setFilters={setFilters}
+            isPro={isPro}
+            onPro={gateGuided}
+            moreOpen={moreOpen}
+            onMore={toggleMore}
+            coarse={coarse}
+            chips={chips}
+            poolColours={poolColours}
+            toast={toast}
+            summary={randomSummary}
+            lockedType={lockedType}
+            lockedStops={lockedStops}
+          />
+          <button type="button" className="grd-tune-close" onClick={closeTune}>Done</button>
+        </section>
+      )}
       <ToolGrid>
         <ToolMain>
           {editLocked && (
@@ -2243,14 +2360,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               onChange={choosePlace}
               label="Preview as"
               moreLabel="More previews"
-              after={previewPlace === 'fill' ? <FillStylePicker styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
+              after={previewPlace === 'fill' ? <FillStylePicker strength={strength} onStrength={changeStrength} styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
             />
           </div>
           {/* The stage is the canvas's fixed slot. */}
           <div ref={stageRef} className="grd-stage" data-ctx={previewAs}>
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
             <PreviewSample mesh={mesh} id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
+            {isPreviewStyle(previewAs) && <GradientFx strength={styledFill ? strength : 100} id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
             {isTextStyle(previewAs) && <GradientText mesh={mesh} id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
           </div>
 
@@ -2357,73 +2474,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           {/* Two columns at tablet width;
               everywhere else the wrappers dissolve and the sections stack. */}
           <div className="grd-col">
-          <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
-            {/* Always drawn so a screen reader hears the line when it appears. */}
-            <div className="grd-geo-live" aria-live="polite">
-              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. The CSS export uses the underlying gradient.</p>}
-            </div>
-            <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
-              <ToolPills
-                label="Gradient type"
-                describedBy={shapeMoot ? 'grd-geo-why' : undefined}
-                options={GRAD_TYPES}
-                value={type}
-                onChange={(t) => { if (t !== type && guardEdit()) { beginEdit(false); setType(t) } }}
-              />
-              <LockBtn on={locks.type} onClick={() => toggleGeometryLock('type')} className="grd-geo-lock" label={keepLabel(locks.type, 'the type')} />
-            </div>
-            {/* The row is always drawn, at the wheel's height; a radial gradient
-                says it has no angle in the same space instead of removing it. */}
-            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`} role={shapeMoot ? 'group' : undefined} aria-label={shapeMoot ? 'Angle' : undefined} aria-describedby={shapeMoot ? 'grd-geo-why' : undefined}>
-              {angleActive ? (
-                <AngleWheel
-                  label="Angle"
-                  ariaLabel="Gradient angle"
-                  numberLabel="Gradient angle in degrees"
-                  value={angle}
-                  onChange={(v) => { if (v !== angle && guardEdit()) { beginEdit('angle'); setAngle(v) } }}
-                  locked={editLocked}
-                  onLockedPress={guardEdit}
-                />
-              ) : (
-                <p className="grd-angle-none" id="grd-angle-none">{type} gradients have no angle</p>
-              )}
-              <LockBtn on={locks.angle} onClick={() => toggleGeometryLock('angle')} className="grd-geo-lock grd-angle-lock" label={keepLabel(locks.angle, `the angle (${Math.round(angle)}°)`)} />
-            </div>
-            <div className="grd-interp">
-              <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
-              <div className="grd-interp-ctl">
-                <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={(v) => { if (v !== space) { beginEdit(false); setSpace(v) } }} />
-                {RANDOM_DRAWS_SPACE && <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />}
-              </div>
-              {/* Both hints sit in one grid cell, the idle one hidden, so the
-                  cell is as tall as the longer hint whichever is showing. */}
-              <div className="grd-interp-hints">
-                {SPACES.map((o) => (
-                  o.value === space
-                    ? <p key={o.value} className="grd-interp-hint" id="grd-interp-hint">{o.hint}</p>
-                    : <p key={o.value} className="grd-interp-hint is-idle" aria-hidden="true">{o.hint}</p>
-                ))}
-              </div>
-            </div>
-          </ToolSection>
-          {isMesh && <GradientArtworkEditor paint={paintCss} layout={layouts.mesh}
-            stops={stops} oklch={fxOklch} onEdit={editArtwork} onAddPoint={addStop} onColour={updateStop} locked={editLocked} />}
-          <GenSection
-            filters={filters}
-            setFilters={setFilters}
-            isPro={isPro}
-            onPro={gateGuided}
-            moreOpen={moreOpen}
-            onMore={toggleMore}
-            coarse={coarse}
-            chips={chips}
-            poolColours={poolColours}
-            toast={toast}
-            summary={randomSummary}
-            lockedType={lockedType}
-            lockedStops={lockedStops}
-          />
+
+
+
 
           <ToolSection
             label="Stops"
@@ -2444,9 +2497,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     {coarse && <button type="button" className="grd-sel-clear" onClick={startSelecting} aria-label="Select stops">Select</button>}
                   </>
                 )}
-                <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
-                  <ToolIcon name="arrows-left-right" size={13} />
-                </button>
                 <button
                   type="button"
                   className="grd-iconbtn grd-add"
@@ -2592,7 +2642,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </div>
 
           <div className="grd-col">
-          <ToolSection label={multi ? `${targets.length} stops` : `Stop ${activeStop + 1}`} aside={LOCK_CAPTION}>
+          <ToolSection className="grd-selected-stop" label={multi ? `${targets.length} stops` : `Stop ${activeStop + 1}`} aside={<span className="grd-selected-chip" style={{ background: selected?.color }} aria-hidden="true" />}>
             {selected && (
               <div className="grd-pick">
                 <StopHexInput
@@ -2644,6 +2694,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
           </ToolSection>
 
+          {isMesh && <GradientArtworkEditor paint={paintCss} layout={layouts.mesh}
+            stops={stops} oklch={fxOklch} onEdit={editArtwork} onAddPoint={addStop} onColour={updateStop} locked={editLocked} />}
           </div>
         </ToolPanel>
       </ToolGrid>

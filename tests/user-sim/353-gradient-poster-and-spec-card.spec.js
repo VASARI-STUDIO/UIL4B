@@ -34,7 +34,7 @@ const SCENES = [
   { id: 'spec', name: 'Spec card', as: ', shown as a spec card' },
 ]
 const VIEWS = [
-  { w: 1440, h: 900, stage: [1046, 502], poster: [336, 420], spec: [352, 420] },
+  { w: 1440, h: 900, stage: [1046, 432], poster: [280, 350], spec: [352, 350] },
   { w: 768, h: 1024, stage: [720, 360], poster: null, spec: [600, 264] },
   { w: 390, h: 844, stage: [366, 274.5], poster: null, spec: [342, 198], touch: true },
 ]

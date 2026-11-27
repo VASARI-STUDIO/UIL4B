@@ -1,13 +1,19 @@
 # Gradient Generator preview handover
 
-The generator at `/create/gradient` has three choices. **Shape → Gradient type** defines the paint. **Preview as** chooses where it appears. On **Fill**, **Fill style** adds an optional surface treatment.
+The generator at `/create/gradient` has three choices. **Gradient type** in the toolbar defines the paint. **Preview as** chooses where it appears. On **Fill**, **Fill style** adds an optional surface treatment.
 
 ## Walk through an edit
 
-1. In **Shape**, choose Linear, Radial, Conic or Mesh. Open **Mesh points**, select a numbered point and drag it on the map. Horizontal, Vertical and Spread give precise keyboard control. The colour swatch changes that point’s stop. **Add point** adds a stop in the widest gap, up to five points.
-2. Choose **Webpage** above the artwork to see the gradient on the Frequency FM feature sleeve. Choose **App icon** to compare icon sizes, or **Poster** to see the same field under the Shallow End headline. Narrow screens put additional places in **More**. The point editor stays available in each scene.
-3. Change a colour or move a point while the scene is open. Its gradient-bearing surfaces repaint immediately. Webpage keeps the masthead, schedule and sleeve lettering on paper so the layout stays legible. Poster and App icon choose their text ink from the painted region.
+1. In the toolbar, choose Linear, Radial, Conic or Mesh. With Mesh selected, open **Mesh points**, select a numbered point and drag it on the map. Horizontal, Vertical and Spread give precise keyboard control. The colour swatch changes that point’s stop. **Add point** adds a stop in the widest gap, up to five points.
+2. Choose **Webpage** above the artwork to see the gradient on the Frequency FM feature sleeve. Choose **App icon** to compare icon sizes, or **Poster** to see the same field beneath the Night swim lettering. Narrow screens put additional places in **More**. The point editor stays available in each scene.
+3. Change a colour or move a point while the scene is open. Its gradient-bearing surfaces repaint immediately. Webpage keeps the masthead, schedule and sleeve lettering on paper so the layout stays legible. Poster and App icon choose an ink for the lettering or mark from the painted region.
 4. Copy **CSS** or **Tailwind** to reuse the underlying gradient. Under **Fill → Plain**, **Save or share → Download Mesh PNG** exports the field at 2048 pixels on the long edge with Pro. Selecting a finish exports the treated surface. Save a project or copy a link to continue editing. SVG export supports the linear and radial types.
+
+## Toolbar and inspector
+
+The toolbar holds the gradient type, angle, interpolation space and locks. On a phone, **Angle and interpolation** expands the precision controls. **Reverse** flips the stops. **Random settings** opens a tray for the next random gradient. On narrow screens these actions move into the toolbar’s overflow menu. The inspector groups the editable stops, colour sources and the selected stop’s controls. Choosing Mesh adds its point map.
+
+**Fill style** groups live thumbnails into Surface, Optics and Print & colour. Fresnel lens bends the field into concentric ridges. Risograph adds screened ink and grain. **Finish strength** mixes the chosen treatment with the original paint, from the original at 0% to the full treatment at 100%. The picker and exported PNG use the same strength. The browser tab remembers this setting when you change scenes or reload. On a phone, selecting a finish closes the sheet to reveal the canvas. Reopen it to adjust strength.
 
 ## Rendering a scene
 
@@ -16,10 +22,12 @@ The generator at `/create/gradient` has three choices. **Shape → Gradient type
 | Scene | Where the gradient goes |
 |---|---|
 | Webpage | Record sleeve on the programme page, beneath the grooves and catalogue mark |
-| Hero | Background behind the swim school headline |
-| Card and Button | Statement’s foil faces and the action buttons |
+| Hero | Channel Ferry landing page behind the headline and arched ferry photograph |
+| Card | Printed face of a Harbour Pass ticket beside its barcode stub |
+| Button | Booking action in a ferry checkout, beneath the fare and departure details |
 | Poster | Printed field beneath the typography, lane lines and grain |
-| App icon and Phone | Every size of the monogram and the sign-in screen’s header |
+| App icon | Frequency FM waveform tile in its store listing and compact player |
+| Phone | Header of a mobile ferry boarding pass, with a stop colour on the action |
 | Spec card | Colour field, with the stop values and samples underneath |
 
 Use [GradientText.jsx](../../src/components/tool/GradientText.jsx) for measured lettering and object layouts and [gradient.css](../../src/styles/pages/gradient.css) for their composition. For another webpage or product scene, register the place in [gradientPreviewStyles.js](../../src/utils/gradientPreviewStyles.js) and apply the passed paint to the object that carries it. Use the current stops for any additional swatches. Keep paper, navigation, labels and framing separate from the artwork. Compare a two-colour ramp and an off-centre mesh on the same object to check that the template follows both.

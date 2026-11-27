@@ -100,3 +100,25 @@ for (const width of [390, 1440]) {
     }
   })
 }
+
+test('the workbench keeps random settings and finish strength within keyboard reach', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await go(page, route)
+  const random = page.getByRole('button', { name: 'Random settings', exact: true })
+  const tray = page.getByRole('region', { name: 'Random settings' })
+  await expect(tray).toHaveCount(0)
+  await random.click()
+  await expect(tray).toBeVisible()
+  await tray.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(random).toBeFocused()
+  await page.getByRole('button', { name: 'Fill style: Plain' }).click()
+  await page.getByRole('button', { name: 'Fresnel lens' }).click()
+  const strength = page.getByRole('slider', { name: 'Finish strength' })
+  await strength.press('Home')
+  await strength.press('ArrowRight')
+  await expect(strength).toHaveValue('1')
+  const mix = page.locator('.grd-stage .grd-finish-mix')
+  await expect(mix).toHaveCSS('opacity', '0.99')
+  await page.reload()
+  await expect(mix).toHaveCSS('opacity', '0.99')
+})

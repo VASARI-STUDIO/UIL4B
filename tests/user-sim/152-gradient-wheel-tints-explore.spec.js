@@ -1,3 +1,4 @@
+import { openGeometry } from './gradient-controls.js'
 // /create/gradient: the angle wheel, the stop tints menu, the Explore panel and
 // the OKLCH presets.
 //
@@ -41,6 +42,7 @@ async function cssAngle(page) {
 
 async function open(page) {
   await go(page, ROUTE)
+  await openGeometry(page)
   await expect(wheelOf(page)).toBeVisible()
   // A first visit opens on the first preset, angle included (Indigo Night, 160deg).
   await expect(wheelOf(page)).toHaveAttribute('aria-valuenow', String(FIRST_ANGLE))

@@ -11,6 +11,8 @@ import { hexToOklchRaw } from '../components/tool/oklch.js'
 
 /** The styles, in switcher order. `as` completes the canvas's spoken name. */
 export const PREVIEW_STYLES = [
+  { id: 'fresnel', label: 'Fresnel lens', as: ', refracted through a Fresnel lens' },
+  { id: 'riso', label: 'Risograph', as: ', printed with overlapping ink screens' },
   { id: 'aperture', label: 'Aperture', as: ', shown through an optical aperture' },
   { id: 'satin', label: 'Satin', as: ', shown on satin' },
   { id: 'folds', label: 'Folded paper', as: ', shown on folded paper' },
@@ -38,7 +40,7 @@ export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
 /** The fill styles, in picker order. Plain is the canvas as it is. */
 export const FILL_STYLES = [
   { id: 'plain', label: 'Plain', as: '' },
-  ...['aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+  ...['fresnel', 'riso', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
 ]
 export const isFillStyle = (id) => FILL_STYLES.some((s) => s.id === id)
 
@@ -81,8 +83,8 @@ export const isTextStyle = (id) => TEXT_STYLES.includes(id)
 /** The Poster's words: the Shallow End brand's own name, primary line and sample caption. */
 export const POSTER_COPY = {
   brand: 'Shallow End',
-  display: 'Lessons that fit after school.',
-  footer: 'Pool 2, Sandy Bay. Tuesdays at 4:15.',
+  display: 'Night swim.',
+  footer: 'Friday 19:30  /  Pool 2, Sandy Bay',
 }
 
 const byPosition = (stops) => [...stops].sort((a, b) => a.position - b.position)
@@ -279,16 +281,13 @@ export function phoneButton(stops) {
   return byPosition(stops).reduce((top, s) => (hexToOklchRaw(s.color)[1] > hexToOklchRaw(top.color)[1] ? s : top)).color.toUpperCase()
 }
 
-/** The Phone's words: Offcut's own primary line, then the sign-in form. */
+/** Copy for the Channel Ferry boarding pass. */
 export const PHONE_COPY = {
-  line: 'Quote on site. Paid by Friday.',
-  heading: 'Sign in to Offcut',
-  email: 'mel@offcut.example',
-  label: 'Email',
-  button: 'Continue',
-  link: 'Create an account',
+  line: 'Boarding pass',
+  heading: 'Brooke St → Bellerive',
+  label: 'Departure',
+  departure: '08:40  /  Pier 1',
+  button: 'Show ticket',
 }
 
-/** The App icon: Tenner's "T", and the part of the icon (fractions of its side) the glyph's ink is chosen over. */
-export const ICON_GLYPH = 'T'
 export const ICON_INK_BOX = { x: 0.25, y: 0.25, w: 0.5, h: 0.5 }

@@ -1,3 +1,4 @@
+import { openRandomSettings, openGeometry } from './gradient-controls.js'
 // /create/gradient, gradient generation v2 G2 part 2: the locks in the UI
 // (gradient generation v2 spec, 4.1 and 4.3).
 //
@@ -48,6 +49,8 @@ async function open(page) {
   await seed(page)
   await go(page, ROUTE)
   await expect(panelOf(page)).toBeVisible()
+  await openRandomSettings(page)
+  await openGeometry(page)
   await page.evaluate(() => document.fonts.ready)
   await settle(page)
 }
@@ -57,7 +60,7 @@ const stopList = (page) => page.getByRole('group', { name: 'Stop list' })
 // The Stop N section is named for the highlighted stop ("Stop 2"), or "3 stops" for a selection.
 // It holds the stop's hex, Tints and the position lock; the colour lock lives on each stop row.
 const selectedSection = (page) => panelOf(page).getByRole('group', { name: /^(Stop \d+|\d+ stops)$/ })
-const geometry = (page) => panelOf(page).getByRole('group', { name: 'Shape', exact: true })
+const geometry = (page) => page.getByRole('group', { name: 'Shape', exact: true })
 // The angle's label carries its value ("Keep the angle (160°) when you press Random"), so each name takes an optional "(N°)".
 const lockIn = (scope, thing) => scope.getByRole('button', { name: new RegExp(`(^Keep ${thing}(?: \\(\\d+°\\))? when you press Random$)|(^${thing[0].toUpperCase()}${thing.slice(1)}(?: \\(\\d+°\\))? (is|are) kept\\. Press to let Random change (it|them)\\.$)`) })
 const random = (page) => page.locator('[data-tool-toolbar]').getByRole('button', { name: /^Random$/ })
@@ -66,9 +69,9 @@ const hexOfStop = (page, n) => page.getByRole('button', { name: new RegExp(`^Sel
 const posOfStop = (page, n) => page.getByRole('button', { name: new RegExp(`^Gradient stop ${n} at `) }).getAttribute('aria-label').then((s) => Number(/at (\d+)%/.exec(s)[1]))
 // The Type and Stops filters sit under the Random section's More options. Opening it twice leaves it open.
 const moreOptions = async (page) => {
-  const toggle = panelOf(page).getByRole('button', { name: /^(More|Fewer) options$/ })
+  const toggle = page.getByRole('button', { name: /^(More|Fewer) options$/ })
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
-  const d = panelOf(page).locator('#grd-gen-more')
+  const d = page.locator('#grd-gen-more')
   await expect(d).toBeVisible()
   return d
 }
