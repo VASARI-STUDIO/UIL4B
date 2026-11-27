@@ -1,7 +1,7 @@
 // THE EXPORT DIALOG'S TEMPLATES.
 //
 // The UI kit and the book (PDF and HTML) take any template in the THEMES list below; the slides (PDF and HTML) take those and two more,
-// Label and Swiss Field, which draw the guidelines only. The templates are a grid inside the dialog, opened by "View templates" and
+// Label and Swiss Field, which draw the guidelines only. The templates are a grid inside the dialog, opened by "Change template" and
 // left by choosing a card or "Back to preview": one card per template, its picture, its name and its sample brand. The ten premium
 // templates (21 up) come first in id order, then the templates the file is free in, then the rest; the order is the same for every
 // account and while the plan is being read. The Pro ones carry a Pro mark for a free account. A free account can have the UI kit in Standards (for now) and the guidelines in Label and Swiss Field; every other
@@ -96,7 +96,7 @@ async function open(page, { plan = 'free', file = 'kit', size, saved = true } = 
   return panel
 }
 
-// The templates grid, opened by "View templates": one button card per template, the chosen one aria-pressed.
+// The templates grid, opened by "Change template": one button card per template, the chosen one aria-pressed.
 const grid = (panel) => panel.locator(GALLERY)
 const cards = (panel) => grid(panel).locator('.xd-tpl-card')
 const pressed = (panel) => grid(panel).locator('.xd-tpl-card[aria-pressed="true"]')
@@ -111,7 +111,7 @@ const expectStage = (panel, name, message) => expect.poll(() => stageName(panel)
 async function pick(panel, name) {
   await chooseTemplate(panel, name)
   await expect(grid(panel), 'choosing a card returns to the preview').toHaveCount(0)
-  await expect(panel.getByRole('button', { name: 'View templates' })).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Change template' })).toBeVisible()
   await expectChosen(panel, name)
 }
 
@@ -250,16 +250,16 @@ test.describe('Free and Pro', () => {
     })
   }
 
-  test('View templates is on the UI kit, the book and the slides, and on no other file', async ({ page }) => {
+  test('Change template is on the UI kit, the book and the slides, and on no other file', async ({ page }) => {
     watch(page, 'a Pro account looking for the templates on each file')
     const panel = await open(page, { plan: 'pro', file: 'kit' })
     for (const file of Object.keys(FILES)) {
       await chooseFormat(panel, file)
-      await expect(panel.getByRole('button', { name: 'View templates' }), file).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Change template' }), file).toBeVisible()
     }
     for (const file of ['book-png', 'html', 'css', 'json']) {
       await chooseFormat(panel, file)
-      await expect(panel.getByRole('button', { name: 'View templates' }), file).toHaveCount(0)
+      await expect(panel.getByRole('button', { name: 'Change template' }), file).toHaveCount(0)
       await expect(grid(panel), file).toHaveCount(0)
     }
     await expect(panel.getByRole('heading', { name: 'Theme', level: 3 }), 'the old Theme step is gone').toHaveCount(0)

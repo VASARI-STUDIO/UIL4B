@@ -38,7 +38,7 @@ async function openExport(page, plan, file) {
   return panel
 }
 
-/** Pick a template the way a person does: View templates, then the card; the dialog returns to the preview with it chosen. */
+/** Pick a template the way a person does: Change template, then the card; the dialog returns to the preview with it chosen. */
 async function chooseTheme(page, panel, name) {
   await chooseTemplate(panel, name)
   await expectTemplate(panel, name)

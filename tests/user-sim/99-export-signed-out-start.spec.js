@@ -27,7 +27,7 @@ async function expectTheme(panel, name) {
   await expectTemplate(panel, name)
 }
 
-/** Pick a template the way Flow B offers it: View templates, then the card. */
+/** Pick a template the way Flow B offers it: Change template, then the card. */
 async function chooseTheme(page, panel, name) {
   await chooseTemplate(panel, name)
   await expectTheme(panel, name)

@@ -154,7 +154,7 @@ async function openDialog(page, { client = 'free', server = 'free', file = 'kit'
   return { panel, ...served }
 }
 
-// The template is chosen in the dialog's "View templates" grid: open it, click the card, and the dialog returns to the preview.
+// The template is chosen in the dialog's "Change template" grid: open it, click the card, and the dialog returns to the preview.
 const pick = (panel, name) => chooseTemplate(panel, name)
 
 /** Count what a click produces: files saved and windows opened. */

@@ -26,7 +26,7 @@ export const motionState = (page) => page.evaluate(() => ({
 
 /**
  * Choose a template from the keyboard, with the dialog on the free account's default template (Standards, the first card after the ten
- * premium ones): open "View templates", focus the chosen card, Tab reaches the next card (Presentation), and
+ * premium ones): open "Change template", focus the chosen card, Tab reaches the next card (Presentation), and
  * Enter chooses it and goes back to the preview.
  */
 export async function chooseThemeWithKeys(page, panel) {

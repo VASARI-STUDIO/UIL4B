@@ -38,7 +38,7 @@ async function open(page, plan, file, size) {
   await chooseFormat(panel, file)
   return panel
 }
-/** Pick a template from the grid behind "View templates". The dialog goes back to the preview, whose "Show the default template" box
+/** Pick a template from the grid behind "Change template". The dialog goes back to the preview, whose "Show the default template" box
     starts clear again, so tick it (when it can be ticked) and the stage draws the stock picture whatever the live preview does. */
 async function choose(page, panel, name) {
   await chooseTemplate(panel, name)

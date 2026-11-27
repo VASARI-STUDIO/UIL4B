@@ -355,7 +355,7 @@ test.describe('with the keyboard', () => {
     const panel = await settled(page)
     await expect(panel.getByRole('heading', { level: 2 }), 'focus starts on the title').toBeFocused()
 
-    await typeRadio(panel, 'Branding').focus()
+    await typeRadio(panel, 'Brand guidelines').focus()
     await page.keyboard.press('ArrowDown')
     await expect(typeRadio(panel, 'UI')).toBeFocused()
     await expect(typeRadio(panel, 'UI')).toHaveAttribute('aria-checked', 'true')
