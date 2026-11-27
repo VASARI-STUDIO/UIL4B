@@ -18,3 +18,4 @@
   .lbry-toolbar:not([data-peek])::before,.lbry-toolbar:not([data-peek])::after{display:none}
   .lbry-toolbar[data-peek]{--lbry-gap:calc(var(--nav-clear) - var(--chrome-h))}
 }
+@media(min-width:641px) and (max-width:980px){.lbry-toolbar::before{left:0;right:0;width:auto;margin-left:0;box-shadow:0 0 0 100vmax var(--bg-0);clip-path:inset(0 -100vmax)}}
