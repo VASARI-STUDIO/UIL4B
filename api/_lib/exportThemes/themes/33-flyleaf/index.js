@@ -3,7 +3,7 @@
 // layout, so either holds at the other's size. Free draws a shorter edition with a credit line on each page (ctx.skeleton, set by the route from the plan).
 // No photographs and no mockups: the places a photograph would sit are flat colour panels.
 import { guidelines } from './brand-pages.js';
-import { guide as uiGuide } from './ui-pages.js';
+import { guide as uiGuide } from './lane-guide.js';
 import { brandOrder, uiOrder, palette } from './helpers.js';
 
 export const meta = {

@@ -74,7 +74,7 @@ const dataUrl = (E) => (f) => `data:font/woff2;base64,${Buffer.from(E.loaders.fo
 // Puts the CSP meta at the top of the head. The document is the engine's own, so its first `<head>` is the real one and sits near
 // the start; anything else is a fault. A print document holds no script and no form, so one that does is refused here, before it
 // can reach a window (the CSP would stop them running; this keeps them from being written at all).
-function withCsp(html) {
+export function withCsp(html) {
   const at = typeof html === 'string' ? html.indexOf('<head>') : -1
   if (at < 0 || at > 200) throw new Error('print document has no head')
   if (/<script[\s>/]/i.test(html) || /<form[\s>/]/i.test(html)) throw new Error('print document holds a script or a form')

@@ -17,7 +17,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
-import { loadEngine } from '../../api/_lib/exportThemeRoute.js'
+import { loadEngine, withCsp } from '../../api/_lib/exportThemeRoute.js'
 import { isPrintSafe } from '../../src/utils/exportThemeRequest.js'
 import { EXPORT_THEMES, themeHasRow } from '../../src/data/exportThemes.js'
 import * as T from '../../api/_lib/exportThemes/themes/33-flyleaf/index.js'
@@ -46,7 +46,7 @@ for (const [name, colors] of Object.entries(PALETTES)) {
         const html = list.map((id) => { assert.equal(typeof pages[id], 'function', `${kind} page ${id} is missing`); return pages[id](ctx) })
         const doc = E.pageDoc(ctx, T, { title: 'Flyleaf', pages: html, size })
         assert.deepEqual(ids(doc), list, `${kind} pages in order`)
-        assert.ok(isPrintSafe(doc), `${kind} document is print safe`)
+        assert.ok(isPrintSafe(withCsp(doc)), `${kind} document is print safe once the route has added its CSP`)
         assert.ok(!doc.includes(CREDIT), 'the full edition has no credit line')
         assert.ok(!/undefined|NaN|\[object/.test(doc.replace(/<style>[\s\S]*?<\/style>/, '')), `${kind}: no undefined, NaN or object text on a page`)
       }

@@ -175,9 +175,10 @@ test('FREE_POINTS and PRO_POINTS keep their text while the themes are off, and n
 
 test('the switch turns the Free UI kit line and the Pro export rows, both ways', () => {
   const free = freeThemes()
-  const freeNames = free.map((t) => t.name).join(' and ')
+  const names = free.map((t) => t.name)
+  const freeNames = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join('')
   assert.equal(freeLines(false)[2], 'The UI kit')
-  // The Free pair's guidelines, then (interim) the UI kit that Standards still gives a free account.
+  // The Free themes' guidelines, then (interim) the UI kit that Standards still gives a free account.
   assert.equal(freeLines(true)[2], `Brand guidelines in ${free.length} export themes: ${freeNames}, plus the UI kit in Standards`)
   assert.equal(freeLines(true).length, 8)
   assert.equal(freeLines(false).length, 8)
@@ -310,13 +311,13 @@ test('/plans, the homepage and Settings all name the export line “Made with UI
 // (PlansPageR3A, HomePlans, HomeExports boards).
 test('theme counts follow the board: numerals in labels, words in sentences', () => {
   // Labels and row titles: numerals.
-  assert.equal(PRO_ROWS[1].title, 'All 22 export themes')
-  assert.equal(THEME_FACTS.freeTag, 'Free in 2 themes')
-  assert.equal(freeLines(true)[2], 'Brand guidelines in 2 export themes: Label and Swiss Field, plus the UI kit in Standards')
+  assert.equal(PRO_ROWS[1].title, 'All 23 export themes')
+  assert.equal(THEME_FACTS.freeTag, 'Free in 3 themes')
+  assert.equal(freeLines(true)[2], 'Brand guidelines in 3 export themes: Label, Swiss Field and Flyleaf, plus the UI kit in Standards')
   // Running sentences: words.
-  assert.match(plansLead(true), /Pro is the full studio: all twenty-two export themes, the UI kit and brand book,/)
+  assert.match(plansLead(true), /Pro is the full studio: all twenty-three export themes, the UI kit and brand book,/)
   assert.match(PRO_ROWS[1].sub, /^Twenty more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint, In use, Keynote, Stub, Front Page, Standards Plate, Notebook, Print Shop, Drawing Sheet, Fluted, Contact and Dieline\./)
   assert.match(PRO_ROWS[1].phoneSub, /^Twenty more than Free, each with all \w+ exports\.$/)
-  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in two of the twenty-two themes, Label and Swiss Field, and the UI kit in Standards')
-  assert.equal(THEME_FACTS.countWord, 'twenty-two')
+  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in three of the twenty-three themes, Label, Swiss Field and Flyleaf, and the UI kit in Standards')
+  assert.equal(THEME_FACTS.countWord, 'twenty-three')
 })

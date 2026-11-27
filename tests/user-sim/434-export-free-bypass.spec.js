@@ -44,8 +44,8 @@ const THEMED_DOCS = ['book-html', 'guidelines-html']
 // Every request to the export route, whatever its query string carries (a glob would stop at the first extra parameter).
 const EXPORT_ROUTE = (url) => url.pathname === '/api/ai' && url.searchParams.get('export') === 'document'
 
-// The free tier, written out (not read from src/): the guidelines in Label and Swiss Field, the UI kit in Standards.
-const isFree = (theme, row) => ['25-label', '27-swissfield'].includes(theme) || (theme === '04-standards' && row === 'ui-kit')
+// The free tier, written out (not read from src/): the guidelines in Label, Swiss Field and Flyleaf, the UI kit in Standards.
+const isFree = (theme, row) => ['25-label', '27-swissfield', '33-flyleaf'].includes(theme) || (theme === '04-standards' && row === 'ui-kit')
 const PRO_COMBOS = []
 for (const { id: theme } of EXPORT_THEMES) {
   for (const [row, formats] of Object.entries(THEME_ROW_FORMATS)) {
