@@ -226,7 +226,8 @@ test.describe('Exact words, 1440', () => {
     await open(page, WIDE)
     await searchBox(page).fill('snowflake')
     const d = await modeSwitch(page).evaluate((el) => getComputedStyle(el).transitionDuration)
-    expect(d.split(',').every((s) => parseFloat(s) === 0), `transition-duration is ${d}`).toBe(true)
+    // The global reduced-motion rule floors durations at 0.01ms (1e-05s) rather than 0; either is "no transition".
+    expect(d.split(',').every((s) => parseFloat(s) <= 0.00001), `transition-duration is ${d}`).toBe(true)
   })
 
   // T13
@@ -241,6 +242,13 @@ test.describe('Exact words, 1440', () => {
     await expect(page).toHaveURL(/match=exact/)
     await page.getByRole('button', { name: 'Clear search' }).click()
     await expect(modeSwitch(page)).toHaveCount(0)
+    // The switch is a setting, not part of the query: clearing the field keeps it (spec 5, "a shared link with
+    // no query"), so the parameter stays and the next search starts with the switch on.
+    await expect(page).toHaveURL(/match=exact/)
+    await searchBox(page).fill('snowflake')
+    await expect(modeSwitch(page)).toHaveAttribute('aria-checked', 'true')
+    // Turning it off is what removes the parameter.
+    await modeSwitch(page).click()
     await expect(page).not.toHaveURL(/match=/)
   })
 
@@ -253,6 +261,17 @@ test.describe('Exact words, 1440', () => {
     await searchBox(page).fill('snowflake')
     await expect(modeSwitch(page)).toBeVisible()
     expect(await stage(), 'the row reserved room for the switch from the first paint').toBe(before)
+  })
+
+  // T14b
+  test('at 1024 the switch sits on the line below and the toolbar stays on one row', async ({ page }) => {
+    watch(page, 'a designer on a small laptop')
+    await open(page, { width: 1024, height: 768 })
+    await searchBox(page).fill('snowflake')
+    await expect(modeSwitch(page)).toHaveCount(1)
+    expect(await modeSwitch(page).evaluate((el) => Boolean(el.closest('.ig-searchline'))), 'under 1440px the switch leads the line, not the field').toBe(true)
+    const stage = await page.locator('.lbry-toolbar').first().getAttribute('data-stage')
+    expect(Number(stage), `the toolbar is on stage ${stage}, so it wrapped`).toBeLessThan(2)
   })
 
   // T15
