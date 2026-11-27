@@ -449,3 +449,8 @@ html[data-reduced-motion="true"] .iel-page .ig-gate-sample-grid{filter:blur(3px)
   .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"],.iel-page .ig-weight-btn[aria-pressed="true"]{forced-color-adjust:none;background:Highlight;color:HighlightText}
   .iel-page.lib-surface .lbry-filters .lbry-filter[data-active="true"]:focus-visible,.iel-page .ig-weight-btn[aria-pressed="true"]:focus-visible{outline:2px solid HighlightText;outline-offset:-2px}
 }
+/* A narrow phone (360): the field sits between the Filters and My icons squares and the 44px clear button, which
+   left the input 110px. Tighter padding and gap give it back about 14px, so a query still has room to read. */
+@media(max-width:400px){
+  .lib-surface.lib-v3[class] .ig-toolbar .lbry-search{padding:0 8px 0 14px;gap:8px}
+}
