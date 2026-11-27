@@ -99,9 +99,9 @@ test('the pause control, keyboard focus, the autoplay owner and reduced motion s
   assert.match(VIEW, /onClick=\{tour\.toggle\}/)
 })
 
-test('the sub-line is derived from the two counts, never typed', () => {
-  // Mutation: type "13" or "26" into the sub-line.
-  assert.match(VIEW, /\{TOOL_COUNT\} tools that would otherwise be \{BOOKMARK_COUNT\} tabs/)
+test('the heading stands alone, with no sub-line under it', () => {
+  // Mutation: put the "tools that would otherwise be … tabs" line back.
+  assert.doesNotMatch(VIEW, /bm-sub"|tools that would otherwise be/)
 })
 
 // ── the layout below 1024px ─────────────────────────────────────────────────

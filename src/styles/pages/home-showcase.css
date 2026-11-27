@@ -39,14 +39,6 @@
   text-wrap: balance;
 }
 .hsc-h:focus { outline: none; }
-.hsc-sub {
-  margin: 24px auto 0;
-  max-width: 52ch;
-  font-size: 18px;
-  line-height: 1.6;
-  text-wrap: balance;
-  color: var(--hsc-ink-2);
-}
 
 /* Picker */
 .hsc-bar {
@@ -213,7 +205,6 @@
   padding-top: 28px;
   border-top: 1px solid var(--hsc-line);
 }
-.hsc-footnote { margin: 0; max-width: 64ch; font-size: 14px; line-height: 1.6; color: var(--hsc-ink-3); }
 .hsc .hsc-cta {
   display: inline-flex;
   align-items: center;
@@ -259,7 +250,6 @@
   .hsc-head { text-align: left; }
   .hsc-h { margin: 0; max-width: none; font-size: clamp(28px, 8vw, 36px); }
   .hsc-h-line { display: block; }
-  .hsc-sub { margin: 16px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
   .hsc-bar { gap: 8px; margin-top: 28px; padding: 0; border: 0; border-radius: 0; }
   .hsc-tab { height: 44px; min-width: 44px; padding: 0 4px; border: 1px solid var(--hsc-line-ctl); font-size: 14px; }
   .hsc-tab[aria-selected="true"] { border-color: var(--hsc-ink); }
@@ -294,7 +284,6 @@
   .hsc-cap1 { font-size: 13px; white-space: nowrap; }
   .hsc-cap2 { font-size: 12px; white-space: nowrap; }
   .hsc-foot { display: block; margin-top: 40px; padding-top: 20px; }
-  .hsc-footnote { max-width: none; font-size: 13px; }
   .hsc .hsc-cta { display: flex; justify-content: space-between; height: 54px; margin-top: 20px; }
   .hsc .hsc-cta .mi-go { width: 40px; height: 40px; }
 }

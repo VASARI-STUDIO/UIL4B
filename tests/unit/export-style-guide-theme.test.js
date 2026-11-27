@@ -7,7 +7,7 @@
 //     Break: change the folder E.fontFiles writes to, so a page links a font the zip does not hold.
 //  3. NOTHING THIRD-PARTY: no origin in any file, and the print document keeps its CSP meta and holds no script.
 //     Break: add a Google Fonts link to guideCss in themes/27-swissfield/lane-guide.js.
-//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Swiss Field, Drawing Sheet, Keynote and Stub are offered it.
+//  4. THE ROW IS OPT-IN: a theme without a rows list has no `guide` row (the book is still on it), and only Standards Plate, Label, Swiss Field, Drawing Sheet, Print Shop, Keynote and Stub are offered it.
 //     Break: make themeHasRow in src/data/exportThemes.js ignore OPT_IN_ROWS.
 //  5. A THEME WITHOUT THE ROW IS REFUSED like any other missing row: 400 unknown_row.
 //     Break: drop the themeHasRow line in themeRequestProblem.
@@ -16,7 +16,7 @@
 //  7. NO PAGE IS LEFT OUT for long brand names or a one-colour palette: every page id is drawn, in order, with no warning,
 //     and the markdown carries all six sections.
 //     Break: put the head's left label back to the full `${name} style guide`, or drop the one-row retry on the logo page.
-//  8. A PAGE LEFT OUT IS LEFT OUT OF THE MARKDOWN: an over-long one-word name (30 letters on Swiss Field, 48 on Standards Plate and Drawing Sheet) drops the logo page, and the md then numbers
+//  8. A PAGE LEFT OUT IS LEFT OUT OF THE MARKDOWN: an over-long one-word name (30 letters on Swiss Field, 48 on Standards Plate, Label and Drawing Sheet) drops the logo page, and the md then numbers
 //     Colour to Usage 01 to 05 with no Logo section.
 //     Break: drop the drawn(k) check in styleGuideMarkdown, or the ctx.pagesDrawn line in styleGuide.
 //  9. A TABLE CELL NEVER BREAKS THE TABLE: a pipe is escaped and a line break becomes a space.
@@ -34,13 +34,14 @@ import { assertThemeAccess } from '../../api/_lib/themeAccess.js'
 import { mdCell } from '../../api/_lib/exportThemes/engine/styleguide.js'
 import { guide as swissGuide } from '../../api/_lib/exportThemes/themes/27-swissfield/index.js'
 import { guide as standardsGuide } from '../../api/_lib/exportThemes/themes/24-standards/index.js'
+import { guide as labelGuide } from '../../api/_lib/exportThemes/themes/25-label/index.js'
 import { guide as blueprintGuide } from '../../api/_lib/exportThemes/themes/29-blueprint/index.js'
 
 // the themes that name the row, each with its own guide export (the applied-throws test plants a failure in it)
-const THEMES = { '24-standards': standardsGuide, '27-swissfield': swissGuide, '29-blueprint': blueprintGuide }
+const THEMES = { '24-standards': standardsGuide, '25-label': labelGuide, '27-swissfield': swissGuide, '29-blueprint': blueprintGuide }
 const IDS = Object.keys(THEMES)
 // the shortest run of one wide letter that no logo slot can hold, per theme: only the logo page drops for it
-const LONG_WORD = { '24-standards': 'W'.repeat(48), '27-swissfield': 'A'.repeat(30), '29-blueprint': 'W'.repeat(48) }
+const LONG_WORD = { '24-standards': 'W'.repeat(48), '25-label': 'W'.repeat(48), '27-swissfield': 'A'.repeat(30), '29-blueprint': 'W'.repeat(48) }
 const KEYNOTE = '21-presentation'
 const PAGES = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast', 'tokens', 'usage']
 const drawnPages = (html) => [...html.matchAll(/<section class="pg" data-page="([a-z]+)"/g)].map((m) => m[1])
@@ -51,12 +52,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', ...IDS].sort())
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
-test('the picker offers the style guide only on Standards Plate, Swiss Field, Drawing Sheet, Keynote and Stub, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', ...IDS].sort())
+test('the picker offers the style guide only on Standards Plate, Label, Swiss Field, Drawing Sheet, Print Shop, Keynote and Stub, in the three formats', () => {
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', ...IDS].sort())
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
@@ -65,7 +66,7 @@ test('the picker offers the style guide only on Standards Plate, Swiss Field, Dr
 
 test('the style guide is free where the guidelines are free (Pro on a premium theme), and a theme without the row is refused', () => {
   for (const THEME of IDS) {
-    const free = THEME === '27-swissfield' // Standards Plate and Drawing Sheet are premium themes: each guide is Pro, like its book
+    const free = THEME === '25-label' || THEME === '27-swissfield' // Standards Plate and Drawing Sheet are premium themes: each guide is Pro, like its book
     assert.equal(isThemeExportPro('guide', THEME), !free)
     const asFree = assertThemeAccess({ id: 'free' }, { theme: THEME, row: 'guide', format: 'md' })
     if (free) assert.deepEqual(asFree, { ok: true })
@@ -318,6 +319,53 @@ test('29-blueprint: a one-colour and an all-the-same palette hold no NaN or Infi
     assert.doesNotMatch(md, /NaN|Infinity/, `md for ${colors}`)
     assert.deepEqual(drawnPages(html), PAGES, `every page drawn for ${colors}`)
     assert.deepEqual(left, [], `nothing left out for ${colors}`)
+  }
+})
+
+// Label's guide spreads slack over its gaps (gapStretch 1.5) and fills each page's foot with flex.
+// A change to the gaps or a section height that strands space shows up as a "leaves N px at the foot" warning.
+test('25-label: no page leaves a gap at the foot, for any name or palette', async () => {
+  const NAMES = [undefined, 'Kerbside', 'Bright Harbour Studio', 'Northern Rivers Community Credit Union']
+  const PALETTES = [undefined, ['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#F96B76'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  const warned = []
+  const keep = console.warn
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    for (const colors of PALETTES) {
+      for (const projectName of NAMES) {
+        const design = colors ? { palette: { base: colors[0], harmony: 'auto', colors } } : undefined
+        const at = warned.length
+        await renderThemeExport({ theme: '25-label', row: 'guide', format: 'pdf', design, projectName })
+        assert.deepEqual(warned.slice(at).filter((w) => w.includes('at the foot') || w.includes('left out')), [], `${colors ? colors[0] : 'default'} "${projectName}"`)
+      }
+    }
+  } finally {
+    console.warn = keep
+  }
+})
+
+// ---- 28-riso (Print Shop): every page on three palettes and four brand names, and the md keeps its six sections
+test('28-riso: four brands on three palettes draw all nine pages, no page left out, and md keeps its six sections', async () => {
+  const NAMES = ['Kerbside', 'Bright Harbour Studio', 'Wild Tide Collective', 'Northern Rivers Community Credit Union']
+  const PALETTES = [['#0A7562', '#033C31', '#4A9FBC', '#D9E6E1'], ['#777777'], ['#2E7BB8', '#F2B705', '#1B1B1B']]
+  const keep = console.warn
+  const warned = []
+  console.warn = (...a) => { warned.push(a.map(String).join(' ')) }
+  try {
+    for (const colors of PALETTES) {
+      for (const projectName of NAMES) {
+        const design = { palette: { base: colors[0], harmony: 'auto', colors } }
+        warned.length = 0
+        const pdf = await renderThemeExport({ theme: '28-riso', row: 'guide', format: 'pdf', design, projectName })
+        const md = await renderThemeExport({ theme: '28-riso', row: 'guide', format: 'md', design, projectName })
+        const label = `${colors[0]} "${projectName}"`
+        assert.deepEqual(warned.filter((w) => w.includes('left out')), [], `${label}: no page left out`)
+        assert.deepEqual(drawnPages(pdf.html), PAGES, `${label}: every page drawn`)
+        assert.deepEqual((md.md.match(/^## \d\d · .+$/gm) || []).map((h) => h.slice(8)), ['Logo', 'Colour', 'Typography', 'Contrast', 'Tokens', 'Usage'], `${label}: every md section`)
+      }
+    }
+  } finally {
+    console.warn = keep
   }
 })
 

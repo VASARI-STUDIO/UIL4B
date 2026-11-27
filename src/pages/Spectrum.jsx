@@ -94,7 +94,7 @@ export default function Spectrum() {
 
         {/* ── Final call: last child of main. The light behind it is drawn on
             the footer's box, so this section paints nothing of its own. ───── */}
-        <HomeFinalCall toolkitTo="/projects" />
+        <HomeFinalCall toolkitTo="/projects" lead={null} />
       </main>
       </AutoplayOwner>
 

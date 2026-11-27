@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EXPORT_THEMES_LIVE, themeById } from '../../config/exportFormats'
-import { plansLead, proRows } from '../../config/planFacts'
+import { proRows } from '../../config/planFacts'
 import { usePrices } from '../../hooks/usePrices'
 import { FreeList, ProList } from './PlanLists'
 import { freePrice, planPriceFacts } from './plansPrices'
@@ -107,7 +107,6 @@ export default function HomePlans() {
           <h2 id="plans-h" className="hpl-h2" tabIndex={-1}>
             <span>Free to build it.</span> <span>Pro to hand it over.</span>
           </h2>
-          <p className="hpl-lead">{plansLead(live)}</p>
         </div>
 
         <div className="hpl-grid">

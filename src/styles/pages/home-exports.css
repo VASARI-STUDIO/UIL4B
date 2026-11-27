@@ -55,13 +55,6 @@
 /* Fill each line before breaking. The page-wide `.spectrum h2` balance would
    split the phone's two-line heading evenly instead of after "Design". */
 .hx .hx-h2 { text-wrap: wrap; }
-.hx-lead {
-  margin: 24px auto 0;
-  max-width: 52ch;
-  font-size: 18px;
-  line-height: 1.6;
-  color: rgba(var(--sp-ink-rgb), .68);
-}
 
 /* ── The stack ───────────────────────────────────────────────────────────── */
 /* Each nest holds its card, a gap and the next nest, so a card stays docked
@@ -70,13 +63,6 @@
 .hx-nest { position: relative; }
 .hx-gap { height: var(--hx-gap); }
 .hx-tail { height: 0; }
-.hx-foot {
-  margin: 48px 0 0;
-  text-align: center;
-  font-size: 14px;
-  line-height: 1.6;
-  color: rgba(var(--sp-ink-rgb), .56);
-}
 
 .hx-card {
   display: grid;
@@ -573,9 +559,7 @@
   }
   .hx-head { text-align: left; }
   .hx-h2 { font-size: 38px; }
-  .hx-lead { margin: 16px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
   .hx-stack { margin-top: 32px; }
-  .hx-foot { margin-top: 32px; }
   .hx-card { border-radius: 24px; }
 
   .hx-say { padding: 24px 20px 20px; }

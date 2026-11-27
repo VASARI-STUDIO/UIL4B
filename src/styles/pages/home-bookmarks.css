@@ -17,14 +17,12 @@
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* Heading and sub-line */
-.bm-head { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; }
+/* Heading */
 .bm-h {
   margin: 0; max-width: 13ch;
   font-size: 60px; font-weight: 600; line-height: 1.02; letter-spacing: -.04em; text-wrap: balance;
 }
 .bm-h:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
-.bm-sub { margin: 0 0 6px; max-width: 44ch; justify-self: end; font-size: 18px; line-height: 1.6; color: rgba(239, 238, 234, .68); }
 
 /* Controls */
 .bm button { font-family: inherit; cursor: pointer; transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--e); }
@@ -248,17 +246,13 @@
 /* ── Below 1024px: the phone layout ──────────────────────────────────────────── */
 .bmp { display: none; }
 @media (max-width: 1023px) {
-  .bm-head { grid-template-columns: 1fr; gap: 12px; }
   .bm-h { max-width: 12ch; font-size: 38px; }
-  .bm-sub { justify-self: start; margin: 0; font-size: 16px; line-height: 1.55; }
   .bm-frame { display: none; }
   .bmp { display: block; margin-top: 20px; }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .bm-h { max-width: 13ch; font-size: 60px; }
-  .bm-head { gap: 16px; }
-  .bm-sub { font-size: 18px; line-height: 1.6; }
-  /* Heading, sub-line and the layout share one centred 640px column; the tools go three up. */
+  /* Heading and the layout share one centred 640px column; the tools go three up. */
   .bm-wide { max-width: 640px; }
   .bmp .bmp-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
