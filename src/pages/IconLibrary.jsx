@@ -5426,6 +5426,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // pack menu, so only that counts and the badge never points at a sheet that does not explain it. A changed
   // sort counts at every width: whenever the badge shows, the Sort menu is in the panel with it.
   const phone = useMediaQuery('(max-width: 640px)')
+  // The Exact words switch lives in the search field only where the toolbar row has room to spare for it;
+  // below this width it leads the line under the toolbar, as on a phone, so the row keeps its controls.
+  const switchInField = useMediaQuery('(min-width: 1440px)')
   const filtersCount = (selectValue !== 'all' ? 1 : 0) + (sort !== 'recommended' ? 1 : 0) + (phone ? 0
     : (category !== 'all' ? 1 : 0) + (category === 'all' ? (weight !== 'regular' && weightState(weight).ok ? 1 : 0) : (facet ? 1 : 0)))
   // How many packs sit on the other side of the account boundary. Read off the
@@ -5552,8 +5555,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   /* THE EXACT WORDS SWITCH AND THE LINE THAT STATES THE MODE.
      Shown once the query is two characters (the point a search starts) and not for Logo.dev, which has no
      meaning groups. role=switch because it is a setting with one fixed label; "My icons" beside it is a filter
-     and keeps aria-pressed. From 641px it sits in the search field (LibrarySearch `trailing`); on a phone the
-     field has no room for it, so it leads the line under the toolbar. One node either way, never two.
+     and keeps aria-pressed. From 1440px it sits in the search field (LibrarySearch `trailing`); below that
+     the row has no room for it without folding the filters into a Filters button, so it leads the line
+     under the toolbar. One node either way, never two.
      The line is drawn under the band, not in it (the band is sticky and its height is measured). It is
      always drawn while the switch is, at one fixed height, and only its words change, so nothing under it
      moves when the related words arrive or the switch is pressed. */
@@ -5909,9 +5913,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             onChange: handleQueryChange,
             placeholder: 'Search icons…',
             label: 'Search icons',
-            trailing: phone ? null : exactSwitch,
+            trailing: switchInField ? exactSwitch : null,
           }}
-          reserveTrailing={!phone}
+          reserveTrailing={switchInField}
           /* The sort sits after the pack menu on the row, and in the Filters
              sheet's foot on a phone and a narrow desktop. */
           sort={<LibrarySort searching={!!query.trim()} />}
@@ -5963,7 +5967,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         </div>
         {showMode && (
           <div className="ig-searchline">
-            {phone && exactSwitch}
+            {!switchInField && exactSwitch}
             <div className="ig-related" id="ig-mode-line">
               {exact ? (
                 <span className="ig-related-text">{`Names with “${typedQuery}” only`}</span>
