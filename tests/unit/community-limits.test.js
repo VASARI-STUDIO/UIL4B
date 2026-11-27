@@ -106,7 +106,7 @@ test('isPostLimit tells a limit from any other failure', () => {
 
 test('every place that posts to the community shows the limit message instead of the generic failure', () => {
   const read = (rel) => fs.readFileSync(new URL(`../../${rel}`, import.meta.url), 'utf8')
-  const GENERIC = /we could not reach the review queue|Failed to submit/
+  const GENERIC = /[Ww]e could not reach the review queue|Failed to submit/
   // The design and icon flows share one publish helper in the community hub.
   for (const file of ['src/components/community/useCommunityHub.js', 'src/pages/PaletteBuilder.jsx', 'src/components/prompt/SubmitPromptPanel.jsx']) {
     const src = read(file)

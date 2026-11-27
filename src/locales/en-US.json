@@ -410,7 +410,7 @@
     "clearData": "Clear Local Data",
     "dataExported": "Data exported",
     "dataCleared": "Local data cleared",
-    "clearConfirm": "Are you sure? This will delete all locally saved data.",
+    "clearConfirm": "Delete all locally saved data? This cannot be undone.",
     "privacyLegal": "Privacy",
     "privacyPoints": {
       "collect": "We only collect data necessary for the service (APP 3)",
@@ -545,7 +545,7 @@
     "thankYou": "Thank you for your feedback!",
     "submitError": "Your message didn't send.",
     "sent": "Sent",
-    "sendingMessage": "Thanks — sending your message now.",
+    "sendingMessage": "Thanks. Sending your message now.",
     "sentMessage": "Thanks, we've got it.",
     "tryAgain": "Try again",
     "editMessage": "Edit message",

@@ -78,7 +78,7 @@ export function defineJourneys({ touch, tag }) {
     await section.getByLabel('New password', { exact: true }).fill('test-pass-5678')
     await section.getByLabel('Confirm new password').fill('test-pass-5678')
     await tapBtn(section.getByRole('button', { name: 'Update password' }))
-    await expect(section.getByRole('status')).toHaveText(want('Password updated successfully', 'Password could not be updated'))
+    await expect(section.getByRole('status')).toHaveText(want('Password updated', 'Password could not be updated'))
     await expect(section.getByLabel('Current password')).toHaveCount(0, { timeout: 5000 })
   })
 

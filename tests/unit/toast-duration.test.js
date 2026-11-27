@@ -11,7 +11,7 @@ import {
   toastDuration, TOAST_MIN_MS, TOAST_MAX_MS, TOAST_ERROR_MIN_MS,
 } from '../../src/utils/toastDuration.js'
 
-const REFUSAL = 'Free plan saves up to 3 projects — go Pro for unlimited.'
+const REFUSAL = 'Free plan saves up to 3 projects. Go Pro for unlimited.'
 
 test('a short success keeps the old 1.8 seconds — a lingering tick is noise', () => {
   assert.equal(toastDuration('Project saved'), TOAST_MIN_MS)

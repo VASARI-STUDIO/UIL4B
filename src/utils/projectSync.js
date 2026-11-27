@@ -312,7 +312,7 @@ export function syncFailureMessage(reason, detail) {
     return `Your account refused the sync. ${safe} Signing out and back in usually clears it.`
   }
   if (reason === 'offline') {
-    return `Your projects aren’t syncing — this device looks offline. ${safe} Syncing resumes on its own once you’re back.`
+    return `Your projects aren’t syncing. This device looks offline. ${safe} Syncing resumes on its own once you’re back.`
   }
   return `Your projects aren’t syncing to your account right now. ${safe} They will sync again once the connection recovers.`
 }
