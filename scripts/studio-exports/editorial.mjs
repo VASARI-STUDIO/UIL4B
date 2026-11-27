@@ -12,3 +12,11 @@ export function brandProfile(project,id,image){
   const caption=stationery[id][1], lead=esc(project.headline || project.name);
   return `<div class="identity-essay">${image?`<figure><img src="${image}" alt="${esc(caption)}"></figure>`:''}<div class="essay-text"><h2>${lead}</h2><p>${esc(project.profile)}</p>${image?`<small>${esc(caption)}</small>`:''}</div></div>`;
 }
+
+export function correspondence(project,mark) {
+  const mail=project.message;
+  const paragraphs=Array.isArray(mail.body)?mail.body:[mail.greeting,mail.body].filter(Boolean);
+  const address=[mail.to,mail.time].filter(Boolean).map(value=>`<span>${esc(value)}</span>`).join('');
+  return `<div class="correspondence"><div class="mail-intro"><small>Customer email</small><h2>${esc(mail.title || 'Correspondence')}</h2></div><article class="mail-paper"><header>${mark}</header><div class="address-line">${address}</div><div class="mail-body"><small>Subject</small><h3>${esc(mail.subject)}</h3>${paragraphs.map(line=>`<p>${esc(line)}</p>`).join('')}</div></article></div>`;
+}
+

@@ -12,6 +12,7 @@ for (const id of Object.keys(themes)) {
       delete project.design.logo;
       project.icons=[];
       delete project.profile;
+      delete project.message;
       const brand=renderTemplate(project,id,'brand','a4');
       const ui=renderTemplate(project,id,'ui','deck');
       assert.match(brand.html,/Your logo goes here/);
@@ -107,4 +108,19 @@ test('each colour proof draws with the colours listed on that page', () => {
   assert.ok(plates[0].includes(palette[0]));
   assert.ok(plates[1].includes(palette[6]));
   assert.ok(!plates[1].includes(palette[0]));
+});
+
+test('sample editions preserve all authored email paragraphs and include their brand profile', () => {
+  for(const id of Object.keys(themes)){
+    const project=sampleProject(id);
+    const brand=renderTemplate(project,id,'brand','a4');
+    const ui=renderTemplate(project,id,'ui','deck');
+    assert.equal(brand.pages,11,id);
+    assert.equal(ui.pages,11,id);
+    assert.match(brand.html,/<section class="sheet profile"/);
+    const match=ui.html.match(/<section class="sheet correspondence-sheet"[^>]*>([\s\S]*?)<\/section>/);
+    assert.ok(match,id);
+    const paragraphs=Array.isArray(project.message.body)?project.message.body:[project.message.greeting,project.message.body];
+    for(const line of paragraphs)assert.ok(match[1].includes(line.replaceAll('&','&amp;').replaceAll("'",'&#39;')),id);
+  }
 });

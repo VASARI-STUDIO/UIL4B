@@ -17,6 +17,11 @@ import * as inUse from '../../api/_lib/exportThemes/themes/10-inuse/index.js';
 
 const editions = { 'contact-sheet':monograph, workbench:studio, soundings:standards, hearth:spec, offprint:inUse, flyleaf: catalogue, 'set-square': blueprint, dispatch: presentation, doorlist: poster, 'market-day': broadsheet };
 
+const messageTitles={
+  flyleaf:'Pre-order receipt','set-square':'Measure-up booking',dispatch:'Pickup notice',doorlist:'Ticket delivery',
+  'market-day':'Box collection','contact-sheet':'Entry time',workbench:'Quote email',soundings:'Ferry fare',hearth:'Install day',offprint:'Lesson reminder',
+};
+
 export function sampleProject(theme) {
   const original = editions[theme];
   const brand = BRANDS[original.meta.brand].data;
@@ -29,6 +34,7 @@ export function sampleProject(theme) {
     date: brand.version.date,
     profile: brand.voice.boilerplate25,
     contactCard: brand.applications.card,
+    message: {...brand.guideB.email, title:messageTitles[theme]},
     screenTitle: brand.ui.screen.title,
     screenDetail: screen.pickup,
     formLabel: screen.form.pickup,

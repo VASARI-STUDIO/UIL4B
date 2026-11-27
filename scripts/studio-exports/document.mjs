@@ -15,7 +15,7 @@ import { contexts, appliedImage, liveSpecimen, componentStyles } from './masters
 import { gridProof, interfaceProof } from './grid-proofs.mjs';
 import { jacket, portraitJacketStyles } from './jackets.mjs';
 import { printStudy, paletteStudy, actionProof } from './print-studies.mjs';
-import { brandProfile } from './editorial.mjs';
+import { brandProfile, correspondence } from './editorial.mjs';
 export { esc };
 const stylesheet = fs.readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
 const additionalStyles = fs.readFileSync(new URL('./editions.css', import.meta.url), 'utf8');
@@ -121,7 +121,9 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   };
   const pages=[];
   for(const id of theme[product]) {
-
+    if(id==='handoff' && project.message?.subject && (Array.isArray(project.message.body) || typeof project.message.body==='string') && project.message.body.length){
+      pages.push({id:'correspondence-sheet',heading:'Customer correspondence',content:correspondence(project,mark)});
+    }
     if(id==='reference' && d.palette.length>6) {
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.reference,content:identityReference({...project,paletteNames:project.paletteNames?.slice(i,i+6)},{...d,palette:d.palette.slice(i,i+6)},mark)});
     } else if(id==='colour') {
@@ -142,7 +144,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   const sheet=(pg,i)=>{
     const folio='<footer><span>Made with UI L4B</span><span>'+String(i+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0')+'</span></footer>';
     if(pg.id==='cover')return '<section class="sheet cover" id="page-1">'+pg.content+folio+'</section>';
-    if(pg.id==='profile')return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header>${pg.content}${folio}</section>`;
+    if(['profile','correspondence-sheet'].includes(pg.id))return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header>${pg.content}${folio}</section>`;
     const note=pg.id==='strategy' && project.voice && project.mission ? '' : introductions[pg.id] || '';
     return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header><div class="inside"><div class="heading"><h2>${pg.heading}</h2>${note?'<p>'+note+'</p>':''}</div><div class="content">${pg.content}</div></div>${folio}</section>`;
   };
