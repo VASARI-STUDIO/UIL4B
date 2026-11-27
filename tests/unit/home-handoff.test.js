@@ -102,7 +102,7 @@ test('every draft size is a converter size preset with the same name, so "2K" me
     const preset = SIZE_PRESETS.find((p) => p.id === r.maxDim)
     assert.ok(preset, `${r.label} (${r.maxDim} px) has no matching converter size preset`)
     assert.equal(
-      preset.label.split(' — ')[0], r.label,
+      preset.label.split(' (')[0], r.label,
       `draft "${r.label}" lands in the converter as "${preset.label}"`,
     )
     assert.ok(r.detail.includes(`${r.maxDim} px`), `${r.label} detail "${r.detail}" disagrees with ${r.maxDim}`)

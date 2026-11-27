@@ -117,7 +117,7 @@ export default function AppFooter({ compact = false }) {
               {/* Unfinished pages are listed for admins only. */}
               {group.links.filter(([to, , soon]) => isAdmin || !(soon || isSoonPath(to))).map(([to, label, soon]) => (
                 soon ? (
-                  <span className="app-footer-soon-link" key={to} aria-label={`${label} — coming soon`}>
+                  <span className="app-footer-soon-link" key={to} aria-label={`${label} (coming soon)`}>
                     {label} <em>Soon</em>
                   </span>
                 ) : <NavLink key={to} to={to}>{label}</NavLink>

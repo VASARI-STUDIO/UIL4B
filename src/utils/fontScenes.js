@@ -160,7 +160,7 @@ export const SCENES = {
 
   signage: { label: 'Signage and labels', asks: 'Does the weight read from across a room and still set a paragraph?' },
 
-  ui: { label: 'Interface', asks: 'Do labels and controls stay legible at 13–14px?' },
+  ui: { label: 'Interface', asks: 'Do labels and controls stay legible at 13 to 14px?' },
   datatable: { label: 'Dense data', asks: 'Do the rows stay separable when the table gets tight?' },
   form: { label: 'A form under load', asks: 'Can a label, a hint and an error all be told apart?' },
 

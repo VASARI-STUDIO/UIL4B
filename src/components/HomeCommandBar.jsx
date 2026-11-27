@@ -177,7 +177,7 @@ export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = 
   // once and held still. That is the only version of this feature that anyone
   // reads at a glance anyway.
   const restingPlaceholder = useMemo(
-    () => (hints.length ? `Search tools — ${hints.slice(0, 3).join(', ')}…` : 'Search every tool'),
+    () => (hints.length ? `Search tools: ${hints.slice(0, 3).join(', ')}…` : 'Search every tool'),
     [hints],
   )
 
@@ -364,7 +364,7 @@ export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = 
         <div className="hcmd-results">
           {rows.length === 0 ? (
             <p className="hcmd-empty">
-              Nothing matches <strong>{query.trim()}</strong> yet. Try a colour, type, icon or image word —
+              Nothing matches <strong>{query.trim()}</strong> yet. Try a colour, type, icon or image word,
               or <Link to="/sitemap">see every tool</Link>.
             </p>
           ) : (

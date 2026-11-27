@@ -142,7 +142,7 @@ test.describe('the icon and emoji libraries sort', () => {
       const started = (await iconNames(page)).slice(0, 40)
       expect(started, 'the stub pack must start out of order, or this spec proves nothing').not.toEqual([...started].sort())
 
-      await chooseSort(page, 'Name A–Z')
+      await chooseSort(page, 'Name A to Z')
       // Two pages and a bit, so the order has to hold across the boundary between pages (PAGE_SIZE is
       // 120), and the first page cannot have been sorted on its own: it holds names 000-119 only if
       // the whole of the 800 was sorted before the page was cut.
@@ -150,9 +150,9 @@ test.describe('the icon and emoji libraries sort', () => {
       const az = await iconNames(page)
       expect(az.slice(0, 260), 'Name A-Z must run in order across the page boundary').toEqual(SORTED.slice(0, 260))
       expect(az.every((n) => /^sort-\d{3}$/.test(n)), 'the pack scope still holds: only this pack\'s icons are listed').toBe(true)
-      expect(await sortName(page)).toBe('Sort: Name A–Z')
+      expect(await sortName(page)).toBe('Sort: Name A to Z')
 
-      await chooseSort(page, 'Name Z–A')
+      await chooseSort(page, 'Name Z to A')
       await revealCells(page, 260)
       const za = await iconNames(page)
       expect(za.slice(0, 260), 'Name Z-A runs from the other end').toEqual([...SORTED].reverse().slice(0, 260))
@@ -171,8 +171,8 @@ test.describe('the icon and emoji libraries sort', () => {
       await expect.poll(() => sortName(page)).toBe('Sort: Best match')
 
       // A chosen sort keeps its own name whether or not a search is typed.
-      await chooseSort(page, 'Name A–Z')
-      expect(await sortName(page)).toBe('Sort: Name A–Z')
+      await chooseSort(page, 'Name A to Z')
+      expect(await sortName(page)).toBe('Sort: Name A to Z')
     })
 
     test('where the Sort menu is in the Filters panel, a changed sort counts on the Filters badge', async ({ page }) => {
@@ -183,7 +183,7 @@ test.describe('the icon and emoji libraries sort', () => {
       const badge = filtersButton(page).locator('.lbry-filtersbtn-count')
       await expect(badge, 'nothing is filtered yet').toHaveCount(0)
 
-      await chooseSort(page, 'Name A–Z')
+      await chooseSort(page, 'Name A to Z')
       await expect(badge, 'the hidden sort is counted, so the person can see something is set').toHaveText('1')
 
       await chooseSort(page, 'Recommended')
@@ -203,11 +203,11 @@ test.describe('the icon and emoji libraries sort', () => {
 
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
-    await chooseSort(page, 'Name A–Z')
+    await chooseSort(page, 'Name A to Z')
 
     await page.getByRole('tab', { name: /^Emoji/ }).click()
     await expect(page.locator('.emoji-cell').first()).toBeVisible({ timeout: 20_000 })
-    expect(await sortName(page), 'the emoji library shows the choice made in the icon library').toBe('Sort: Name A–Z')
+    expect(await sortName(page), 'the emoji library shows the choice made in the icon library').toBe('Sort: Name A to Z')
 
     // The index arrives a moment after the sort is seen; the grid re-orders when it does.
     await expect.poll(async () => {

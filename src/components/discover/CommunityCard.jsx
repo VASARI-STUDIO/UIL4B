@@ -106,12 +106,12 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
           href={href}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          aria-label={`${item.name} — open in new tab`}
+          aria-label={`${item.name}, open in new tab`}
         >
           {thumbContent}
         </a>
       ) : (
-        <div {...thumbProps} aria-label={item.curated ? `${item.name} example` : `${item.name} preview — external link unavailable`}>
+        <div {...thumbProps} aria-label={item.curated ? `${item.name} example` : `${item.name} preview (external link unavailable)`}>
           {thumbContent}
         </div>
       )}
