@@ -200,6 +200,8 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-gradient-preview': { scope: 'session', why: 'Gradient preview place (Fill, Hero, Card, Button, Poster, …), this tab only' },
   'vs-gradient-fill': { scope: 'session', why: 'Gradient Fill preview style (Plain, Grain, …), this tab only' },
   'vs-gradient-gen-more': { scope: 'session', why: 'Gradient Random section: whether More options is open, this tab only' },
+  'vs-gradient-finish-strength': { scope: 'session', why: 'Gradient Fill finish strength (0 to 100), this tab only' },
+  'vs-gradient-tune-open': { scope: 'session', why: 'Gradient Tune panel: whether it is open, this tab only' },
   'vs-icon-draft': { scope: 'session', why: 'Icon customiser Pro preview kept while the viewer visits /plans, so Back reopens it; this tab only' },
   'vs-sync-meta': { scope: 'bookkeeping', why: 'Owner, per-key stamps and fingerprints for this module' },
   'vs-sync-updatedAt': { scope: 'bookkeeping', why: 'Legacy device clock; migrated into vs-sync-meta and removed' },

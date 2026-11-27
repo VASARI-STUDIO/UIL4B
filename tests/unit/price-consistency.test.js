@@ -170,6 +170,11 @@ const WINDOW = 400
 // what we charge."
 const NOT_A_PLAN_PRICE = [
   {
+    file: 'src/pages/GradientGenerator.jsx',
+    context: /grd-booking-total|1 adult/,
+    why: 'Sample ticket total in a gradient preview scene (a made-up ferry booking), not a plan price.',
+  },
+  {
     file: 'src/utils/communityHandle.js',
     context: /\.replace\(\/\[\$5\]\/g, 's'\)|collapse repeated-character padding/,
     why: 'Regex syntax in the community-handle lookalike filter: "[$5]" is a character class '
