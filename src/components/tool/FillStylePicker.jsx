@@ -12,11 +12,10 @@ import ToolIcon from './ToolIcon'
 // the sheet covers the canvas, so a pick closes it. Done, Esc, a press outside or tabbing
 // out closes it and focus goes back to the trigger. Tiles are drawn only while it is open.
 const SHEET_QUERY = '(max-width: 767.98px)'
-export default function FillStylePicker({ styles, value, onChange, stops, paint, oklch, layouts }) {
+export default function FillStylePicker({ styles, value, onChange, stops, paint, oklch }) {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { initialFocus: '[aria-pressed="true"]', arrowNav: true, portalled: true })
-  const composition = s => ['plain', 'mesh', 'orb'].includes(s.id)
   const current = styles.find((s) => s.id === value) || styles[0]
   const pick = (id) => {
     onChange(id)
@@ -60,26 +59,21 @@ export default function FillStylePicker({ styles, value, onChange, stops, paint,
               <h2 className="grd-fill-title">Fill style</h2>
               <button type="button" className="grd-fill-done" onClick={closeToTrigger}>Done</button>
             </div>
-            {[['Composition', styles.filter(composition)], ['Finishes', styles.filter(s => !composition(s))]].map(([title, group]) => (
-              <section key={title} aria-label={title} className="grd-fill-family">
-                <h3>{title}</h3>
-                <div className="grd-fill-grid" data-arrow-grid="">
-                  {group.map((s) => {
-                    const on = s.id === current.id
-                    return (
-                      <button key={s.id} type="button" className={`grd-fill-tile${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => pick(s.id)}>
-                        <span className="grd-fill-thumb" data-art={s.id} aria-hidden="true">
-                          <span className="grd-canvas" style={{ background: paint }} />
-                          {s.id !== 'plain' && <GradientFx id={s.id} layout={layouts[s.id]} stops={stops} paint={paint} oklch={oklch} />}
-                          {on && <span className="grd-fill-check"><ToolIcon name="check" size={12} /></span>}
-                        </span>
-                        <span className="grd-fill-name">{s.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            ))}
+            <div className="grd-fill-grid" data-arrow-grid="">
+              {styles.map((s) => {
+                const on = s.id === current.id
+                return (
+                  <button key={s.id} type="button" className={`grd-fill-tile${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => pick(s.id)}>
+                    <span className="grd-fill-thumb" data-art={s.id} aria-hidden="true">
+                      <span className="grd-canvas" style={{ background: paint }} />
+                      {s.id !== 'plain' && <GradientFx id={s.id} stops={stops} paint={paint} oklch={oklch} />}
+                      {on && <span className="grd-fill-check"><ToolIcon name="check" size={12} /></span>}
+                    </span>
+                    <span className="grd-fill-name">{s.label}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>,
         document.body,

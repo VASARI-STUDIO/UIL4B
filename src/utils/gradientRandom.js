@@ -71,9 +71,9 @@ export const MIN_MIDPOINT_CHROMA = 0.025
 export const MAX_CHROMA_GAP = 0.08
 
 export const MAX_STOPS = 5
-export const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
+export const GRAD_TYPES = [...GRAD_TYPE_WEIGHTS.map(([type]) => type), 'Mesh']
 
-// Style families (Horizon, Mesh and the rest) are not drawn yet. The filter
+// Style families such as Horizon are not drawn yet. The filter
 // carries the list so a family can be added here and offered in Shuffle
 // settings without changing the shape of the filter; until then every roll is
 // Plain, whatever the filter holds.

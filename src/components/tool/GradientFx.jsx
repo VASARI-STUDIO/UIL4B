@@ -32,7 +32,6 @@ const STREAKS = [
 
 function Scene({ id, stops, oklch, name }) {
   switch (id) {
-    case 'orb': return <div className="grd-fx-sphere" />
     case 'aperture':
       return <><div className="grd-fx-aperture"><div className="grd-fx-lamp" /><Flutes><div className="grd-fx-lamp" /></Flutes></div><div className="grd-fx-grain" /></>
     case 'satin':
@@ -68,8 +67,6 @@ function Scene({ id, stops, oklch, name }) {
     case 'spec':
       // The ground only: the card, its strip and its words are the text layer's (GradientText.jsx).
       return null
-    case 'mesh':
-      return (<><div className="grd-fx-mesh" /><div className="grd-fx-grain" /><Caption name={name} stops={stops} /></>)
     case 'waves':
       return (<><Waves stops={stops} oklch={oklch} /><Caption name={name} stops={stops} /></>)
     default:
@@ -108,11 +105,11 @@ function Caption({ name, stops }) {
 /**
  * One preview style drawn from the stops. `paint` is the canvas's own gradient CSS and
  * `oklch` says whether it blends in OKLCH, so a style reads colour as the canvas does;
- * `name` is the caption's name on Mesh and Waves.
+ * `name` is the caption's name on Waves.
  */
-export default function GradientFx({ id, stops, paint, oklch, name, layout }) {
+export default function GradientFx({ id, stops, paint, oklch, name }) {
   return (
-    <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch, layout })}>
+    <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch })}>
       <Scene id={id} stops={stops} oklch={oklch} name={name} />
     </div>
   )

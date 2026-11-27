@@ -1,3 +1,4 @@
+import { meshInkSamples } from './gradientPreviewStyles.js'
 // Which ink to set over a gradient. The candidates are near-black and near-white (not
 // pure); the winner is the one with the higher worst-case contrast against the colours
 // the text can sit over. With no region that is every stop and the midpoint between each
@@ -113,7 +114,7 @@ const worst = (ink, samples) => Math.min(...samples.map((c) => contrastRatio(ink
  * part of the gradient that box covers; leave it out to cover the whole gradient.
  */
 export function pickInk(stops, over) {
-  const samples = over ? regionSamples(stops, gradientSpan(over.type, over.angle, over.box, over.aspect)) : inkSamples(stops)
+  const samples = over?.mesh ? meshInkSamples(over.mesh, over.box) : over?.box ? regionSamples(stops, gradientSpan(over.type, over.angle, over.box, over.aspect)) : inkSamples(stops)
   const dark = worst(INK_DARK, samples)
   const light = worst(INK_LIGHT, samples)
   const ink = dark >= light ? INK_DARK : INK_LIGHT

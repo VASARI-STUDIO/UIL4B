@@ -202,7 +202,8 @@ export function designTokens(design) {
     add(['gradient', 'brand'], 'gradient', {
       stops: d.gradient.stops.map((s) => ({ color: lower(s.color), position: s.position })),
       angle: d.gradient.angle,
-      type: ['Linear', 'Radial', 'Conic'].includes(d.gradient.type) ? d.gradient.type : 'Linear',
+      ...(d.gradient.type === 'Mesh' ? { mesh: d.gradient.mesh, space: d.gradient.space } : {}),
+      type: ['Linear', 'Radial', 'Conic', 'Mesh'].includes(d.gradient.type) ? d.gradient.type : 'Linear',
     })
   }
   return tokens
@@ -221,7 +222,7 @@ function cssValue(token) {
     case 'dimension':
       return isFontSize(token) ? { value: remOf(v.value), note: `${v.value}px` } : { value: `${v.value}${v.unit}`, note: '' }
     case 'fontFamily': return { value: v.map((f, i) => (i === 0 ? `"${String(f).replace(/["\\]/g, '')}"` : f)).join(', '), note: '' }
-    case 'gradient': return { value: gradientCss(v.type, v.angle, v.stops).replace(/#[0-9A-F]{6}/g, lower), note: '' }
+    case 'gradient': return { value: gradientCss(v.type, v.angle, v.stops, v.mesh, v.space).replace(/#[0-9A-F]{6}/g, lower), note: '' }
     case 'duration': return { value: `${v.value}${v.unit}`, note: '' }
     case 'cubicBezier': return { value: `cubic-bezier(${v.join(', ')})`, note: '' }
     default:
@@ -365,7 +366,7 @@ function dtcgToken(token, modes = false) {
       case 'color': value = dtcgColor(v); break
       case 'gradient':
         value = v.stops.map((s) => ({ color: dtcgColor(s.color), position: round4(s.position / 100) }))
-        extensions['com.uil4b'] = { ...(extensions['com.uil4b'] || {}), type: v.type, angle: v.angle }
+        extensions['com.uil4b'] = { ...(extensions['com.uil4b'] || {}), type: v.type, angle: v.angle, ...(v.type === 'Mesh' ? { mesh: v.mesh, space: v.space } : {}) }
         break
       case 'typography':
         value = { ...v }

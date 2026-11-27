@@ -69,12 +69,12 @@ test('the real inks keep the ratio they report, and the lowest of them is the ba
   assert.match(sceneBadge([ink, inkFor(BW, 'Linear', 180, undefined)]).text, / · low$/)
 })
 
-test('Poster and Spec card sit before Mesh, Waves, App icon and Phone, named and spoken as written', () => {
-  const six = PREVIEW_STYLES.slice(-6)
-  assert.deepEqual(six.map((s) => s.id), ['poster', 'spec', 'mesh', 'waves', 'icon', 'phone'])
-  assert.deepEqual(six.map((s) => s.label), ['Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'])
-  assert.deepEqual(six.map((s) => s.as), [
-    ', shown as a poster', ', shown as a spec card', ', shown as a mesh', ', shown as waves', ', shown as an app icon', ', shown as a phone screen',
+test('Poster and Spec card sit before Waves, App icon and Phone, named and spoken as written', () => {
+  const five = PREVIEW_STYLES.slice(-5)
+  assert.deepEqual(five.map((s) => s.id), ['poster', 'spec', 'waves', 'icon', 'phone'])
+  assert.deepEqual(five.map((s) => s.label), ['Poster', 'Spec card', 'Waves', 'App icon', 'Phone'])
+  assert.deepEqual(five.map((s) => s.as), [
+    ', shown as a poster', ', shown as a spec card', ', shown as waves', ', shown as an app icon', ', shown as a phone screen',
   ])
   assert.deepEqual(TEXT_STYLES, ['poster', 'spec', 'icon', 'phone'])
   assert.ok(isTextStyle('poster') && isTextStyle('icon') && isTextStyle('phone'))

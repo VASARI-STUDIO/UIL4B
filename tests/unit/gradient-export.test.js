@@ -187,7 +187,7 @@ test('the OKLCH line is the same gradient the canvas paints', () => {
 
 test('the code well and the Save or share menu both use the one function', () => {
   const src = read('src/pages/GradientGenerator.jsx')
-  assert.match(src, /return gradientCssText\(type, angle, stops, space\)/)
-  assert.match(src, /copyExport\(gradientCssText\(type, angle, stops, space\)\)/)
+  assert.match(src, /const cssCode = gradientCssText\(type, angle, stops, space, layouts.mesh\)/)
+  assert.match(src, /copyExport\(cssCode\)/)
   assert.ok(!/`background: \$\{css\};`/.test(src), 'no second hand-built CSS line in the page')
 })

@@ -1,21 +1,19 @@
 import { useRef, useState } from 'react'
-import { artworkPoints } from '../../utils/gradientPreviewStyles'
+import { meshLayoutPoints } from '../../utils/gradientPreviewStyles'
 import { ToolSection, ToolSlider } from './ToolLayout'
-import GradientFx from './GradientFx'
 import ColorPickerPop from '../ColorPickerPop'
 
-export default function GradientArtworkEditor({ kind, stops, oklch, layout, onEdit, onAddPoint, onColour, locked }) {
-  const points = artworkPoints(kind, stops, oklch, layout)
+export default function GradientArtworkEditor({ stops, paint, oklch, layout, onEdit, onAddPoint, onColour, locked }) {
+  const points = meshLayoutPoints(stops, oklch, layout)
   const [selected, setSelected] = useState(0)
   const drag = useRef(null)
   const index = Math.min(selected, points.length - 1)
   const point = points[index]
-  const mesh = kind === 'mesh'
-  const pointName = mesh ? `Point ${index + 1}` : 'Orb'
+  const pointName = `Point ${index + 1}`
 
-  const sampled = mesh && stops.length > points.length
-  const source = [...stops].sort((a, b) => a.position - b.position)[mesh ? index : 0]
-  const add = mesh && stops.length < 5 && !locked && (
+  const sampled = stops.length > points.length
+  const source = [...stops].sort((a, b) => a.position - b.position)[index]
+  const add = stops.length < 5 && !locked && (
     <button type="button" className="grd-gen-more" onClick={() => {
       const added = onAddPoint()
       if (added != null) setSelected(added)
@@ -29,8 +27,8 @@ export default function GradientArtworkEditor({ kind, stops, oklch, layout, onEd
   }
 
   return (
-    <ToolSection label={mesh ? 'Mesh points' : 'Orb composition'} className="grd-art-editor" aside={add}>
-      <div className="grd-art-map" data-art={kind}
+    <ToolSection label="Mesh points" className="grd-art-editor" aside={add}>
+      <div className="grd-art-map" style={{ background: paint }}
         onPointerDown={event => {
           if (event.button !== 0 || !event.isPrimary) return
           const handle = event.target.closest('[data-point]')
@@ -44,25 +42,24 @@ export default function GradientArtworkEditor({ kind, stops, oklch, layout, onEd
         onPointerMove={event => { if (drag.current?.pointer === event.pointerId) place(event, drag.current.i) }}
         onLostPointerCapture={() => { drag.current = null }}
       >
-        <GradientFx id={kind} stops={stops} oklch={oklch} layout={layout} />
         {points.map((p, i) => (
           <button key={i} type="button" data-point={i} aria-pressed={index === i}
-            aria-label={mesh ? `Select mesh point ${i + 1}, ${p.color}` : 'Select orb centre'}
+            aria-label={`Select mesh point ${i + 1}, ${p.color}`}
             style={{ left: `clamp(17px, ${p.x}%, calc(100% - 17px))`, top: `clamp(17px, ${p.y}%, calc(100% - 17px))` }}
-            onClick={() => setSelected(i)}>{mesh ? i + 1 : '+'}</button>
+            onClick={() => setSelected(i)}>{i + 1}</button>
         ))}
       </div>
       <div className="grd-art-point">
-        <span>{mesh ? pointName : 'Inner colour'}</span>
+        <span>{pointName}</span>
         {sampled ? <span>{point.color}</span> : (
-          <ColorPickerPop value={source.color} ariaLabel={`Change ${mesh ? pointName.toLowerCase() : 'orb inner'} colour`}
+          <ColorPickerPop value={source.color} ariaLabel={`Change ${pointName.toLowerCase()} colour`}
             onChange={hex => onColour(stops.indexOf(source), { color: hex.toUpperCase() })}
             triggerClassName="grd-art-ink" triggerChildren={<><i style={{ background: source.color }} />{source.color.toUpperCase()}</>}
             disabled={locked} portal popClassName="grd-cpk-pop" />
         )}
       </div>
       {sampled && <small>Five points sample your {stops.length} stops.</small>}
-      {[['x', 'Horizontal'], ['y', 'Vertical'], ['size', mesh ? 'Spread' : 'Diameter']].map(([key, label]) => (
+      {[['x', 'Horizontal'], ['y', 'Vertical'], ['size', 'Spread']].map(([key, label]) => (
         <ToolSlider key={key} label={label} ariaLabel={`${pointName} ${label.toLowerCase()}`}
           min={key === 'size' ? 20 : -10} max={key === 'size' ? 160 : 110}
           value={point[key]} display={`${point[key]}%`} disabled={locked}

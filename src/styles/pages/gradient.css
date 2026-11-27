@@ -1228,7 +1228,7 @@
 .grd .grd-fill-thumb .grd-canvas,
 .grd .grd-fill-thumb .grd-fx { position: absolute; inset: 0; border: 0; border-radius: 0; }
 .grd .grd-fill-tile.is-on .grd-fill-thumb { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--tl-ink); }
-/* A tile is too small for the Mesh and Waves caption; the full preview shows it. */
+/* A tile is too small for the Waves caption; the full preview shows it. */
 .grd .grd-fill-thumb .grd-fx > .grd-fx-cap { display: none; }
 .grd .grd-fill-check {
   position: absolute; right: 5px; bottom: 5px; z-index: 1;
@@ -1375,9 +1375,7 @@
   .grd .grd-spec-note { margin-top: 2px; }
 }
 
-/* Mesh and Waves. The effects layer draws the whole scene: Mesh is soft points of colour on a
-   ground (the grain is the shared one, at its base .3), Waves is seven flat bands in one
-   SVG with no blur and no grain. Both carry one caption chip on the ratio badge's scrim. */
+/* The Waves caption names the gradient and lists its stops. */
 .grd .grd-fx > .grd-fx-cap {
   inset: auto auto 24px 24px;
   display: flex; align-items: baseline; gap: 6px; width: fit-content; max-width: calc(100% - 48px);
@@ -1478,20 +1476,11 @@
 }
 
 /* The picker uses the same neutral swatch surface and selected outline as Palette Builder. */
-.grd .grd-fill-family + .grd-fill-family { border-top: 1px solid var(--tl-hair); margin-top: 14px; padding-top: 10px; }
-.grd .grd-fill-family h3 { margin: 0 0 8px; font-size: 12px; font-weight: 550; color: var(--tl-dim); }
-.grd .grd-fill-family:first-of-type .grd-fill-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
-.grd .grd-fill-family:first-of-type .grd-fill-thumb { aspect-ratio: 2 / 1; }
 .grd .grd-fill-pop { overflow-y: auto; }
-.grd .grd-stage[data-ctx="orb"] .grd-canvas,
-.grd [data-art="orb"] { background: repeating-conic-gradient(var(--tl-card2) 0 25%, var(--tl-card) 0 50%) 0 0 / 20px 20px !important; }
-.grd .grd-fill-thumb[data-art="orb"] .grd-canvas { visibility: hidden; }
 .grd .grd-art-map {
   position: relative; isolation: isolate; container-type: size; height: 128px; border-radius: 10px;
   overflow: hidden; touch-action: none; cursor: crosshair; border: 1px solid var(--tl-line);
 }
-.grd .grd-art-map .grd-fx { border: 0; border-radius: 0; }
-.grd .grd-art-map .grd-fx-cap { display: none; }
 .grd .grd-art-map button {
   position: absolute; transform: translate(-50%, -50%); width: 32px; height: 32px;
   display: grid; place-items: center; padding: 0; border: 2px solid #f9f8f4; border-radius: 50%;
@@ -1513,3 +1502,38 @@
 .grd .grd-art-ink:hover { background: var(--tl-card2); }
 .grd .grd-art-ink:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 @media (pointer: coarse) { .grd .grd-art-ink { min-height: 44px; } }
+
+/* A radio programme page. Its feature sleeve carries the current generator paint. */
+.grd .grd-web {
+  container-type: size; display: grid; place-items: center; padding: 3%;
+  background: var(--tl-card2); border: 1px solid var(--tl-line);
+}
+.grd .grd-web-page {
+  width: min(93%, 146cqh); padding: 2% 3%; box-sizing: border-box;
+  background: #f7f4ec; color: #221f1c; border: 1px solid #c9c6bd;
+  box-shadow: 0 5px 18px rgb(30 29 23 / .08); container-type: inline-size;
+}
+.grd .grd-web-mast, .grd .grd-web-schedule { display: flex; gap: 4cqi; align-items: baseline; border-bottom: 1px solid currentColor; padding-bottom: 1.8cqi; }
+.grd .grd-web-mast b { flex: 1; font-size: 2.65cqi; letter-spacing: -.06em; }
+.grd .grd-web-mast span, .grd .grd-web-schedule { font-size: 1.75cqi; }
+.grd .grd-web-feature { display: grid; grid-template-columns: 1fr 1fr; gap: 5cqi; margin: 3cqi 0; align-items: center; }
+.grd .grd-web-story { display: grid; justify-items: start; gap: 2cqi; }
+.grd .grd-web-story small, .grd .grd-web-cover span { font: 600 1.6cqi/1.2 monospace; text-transform: uppercase; letter-spacing: .06em; }
+.grd .grd-web-story strong { font: 500 9.2cqi/.85 Georgia, serif; letter-spacing: -.065em; }
+.grd .grd-web-story > span { font-size: 1.9cqi; }
+.grd .grd-web-listen { padding: 1cqi 1.7cqi; border-radius: 2px; background: #221f1c; color: #f7f4ec; font-size: 1.7cqi; }
+.grd .grd-web-cover { position: relative; overflow: hidden; aspect-ratio: 1.08; }
+.grd .grd-web-record {
+  position: absolute; inset: -12% -33% -18% 18%; border-radius: 50%;
+  --groove: clamp(4px, 1.4cqi, 10px);
+  background: repeating-radial-gradient(circle, transparent 0 calc(var(--groove) - 1.6px), rgb(20 17 14 / .34) calc(var(--groove) - .8px), transparent var(--groove));
+  border: 1px solid rgb(20 17 14 / .32);
+}
+.grd .grd-web-cover span { position: absolute; bottom: 6%; left: 6%; padding: .8cqi 1cqi; background: #f7f4ec; }
+.grd .grd-web-schedule { border-bottom: 0; border-top: 1px solid; padding: 1.5cqi 0 0; }
+.grd .grd-web-schedule b { margin-right: auto; }
+@container (max-width: 480px) {
+  .grd .grd-web-page { width: 100%; }
+  .grd .grd-web-story > span { font-size: 2.6cqi; }
+  .grd .grd-web-listen, .grd .grd-web-mast span, .grd .grd-web-schedule { font-size: 2.5cqi; }
+}

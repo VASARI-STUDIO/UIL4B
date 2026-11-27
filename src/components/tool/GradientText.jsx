@@ -42,9 +42,9 @@ function Badge({ badge }) {
   return <span className={`grd-ctx-ratio${badge.low ? ' is-low' : ''}`} role="status">{badge.text}</span>
 }
 
-function PosterText({ stops, type, angle }) {
+function PosterText({ stops, type, angle, mesh }) {
   const [ref, spots] = useMeasured(measurePoster)
-  const inks = useMemo(() => sceneInks(stops, type, angle, spots, POSTER_BOXES), [stops, type, angle, spots])
+  const inks = useMemo(() => sceneInks(stops, type, angle, spots, POSTER_BOXES, mesh), [stops, type, angle, spots, mesh])
   const badge = sceneBadge(Object.values(inks))
   return (
     <div className="grd-txt" ref={ref}>
@@ -112,8 +112,8 @@ function AppIcon({ size, paint, ink, blank }) {
 
 // Every icon is square, so the one ink for the glyph is chosen against the middle of a square
 // of the gradient and used at every size.
-function IconText({ paint, stops, type, angle }) {
-  const ink = useMemo(() => inkFor(stops, type, angle, { aspect: 1, box: ICON_INK_BOX }), [stops, type, angle])
+function IconText({ paint, stops, type, angle, mesh }) {
+  const ink = useMemo(() => inkFor(stops, type, angle, { aspect: 1, box: ICON_INK_BOX }, mesh), [stops, type, angle, mesh])
   const badge = sceneBadge([ink])
   const icon = (size, key) => <AppIcon key={key ?? size} size={size} paint={paint} ink={ink.css} />
   return (
@@ -148,10 +148,10 @@ const measurePhone = (view) => {
 // A flat stop as a two-stop ramp, to pick the ink for the label set on it.
 const flat = (color) => [{ color, position: 0 }, { color, position: 100 }]
 
-function PhoneScene({ framed, paint, stops, type, angle }) {
+function PhoneScene({ framed, paint, stops, type, angle, mesh }) {
   const [ref, spots] = useMeasured(measurePhone)
   const fill = phoneButton(stops)
-  const lineInk = useMemo(() => inkFor(stops, type, angle, spots?.line), [stops, type, angle, spots])
+  const lineInk = useMemo(() => inkFor(stops, type, angle, spots?.line, mesh), [stops, type, angle, spots, mesh])
   const buttonInk = useMemo(() => inkFor(flat(fill), type, angle), [fill, type, angle])
   const badge = sceneBadge([lineInk, buttonInk])
   const screen = (
@@ -189,10 +189,10 @@ function PhoneText(props) {
  * The words and objects of one preview style over the canvas. `paint` is the canvas's own
  * gradient and `oklch` whether it blends in OKLCH; `name` is the Spec card's heading.
  */
-export default function GradientText({ id, paint, stops, type, angle, oklch, name }) {
-  if (id === 'poster') return <PosterText stops={stops} type={type} angle={angle} />
+export default function GradientText({ id, paint, stops, type, angle, oklch, name, mesh }) {
+  if (id === 'poster') return <PosterText mesh={mesh} stops={stops} type={type} angle={angle} />
   if (id === 'spec') return <SpecText paint={paint} stops={stops} type={type} angle={angle} oklch={oklch} name={name} />
-  if (id === 'icon') return <IconText paint={paint} stops={stops} type={type} angle={angle} />
-  if (id === 'phone') return <PhoneText paint={paint} stops={stops} type={type} angle={angle} />
+  if (id === 'icon') return <IconText mesh={mesh} paint={paint} stops={stops} type={type} angle={angle} />
+  if (id === 'phone') return <PhoneText mesh={mesh} paint={paint} stops={stops} type={type} angle={angle} />
   return null
 }

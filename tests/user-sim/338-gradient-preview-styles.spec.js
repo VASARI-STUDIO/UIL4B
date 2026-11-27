@@ -33,8 +33,8 @@ const STYLES = [
   ['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'],
   ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade'],
 ]
-const PLACES = ['Fill', 'Hero', 'Card', 'Button', 'Poster', 'Spec card', 'App icon', 'Phone']
-const FILL_NAMES = ['Plain', ...STYLES.map(([, n]) => n), 'Mesh', 'Waves']
+const PLACES = ['Fill', 'Webpage', 'Hero', 'Card', 'Button', 'Poster', 'Spec card', 'App icon', 'Phone']
+const FILL_NAMES = ['Plain', ...STYLES.map(([, n]) => n), 'Waves']
 
 const switchOf = (page) => page.getByRole('group', { name: 'Preview as' })
 const stageOf = (page) => page.locator('.grd-stage')

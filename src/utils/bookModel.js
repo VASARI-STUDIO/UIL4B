@@ -1,3 +1,4 @@
+import { cleanMeshLayout } from './gradientPreviewStyles.js'
 // The design, read the way every export document reads it.
 //
 // readBook() turns a saved design (many tool versions, a localStorage round trip,
@@ -51,6 +52,10 @@ export function readBook(design) {
     gradient: hasGradient
       ? {
         stops,
+        ...(design.gradient.type === 'Mesh' ? {
+          mesh: cleanMeshLayout(design.gradient.artwork?.mesh),
+          space: design.gradient.space === 'oklch' ? 'oklch' : 'srgb',
+        } : {}),
         angle: Number.isFinite(Number(design?.gradient?.angle)) ? Math.round(Number(design.gradient.angle)) : 135,
         type: typeof design?.gradient?.type === 'string' ? design.gradient.type : 'Linear',
       }

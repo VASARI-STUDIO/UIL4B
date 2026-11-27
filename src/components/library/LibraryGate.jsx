@@ -1,7 +1,7 @@
 import GalleryEndGate, { GateFadeRows } from './GalleryEndGate'
 import VerticalPanelTile, { VptGrid } from './VerticalPanelTile'
 import { libraryGateCopy } from '../../data/galleryGateCopy'
-import { gradientCss } from '../../data/gradientGallery'
+import { gradientItemCss } from '../../data/gradientGallery'
 import { standinFromStub, standinGradients, standinPalettes, STANDIN_COUNT } from '../../utils/gateStandins'
 import { lockedMeta } from '../../utils/galleryMeta'
 
@@ -47,7 +47,7 @@ function fadeTile(kind, item) {
       locked
       name={item.name}
       meta={item.meta}
-      mediaStyle={{ background: gradientCss(item.type, item.angle, item.stops) }}
+      mediaStyle={{ background: gradientItemCss(item) }}
     />
   )
 }

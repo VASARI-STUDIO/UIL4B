@@ -16,7 +16,7 @@ export function communityBy(row) {
  * swatch already shows the type, and the line has to fit a two-column phone tile.
  */
 export function gradientMeta(g) {
-  const kind = communityBy(g) || (g.type === 'Radial' ? 'Radial' : `${g.type} ${Math.round(g.angle)}°`)
+  const kind = communityBy(g) || (['Radial', 'Mesh'].includes(g.type) ? g.type : `${g.type} ${Math.round(g.angle)}°`)
   return `${kind} · ${plural(g.stops.length, 'stop', 'stops')}`
 }
 

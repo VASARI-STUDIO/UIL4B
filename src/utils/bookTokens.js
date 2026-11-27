@@ -1,3 +1,4 @@
+import { gradientItemCss } from '../data/gradientGallery.js'
 // The custom properties a design system book documents, as {name, value} pairs.
 //
 // Split out of designSystemBook.js so the PNG book (utils/bookRaster.js) can list
@@ -45,10 +46,9 @@ export function bookTokens(d) {
     rows.push({ name: `--font-size-${s.name.toLowerCase().replace(/\s+/g, '-')}`, value: `${s.px}px` })
   })
   if (d.gradient) {
-    const stops = d.gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ')
     rows.push({
       name: '--gradient-brand',
-      value: `linear-gradient(${d.gradient.angle}deg, ${stops})`,
+      value: gradientItemCss(d.gradient),
     })
   }
   return rows

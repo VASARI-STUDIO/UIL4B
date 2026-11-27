@@ -55,12 +55,13 @@ export function communityGradientRows(docs) {
     if (seen.has(id)) continue
     const g = sanitizeGradientSubmission({
       id, name: d.name, author: d.authorName,
-      type: d.payload?.type, angle: d.payload?.angle, stops: d.payload?.stops,
+      type: d.payload?.type, angle: d.payload?.angle, url: d.payload?.url, stops: d.payload?.stops,
     })
     if (!g) continue
     seen.add(id)
     rows.push({
       id, name: g.name, type: g.type, angle: g.angle, stops: g.stops,
+      ...(g.type === 'Mesh' ? { mesh: g.mesh, space: g.space } : {}),
       tags: gradientTags(g.stops), author: g.author, community: true,
     })
   }
