@@ -29,12 +29,12 @@ test('there are twenty-four themes, under the folder ids the export engine reads
   assert.deepEqual(EXPORT_THEMES.map((t) => t.id), [
     '01-presentation', '02-poster', '03-broadsheet', '04-standards', '05-specimen',
     '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse', '21-presentation', '22-ticket', '23-broadsheet', '24-standards',
-    '26-notebook', '28-riso', '29-blueprint', '30-fluted', '31-contact', '32-dieline', '34-set-square', '25-label', '27-swissfield', '33-flyleaf',
+    '26-notebook', '28-riso', '29-blueprint', '30-fluted', '31-contact', '32-dieline', '25-label', '27-swissfield', '33-flyleaf', '34-set-square',
   ])
   assert.deepEqual(EXPORT_THEMES.map((t) => t.name), [
     'Presentation', 'Ticket', 'Broadsheet', 'Standards', 'Catalogue',
     'Studio', 'Specification', 'Riso', 'Blueprint', 'In use', 'Keynote', 'Stub', 'Front Page', 'Standards Plate',
-    'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline', 'Set Square', 'Label', 'Swiss Field', 'Flyleaf',
+    'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline', 'Label', 'Swiss Field', 'Flyleaf', 'Set Square',
   ])
 })
 
@@ -42,7 +42,7 @@ test('each theme names its sample brand, and no sample brand is a real company',
   assert.deepEqual(EXPORT_THEMES.map((t) => t.brand), [
     'Kerbside', 'Encore', 'Saltbush', 'Two Shores', 'Margin',
     'Offcut', 'Northern Current', 'Long Room', 'Plumbline', 'Shallow End', 'Kerbside', 'Encore', 'Saltbush', 'Two Shores',
-    'Offcut', 'Long Room', 'Plumbline', 'Northern Current', 'Plumbline', 'Kerbside', 'Plumbline', 'Margin', 'Northern Current', 'Margin',
+    'Offcut', 'Long Room', 'Plumbline', 'Northern Current', 'Plumbline', 'Kerbside', 'Margin', 'Northern Current', 'Margin', 'Plumbline',
   ])
   for (const file of ['src/config/exportFormats.js', 'src/config/planFacts.js']) {
     assert.ok(!/\b(Tally|Paddle)\b/.test(read(file)), `${file} names a retired sample brand`)
