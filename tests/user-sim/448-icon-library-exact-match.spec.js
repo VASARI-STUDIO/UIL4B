@@ -12,7 +12,7 @@
 // have icons; "cold" has none, so it is the literal-empty case; "winterGreen" is a substring-only hit.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { isIconifyUrl, isLiveIconify, refuseIconify } from './iconify-stub.js'
+import { ICONIFY_STUB_HEADER, answerIconify, isIconifyUrl, isLiveIconify, refuseIconify } from './iconify-stub.js'
 
 const REAL_CELL = '.ig .ic:not(.ig-skel)'
 const LIVE = 'the live API decides what it serves; this spec pins the fixture'
@@ -410,4 +410,38 @@ test('with the icon service refused, the built-in answer is exact and the line s
   await modeSwitch(page).click()
   await expect(line(page)).toContainText('Names with “arrow” only')
   await expect.poll(async () => (await names(page)).length, { timeout: 20_000 }).toBeGreaterThan(0)
+})
+
+// A related word's answer goes through the same gate as the typed word's. The page asks the API for a free
+// viewer's packs only, but enforces that on what arrives: here the answer for "thermometer" (a related word of
+// "snowflake") also names a brand pack, Carbon's Pro-only logo-* and an animated set, as a proxy that dropped
+// `prefixes` would. None of the three may reach the grid. Fails if `admit` is skipped for related-word lists.
+test.describe('Exact words, related words keep the viewer gate', () => {
+  test.beforeEach(({}, info) => { info.skip(isLiveIconify(), LIVE) })
+
+  test('a free viewer sees no gated icon among the related words', async ({ page }) => {
+    watch(page, 'a free designer searching a word with related words')
+    const GATED = ['simple-icons:thermometer-brand', 'carbon:logo-thermometer', 'line-md:thermometer-wave']
+    await page.route((u) => isIconifyUrl(u.href) && u.pathname === '/search' && u.searchParams.get('query') === 'thermometer', async (route) => {
+      const answer = answerIconify(route.request().url())
+      const body = JSON.parse(answer.body)
+      body.icons = [...body.icons, ...GATED]
+      await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }, body: JSON.stringify(body) })
+    })
+    await page.setViewportSize(WIDE)
+    await signIn(page, { plan: 'free' })
+    await go(page, '/create/icons')
+    await expect(page.locator(REAL_CELL).first(), 'POSITIVE CONTROL: the grid is up').toBeVisible({ timeout: 20_000 })
+
+    await searchBox(page).fill('snowflake')
+    await expect.poll(async () => (await names(page)).some((n) => n.includes('thermometer')), {
+      timeout: 20_000,
+      message: 'POSITIVE CONTROL: the related word "thermometer" added its free icons',
+    }).toBe(true)
+    const labels = await page.locator('.ig .ic').evaluateAll((cells) => cells.map((c) => c.getAttribute('aria-label') || ''))
+    for (const id of GATED) {
+      const name = id.split(':')[1]
+      expect(labels.some((l) => l.includes(name)), `${id} stays out of a free viewer's grid`).toBe(false)
+    }
+  })
 })

@@ -95,6 +95,7 @@ import GalleryEndGate from '../components/library/GalleryEndGate'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import { isCountUnknownError } from '../utils/projectCount'
+import { typedWords } from '../utils/iconSearchWords.js'
 import '../styles/deferred/library.css'
 import '../styles/pages/icon-editor.css'
 import '../styles/deferred/tool-shell.css'
@@ -198,7 +199,6 @@ const TERM_CACHE_MAX = 60
 const TERM_LIMIT = 96
 // The first rows of each related word are taken in turn, so the first word does not fill the grid.
 const INTERLEAVE = 8
-const typedWords = (q) => String(q || '').toLowerCase().split(/\s+/).filter(Boolean)
 // Exact words: every typed word is a whole hyphen-separated word of the name ("cat" is cat-face, cats and cat2;
 // it is not category or location), or the name is the words run together (arrowup for "arrow up").
 function nameHasWholeWords(name, words) {
