@@ -53,7 +53,10 @@ const reportMessage = ({ verifiedEmail = null, ...extra }) => stampReporter(vali
   target, reasonId: 'other', details: 'This copies a design I made last year.', goodFaith: true, ...extra,
 })).entry, verifiedEmail).message
 
-const at = (days) => new Date(Date.UTC(2026, 9, 30, 3, 0, 0) - days * 86_400_000).toISOString()
+// Relative to the real clock, which is the one the page's date range reads: the
+// Overview counts only the last 30 days, so a fixed anchor ages out of it. 1 to 5
+// days old keeps every item well inside that window, however close to midnight the run is.
+const at = (days) => new Date(Date.now() - days * 86_400_000).toISOString()
 
 const FEEDBACK = [
   { id: 'r-out', type: 'report', status: 'new', source: 'inline', subject: 'Content report: Aurora Card',
