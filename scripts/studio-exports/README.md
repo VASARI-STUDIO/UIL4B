@@ -15,6 +15,10 @@ The two downloads are **Brand guidelines** and **UI style guide**. Each ZIP cont
 | Hearth | Northern Current | Household stationery, an arched photographic window and a home energy guide |
 | Offprint | Shallow End | A lane-turn drawing, poolside signage and a lesson roster |
 
+The sample downloads have eleven pages per layout. A brand profile uses the project's authored description and stationery. A customer email uses its saved subject and message. Projects without those optional fields omit the corresponding spread. Device photographs use the interface drawn by the UI guide.
+
+Each edition has a downloadable 1200 × 1500 JPG in the gallery. The print photograph uses the A4 PDF cover, with interior pages for the notebook and gallery wall, and the two smaller previews come from the widescreen PDFs.
+
 Every brand guide includes a one-page identity sheet. Every UI guide has a keyboard-operable form with error and success states, also included as `form-example.html` in the ZIP. The sample applications use the corresponding project’s titles, prices and details. Provide `items` as an array of `{ "title", "detail", "price" }` records to populate them for another project.
 
 The collection takes the chapter structure and repeatable page formats in Circular’s [Odessa](https://www.madebycircular.com.au/product/odessa-brand-guidelines) and [Calypso](https://www.madebycircular.com.au/product/calypso-brand-guidelines) as references. All illustrations, layouts and implementation files here are built from UIL4B project assets and code.

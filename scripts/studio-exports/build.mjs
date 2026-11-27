@@ -8,6 +8,8 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from '@playwright/test';
 import { zipFiles } from '../../api/_lib/exportThemes/engine/files.js';
+import { photographPrint, settings } from './press-photographs.mjs';
+import { campaignImage } from './campaign.mjs';
 import { photographCards } from './cards.mjs';
 import { sampleProject } from './samples.mjs';
 import { renderTemplate } from './document.mjs';
@@ -23,17 +25,18 @@ const project=values.project && JSON.parse(await readFile(values.project,'utf8')
 const selected=values.theme?[values.theme]:Object.keys(themes);
 const titles={brand:'Brand guidelines',ui:'UI style guide'};
 const sceneRoot=await findScenes(values.scenes);
-const browser=await chromium.launch({channel:'chromium'});
+const browser=await chromium.launch({channel:'chromium',args:['--disable-gpu','--force-color-profile=srgb','--disable-skia-runtime-opts']});
 const editions=[];
 const run=promisify(execFile);
 const scratch=await mkdtemp(path.join(tmpdir(),'uil4b-exports-'));
 try {
   for (const id of selected) {
     const data=project || sampleProject(id), theme=themes[id];
-    const edition={id,name:theme.name,discipline:theme.discipline,project:data.name,guides:[]};
+    const edition={id,name:theme.name,discipline:theme.discipline,project:data.name,description:data.profile,guides:[]};
     editions.push(edition);
     const photographs=await makePhotographs(browser,sceneRoot,id,data);
     photographs.stationery=await photographCards(browser,sceneRoot,id,data);
+    const plates={};
     for (const [product,title] of Object.entries(titles)) {
       const dir=path.join(root,id,product);
       await mkdir(dir,{recursive:true});
@@ -64,6 +67,7 @@ try {
             const file='images/'+layout+'/'+String(i+1).padStart(2,'0')+'-'+section+'.png';
             const number=String(i+1).padStart(String(await sheets.count()).length,'0');
             files[file]=await readFile(path.join(scratch,'page-'+number+'.png'));
+            if(product==='brand' && layout==='a4' && settings[id][1].includes(section) && !plates[section])plates[section]=files[file];
           }
           if(layout==='deck'){
             const detail=page.locator('main>.sheet.'+(product==='brand'?'application':'components'));
@@ -85,6 +89,8 @@ try {
       edition.guides.push({product,title,stem,detailPage,colourPage,interfacePage});
       console.log(theme.name+' / '+title+' complete');
     }
+    await photographPrint(browser,sceneRoot,root,id,plates);
+    await campaignImage(browser,root,edition,data);
   }
   await saveComparison(browser,root,editions);
 } finally {await browser.close();await rm(scratch,{recursive:true,force:true});}
