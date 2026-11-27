@@ -25,16 +25,16 @@ import { FREE_UI_KIT_THEMES, EXPORT_THEMES as SHIPPED_THEMES } from '../../src/d
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const MARKER = 'ships with the export themes'
 
-test('there are twenty-three themes, under the folder ids the export engine reads', () => {
+test('there are twenty-four themes, under the folder ids the export engine reads', () => {
   assert.deepEqual(EXPORT_THEMES.map((t) => t.id), [
     '01-presentation', '02-poster', '03-broadsheet', '04-standards', '05-specimen',
     '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse', '21-presentation', '22-ticket', '23-broadsheet', '24-standards',
-    '26-notebook', '28-riso', '29-blueprint', '30-fluted', '31-contact', '32-dieline', '25-label', '27-swissfield', '33-flyleaf',
+    '26-notebook', '28-riso', '29-blueprint', '30-fluted', '31-contact', '32-dieline', '34-set-square', '25-label', '27-swissfield', '33-flyleaf',
   ])
   assert.deepEqual(EXPORT_THEMES.map((t) => t.name), [
     'Presentation', 'Ticket', 'Broadsheet', 'Standards', 'Catalogue',
     'Studio', 'Specification', 'Riso', 'Blueprint', 'In use', 'Keynote', 'Stub', 'Front Page', 'Standards Plate',
-    'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline', 'Label', 'Swiss Field', 'Flyleaf',
+    'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline', 'Set Square', 'Label', 'Swiss Field', 'Flyleaf',
   ])
 })
 
@@ -42,7 +42,7 @@ test('each theme names its sample brand, and no sample brand is a real company',
   assert.deepEqual(EXPORT_THEMES.map((t) => t.brand), [
     'Kerbside', 'Encore', 'Saltbush', 'Two Shores', 'Margin',
     'Offcut', 'Northern Current', 'Long Room', 'Plumbline', 'Shallow End', 'Kerbside', 'Encore', 'Saltbush', 'Two Shores',
-    'Offcut', 'Long Room', 'Plumbline', 'Northern Current', 'Plumbline', 'Kerbside', 'Margin', 'Northern Current', 'Margin',
+    'Offcut', 'Long Room', 'Plumbline', 'Northern Current', 'Plumbline', 'Kerbside', 'Plumbline', 'Margin', 'Northern Current', 'Margin',
   ])
   for (const file of ['src/config/exportFormats.js', 'src/config/planFacts.js']) {
     assert.ok(!/\b(Tally|Paddle)\b/.test(read(file)), `${file} names a retired sample brand`)
@@ -55,25 +55,25 @@ test('only Label, Swiss Field and Flyleaf are Free', () => {
   assert.ok(EXPORT_THEMES.every((t) => t.tier === 'free' || t.tier === 'pro'))
 })
 
-test('page shapes: seven 16:9, one 5:4, one 4:5, one 3:2, one 1:1, four A4 landscape, eight A4', () => {
+test('page shapes: eight 16:9, one 5:4, one 4:5, one 3:2, one 1:1, four A4 landscape, eight A4', () => {
   const shapes = Object.fromEntries(EXPORT_THEMES.map((t) => [t.id, t.shape]))
   assert.deepEqual(shapes, {
     '01-presentation': '16:9', '02-poster': '16:9', '03-broadsheet': '16:9',
     '04-standards': 'A4 landscape',
     '05-specimen': 'A4', '06-studio': 'A4', '07-spec': 'A4', '08-monograph': 'A4', '09-blueprint': 'A4', '10-inuse': 'A4',
     '21-presentation': '16:9', '22-ticket': '16:9', '23-broadsheet': 'A4', '24-standards': 'A4 landscape', '26-notebook': 'A4 landscape', '28-riso': 'A4', '29-blueprint': 'A4 landscape',
-    '30-fluted': '4:5', '31-contact': '3:2', '32-dieline': '1:1',
+    '30-fluted': '4:5', '31-contact': '3:2', '32-dieline': '1:1', '34-set-square': '16:9',
     '25-label': '5:4', '27-swissfield': '16:9', '33-flyleaf': '16:9',
   })
   assert.deepEqual([...EXPORT_THEME_SHAPES], ['16:9', '5:4', '4:5', '3:2', '1:1', 'A4 landscape', 'A4'])
 })
 
-test('the Pro themes make all four exports, the three Free themes the guidelines only, and the free offer is counted', () => {
+test('the Pro themes make all four exports (Set Square the guidelines only), the three Free themes the guidelines only, and the free offer is counted', () => {
   assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.id), ['brand-kit', 'brand-guidelines', 'brand-book', 'ui-kit'])
   assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.name), ['Brand kit', 'Brand guidelines', 'HTML brand book', 'UI kit'])
   for (const t of EXPORT_THEMES) {
     const made = themeExports(t.id).map((e) => e.id)
-    assert.deepEqual(made, t.tier === 'free' ? ['brand-guidelines'] : EXPORT_THEME_EXPORTS.map((e) => e.id), `${t.id} makes the wrong exports`)
+    assert.deepEqual(made, t.tier === 'free' || t.id === '34-set-square' ? ['brand-guidelines'] : EXPORT_THEME_EXPORTS.map((e) => e.id), `${t.id} makes the wrong exports`)
   }
   // The whole free offer: the three Free themes' guidelines, and (interim) Standards' UI kit.
   const freePairs = EXPORT_THEMES.flatMap((t) => themeExports(t.id).filter((e) => !e.pro).map((e) => `${t.id}/${e.id}`))

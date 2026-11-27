@@ -21,6 +21,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { GALLERY, chooseFormat, exportPanel, primaryButton, openTemplates, readTemplates } from './export-rows.js'
 
 const ROUTE = '/projects/harbour/export'
+// Set Square is Pro and makes the guidelines only, so it is the eleventh premium template there and not in the UI kit.
 const PREMIUM = ['Keynote', 'Stub', 'Front Page', 'Standards Plate', 'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline']
 const WIDTHS = [
   { name: '1440', size: { width: 1440, height: 900 }, count: 4 },
@@ -28,7 +29,7 @@ const WIDTHS = [
   { name: '390', size: { width: 390, height: 844 }, count: 2 },
 ]
 const FILES = [
-  { id: 'guidelines', cat: 'Guidelines', total: 23, wayOut: 'Use the free Guidelines (Label)' },
+  { id: 'guidelines', cat: 'Guidelines', total: 24, wayOut: 'Use the free Guidelines (Label)' },
   { id: 'kit', cat: 'UI kit', total: 20, wayOut: 'Use the free UI kit (Standards)' },
 ]
 
@@ -72,9 +73,10 @@ test.describe('the gallery lists the premium ten first', () => {
       const panel = await open(page, { plan, file: f.id })
       const read = await readTemplates(panel)
       expect(read.names.slice(0, 10), 'premium, in id order').toEqual(PREMIUM)
+      if (f.id === 'guidelines') expect(read.names[10], 'Set Square, the eleventh, is Pro for the guidelines only').toBe('Set Square')
       expect(read.names, 'every template once').toHaveLength(f.total)
       expect(new Set(read.names).size, 'no template twice').toBe(f.total)
-      if (f.id === 'guidelines') expect(read.names.slice(10, 13), 'Label, Swiss Field and Flyleaf follow, they are free').toEqual(['Label', 'Swiss Field', 'Flyleaf'])
+      if (f.id === 'guidelines') expect(read.names.slice(11, 14), 'Label, Swiss Field and Flyleaf follow, they are free').toEqual(['Label', 'Swiss Field', 'Flyleaf'])
       else expect(read.names[10], 'Standards follows, the kit is free in it').toBe('Standards')
       expect(read.names.indexOf('Presentation'), 'the classics come after').toBeGreaterThan(10)
     })

@@ -42,10 +42,11 @@ const PREVIEW_PAGES = {
 
 const FREE_SLIDES_THEMES = ['25-label', '27-swissfield', '33-flyleaf']
 const FREE_UI_KIT_THEME = '04-standards'
-const GUIDELINES_ONLY = new Set(FREE_SLIDES_THEMES)
+// Set Square is Pro and draws the guidelines and the style guide only, so the other rows are unknown to it.
+const GUIDELINES_ONLY = new Set([...FREE_SLIDES_THEMES, '34-set-square'])
 
 // The themes with a style guide of their own, by hand. The guide is gated like the guidelines, so Label's and Swiss Field's are free and Standards Plate's, Drawing Sheet's, Keynote's and Stub's are Pro; Print Shop's follows its guidelines.
-const GUIDE_THEMES = new Set(['24-standards', '25-label', '27-swissfield', '33-flyleaf', '28-riso', '29-blueprint', '21-presentation', '22-ticket'])
+const GUIDE_THEMES = new Set(['24-standards', '25-label', '27-swissfield', '33-flyleaf', '34-set-square', '28-riso', '29-blueprint', '21-presentation', '22-ticket'])
 
 // What a Free account may have, by hand: slides in a free theme and its style guide, the UI kit of Standards, nothing else. A 400 where
 // the theme lacks the row.

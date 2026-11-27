@@ -14,6 +14,7 @@ const SNAPSHOT = {
   '06-studio': ALL, '07-spec': ALL, '08-monograph': ALL, '09-blueprint': ALL, '10-inuse': ALL,
   '21-presentation': [...ALL, 'guide'], '22-ticket': [...ALL, 'guide'], '23-broadsheet': ALL, '24-standards': [...ALL, 'guide'], '26-notebook': ALL,
   '28-riso': [...ALL, 'guide'], '29-blueprint': [...ALL, 'guide'], '30-fluted': ALL, '31-contact': ALL, '32-dieline': ALL,
+  '34-set-square': ['slides', 'guide'],
   '25-label': ['slides', 'guide'],
   '27-swissfield': ['slides', 'guide'],
   '33-flyleaf': ['slides', 'guide'],
