@@ -89,7 +89,7 @@ import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCr
 import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
-import { iconSynonymFor } from '../data/iconSynonyms'
+import { iconSynonymFor, iconConceptTermsFor } from '../data/iconSynonyms'
 import GalleryEndGate from '../components/library/GalleryEndGate'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -183,6 +183,55 @@ function iconStateFromParams(params) {
   if (category === 'coloured') return { category, weight: 'regular', pack: '', group: known ? style : 'coloured' }
   return { category, weight: 'regular', pack: known ? style : '', group: category }
 }
+/* ── EXACT WORDS AND RELATED WORDS ─────────────────────────────────────────
+   A search is a MEANING search by default: the literal results first, then the results for the words
+   iconConceptTermsFor(q) names ("cold" also finds snowflake, thermometer). The "Exact words" switch turns that
+   off and keeps only icons whose names hold the typed words. `?match=exact` carries the switch (read on mount,
+   written by the URL effect). */
+// What the search line is told about the last meaning search: the query it was for, the related words that
+// added at least one icon to what is on screen, and whether the literal search found nothing at all.
+const NO_RELATED = { for: '', terms: [], literalEmpty: false }
+// Term lists are kept for the session, keyed by the whole request (scope and word), so pressing a related word
+// that was just fetched as a term costs nothing.
+const TERM_CACHE = new Map()
+const TERM_CACHE_MAX = 60
+const TERM_LIMIT = 96
+// The first rows of each related word are taken in turn, so the first word does not fill the grid.
+const INTERLEAVE = 8
+const typedWords = (q) => String(q || '').toLowerCase().split(/\s+/).filter(Boolean)
+// Exact words: every typed word is a whole hyphen-separated word of the name ("cat" is cat-face, cats and cat2;
+// it is not category or location), or the name is the words run together (arrowup for "arrow up").
+function nameHasWholeWords(name, words) {
+  const tokens = String(name).toLowerCase().split(/[-_]/)
+  const whole = (w) => tokens.some((t) => {
+    if (t === w) return true
+    const base = t.replace(/\d+$/, '')
+    return base === w || base === `${w}s` || base === `${w}es`
+  })
+  return words.every(whole) || tokens.join('') === words.join('')
+}
+// The literal list, then each related word's list. Names holding the typed words come first, then the related
+// words' icons (the first INTERLEAVE of each in turn, then the rest), then any other keyword hits.
+// `origin` says which related word first supplied an icon.
+function mergeRelated(literal, termLists, typed) {
+  const seen = new Set()
+  const origin = new Map()
+  const list = []
+  const take = (ic, term) => {
+    if (!ic || seen.has(ic.id)) return
+    seen.add(ic.id)
+    if (term) origin.set(ic.id, term)
+    list.push(ic)
+  }
+  const other = []
+  for (const ic of literal) { if (typed.every((w) => ic.name.includes(w))) take(ic); else other.push(ic) }
+  for (let r = 0; r < INTERLEAVE; r += 1) termLists.forEach((t) => take(t.items[r], t.term))
+  termLists.forEach((t) => t.items.slice(INTERLEAVE).forEach((ic) => take(ic, t.term)))
+  other.forEach((ic) => take(ic))
+  return { list, origin }
+}
+// Related words are named after the cap, from what is actually on screen.
+const relatedOnScreen = (items, origin, terms) => terms.filter((t) => items.some((ic) => origin.get(ic.id) === t))
 // Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
 // ride in the default "All packs" listing and stay in the pack menu.
 const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
@@ -3847,6 +3896,11 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const location = useLocation()
   const [urlStart] = useState(() => iconStateFromParams(searchParams))
   const [pack, setPack] = useState(urlStart.pack)
+  // Exact words. The ref is what a search reads, at the moment it runs (a debounced search, Try again and the
+  // related-word buttons all call doSearch, and none of them can be handed the state); the state draws the switch.
+  const [exact, setExact] = useState(() => searchParams.get('match') === 'exact')
+  const exactRef = useRef(exact)
+  const [related, setRelated] = useState(NO_RELATED)
   // The weight is read through a ref by the browse functions, so choosing one
   // can re-run the current scope in the same tick (see handleWeight).
   const [weight, setWeight] = useState(urlStart.weight)
@@ -3956,13 +4010,29 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const scope = categoryPacks(categoryRef.current)
     // The names are hyphenated ("arrow-up"), so "arrow up" is two words that each have
     // to be found, not one phrase with a space in it. A single word matches as before.
-    const words = (q || '').toLowerCase().split(/\s+/).filter(Boolean)
-    const filtered = capList(localIcons.filter(i =>
+    const words = typedWords(q)
+    const inScope = (i) =>
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
-      (!scope || scope.includes(prefixOf[i.p] || i.p)) &&
-      words.every(w => i.n.indexOf(w) !== -1 || i.c.indexOf(w) !== -1)
-    ))
+      (!scope || scope.includes(prefixOf[i.p] || i.p))
+    const hits = (i, ws) => ws.every(w => i.n.indexOf(w) !== -1 || i.c.indexOf(w) !== -1)
+    const literal = localIcons.filter(i => inScope(i) && hits(i, words))
+    // A meaning search adds the related words' icons after the literal ones, as the catalogue path does.
+    const terms = exactRef.current ? [] : iconConceptTermsFor(q)
+    const seen = new Set(literal)
+    const origin = new Map()
+    const added = []
+    for (const t of terms) {
+      for (const i of localIcons) {
+        if (!seen.has(i) && inScope(i) && hits(i, [t])) { seen.add(i); origin.set(i, t); added.push(i) }
+      }
+    }
+    const filtered = capList([...literal, ...added])
+    setRelated({
+      for: (q || '').trim(),
+      terms: terms.filter(t => filtered.some(i => origin.get(i) === t)),
+      literalEmpty: literal.length === 0,
+    })
     setIcons(filtered.map(i => ({
       id: i.n,
       name: i.n,
@@ -4354,6 +4424,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
     setSearchTease(null)
     setTeasePending(false)
+    setRelated(NO_RELATED)
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -4390,17 +4461,32 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
       // The names are hyphenated, so "arrow up" has to match arrow-up.
       const needle = q.toLowerCase().replace(/\s+/g, '-')
+      // A meaning search also tests the related words, after the literal one. Exact words tests only the needle.
+      const relatedWords = exactRef.current ? [] : iconConceptTermsFor(q)
       // Inside a category the artwork is Regular, as in every group scope.
       const searchWeight = groupKey ? 'regular' : weightRef.current
       Promise.all(animatedPacks.map(p => getCollectionNames(p).then(({ names }) => ({ pack: p, names }))))
         .then((results) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
-          const lists = results.map(({ pack: p, names }) => names
-            .filter(n => n.includes(needle) && matchesWeight(p, n, searchWeight))
-            .map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true })))
+          const origin = new Map()
+          let literalCount = 0
+          const lists = results.map(({ pack: p, names }) => {
+            const out = []
+            const seen = new Set()
+            ;[needle, ...relatedWords].forEach((word, k) => {
+              for (const n of names) {
+                if (seen.has(n) || !n.includes(word) || !matchesWeight(p, n, searchWeight)) continue
+                seen.add(n)
+                out.push({ id: `${p}:${n}`, pack: p, name: n, cdn: true })
+                if (k > 0) origin.set(`${p}:${n}`, word); else literalCount += 1
+              }
+            })
+            return out
+          })
           const items = capList(lists.length > 1 ? concatenatePackLists(lists, PER_PACK_CAP) : lists[0])
           if (!items.length) { noMatch(); return }
+          setRelated({ for: q, terms: relatedOnScreen(items, origin, relatedWords), literalEmpty: literalCount === 0 })
           setIcons(items)
           setVisible(PAGE_SIZE)
           setLoading(false)
@@ -4428,46 +4514,96 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
     // the collection of results; chip alone fans out to the
     // whole collection's packs.
-    const params = new URLSearchParams()
-    if (packFilter) params.set('prefix', packFilter)
-    else if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.filter(canSee).join(','))
-    // NO `prefixes` FOR PRO, and that is not an oversight. An unscoped search
-    // reaches every set Iconify carries, not only our twenty-five, and a Pro
-    // visitor has always had that — narrowing it here to "our list" would be
-    // taking a capability away in the name of a gate that does not apply to
-    // them. Every narrower tier is scoped to exactly what it may browse.
-    else if (tier !== 'paid') params.set('prefixes', allowedPacks.join(','))
-    params.set('query', q)
-    params.set('limit', String(API_LIMIT))
-    fetchWithFallback(`/search?${params.toString()}`)
+    // ONE BUILDER for the literal request and every related-word request, so a related word is scoped exactly
+    // as the typed one is (the gate comment above and the filters below apply to both).
+    const paramsFor = (text, limit) => {
+      const params = new URLSearchParams()
+      if (packFilter) params.set('prefix', packFilter)
+      else if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.filter(canSee).join(','))
+      // NO `prefixes` FOR PRO, and that is not an oversight. An unscoped search
+      // reaches every set Iconify carries, not only our twenty-five, and a Pro
+      // visitor has always had that — narrowing it here to "our list" would be
+      // taking a capability away in the name of a gate that does not apply to
+      // them. Every narrower tier is scoped to exactly what it may browse.
+      else if (tier !== 'paid') params.set('prefixes', allowedPacks.join(','))
+      params.set('query', text)
+      params.set('limit', String(limit))
+      return params.toString()
+    }
+    const exactNow = exactRef.current
+    const typed = typedWords(q)
+    const relatedWords = exactNow ? [] : iconConceptTermsFor(q)
+    // THE SECOND CHECK, on the way back. `prefixes` above is a request the
+    // API is asked to honour; this is the one we enforce. A proxy that drops
+    // the parameter, a future API that widens it, a cached answer from a
+    // wider scope — none of them can put a gated pack into the grid, because
+    // the filter is applied to what ARRIVED rather than to what was asked
+    // for. Same reasoning as the SANITISE_KEYS whitelist in lockedPreview.js:
+    // the gate is the filter, the request is only a convenience.
+    const admit = (ids) => ids
+      .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
+      .filter(ic => canSee(ic.pack))
+      // A pack's Pro-only icons (Carbon's logo-*) are left out for everyone below Pro.
+      .filter(ic => canSeeIcon(ic.pack, ic.name, tier))
+      // An unscoped Pro search can name an animated set. Its glyphs only load
+      // through the server's Pro check, so a direct hit is left out of this list.
+      .filter(ic => !isAnimatedPack(ic.pack))
+      .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
+    const arrange = (matches) => groupKey
+      ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
+      : capList(matches)
+    const termIds = (term) => {
+      const request = paramsFor(term, TERM_LIMIT)
+      if (TERM_CACHE.has(request)) return Promise.resolve(TERM_CACHE.get(request))
+      return fetchWithFallback(`/search?${request}`)
+        .then(r => r.json())
+        .then(d => {
+          const ids = Array.isArray(d?.icons) ? d.icons : []
+          if (TERM_CACHE.size >= TERM_CACHE_MAX) TERM_CACHE.delete(TERM_CACHE.keys().next().value)
+          TERM_CACHE.set(request, ids)
+          return ids
+        })
+    }
+    fetchWithFallback(`/search?${paramsFor(q, API_LIMIT)}`)
       .then(r => r.json())
       .then(d => {
         if (rid !== reqId.current) return
         cdnOk.current = true
         probeLockedMatches(q, packFilter, groupKey, d.icons, rid)
-        if (!d.icons || !d.icons.length) {
+        if (!relatedWords.length && (!d.icons || !d.icons.length)) {
           noMatch()
           return
         }
-        // THE SECOND CHECK, on the way back. `prefixes` above is a request the
-        // API is asked to honour; this is the one we enforce. A proxy that drops
-        // the parameter, a future API that widens it, a cached answer from a
-        // wider scope — none of them can put a gated pack into the grid, because
-        // the filter is applied to what ARRIVED rather than to what was asked
-        // for. Same reasoning as the SANITISE_KEYS whitelist in lockedPreview.js:
-        // the gate is the filter, the request is only a convenience.
-        const matches = d.icons
-          .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
-          .filter(ic => canSee(ic.pack))
-          // A pack's Pro-only icons (Carbon's logo-*) are left out for everyone below Pro.
-          .filter(ic => canSeeIcon(ic.pack, ic.name, tier))
-          // An unscoped Pro search can name an animated set. Its glyphs only load
-          // through the server's Pro check, so a direct hit is left out of this list.
-          .filter(ic => !isAnimatedPack(ic.pack))
-          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
-        const items = groupKey
-          ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
-          : capList(matches)
+        if (relatedWords.length) {
+          // MEANING SEARCH. The literal answer is drawn the moment it lands, at today's speed; each related
+          // word's icons are appended as its request settles, under the rows already drawn. A slow or failed
+          // word costs the rows it would have added and nothing else. Same rid guard on every one.
+          const literal = admit(d.icons || [])
+          const lists = relatedWords.map(term => ({ term, items: [], done: false }))
+          let landed = false
+          const publish = () => {
+            const { list, origin } = mergeRelated(literal, lists, typed)
+            const finished = lists.every(l => l.done)
+            const items = arrange(list)
+            if (!items.length) { if (finished) noMatch(); return }
+            setRelated({ for: q, terms: relatedOnScreen(items, origin, relatedWords), literalEmpty: literal.length === 0 })
+            setIcons(items)
+            if (!landed) { landed = true; setVisible(PAGE_SIZE) }
+            setLoading(false)
+          }
+          if (literal.length) publish()
+          lists.forEach((entry) => {
+            termIds(entry.term)
+              .then(ids => { if (rid === reqId.current) entry.items = admit(ids) })
+              .catch(() => {})
+              .then(() => { if (rid !== reqId.current) return; entry.done = true; publish() })
+          })
+          return
+        }
+        // Exact words keeps the names that hold every typed word whole (the live catalogue returned none that
+        // lacked the word as text, so this is the stricter reading of "words": "cat" is not "category").
+        const matches = admit(d.icons).filter(ic => nameHasWholeWords(ic.name, typed))
+        const items = arrange(matches)
         if (!items.length) { noMatch(); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
@@ -4665,6 +4801,17 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     setQuery(word)
     scrollOnLand.current = true
     doSearch(word, { pack, group })
+  }
+
+  // The Exact words switch. The ref is set here, in the handler that sets the state, so the search that runs
+  // next (and any debounced one already queued, and Try again) reads the new value. Runs the search at once:
+  // it is a press, not typing.
+  const toggleExact = () => {
+    const next = !exactRef.current
+    exactRef.current = next
+    setExact(next)
+    clearTimeout(timer.current)
+    if (query.trim().length >= 2) doSearch(query, { pack, group })
   }
 
   const handleClearSearch = () => {
@@ -5194,7 +5341,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
   // A word the catalogues name differently ("home" for "house"): offered as a
   // button on the empty state, so no second search runs unless it is pressed.
-  const synonym = searchEmpty ? iconSynonymFor(query) : ''
+  // The one-press retry belongs to Exact words only: a meaning search has already searched the synonym.
+  const synonym = searchEmpty && exact ? iconSynonymFor(query) : ''
+  // Whether this word has related words at all, for copy that would otherwise promise results that do not exist.
+  const hasRelatedWords = searchEmpty && iconConceptTermsFor(query).length > 0
 
   /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
      `gated` replaces the grid: the viewer asked for a set they may not have, so
@@ -5358,6 +5508,31 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const lastCountRef = useRef(undefined)
   if (!loading) lastCountRef.current = shownCount
   const toolbarCount = loading ? lastCountRef.current : shownCount
+  /* THE EXACT WORDS SWITCH AND THE LINE THAT STATES THE MODE.
+     Shown once the query is two characters (the point a search starts) and not for Logo.dev, which has no
+     meaning groups. role=switch because it is a setting with one fixed label; "My icons" beside it is a filter
+     and keeps aria-pressed. From 641px it sits in the search field (LibrarySearch `trailing`); on a phone the
+     field has no room for it, so it leads the line under the toolbar. One node either way, never two.
+     The line is drawn under the band, not in it (the band is sticky and its height is measured). It is
+     always drawn while the switch is, at one fixed height, and only its words change, so nothing under it
+     moves when the related words arrive or the switch is pressed. */
+  const typedQuery = query.trim()
+  const showMode = typedQuery.length >= 2 && pack !== 'logodev' && !isMyIcons
+  const relatedNow = related.for === typedQuery ? related : NO_RELATED
+  const shownTerms = relatedNow.terms.slice(0, phone ? 3 : 4)
+  const exactSwitch = showMode ? (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={exact}
+      aria-describedby="ig-mode-line"
+      className="lbry-search-mode"
+      title="Only icons whose names contain the words you typed"
+      onClick={toggleExact}
+    >Exact words</button>
+  ) : null
+  const modeCountNote = !showMode ? '' : exact ? ', exact words' : (relatedNow.terms.length ? ', including related words' : '')
+  const announcedCount = !toolbarCount ? '' : `${toolbarCount}${showMode ? ` for “${typedQuery}”${modeCountNote}` : ''}`
   // ?category= and ?style= follow the controls on the Icons tab only (replace, so Back skips them).
   // q and pack are not stored. Moving to Emoji or Groups navigates without a query, which clears them.
   const styleParam = category === 'all' ? (weight !== 'regular' ? weight : '') : facet
@@ -5367,8 +5542,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const next = new URLSearchParams(searchParams)
     if (category === 'all') next.delete('category'); else next.set('category', category)
     if (styleParam) next.set('style', styleParam); else next.delete('style')
+    // ?match=exact only while the switch is on; off writes nothing.
+    if (exact) next.set('match', 'exact'); else next.delete('match')
     if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true })
-  }, [category, styleParam, onIconsRoute, searchParams, setSearchParams])
+  }, [category, styleParam, exact, onIconsRoute, searchParams, setSearchParams])
   const bandRef = useRef(null)
   const bandSentinelRef = useRef(null)
   useEffect(() => {
@@ -5689,7 +5866,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
             onChange: handleQueryChange,
             placeholder: 'Search icons…',
             label: 'Search icons',
+            trailing: phone ? null : exactSwitch,
           }}
+          reserveTrailing={!phone}
           /* The sort sits after the pack menu on the row, and in the Filters
              sheet's foot on a phone and a narrow desktop. */
           sort={<LibrarySort searching={!!query.trim()} />}
@@ -5737,8 +5916,30 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           )}
         </LibraryToolbar>
         {/* The result count is announced, not drawn: the row has no room for it. */}
-        <p id="ig-result-count" className="sr-only" role="status">{toolbarCount ? (category === 'all' ? toolbarCount : `${CATEGORY_LABELS[category]}, ${toolbarCount}`) : ''}</p>
+        <p id="ig-result-count" className="sr-only" role="status">{announcedCount ? (category === 'all' ? announcedCount : `${CATEGORY_LABELS[category]}, ${announcedCount}`) : ''}</p>
         </div>
+        {showMode && (
+          <div className="ig-searchline">
+            {phone && exactSwitch}
+            <div className="ig-related" id="ig-mode-line">
+              {exact ? (
+                <span className="ig-related-text">{`Names with “${typedQuery}” only`}</span>
+              ) : shownTerms.length ? (
+                <>
+                  <span className="ig-related-text">{relatedNow.literalEmpty ? `No icons named “${typedQuery}”. Showing:` : 'Also showing:'}</span>
+                  {shownTerms.map((term, i) => (
+                    <Fragment key={term}>
+                      <button type="button" className="ig-related-term" onClick={() => handleTrySynonym(term)}>{term}</button>
+                      {!phone && i < shownTerms.length - 1 && <span className="ig-related-sep" aria-hidden="true">,</span>}
+                    </Fragment>
+                  ))}
+                </>
+              ) : (
+                <span className="ig-related-text">{iconConceptTermsFor(typedQuery).length ? 'Including related words' : 'Names and keywords'}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {visibleRecents.length > 0 && !isMyIcons && (
           <div className="ig-rail">
@@ -5990,11 +6191,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     <button type="button" className="btn pl-empty-try" onClick={() => handleTrySynonym(synonym)}>
                       {`Search “${synonym}” instead`}
                     </button>
+                    {hasRelatedWords && <p className="pl-empty-hint">Exact words is on. Turn it off to include related icons.</p>}
                   </>
                 ) : (
                   <>
                     <p>{query.trim()
-                      ? (CATEGORY_EMPTY[category]?.(query.trim()) || `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`)
+                      ? (CATEGORY_EMPTY[category]?.(query.trim()) || (exact
+                        ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                        : `No icons for “${query.trim()}”${hasRelatedWords ? ' or related words' : ''}. Try another word, or clear the search to browse everything.`))
                       : loadError
                         ? (category !== 'all' ? 'No built-in icons in this category right now.' : selectValue !== 'all' ? 'No icons to show — try another pack or search.' : 'No built-in icons to show right now.')
                         : 'No icons to show — try another pack or search.'}</p>
@@ -6002,6 +6206,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     {query.trim() && category !== 'all' && CATEGORY_EMPTY[category] && (
                       <button type="button" className="btn pl-empty-try" onClick={() => handleCategory('all')}>Search in All</button>
                     )}
+                    {exact && query.trim() && hasRelatedWords && <p className="pl-empty-hint">Exact words is on. Turn it off to include related icons.</p>}
                   </>
                 )}
               </div>

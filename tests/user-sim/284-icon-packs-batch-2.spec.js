@@ -167,7 +167,7 @@ test('Bootstrap Icons keeps its -fill glyphs under Fill, not beside their outlin
 test('a free account’s search finds the new packs’ icons and drops Fluent’s 16px one', async ({ page }) => {
   await openLibrary(page, 1440, 'designer on the free plan searching', 'free')
   await page.locator('.lbry-search input').first().fill('packbatchprobe')
-  await expect(page.locator('#ig-result-count')).toHaveText('4 icons', { timeout: 15000 })
+  await expect(page.locator('#ig-result-count')).toHaveText('4 icons for “packbatchprobe”', { timeout: 15000 })
   expect((await cellNames(page)).sort()).toEqual(['packbatchprobe', 'packbatchprobe', 'packbatchprobe', 'packbatchprobe-24-regular'])
 })
 

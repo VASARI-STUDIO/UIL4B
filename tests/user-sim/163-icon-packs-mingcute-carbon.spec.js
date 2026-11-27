@@ -192,7 +192,7 @@ test.describe('search', () => {
     await openLibrary(page, 1440, 'designer on the free plan searching', 'free')
     await search(page, 'packprobe')
     // The fixture answers this query with carbon:logo-packprobe too; the page must drop it.
-    await expect(page.locator('#ig-result-count')).toHaveText('2 icons')
+    await expect(page.locator('#ig-result-count')).toHaveText('2 icons for “packprobe”')
     expect((await cellNames(page)).sort()).toEqual(['packprobe', 'packprobe-line'])
     expect(urls.filter((u) => u.includes('logo-packprobe') && !u.includes('/search?')), 'no glyph request names it').toEqual([])
   })
@@ -206,7 +206,7 @@ test.describe('search', () => {
     await openLibrary(page, 1440, 'designer on Pro searching every set', 'pro')
     await search(page, 'packprobe')
 
-    await expect(page.locator('#ig-result-count')).toHaveText('3 icons')
+    await expect(page.locator('#ig-result-count')).toHaveText('3 icons for “packprobe”')
 
     // The API really did offer the blocked sets, so the absence below is the page's doing.
     // The response body is read asynchronously, so wait for it rather than reading once.

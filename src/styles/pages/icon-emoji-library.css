@@ -310,6 +310,32 @@ html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none
    (--ig-band-h, set where the band is mounted). Phones keep the toolbar in flow. */
 .iel-page .ig-band{margin-bottom:14px}
 .iel-page .ig-band-sentinel{height:1px;margin-bottom:-1px;pointer-events:none}
+/* The line that states the search mode ("Also showing: snowflake, ice" / "Names with “x” only"). It is drawn
+   whenever the Exact words switch is, at one fixed height, and only its words change, so nothing under it moves
+   when the related words arrive or the switch is pressed. Phones: the switch leads the row, the line wraps. */
+.iel-page .ig-searchline{display:flex;align-items:center;gap:10px;min-height:28px;margin:0 0 10px;font-size:var(--fs-body-s);color:var(--t2)}
+.iel-page .ig-related{display:flex;align-items:center;min-width:0;flex:1 1 auto;height:28px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.iel-page .ig-related-text{flex-shrink:0;color:var(--t2)}
+.iel-page .ig-related-sep{flex-shrink:0;margin-right:6px;color:var(--t2)}
+.iel-page .ig-related-term{
+  flex-shrink:0;display:inline-flex;align-items:center;min-height:24px;margin:0 0 0 6px;padding:0;
+  border:0;background:none;color:var(--t0);font:inherit;cursor:pointer;
+  text-decoration:underline;text-decoration-color:var(--t3);text-decoration-thickness:1px;text-underline-offset:3px;
+}
+.iel-page .ig-related-sep + .ig-related-term{margin-left:0}
+@media (hover:hover){.iel-page .ig-related-term:hover{text-decoration-color:currentColor}}
+.iel-page .ig-related-term:focus-visible{outline:var(--focus-w) solid var(--focus-ink);outline-offset:var(--focus-offset)}
+@media (forced-colors:active){
+  .iel-page .ig-related-term{text-decoration-color:currentColor}
+  .iel-page .ig-related-term:focus-visible{outline-color:Highlight}
+}
+@media(pointer:coarse){.iel-page .ig-related{height:44px}.iel-page .ig-related-term{min-height:44px;padding:0 6px}}
+/* A phone: the switch and the line share a row that wraps; the band above has its own 14px bottom margin. */
+@media(max-width:640px){
+  .iel-page .ig-searchline{flex-wrap:wrap;margin-top:-4px;gap:4px 10px}
+  .iel-page .ig-related{flex-wrap:wrap;height:auto;min-height:28px;white-space:normal;text-overflow:clip;overflow:visible}
+  .iel-page .ig-related-term{margin-left:8px}
+}
 /* Short landscape phones keep it in flow too: the nav and a two-row band would take half the screen. */
 @media(min-width:641px) and (min-height:560px){
   .iel-page .ig-band{position:sticky;top:var(--chrome-h);z-index:45;padding:8px 0 12px;background:var(--bg-0);border-bottom:1px solid transparent;margin-bottom:2px}
