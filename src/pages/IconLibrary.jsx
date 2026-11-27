@@ -3956,7 +3956,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const scope = categoryPacks(categoryRef.current)
     // The names are hyphenated ("arrow-up"), so "arrow up" is two words that each have
     // to be found, not one phrase with a space in it. A single word matches as before.
-    const words = (q || '').toLowerCase().split(/s+/).filter(Boolean)
+    const words = (q || '').toLowerCase().split(/\s+/).filter(Boolean)
     const filtered = capList(localIcons.filter(i =>
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
