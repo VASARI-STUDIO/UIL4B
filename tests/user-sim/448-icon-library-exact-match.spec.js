@@ -87,6 +87,8 @@ test.describe('Exact words, 1440', () => {
     const terms = await line(page).locator('.ig-related-term').allTextContents()
     expect(terms.length).toBeGreaterThan(0)
     for (const t of terms) expect(got.some((n) => n.includes(t)), `${t} has an icon in the grid`).toBe(true)
+    // The announced count names the query and the mode only because related words changed the answer.
+    await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons? for “snowflake”, including related words$/)
   })
 
   // T4

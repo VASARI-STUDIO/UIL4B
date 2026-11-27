@@ -5572,8 +5572,10 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       onClick={toggleExact}
     >Exact words</button>
   ) : null
+  // The plain count stays plain; the query and mode are added only when the mode changed what the count means
+  // (exact words on, or related words that added icons).
   const modeCountNote = !showMode ? '' : exact ? ', exact words' : (relatedNow.terms.length ? ', including related words' : '')
-  const announcedCount = !toolbarCount ? '' : `${toolbarCount}${showMode ? ` for “${typedQuery}”${modeCountNote}` : ''}`
+  const announcedCount = !toolbarCount ? '' : `${toolbarCount}${modeCountNote ? ` for “${typedQuery}”${modeCountNote}` : ''}`
   // ?category= and ?style= follow the controls on the Icons tab only (replace, so Back skips them).
   // q and pack are not stored. Moving to Emoji or Groups navigates without a query, which clears them.
   const styleParam = category === 'all' ? (weight !== 'regular' ? weight : '') : facet
