@@ -386,7 +386,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 @media (forced-colors:active){
   /* forced-color-adjust:none so the browser keeps these system colours instead of repainting the button
      face over them (the on fill was being flattened to the off fill). Only system colours are used. */
-  .lbry-search-mode{forced-color-adjust:none;background:Canvas;color:ButtonText;border-color:ButtonText}
+  .lbry-search-mode{forced-color-adjust:none;background:Canvas;color:ButtonText;border-color:ButtonText;transition:none}
   .lbry-search-mode[aria-checked="true"]{background:Highlight;color:HighlightText;border-color:Highlight}
   .lbry-search-mode:hover{background:Canvas}
   .lbry-search-mode[aria-checked="true"]:hover{background:Highlight}
