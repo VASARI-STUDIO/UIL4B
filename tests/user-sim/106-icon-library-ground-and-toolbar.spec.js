@@ -415,7 +415,10 @@ test.describe('coloured icons sit on the page, not in a white box', () => {
     await expect(original).toHaveCSS('font-style', 'normal')
     await expect(original).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     const colourRow = original.locator('xpath=ancestor::div[2]')
-    await expect(colourRow.locator('.ied-chips')).toHaveCount(0)
+    // Multicolour art gets one swatch per colour (.ied-paints); that is the only control allowed here.
+    await expect(colourRow.locator('.ied-chips:not(.ied-paints)')).toHaveCount(0)
+    await expect(colourRow.getByRole('radio')).toHaveCount(0)
+    await expect(colourRow.locator('button:not(.ied-paint)')).toHaveCount(0)
     await expect(colourRow.getByText('Default', { exact: true })).toHaveCount(0)
     // The markup is fetched on open; copying before it lands would copy nothing.
     await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeEnabled({ timeout: 20000 })
@@ -949,8 +952,13 @@ for (const [name, body, multicolour] of [
     await expect(colour.getByText('Original colours', { exact: true })).toHaveCount(multicolour ? 1 : 0)
     await expect(colour.getByRole('radio', { name: 'Black', exact: true })).toHaveCount(multicolour ? 0 : 1)
     await expect(colour.getByRole('radio', { name: 'White', exact: true })).toHaveCount(multicolour ? 0 : 1)
-    await expect(colour.locator('.cpk-trigger')).toHaveCount(multicolour ? 0 : 1)
-    if (multicolour) return
+    // Multicolour art: the only triggers are the per-colour swatches. Single colour: the one tint picker.
+    await expect(colour.locator('.cpk-trigger:not(.ied-paint)')).toHaveCount(multicolour ? 0 : 1)
+    if (multicolour) {
+      await expect(colour.locator('.ied-paint').first(), 'one swatch per colour in the artwork').toBeVisible()
+      return
+    }
+    await expect(colour.locator('.ied-paint')).toHaveCount(0)
     await colour.getByRole('radio', { name: 'Black', exact: true }).click()
     await page.locator('#ied-sec-code .ied-disc').click()
     await expect(page.locator('#ied-code code')).toContainText('color="#000000"')
@@ -993,8 +1001,10 @@ for (const scheme of ['dark', 'light']) {
         await expect(page.locator('.ied-ground')).toHaveClass(/ied-ground--page/)
         await expect(page.locator('.ied-ground')).not.toHaveClass(/ied-ground--light/)
         const colourRow = page.locator('#ied-colour-label').locator('xpath=ancestor::div[2]')
-        await expect(colourRow.getByRole('button')).toHaveCount(0)
-        await expect(colourRow.locator('.ied-chips')).toHaveCount(0)
+        // Any button here is a per-colour swatch: no Default pill, Black/White chip or tint picker.
+        await expect(colourRow.getByRole('radio')).toHaveCount(0)
+        await expect(colourRow.locator('button:not(.ied-paint)')).toHaveCount(0)
+        await expect(colourRow.locator('.ied-chips:not(.ied-paints)')).toHaveCount(0)
         await expect(colourRow.locator('.ied-val')).toHaveText('Original colours')
         expect(await page.locator('.ied-stage-img').getAttribute('src')).toMatch(/^data:/)
       } finally { await ctx.close() }
