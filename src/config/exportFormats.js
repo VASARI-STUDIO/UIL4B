@@ -246,11 +246,13 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '30-fluted', name: 'Fluted', brand: 'Northern Current', shape: '4:5', showcase: false }),
   Object.freeze({ id: '31-contact', name: 'Contact', brand: 'Plumbline', shape: '3:2', showcase: false }),
   Object.freeze({ id: '32-dieline', name: 'Dieline', brand: 'Kerbside', shape: '1:1', showcase: false }),
-  Object.freeze({ id: '34-set-square', name: 'Set Square', brand: 'Plumbline', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
   // The Free pair: the brand guidelines, and nothing else.
   Object.freeze({ id: '25-label', name: 'Label', brand: 'Margin', shape: '5:4', makes: Object.freeze(['brand-guidelines']), showcase: false }),
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', brand: 'Northern Current', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
   Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', brand: 'Margin', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
+  // Pro, with the Free skeleton: the brand guidelines only.
+  Object.freeze({ id: '34-set-square', name: 'Set Square', brand: 'Plumbline', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
+
 ].map(withGate))
 
 // ships with the export themes

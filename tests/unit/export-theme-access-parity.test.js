@@ -103,7 +103,7 @@ mock.method(console, 'error', () => {})
 const THEME_IDS = EXPORT_THEMES.map((t) => t.id)
 
 test('the table is the size this test expects, so a new theme or row is walked on purpose', () => {
-  assert.equal(THEME_IDS.length, 23)
+  assert.equal(THEME_IDS.length, 24)
   assert.deepEqual(Object.keys(THEME_ROW_FORMATS), ['ui-kit', 'book', 'slides', 'guide'])
   assert.deepEqual(EXPORT_THEMES.filter((t) => t.free).map((t) => t.id), FREE_SLIDES_THEMES)
 })

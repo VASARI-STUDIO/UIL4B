@@ -729,6 +729,19 @@ export default {
         {"n":8,"id":"typefaces","label":"Typefaces","w":840,"h":472},
         {"n":9,"id":"hierarchy","label":"Hierarchy","w":840,"h":472}
       ]
+    },
+    "34-set-square": {
+      "slides": [
+        {"n":1,"id":"cover","label":"Cover","w":840,"h":472},
+        {"n":2,"id":"composition","label":"composition","w":840,"h":472},
+        {"n":3,"id":"reference","label":"reference","w":840,"h":472},
+        {"n":4,"id":"logo","label":"The logo","w":840,"h":472},
+        {"n":5,"id":"specimen","label":"specimen","w":840,"h":472},
+        {"n":6,"id":"type","label":"type","w":840,"h":472},
+        {"n":7,"id":"colour","label":"colour","w":840,"h":472},
+        {"n":8,"id":"application","label":"application","w":840,"h":472},
+        {"n":9,"id":"digital","label":"Digital","w":840,"h":472}
+      ]
     }
   }
 }
