@@ -170,7 +170,11 @@ test.describe('Discover: what is ready today', () => {
       await expect(page).toHaveURL((u) => u.pathname === '/learn')
       await title.click()
       await expect(page).toHaveURL((u) => u.pathname === href)
-      await expect(page.getByRole('heading', { level: 1 })).toContainText(article.title.split(' ')[0])
+      // The guide page writes its own headline (colour-contrast's h1 is not its index title), so
+      // prove it is this guide by its first section, which the registry names and the page anchors.
+      // MUTATION: link the title to another slug and this section id is not on the page.
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await expect(page.locator(`[id="${article.sections[0].id}"]`)).toHaveCount(1)
       await page.goBack()
       await expect(page).toHaveURL((u) => u.pathname === '/learn')
     }
