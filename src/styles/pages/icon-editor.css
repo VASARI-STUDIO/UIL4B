@@ -674,3 +674,13 @@ html[data-reduced-motion="true"] .ied-spn,html[data-reduced-motion="true"] .ied:
 .ied-paints .cpk-wrap{flex:1 1 96px}
 .ied-paint-reset{display:inline;height:auto;min-height:24px;padding:0 6px;font:inherit;text-decoration:underline}
 @media (pointer:coarse){.ied-paint-reset{min-height:44px}}
+/* Forced colours paint out backgrounds and shadows: keep each swatch's own colour and give chip and swatch an edge. */
+@media (forced-colors:active){
+  .ied .ied-chip.ied-paint.cpk-trigger,.ied-paint{border:1px solid ButtonText}
+  .ied-paint .ied-sw{forced-color-adjust:none;border:1px solid ButtonText}
+}
+/* Phones: the editor covers the site tab bar, so its colour sheet sits on the bottom edge, not a tab bar above it. */
+@media (max-width:767px){
+  html.has-tabbar .pop.cpk-pop.ied-cpop[data-pop-fixed="true"]{bottom:0;padding-bottom:calc(var(--s-3) + env(safe-area-inset-bottom))}
+  .ied-cpop[data-pop-fixed="true"] .cpk-head{height:auto;min-height:20px;flex-shrink:0}
+}

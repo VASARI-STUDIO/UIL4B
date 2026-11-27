@@ -60,8 +60,8 @@ const serveLogos = async (page) => {
   await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'logos', route => route.fulfill({ contentType: 'application/json', headers, body: list }))
 }
 
-const openIcon = async (browser, name, width) => {
-  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width, height: 900 } })
+const openIcon = async (browser, name, width, extra = {}) => {
+  const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width, height: 900 }, ...extra })
   const page = await ctx.newPage()
   watch(page, 'someone recolouring a multicolour icon')
   await signIn(page, { plan: 'pro' })
@@ -165,3 +165,47 @@ for (const width of [1440, 390]) {
     })
   })
 }
+
+// Layout of the swatches and their sheet. SHOULD FAIL before the fix: the forced-colours chip had no border and
+// was painted out, Reset colours was display:inline (22px tall on a touch screen), and on a phone the sheet sat a
+// tab bar's height above the bottom with Copy SVG showing under it and Close overlapping the colour pad.
+test.describe('multicolour swatches, layout', () => {
+  test('in forced colours each swatch keeps its colour and has a visible edge', async ({ browser }) => {
+    const { ctx, page } = await openIcon(browser, 'tri-colour', 1440, { forcedColors: 'active' })
+    await expect(swatches(page)).toHaveCount(3)
+    const chip = await swatchFor(page, RED).locator('.ied-sw').evaluate(el => {
+      const cs = getComputedStyle(el)
+      return { adjust: cs.forcedColorAdjust, border: cs.borderTopWidth, bg: cs.backgroundColor }
+    })
+    expect(chip.adjust).toBe('none')
+    expect(chip.border).toBe('1px')
+    expect(chip.bg).toBe('rgb(229, 57, 53)')
+    const edge = await swatchFor(page, RED).evaluate(el => getComputedStyle(el).borderTopWidth)
+    expect(edge).toBe('1px')
+    await ctx.close()
+  })
+
+  test('on a touch phone Reset colours is at least 44px tall', async ({ browser }) => {
+    const { ctx, page } = await openIcon(browser, 'tri-colour', 390, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+    await changeSecondSwatch(page)
+    const box = await page.locator('.ied-paint-reset').boundingBox()
+    expect(box.height).toBeGreaterThanOrEqual(44)
+    await ctx.close()
+  })
+
+  test('on a phone the colour sheet reaches the bottom edge and Close clears the colour pad', async ({ browser }) => {
+    const { ctx, page } = await openIcon(browser, 'tri-colour', 390, { viewport: { width: 390, height: 844 } })
+    await swatchFor(page, BLUE).click()
+    const pop = page.getByRole('dialog', { name: 'Colour 2 of 3' })
+    await expect(pop).toBeVisible()
+    await expect.poll(async () => Math.round((await pop.boundingBox()).y)).toBeLessThan(844)
+    await page.waitForTimeout(400)
+    const sheet = await pop.boundingBox()
+    expect(sheet.y + sheet.height).toBeGreaterThanOrEqual(843)
+    const close = await pop.getByRole('button', { name: 'Close' }).boundingBox()
+    const pad = await pop.locator('.cpk-pad').boundingBox()
+    expect(close.y).toBeGreaterThanOrEqual(sheet.y)
+    expect(close.y + close.height).toBeLessThanOrEqual(pad.y)
+    await ctx.close()
+  })
+})
