@@ -60,3 +60,9 @@ export function sampleProject(theme) {
     ...(theme === 'dispatch' ? { photo: 'data:image/webp;base64,' + readFileSync(new URL('../../public/home-exports/kerbside-evening-960.webp', import.meta.url)).toString('base64'), photoAlt: 'Kerbside courier at the end of a shift' } : {}),
   };
 }
+
+// What a live export has: a name, a palette, two fonts and a type scale. Everything else is the project's to write, so the templates print placeholders.
+export function minimalProject(theme) {
+  const { design } = sampleProject(theme);
+  return { name: 'Example Co', design: { palette: design.palette, fonts: design.fonts, typeScale: design.typeScale } };
+}

@@ -1,4 +1,7 @@
-export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+import { isPh, escapeText } from './placeholders.mjs';
+
+// Escapes project text. A placeholder (copy the project has not written) comes out as its own marked-up prompt.
+export const esc = value => isPh(value) ? value.html() : escapeText(value);
 
 function listing(item) {
   return `<div class="listing"><div><b>${esc(item.title)}</b><span>${esc(item.detail)}</span></div><strong>${esc(item.price)}</strong></div>`;
@@ -6,17 +9,15 @@ function listing(item) {
 
 export function appSpecimen(project, mark, interactive=false) {
   const items=(project.items || []).slice(0,2);
-  return `<div class="mock">${mark}<strong>${esc(project.screenTitle || project.name)}</strong><p>${esc(project.screenDetail || project.headline)}</p><div class="mock-list">${items.map(listing).join('')}</div>${interactive?'<a class="action" href="#try-feedback">'+esc(project.action || 'Save changes')+'</a>':'<span class="action">'+esc(project.action || 'Save changes')+'</span>'}</div>`;
+  return `<div class="mock">${mark}<strong>${esc(project.screenTitle || project.name)}</strong><p>${esc(project.screenDetail || project.headline)}</p><div class="mock-list">${items.map(listing).join('')}</div>${interactive?'<a class="action" href="#try-feedback">'+esc(project.action)+'</a>':'<span class="action">'+esc(project.action)+'</span>'}</div>`;
 }
 
 export function applicationSpecimen(id, project, mark) {
   const items=project.items || [];
-  const labels={flyleaf:'Publisher’s insert','set-square':'Site notice',dispatch:'Delivery slip',doorlist:'Box office ticket','market-day':'Counter card'};
-  const instructions={flyleaf:'Set the book title first. Keep the author and publication detail together on the line below.','set-square':'Keep the job address and start date together so the site team can check the notice at a glance.',dispatch:'Place the destination above the delivery time. Set the charge on the same row for quick reconciliation.',doorlist:'Set the act in display type. Keep the venue, date and price together for the box office.','market-day':'Lead with the produce and its origin. Keep the price and unit together at the counter.'};
   const heading=esc(items[0]?.title || project.applicationLine || project.headline || project.name);
   const more=id==='market-day'?items.slice(1,2):[];
   const details=items[0]?`<div class="purchase-line"><span>${esc(items[0].detail)}</span><b>${esc(items[0].price)}</b></div>`:'';
-  return `<figure class="stationery">${mark}<strong>${heading}</strong>${details}${more.map(listing).join('')}</figure><div class="note"><small>${labels[id] || 'Artwork detail'}</small><p>${esc(items.length && instructions[id] ? instructions[id] : (project.application || 'Use the mark and selected type together on the same customer touchpoint.'))}</p></div>`;
+  return `<figure class="stationery">${mark}<strong>${heading}</strong>${details}${more.map(listing).join('')}</figure><div class="note"><small>Artwork detail</small><p>${esc(project.application)}</p></div>`;
 }
 
 export function identityReference(project, design, mark) {
@@ -25,8 +26,8 @@ export function identityReference(project, design, mark) {
 }
 
 export function formExample(project) {
-  const label=esc(project.formLabel || 'Project name');
-  return `<form id="try-feedback" class="ui-demo feedback-form" novalidate><label>${label}<input name="entry" required autocomplete="off" aria-describedby="field-response"></label><button type="submit">${esc(project.action || 'Save changes')}</button><output id="field-response" aria-live="polite"></output></form>`;
+  const label=esc(project.formLabel);
+  return `<form id="try-feedback" class="ui-demo feedback-form" novalidate><label>${label}<input name="entry" required autocomplete="off" aria-describedby="field-response"></label><button type="submit">${esc(project.action)}</button><output id="field-response" aria-live="polite"></output></form>`;
 }
 export const formScript = `for(const form of document.querySelectorAll('.feedback-form')){
   const field=form.elements.entry, response=form.querySelector('output');

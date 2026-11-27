@@ -43,15 +43,11 @@ export function printStudy(id,colours,inkFor) {
   return `<svg class="print-study" viewBox="0 0 400 400" aria-hidden="true" focusable="false">${rect(0,0,400,400,base)}${drawings[id]([base,ink,spot])}</svg>`;
 }
 
-// Names describe the construction without assuming the customer's industry or brand name.
-export const studyNames = {
-  flyleaf:'Folded leaves', 'set-square':'Stepped elevation', dispatch:'Direction of travel',
-  doorlist:'Radial impression', 'market-day':'Fruit and seed', 'contact-sheet':'Nested apertures',
-  workbench:'Folding rule', soundings:'Crossing lines', hearth:'Roof and sun', offprint:'Lane turns',
-};
+// The caption says what the drawing is made from, so it never names a business or a subject the project did not choose.
+export const studyCaption = 'Drawn from the project palette';
 
 export function paletteStudy(art, id, rows) {
-  return `<div class="ink-study"><figure>${art}<figcaption>${studyNames[id]}</figcaption></figure><dl>${rows.map(({name,hex,foreground,ratio,usage})=>`<div style="--sample:${hex};--sample-ink:${foreground}"><dt><i style="background:${hex}"></i>${esc(name)}</dt><dd><code>${hex}</code><small>${ratio}:1 · ${foreground}</small>${usage?`<p>${esc(usage)}</p>`:''}</dd></div>`).join('')}</dl></div>`;
+  return `<div class="ink-study"><figure>${art}<figcaption>${studyCaption}</figcaption></figure><dl>${rows.map(({name,hex,foreground,ratio,usage})=>`<div style="--sample:${hex};--sample-ink:${foreground}"><dt><i style="background:${hex}"></i>${esc(name)}</dt><dd><code>${hex}</code><small>${ratio}:1 · ${foreground}</small>${usage?`<p>${esc(usage)}</p>`:''}</dd></div>`).join('')}</dl></div>`;
 }
 
 export function actionProof(project,art,photo,caption) {

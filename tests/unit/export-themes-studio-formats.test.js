@@ -15,14 +15,15 @@ for (const id of Object.keys(themes)) {
       delete project.message;
       const brand=renderTemplate(project,id,'brand','a4');
       const ui=renderTemplate(project,id,'ui','deck');
-      assert.match(brand.html,/Your logo goes here/);
+      assert.match(brand.html,/aria-label="Logo placeholder"/);
+      assert.doesNotMatch(brand.html,/Your logo goes here|UI L4B<\/b>/);
       assert.match(brand.html,/One sentence, 12 to 20 words/);
       assert.match(ui.html,/Icon selection/);
       for (const c of colours) assert.ok(brand.html.includes(c));
       assert.deepEqual(Object.keys(ui.files).sort(),['components.css','fonts.css','form-example.html','tailwind.css','tokens.css','tokens.json']);
       assert.doesNotThrow(()=>JSON.parse(ui.files['tokens.json']));
-      assert.equal(brand.pages,10);
-      assert.equal(ui.pages,10);
+      assert.equal(brand.pages,11);
+      assert.equal(ui.pages,11);
     }
   });
 }

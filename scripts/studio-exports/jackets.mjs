@@ -1,5 +1,5 @@
 import { esc } from './specimens.mjs';
-import { studyNames } from './print-studies.mjs';
+import { studyCaption } from './print-studies.mjs';
 
 // Portrait jackets give wide photographs and wordmarks their own line.
 export const portraitJacketStyles = {
@@ -21,7 +21,7 @@ export function jacket(id,project,title,art,photo,caption) {
   let inside;
   switch(id) {
     case 'flyleaf':
-      inside=`<div class="book-spine">${label}</div><div class="book-title">${mast}${copy}</div>${piece}<div class="book-imprint">${esc(screen?project.formLabel:studyNames[id])}</div>`;break;
+      inside=`<div class="book-spine">${label}</div><div class="book-title">${mast}${copy}</div>${piece}<div class="book-imprint">${studyCaption}</div>`;break;
     case 'set-square':
       inside=`<div class="plan-title">${mast}${copy}</div>${piece}<div class="plan-key">${label}<span>${detail}</span></div>`;break;
     case 'dispatch':

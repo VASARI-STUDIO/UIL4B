@@ -16,6 +16,8 @@ import { gridProof, interfaceProof } from './grid-proofs.mjs';
 import { jacket, portraitJacketStyles } from './jackets.mjs';
 import { printStudy, paletteStudy, actionProof } from './print-studies.mjs';
 import { brandProfile, correspondence } from './editorial.mjs';
+import { fillProject, PH } from './placeholders.mjs';
+import { watermark } from './watermark.mjs';
 export { esc };
 const stylesheet = fs.readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
 const additionalStyles = fs.readFileSync(new URL('./editions.css', import.meta.url), 'utf8');
@@ -54,7 +56,8 @@ export const darkestPaper = paperHexes.reduce((a,b) => ratio(a,'#000000') < rati
 function prompt(title, what, length, example) {
   return `<div class="prompt"><h3>${title}</h3><p>${what}</p><small>${length}</small><blockquote>Example · ${example}</blockquote></div>`;
 }
-export function renderTemplate(project, themeId, product, layout, images={}) {
+export function renderTemplate(input, themeId, product, layout, images={}) {
+  const project=fillProject(input);
   const theme = themes[themeId], title = titles[product];
   if (!theme || !title || !['a4','deck'].includes(layout)) throw new Error('Unknown template selection');
   const design=project.design, d=readDesign(design), name=esc(project.name || 'Your brand');
@@ -63,7 +66,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   const fontCss = [...new Set([fontFace(d.heading,d.headingWeight),fontFace(d.body,d.bodyWeight)])].join('\n');
   const license = oflText({faces:[{family:d.heading},{family:d.body}]});
   const logo = readLogo(design);
-  const mark = logo ? `<img class="mark" src="${logo.src}" alt="${name} logo">` : '<div class="mark-slot"><b>UI L4B</b><span>Your logo goes here</span></div>';
+  const mark = logo ? `<img class="mark" src="${logo.src}" alt="${name} logo">` : watermark();
   const art = printStudy(themeId,d.palette,ink);
   const projectPhoto = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(project.photo || '') ? project.photo : '';
   const hasCoverPhoto = product==='brand' && projectPhoto && ['dispatch','market-day'].includes(themeId);
@@ -81,7 +84,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   }
   const colourRows=d.palette.map((hex,i)=>{
     const fg=ink(hex,d.palette);
-    return {name:project.paletteNames?.[i] || paletteRole(i),hex,foreground:fg,ratio:fmt(pair(fg,hex)),usage:project.colourUses?.[i]};
+    return {name:project.paletteNames?.[i] || paletteRole(i),hex,foreground:fg,ratio:fmt(pair(fg,hex)),usage:project.colourUses?.[i] || PH.colourUse};
   });
   const ladder=typeLadder(d);
   const specimenWord=esc((project.name || 'Type').split(/\s+/)[0].slice(0,10));
@@ -94,7 +97,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   const componentCss=`.ui-demo{font-family:var(--font-body);color:var(--color-on-surface);background:var(--color-surface);padding:clamp(18px,3vw,36px);border:1px solid var(--color-border)}.ui-demo button,.ui-demo input:not([type=checkbox]){font:inherit;min-height:44px;padding:8px 14px;border-radius:4px}.ui-demo button{background:var(--color-primary);color:var(--color-on-primary);border:1px solid currentColor}.ui-demo button:hover,.ui-demo .hover{background:var(--color-primary-hover);color:${hoverInk}}.ui-demo :focus-visible,.ui-demo .focus{outline:3px solid var(--color-focus);outline-offset:3px}.ui-demo button:disabled{background:var(--color-disabled);color:var(--color-on-disabled)}.ui-demo label{display:grid;gap:5px}.ui-demo input:not([type=checkbox]){color:var(--color-on-surface);background:var(--color-background);border:1px solid var(--color-border);width:100%}.ui-demo input[type=checkbox]{accent-color:var(--color-primary)}.feedback-form{display:grid;gap:16px}.feedback-form button{justify-self:start}.feedback-form [aria-invalid="true"]{border:2px solid var(--color-error-700)}.feedback-form output{min-height:1.5em}`+componentStyles[themeId];
   files['components.css']=componentCss;
   files['fonts.css']=fontCss;
-  const action=esc(project.action || 'Save changes');
+  const action=esc(project.action);
   const controls=`<div class="ui-demo"><div class="states">${['Default','Hover','Focus','Disabled'].map(k=>`<div><small>${k}</small><button type="button" class="${k.toLowerCase()}" ${k==='Disabled'?'disabled':''}>${action}</button></div>`).join('')}</div><label>${esc(project.formLabel || 'Project name')}<input value="${esc(project.formValue || project.name)}"></label><label class="check"><span><input type="checkbox" checked> Include colour values</span></label><details><summary>Implementation note</summary><p>Use a visible label and keep the focus ring clear of nearby controls.</p></details></div>`;
   files['form-example.html']='<!doctype html><html lang="en-AU"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+name+' form example</title><link rel="stylesheet" href="fonts.css"><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="components.css"><h1>'+esc(project.screenTitle || project.name)+'</h1>'+formExample(project)+'<script>'+formScript+'</script></html>';
   const iconIds=(project.icons || []).filter(n=>typeof n==='string' && Object.hasOwn(ICONS,n));
@@ -112,7 +115,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     composition:()=>gridProof(themeId,project,mark),
     digital:()=>appliedImage(images.digital,project,themeId,true,appSpecimen(project,mark)),
     interface:()=>images.digital ? `<div class="screen-pair"><figure><img src="${images.digital}" alt="${esc(contexts[themeId][1])}"></figure>${interfaceProof(themeId,project)}</div>` : interfaceProof(themeId,project),
-    logo:()=>`<figure class="logo-board">${mark}</figure>${logo?`<div class="mark-proof"><div>${mark}</div><small>Print proof · 30 mm wide</small></div>`:''}${project.logoNote?`<p class="note">${esc(project.logoNote)}</p>`:''}`,
+    logo:()=>`<figure class="logo-board">${mark}</figure><div class="mark-proof"><div>${mark}</div><small>Small-size proof</small></div><p class="note">${esc(project.logoNote)}</p>`,
     type:()=>typeContent,
     application:()=>appliedImage(images.physical,project,themeId,false,applicationSpecimen(themeId,project,mark)),
     strategy:()=> (project.mission ? '<div class="prompt"><h3>Mission</h3><p>'+esc(project.mission)+'</p></div>' : prompt('Mission','Write who you serve and the change you make for them.','One sentence, 12 to 20 words.','We make everyday services easier to use for people opening their first business.'))+(project.voice ? '<div class="prompt"><h3>Tone of voice</h3><p>'+esc(project.voice)+'</p></div>' : prompt('Tone of voice','Choose two qualities. Show how one changes a customer message.','Two qualities and one short example.','Clear and considerate. “We’ll email you when your order is ready.”')),
@@ -120,13 +123,13 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     feedback:()=>formExample(project)+'<div class="response-key"><div><small>Required field</small><p>Enter a value to continue.</p></div><div><small>Success</small><p>Example submitted.</p></div></div>',
     reference:()=>identityReference(project,d,mark)+(project.imageryNote?'<div class="note"><small>Photography</small><p>'+esc(project.imageryNote)+'</p></div>':''),
     tints:()=>`<h3>Primary scale</h3><div class="ramp">${tokens.filter(t=>t.type==='color' && /^color\.primary\.\d+$/.test(t.path.join('.'))).map(t=>`<div style="background:${t.value};color:${ink(t.value,d.palette)}">${t.path.at(-1)}</div>`).join('')}</div><h3>Semantic colour</h3><div class="signals">${['success','warning','error','info'].map(r=>contrastTiles(r,500)).join('')}</div>`,
-    icons:(ids=iconIds)=>ids.length?`<div class="icons">${ids.map(n=>`<div><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg><span>${esc(n.replaceAll('-',' '))}</span></div>`).join('')}</div>`:prompt('Icon selection','Add icons from the project library.','One set with a short label for each icon.','Search, calendar, settings.'),
+    icons:(ids=iconIds)=>ids.length?`<div class="icons">${ids.map(n=>`<div><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg><span>${esc(n.replaceAll('-',' '))}</span></div>`).join('')}</div>`:prompt('Icon selection','Choose the icons the interface needs from the project library and label each one.','6 to 12 icons from one set, each with a one-word label.','Search, calendar, settings.'),
     handoff:()=>`<div class="downloads">${Object.entries(files).map(([n,s])=>fileLink(n,s)).join('')}</div><h3>Use the components</h3><pre>&lt;link rel="stylesheet" href="fonts.css"&gt;\n&lt;link rel="stylesheet" href="tokens.css"&gt;\n&lt;link rel="stylesheet" href="components.css"&gt;\n\n&lt;div class="ui-demo"&gt;\n  &lt;button&gt;${action}&lt;/button&gt;\n&lt;/div&gt;</pre>`,
   };
   const pages=[];
   for(const id of theme[product]) {
-    if(id==='handoff' && project.message?.subject && (Array.isArray(project.message.body) || typeof project.message.body==='string') && project.message.body.length){
-      pages.push({id:'correspondence-sheet',heading:'Customer correspondence',content:correspondence(project,mark)});
+    if(id==='handoff'){
+      pages.push({id:'correspondence-sheet',heading:'Customer correspondence',content:correspondence(project,logo?mark:watermark(100))});
     }
     if(id==='reference' && d.palette.length>6) {
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.reference,content:identityReference({...project,paletteNames:project.paletteNames?.slice(i,i+6)},{...d,palette:d.palette.slice(i,i+6)},mark)});
@@ -140,8 +143,8 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.contrast,content:contrastProof(d.palette.slice(i,i+6))});
     } else if(id==='icons' && iconIds.length>20) {
       for(let i=0;i<iconIds.length;i+=20) pages.push({id,heading:headings.icons,content:section.icons(iconIds.slice(i,i+20))});
-    } else pages.push({id,heading:id==='interface'?contexts[themeId][1]:id==='application'?contexts[themeId][0]:id==='digital'?contexts[themeId][1]:headings[id] || title,content:section[id]()});
-    if(id==='cover' && product==='brand' && project.profile){
+    } else pages.push({id,heading:id==='application'?contexts[themeId][0]:id==='digital'?contexts[themeId][1]:headings[id] || title,content:section[id]()});
+    if(id==='cover' && product==='brand'){
       pages.push({id:'profile',heading:'Brand profile',content:brandProfile(project,themeId,images.stationery)});
     }
   }
