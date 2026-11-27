@@ -118,6 +118,59 @@ export function isNearBlackMono(svg, max) {
   return luminance !== null && luminance < max
 }
 
+// The key a paint is listed and recoloured under: lowercase hex for black, white and any
+// opaque hex, rgb() or hsl() colour, so "#FFF", "white" and "rgb(255,255,255)" are one
+// swatch. A paint this cannot name (a url() gradient, none, currentColor) is null.
+// Other colour names and a translucent colour keep their own lowercase text.
+function paintKey(value) {
+  const paint = normalizePaint(value)
+  if (!paint || /^url\(/i.test(paint)) return null
+  if (paint === 'black') return '#000000'
+  if (paint === 'white') return '#ffffff'
+  if (/^(?:rgb|hsl)a?\s*\(/i.test(paint)) {
+    const parsed = parseColor(paint)
+    if (parsed && (parsed.alpha === undefined || parsed.alpha === 1)) return parsed.hex.toLowerCase()
+  }
+  return paint
+}
+
+// Each distinct plain colour the artwork paints with, in the order it first appears, so
+// the customiser can offer one swatch per colour. Gradients (url() paints) are not listed:
+// their stops are not paint attributes. Shapes with no paint of their own are black, so a
+// '#000000' entry is added for them when no explicit black is there.
+export function listPaints(svg) {
+  if (!svg) return []
+  const keys = []
+  mapPaints(svg, value => {
+    const key = paintKey(value)
+    if (key && !keys.includes(key)) keys.push(key)
+    return value
+  })
+  if (!keys.includes('#000000') && hasUnpaintedShape(svg)) keys.push('#000000')
+  return keys
+}
+
+// The artwork with each listed colour swapped for the one the map gives it (map keys are
+// listPaints keys, values are hex). A colour with no entry stays. `!important` is kept.
+// Black that is only the default (shapes with no paint) is swapped by giving the root
+// <svg> a fill, which those shapes inherit; shapes that name a colour keep it.
+export function remapPaints(svg, map) {
+  if (!svg || !map) return svg
+  const keys = Object.keys(map).filter(k => map[k] && map[k].toLowerCase() !== k)
+  if (!keys.length) return svg
+  let out = mapPaints(svg, value => {
+    const key = paintKey(value)
+    if (!key || !keys.includes(key)) return value
+    return `${map[key]}${/!important/i.test(value) ? ' !important' : ''}`
+  })
+  if (keys.includes('#000000') && hasUnpaintedShape(svg)) {
+    out = out.replace(/<svg\b([^>]*)>/i, (tag, attrs) => (
+      setsProperty(attrs, 'fill') ? tag : `<svg${attrs} fill="${map['#000000']}">`
+    ))
+  }
+  return out
+}
+
 // Single-colour pack artwork must inherit the same ink as a plain icon.
 export function monochromeSvg(svg) {
   return mapPaints(svg, value => normalizePaint(value)

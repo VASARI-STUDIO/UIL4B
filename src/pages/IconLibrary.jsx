@@ -38,7 +38,7 @@ import { collectionToNames, createCollectionLoader, createLimiter } from '../uti
 import { matchesRegular } from '../data/iconRegularRules'
 import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
-import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
+import { isMulticolourSvg, isNearBlackMono, monochromeSvg, listPaints, remapPaints } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
@@ -1704,6 +1704,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
   const sizeInputRef = useRef(null)
   const sizeRowRef = useRef(null)
   const [color, setColor] = useState(() => (icon?.custom && icon.color) || kept?.color || CUSTOMISER_DEFAULTS.color)
+  // Colour swaps for multicolour art, { [original paint]: new hex }, tagged with the icon they belong to.
+  const [paintEdit, setPaintEdit] = useState({ id: null, map: {} })
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
   // Both arrive in whatever unit their era used, so both go through the pixel
   // conversion: a pre-fix record stored viewBox units next to its own size, and
@@ -1901,9 +1903,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
   // false once a colour is chosen on a brand logo; the header line and the Similar tiles describe
   // the icon, not the choice, so they follow this and stay put across Original / colour.
   const ownColours = isColoredPack || colourRow === 'brand'
-  const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
-    ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
-  [inColoredPack, isColoredPack, rawBaseSvgText])
+  const paintMap = paintEdit.id === currentId ? paintEdit.map : null
+  const paintList = useMemo(() => (colourRow === 'original' ? listPaints(rawBaseSvgText) : []), [colourRow, rawBaseSvgText])
+  // Recoloured once here, so the stage, copy, preview and every export read the same markup.
+  const baseSvgText = useMemo(() => {
+    const base = inColoredPack && !isColoredPack && rawBaseSvgText ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText
+    return colourRow === 'original' && base && paintMap ? remapPaints(base, paintMap) : base
+  }, [inColoredPack, isColoredPack, rawBaseSvgText, colourRow, paintMap])
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
   // A layout effect, so the art lands in the same frame the waiting glyph leaves.
@@ -2391,6 +2397,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
     setSizeText(String(d.size))
     setClampedTo(null)
     setColor(d.color)
+    setPaintEdit({ id: null, map: {} })
     setStroke(d.stroke)
     writeStickyStroke(d.stroke, STROKE_REFERENCE_SIZE)
     setAbsStroke(d.absStroke)
@@ -2879,13 +2886,47 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
                 <div className="ied-lblrow">
                   <label className="ied-lbl" id="ied-colour-label">Colour</label>
                   {colourRow === 'original' ? (
-                    <span className="ied-val">Original colours</span>
+                    <span className="ied-val">{paintMap && Object.keys(paintMap).length ? 'Edited' : 'Original colours'}</span>
                   ) : colourRow === 'wait' ? (
                     <span className="ied-val">&nbsp;</span>
                   ) : (
                     <span className="ied-val ied-hex">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : '\u00a0'}</span>
                   )}
                 </div>
+                {colourRow === 'original' && paintList.length > 0 && (
+                  <>
+                    <div className="ied-chips ied-paints" role="group" aria-labelledby="ied-colour-label">
+                      {paintList.map((key, i) => {
+                        const now = paintMap?.[key] || key
+                        const hex = /^#[\da-f]{6}$/i.test(now) ? now : '#000000'
+                        return (
+                          <ColorPickerPop
+                            key={key}
+                            portal
+                            value={hex}
+                            ariaLabel={`Colour ${i + 1} of ${paintList.length}`}
+                            onChange={(v) => { setPaintEdit(p => ({ id: currentId, map: { ...(p.id === currentId ? p.map : {}), [key]: v } })); markDirty() }}
+                            triggerClassName="ied-chip ied-paint"
+                            popClassName="ied-cpop"
+                            triggerProps={{ 'data-paint': key, 'aria-label': `Colour ${i + 1} of ${paintList.length}, ${now}` }}
+                            triggerChildren={(
+                              <>
+                                <span className="ied-sw" style={{ background: now }} aria-hidden="true" />
+                                <span>{now.toUpperCase()}</span>
+                              </>
+                            )}
+                          />
+                        )
+                      })}
+                    </div>
+                    <p className="ied-note ied-colnote">
+                      Each colour in the artwork can be changed. Gradients keep their own colours.
+                      {paintMap && Object.keys(paintMap).length > 0 && (
+                        <> <button type="button" className="ied-ghost ied-paint-reset" onClick={() => { setPaintEdit({ id: null, map: {} }); markDirty() }}>Reset colours</button></>
+                      )}
+                    </p>
+                  </>
+                )}
                 {colourRow !== 'original' && colourRow !== 'wait' && (
                   <>
                     {/* Four choices, exactly one selected. Default is the file's currentColor (no

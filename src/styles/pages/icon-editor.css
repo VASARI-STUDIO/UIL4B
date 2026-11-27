@@ -669,3 +669,8 @@ html[data-reduced-motion="true"] .ied-spn,html[data-reduced-motion="true"] .ied:
   html:not([data-reduced-motion="false"]) .ied-spn{animation:none}
   html:not([data-reduced-motion="false"]) .ied:has(.ied-spn)::after{animation:none}
 }
+/* Multicolour art: one swatch per colour in the file, wrapping rather than squeezing. */
+.ied-paints{flex-wrap:wrap}
+.ied-paints .cpk-wrap{flex:1 1 96px}
+.ied-paint-reset{display:inline;height:auto;min-height:24px;padding:0 6px;font:inherit;text-decoration:underline}
+@media (pointer:coarse){.ied-paint-reset{min-height:44px}}
