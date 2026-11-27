@@ -183,7 +183,7 @@ export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_G
 
 // ── Export themes ────────────────────────────────────────────────────────────
 //
-// Twenty-three designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, ten more Pro looks, and the three Free themes. They are their own data, NOT
+// Twenty-four designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, ten more Pro looks, the three Free themes, then Set Square. They are their own data, NOT
 // entries in EXPORT_FORMATS: a format listed there as `pro` must be `live`
 // (assertFormatsCoherent). The export panel's Theme row picks one of them.
 
