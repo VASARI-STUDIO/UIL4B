@@ -1,15 +1,10 @@
 import { esc } from './specimens.mjs';
+import { real } from './placeholders.mjs';
 
 import { editions } from './editions.mjs';
 
-export const contexts = {
-  ...Object.fromEntries(Object.entries(editions).map(([id,e])=>[id,e.contexts])),
-  flyleaf:['The book jacket','The reading list'],
-  'set-square':['Site hoarding','The project dashboard'],
-  dispatch:['The street billboard','Rider tracking'],
-  doorlist:['The venue poster','Mobile tickets'],
-  'market-day':['The market label','The counter display'],
-};
+// Page headings and image labels name the kind of application, never an invented business such as a market stall or a ferry.
+export const contexts = Object.fromEntries([...Object.keys(editions),'flyleaf','set-square','dispatch','doorlist','market-day'].map(id=>[id,['Brand in practice','Digital application']]));
 
 export function plate(src, alt) {
   return src ? `<img class="scene-photo" src="${src}" alt="${esc(alt)}">` : '';
@@ -17,8 +12,8 @@ export function plate(src, alt) {
 
 export function liveSpecimen(project, design, isUI) {
   const lead=project.items?.[0] || {};
-  const line=esc((isUI?project.screenTitle:lead.title) || project.headline || project.name);
-  return `<div class="reading-sample"><small>${esc(design.heading)} · ${design.headingWeight}</small><strong>${line}</strong><div class="alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz &amp; 0123456789</div><div class="credits"><p>${esc(lead.detail || project.application || design.body)}</p><span>${esc(design.body)} · ${design.bodyWeight}</span></div></div>`;
+  const line=esc(real(isUI?project.screenTitle:lead.title) || real(project.headline) || project.name);
+  return `<div class="reading-sample"><small>${esc(design.heading)} · ${design.headingWeight}</small><strong>${line}</strong><div class="alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz &amp; 0123456789</div><div class="credits"><p>${esc(real(lead.detail) || real(project.application) || design.body)}</p><span>${esc(design.body)} · ${design.bodyWeight}</span></div></div>`;
 }
 
 export function appliedImage(source, project, id, digital, fallback) {
