@@ -252,7 +252,6 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', brand: 'Margin', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
   // Pro, with the Free skeleton: the brand guidelines only.
   Object.freeze({ id: '34-set-square', name: 'Set Square', brand: 'Plumbline', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
-
 ].map(withGate))
 
 // ships with the export themes
