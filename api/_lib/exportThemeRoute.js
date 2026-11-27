@@ -51,6 +51,7 @@ const THEMES = Object.freeze({
   '30-fluted': () => import('./exportThemes/themes/30-fluted/index.js'),
   '31-contact': () => import('./exportThemes/themes/31-contact/index.js'),
   '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
+  '33-flyleaf': () => import('./exportThemes/themes/33-flyleaf/index.js'),
 })
 
 export async function loadEngine() {
@@ -92,8 +93,11 @@ function leaveOut(err, what) {
 function pagesDoc(E, T, ctx, kind, standalone, only) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
-  // `only` is one page id: the preview draws a single page and not the whole document.
-  const list = (kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES).filter((p) => only === undefined || p.id === only)
+  // `only` is one page id: the preview draws a single page and not the whole document. A theme with a page list of its own
+  // (T.order(kind, ctx), which reads ctx.skeleton for the Free edition) names its ids, and T.previewId maps an engine id to one of them.
+  const own = typeof T.order === 'function' ? T.order(kind, ctx) : null
+  const want = only === undefined ? undefined : (T.previewId && T.previewId[only]) || only
+  const list = (own ? own.map((id) => ({ id })) : kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES).filter((p) => want === undefined || p.id === want)
   // A theme draws only the pages it has written (a guidelines-only theme has twelve); the engine's list keeps their order.
   // A page whose layout cannot hold this brand's words (a theme checks every fit and throws) is left out rather than failing the
   // whole file; only a document with no page at all is a failed build.
@@ -113,7 +117,7 @@ function styleGuide(E, T, ctx, standalone) {
   if (typeof T.guide !== 'object' || !T.guide) throw new Error('theme has no style guide')
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
   const pages = []
-  for (const id of E.guideOrder(T, ctx.edition)) {
+  for (const id of E.guideOrder(T, ctx.edition, ctx)) {
     if (typeof T.guide[id] !== 'function') continue
     // a page that throws may have written its markdown hooks already: put them back so the md never describes a page left out
     const hooks = ctx.mdHooks
@@ -180,7 +184,8 @@ export function siteBrand(brand) {
 }
 
 /** Builds one export. Returns { zip: Buffer, name } or { html } (a print document, with its CSP meta). */
-export async function renderThemeExport({ theme, row, format, design, projectName }, engine) {
+export async function renderThemeExport({ theme, row, format, design, projectName, skeleton = false }, engine) {
+  const opts = { skeleton: skeleton === true }
   const E = engine || await loadEngine()
   // Only these two values leave the request. The date defaults, and no brand object from the client reaches the engine.
   const brand = E.projectToBrand({ design, projectName })
@@ -188,14 +193,14 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   const T = await THEMES[theme]()
   const dirs = { guide: `${slug}-brand-guidelines-${theme}`, kit: `${slug}-ui-kit-${theme}` }
   if (row === 'ui-kit') {
-    const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, T.kitSite ? siteBrand(brand) : brand)
+    const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, T.kitSite ? siteBrand(brand) : brand, opts)
     const site = T.kitSite ? await premiumSite('kit', ctx, T) : null
     const files = { ...E.codePackageFiles(ctx, T), ...E.fontFiles(ctx, T), ...(site || { 'ui-kit.html': pagesDoc(E, T, ctx, 'uikit', false) }) }
     return { name: `${dirs.kit}.zip`, zip: await zipOf(E, files, dirs.kit) }
   }
   if (row === 'slides') {
-    if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand), 'guidelines', true)) }
-    const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, T.guideSite ? siteBrand(brand) : brand)
+    if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand, opts), 'guidelines', true)) }
+    const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, T.guideSite ? siteBrand(brand) : brand, opts)
     const site = T.guideSite ? await premiumSite('guide', ctx, T) : null
     const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
     return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
@@ -203,7 +208,7 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   if (row === 'guide') {
     // Free where the guidelines are free (a theme's rows list names it, src/data/exportThemes.js); the access check is unchanged.
     const name = `${slug}-style-guide-${theme}`
-    const g = styleGuide(E, T, E.makeCtx(T, 'slot', 'guide', E.loaders, brand), format === 'pdf')
+    const g = styleGuide(E, T, E.makeCtx(T, 'slot', 'guide', E.loaders, brand, opts), format === 'pdf')
     const title = `${brand.name} style guide`
     if (format === 'pdf') return { html: withCsp(g.doc(title, g.pages.map((x) => x.html), true)) }
     if (format === 'md') return { md: g.md, name: `${name}.md` }
@@ -221,12 +226,12 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
  * embedded, CSP meta first). `kind` is 'uikit' or 'guidelines' and `page` an engine page id; kind 'book' is the book's first
  * screen and takes no page. Returns { html }.
  */
-export async function renderThemePage({ theme, kind, page, design, projectName }, engine) {
+export async function renderThemePage({ theme, kind, page, design, projectName, skeleton = false }, engine) {
   const E = engine || await loadEngine()
   const brand = E.projectToBrand({ design, projectName })
   const T = await THEMES[theme]()
   if (kind === 'book') return { html: withCsp(bookPrint(E, T, brand, brand.slug)) }
-  const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand)
+  const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand, { skeleton: skeleton === true })
   return { html: withCsp(pagesDoc(E, T, ctx, kind, true, page)) }
 }
 
@@ -309,7 +314,8 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
   let E
   try {
     E = engine || await loadEngine()
-    const out = await renderThemeExport({ theme, row, format, design: body.design, projectName: body.projectName }, E)
+    // Free (any plan but Pro) gets a theme's skeleton edition. It is decided here from the plan the caller read from the account, never from the request.
+    const out = await renderThemeExport({ theme, row, format, design: body.design, projectName: body.projectName, skeleton: plan?.id !== 'pro' }, E)
     if (out.zip) {
       res.setHeader('Content-Type', 'application/zip')
       res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)

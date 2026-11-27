@@ -27,6 +27,7 @@ export const EXPORT_THEMES = Object.freeze([
   // The Free pair. Guidelines-only themes: they have slides and nothing else, and those are free.
   Object.freeze({ id: '25-label', name: 'Label', rows: Object.freeze(['slides', 'guide']), free: true }),
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', rows: Object.freeze(['slides', 'guide']), free: true }),
+  Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', rows: Object.freeze(['slides', 'guide']), free: true }),
 ])
 
 // Each row and the file formats it can download in. The UI kit is one zip; the book and the slides come as a page to print or a zip.
