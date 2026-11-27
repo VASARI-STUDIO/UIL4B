@@ -15,6 +15,8 @@
 // requested on focus so it is normally resolved before the first keystroke.
 // Without this hook that surface would have had to keep its own search field —
 // which is exactly the fourth implementation this component exists to prevent.
+import { useRef } from 'react'
+
 export default function LibrarySearch({
   value,
   onChange,
@@ -23,12 +25,14 @@ export default function LibrarySearch({
   label,
   className = '',
 }) {
+  const inputRef = useRef(null)
   return (
     <div className={`lbry-search${className ? ` ${className}` : ''}`}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
       </svg>
       <input
+        ref={inputRef}
         type="search"
         value={value}
         placeholder={placeholder}
@@ -41,7 +45,9 @@ export default function LibrarySearch({
         <button
           type="button"
           className="lbry-search-clear"
-          onClick={() => onChange('')}
+          // The button leaves the page when the field empties, so focus goes back to the
+          // field: a keyboard user who clears the search is still where they were typing.
+          onClick={() => { onChange(''); inputRef.current?.focus() }}
           aria-label="Clear search"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

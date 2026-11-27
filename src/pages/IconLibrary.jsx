@@ -3924,6 +3924,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const didInit = useRef(false)
   const sentinelRef = useRef(null)
   const retryRef = useRef(null)     // re-runs the last browse for the error banner
+  const scrollOnLand = useRef(false) // a search was typed: the listing that answers it returns to the first row
   const lastTier = useRef(null)     // the tier the current listing was fetched at
 
   const renderLocal = useCallback((q, packFilter) => {
@@ -3953,12 +3954,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // Inside a category the fallback keeps to that category's packs. Animated and Coloured hold no built-in pack, so
     // the grid goes empty under the outage notice rather than showing static icons the category does not hold.
     const scope = categoryPacks(categoryRef.current)
-    q = (q || '').toLowerCase()
+    // The names are hyphenated ("arrow-up"), so "arrow up" is two words that each have
+    // to be found, not one phrase with a space in it. A single word matches as before.
+    const words = (q || '').toLowerCase().split(/s+/).filter(Boolean)
     const filtered = capList(localIcons.filter(i =>
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
       (!scope || scope.includes(prefixOf[i.p] || i.p)) &&
-      (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
+      words.every(w => i.n.indexOf(w) !== -1 || i.c.indexOf(w) !== -1)
     ))
     setIcons(filtered.map(i => ({
       id: i.n,
@@ -4650,6 +4653,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const handleQueryChange = (next) => {
     if (!next) { handleClearSearch(); return }
     setQuery(next)
+    scrollOnLand.current = true
     debounceSearch(next, { pack, group })
   }
 
@@ -4659,11 +4663,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const handleTrySynonym = (word) => {
     clearTimeout(timer.current)
     setQuery(word)
+    scrollOnLand.current = true
     doSearch(word, { pack, group })
   }
 
   const handleClearSearch = () => {
     setQuery('')
+    scrollOnLand.current = true
     clearTimeout(timer.current)
     if (source === 'custom') browseCustom()
     else if (pack) browsePack(pack, group)
@@ -5276,6 +5282,17 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // whenever the list itself is replaced (a new pack, group or query), since
   // positions then mean different icons.
   const gridRef = useRef(null)
+
+  // A search typed while the page is scrolled down used to land its results at the
+  // same scroll offset: the first rows of the new answer were above the screen.
+  // The search box sets scrollOnLand; the listing that answers it brings the first
+  // row back into view (a no-op when it is already there). 'nearest' honours the
+  // cell's scroll-margin, which clears the sticky band.
+  useEffect(() => {
+    if (!scrollOnLand.current || loading) return
+    scrollOnLand.current = false
+    gridRef.current?.querySelector('.ic')?.scrollIntoView({ block: 'nearest' })
+  }, [icons, loading])
 
   /* The signed-out grid is cut to whole rows, and the blurred rows under it
      must line up with its columns, so the column count is read from the live
