@@ -4,7 +4,7 @@ import { readDesign, typeLadder } from '../../src/utils/styleGuideExport.js';
 import { buildTokensCss, buildTokensJson, designTokens, paletteRole } from '../../src/utils/designTokens.js';
 import { buildTailwindCss } from '../../src/utils/tailwindTheme.js';
 import { BRANDS } from '../../api/_lib/exportThemes/brands/index.js';
-import { pair, ratio, fmt } from '../../api/_lib/exportThemes/engine/color.js';
+import { pair, ratio, fmt, readableOn } from '../../api/_lib/exportThemes/engine/color.js';
 import { oflText } from '../../api/_lib/exportThemes/engine/files.js';
 import { ICONS, ICONS_LICENCE } from '../../api/_lib/exportThemes/icons.js';
 import { themes } from './themes.mjs';
@@ -44,10 +44,13 @@ export function fontFace(family, weight) {
   if (!stem || !fs.existsSync(new URL(stem + '.woff2', fontDir))) throw new Error(`Missing bundled font: ${family} ${weight}`);
   return `@font-face{font-family:"${family}";src:url(data:font/woff2;base64,${fs.readFileSync(new URL(stem+'.woff2',fontDir)).toString('base64')}) format("woff2");font-weight:${weight};font-display:block}`;
 }
-export function ink(hex, colours) {
-  const ordered = [...colours].sort((a,b) => ratio(b,hex)-ratio(a,hex));
-  return ordered.find(c => ratio(c,hex)>=4.5) || (ratio('#000000',hex)>ratio('#FFFFFF',hex)?'#000000':'#FFFFFF');
+// Text colour for a background: the palette colour with the best contrast if it reads, then the engine's near-black, near-white, black or white.
+export function ink(hex, colours, opts) {
+  return readableOn(hex, [...colours].sort((a,b) => ratio(b,hex)-ratio(a,hex)), opts);
 }
+// The darkest light surface any guide edition prints on, so body ink is measured on the real paper and not on white.
+const paperHexes = [...(stylesheet+additionalStyles+printStyles).matchAll(/(?:--paper:|background(?:-color)?:)(#[0-9a-f]{6})\b/gi)].map(m => m[1]).filter(c => ratio(c,'#000000') > 12);
+export const darkestPaper = paperHexes.reduce((a,b) => ratio(a,'#000000') < ratio(b,'#000000') ? a : b, '#faf9f5');
 function prompt(title, what, length, example) {
   return `<div class="prompt"><h3>${title}</h3><p>${what}</p><small>${length}</small><blockquote>Example · ${example}</blockquote></div>`;
 }
@@ -87,7 +90,8 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     const hex=colourValue('color.'+role+'.'+step), fg=ink(hex,d.palette);
     return `<div style="background:${hex};color:${fg}"><b>${role}</b><code>${hex}</code></div>`;
   };
-  const componentCss=`.ui-demo{font-family:var(--font-body);color:var(--color-on-surface);background:var(--color-surface);padding:clamp(18px,3vw,36px);border:1px solid var(--color-border)}.ui-demo button,.ui-demo input:not([type=checkbox]){font:inherit;min-height:44px;padding:8px 14px;border-radius:4px}.ui-demo button{background:var(--color-primary);color:var(--color-on-primary);border:1px solid currentColor}.ui-demo button:hover,.ui-demo .hover{background:var(--color-primary-hover)}.ui-demo :focus-visible,.ui-demo .focus{outline:3px solid var(--color-focus);outline-offset:3px}.ui-demo button:disabled{background:var(--color-disabled);color:var(--color-on-disabled)}.ui-demo label{display:grid;gap:5px}.ui-demo input:not([type=checkbox]){color:var(--color-on-surface);background:var(--color-background);border:1px solid var(--color-border);width:100%}.ui-demo input[type=checkbox]{accent-color:var(--color-primary)}.feedback-form{display:grid;gap:16px}.feedback-form button{justify-self:start}.feedback-form [aria-invalid="true"]{border:2px solid var(--color-error-700)}.feedback-form output{min-height:1.5em}`+componentStyles[themeId];
+  const hoverInk=ink(colourValue('color.primary.hover'),[colourValue('color.on-primary'),...d.palette]);
+  const componentCss=`.ui-demo{font-family:var(--font-body);color:var(--color-on-surface);background:var(--color-surface);padding:clamp(18px,3vw,36px);border:1px solid var(--color-border)}.ui-demo button,.ui-demo input:not([type=checkbox]){font:inherit;min-height:44px;padding:8px 14px;border-radius:4px}.ui-demo button{background:var(--color-primary);color:var(--color-on-primary);border:1px solid currentColor}.ui-demo button:hover,.ui-demo .hover{background:var(--color-primary-hover);color:${hoverInk}}.ui-demo :focus-visible,.ui-demo .focus{outline:3px solid var(--color-focus);outline-offset:3px}.ui-demo button:disabled{background:var(--color-disabled);color:var(--color-on-disabled)}.ui-demo label{display:grid;gap:5px}.ui-demo input:not([type=checkbox]){color:var(--color-on-surface);background:var(--color-background);border:1px solid var(--color-border);width:100%}.ui-demo input[type=checkbox]{accent-color:var(--color-primary)}.feedback-form{display:grid;gap:16px}.feedback-form button{justify-self:start}.feedback-form [aria-invalid="true"]{border:2px solid var(--color-error-700)}.feedback-form output{min-height:1.5em}`+componentStyles[themeId];
   files['components.css']=componentCss;
   files['fonts.css']=fontCss;
   const action=esc(project.action || 'Save changes');
@@ -148,8 +152,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     const note=pg.id==='strategy' && project.voice && project.mission ? '' : introductions[pg.id] || '';
     return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header><div class="inside"><div class="heading"><h2>${pg.heading}</h2>${note?'<p>'+note+'</p>':''}</div><div class="content">${pg.content}</div></div>${folio}</section>`;
   };
-  const editorialInk=d.palette.reduce((a,b)=>ratio(a,'#ffffff')>ratio(b,'#ffffff')?a:b);
-  const dark=ratio(editorialInk,'#ffffff')>=4.5?editorialInk:'#1a1919';
+  const dark=ink(darkestPaper,d.palette);
   const spot=d.palette.find(c=>ratio(c,accent)>=3 && c!==dark && ratio(c,'#fff')>=2.4) || accent;
   const variables=`:root{--head:"${d.heading}";--body:"${d.body}";--hw:${d.headingWeight};--bw:${d.bodyWeight};--accent:${accent};--on-accent:${onAccent};--dark:${dark};--on-dark:${ink(dark,d.palette)};--spot:${spot};--on-spot:${ink(spot,d.palette)};--title-fit:${Math.min(1,10/Math.max(1,(project.name||'Your brand').length))};--w:${layout==='deck'?'1280':'794'}px;--h:${layout==='deck'?'720':'1122'}px}@page{size:${layout==='deck'?'1280px 720px':'A4 portrait'};margin:0}`;
   const nav='<nav class="contents" aria-label="Guide sections">'+pages.map((p,i)=>i && pages[i-1].id!==p.id?'<a href="#page-'+(i+1)+'">'+p.heading+'</a>':'').join('')+'</nav>';
