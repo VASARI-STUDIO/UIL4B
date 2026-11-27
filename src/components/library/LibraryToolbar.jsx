@@ -70,6 +70,11 @@ const PHONE_QUERY = '(max-width:640px)'
 // measures a pixel or two wider tipped it into the Filters control. 180 leaves
 // that row 20px of room without changing what it paints where it already fit.
 const SEARCH_FLOOR = { phone: 120, wide: 180 }
+// A surface that draws a control inside the field (the Icon Library's "Exact words" switch, 92px, plus
+// its 8px gap and the clear button) reserves room for it from the first paint, whether or not the control is
+// showing yet, so the row does not change stage when the control appears on the second keystroke.
+// Wide only: on a phone that control sits on its own line and the phone floor stays.
+const SEARCH_FLOOR_TRAILING = 312
 const MAX_STAGE = 3
 
 function FiltersGlyph() {
@@ -82,6 +87,9 @@ function FiltersGlyph() {
 
 function LibraryToolbar({
   search,
+  // True when the search field will carry a trailing control (search.trailing) at some point. Sets the
+  // wide floor to SEARCH_FLOOR_TRAILING whether or not the control is drawn right now.
+  reserveTrailing = false,
   count,
   action,
   // A node drawn on the row after the action at stages 0 and 1, and in the Filters panel from stage 2 (see above).
@@ -167,7 +175,7 @@ function LibraryToolbar({
     for (const el of row.children) {
       if (getComputedStyle(el).display === 'none') continue
       items += 1
-      need += el.classList.contains('lbry-search') ? SEARCH_FLOOR[phone ? 'phone' : 'wide'] : el.scrollWidth
+      need += el.classList.contains('lbry-search') ? (phone ? SEARCH_FLOOR.phone : (reserveTrailing ? SEARCH_FLOOR_TRAILING : SEARCH_FLOOR.wide)) : el.scrollWidth
     }
     need += gap * Math.max(0, items - 1)
     needs.current[effective] = need
@@ -176,7 +184,7 @@ function LibraryToolbar({
       const known = needs.current[s]
       if (known != null && known <= width) { setStage(s); return }
     }
-  }, [])
+  }, [reserveTrailing])
 
   // Re-attached whenever the stage (and so what is on the row) changes. In the
   // commit, not after paint: the previous observer is disconnected before the
@@ -258,6 +266,7 @@ function LibraryToolbar({
             onFocus={search.onFocus}
             placeholder={search.placeholder}
             label={search.label}
+            trailing={search.trailing}
           />
         )}
         {count && <span className="lbry-count">{count}</span>}

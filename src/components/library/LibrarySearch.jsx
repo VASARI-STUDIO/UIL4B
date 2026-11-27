@@ -24,6 +24,9 @@ export default function LibrarySearch({
   placeholder = 'Search…',
   label,
   className = '',
+  // A node drawn inside the field after the input and before the clear button (the Icon Library's
+  // "Exact words" switch). Optional; a field without one is unchanged.
+  trailing = null,
 }) {
   const inputRef = useRef(null)
   return (
@@ -41,6 +44,7 @@ export default function LibrarySearch({
         onChange={(event) => onChange(event.target.value)}
         onFocus={onFocus}
       />
+      {trailing}
       {value && (
         <button
           type="button"
