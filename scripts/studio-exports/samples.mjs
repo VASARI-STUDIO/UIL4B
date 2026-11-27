@@ -27,6 +27,8 @@ export function sampleProject(theme) {
   return {
     name: brand.name,
     date: brand.version.date,
+    profile: brand.voice.boilerplate25,
+    contactCard: brand.applications.card,
     screenTitle: brand.ui.screen.title,
     screenDetail: screen.pickup,
     formLabel: screen.form.pickup,

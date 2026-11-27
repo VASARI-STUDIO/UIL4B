@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from '@playwright/test';
 import { zipFiles } from '../../api/_lib/exportThemes/engine/files.js';
+import { photographCards } from './cards.mjs';
 import { sampleProject } from './samples.mjs';
 import { renderTemplate } from './document.mjs';
 import { libraryPage, saveComparison } from './gallery.mjs';
@@ -32,6 +33,7 @@ try {
     const edition={id,name:theme.name,discipline:theme.discipline,project:data.name,guides:[]};
     editions.push(edition);
     const photographs=await makePhotographs(browser,sceneRoot,id,data);
+    photographs.stationery=await photographCards(browser,sceneRoot,id,data);
     for (const [product,title] of Object.entries(titles)) {
       const dir=path.join(root,id,product);
       await mkdir(dir,{recursive:true});

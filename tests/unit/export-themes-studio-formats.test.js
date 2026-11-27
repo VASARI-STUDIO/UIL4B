@@ -11,6 +11,7 @@ for (const id of Object.keys(themes)) {
       project.design.palette={base:colours[0],colors:colours};
       delete project.design.logo;
       project.icons=[];
+      delete project.profile;
       const brand=renderTemplate(project,id,'brand','a4');
       const ui=renderTemplate(project,id,'ui','deck');
       assert.match(brand.html,/Your logo goes here/);

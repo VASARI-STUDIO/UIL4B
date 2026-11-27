@@ -15,10 +15,11 @@ import { contexts, appliedImage, liveSpecimen, componentStyles } from './masters
 import { gridProof, interfaceProof } from './grid-proofs.mjs';
 import { jacket, portraitJacketStyles } from './jackets.mjs';
 import { printStudy, paletteStudy, actionProof } from './print-studies.mjs';
+import { brandProfile } from './editorial.mjs';
 export { esc };
 const stylesheet = fs.readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
 const additionalStyles = fs.readFileSync(new URL('./editions.css', import.meta.url), 'utf8');
-const printStyles = ['jackets.css','studies.css'].map(file => fs.readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
+const printStyles = ['jackets.css','studies.css','editorial.css'].map(file => fs.readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n');
 const fontDir = new URL('../../api/_lib/exportThemes/fonts/', import.meta.url);
 const faces = Object.values(BRANDS).flatMap(b => Object.values(b.data.fonts));
 const b64 = text => Buffer.from(text).toString('base64');
@@ -120,6 +121,7 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
   };
   const pages=[];
   for(const id of theme[product]) {
+
     if(id==='reference' && d.palette.length>6) {
       for(let i=0;i<d.palette.length;i+=6) pages.push({id,heading:headings.reference,content:identityReference({...project,paletteNames:project.paletteNames?.slice(i,i+6)},{...d,palette:d.palette.slice(i,i+6)},mark)});
     } else if(id==='colour') {
@@ -133,10 +135,14 @@ export function renderTemplate(project, themeId, product, layout, images={}) {
     } else if(id==='icons' && iconIds.length>20) {
       for(let i=0;i<iconIds.length;i+=20) pages.push({id,heading:headings.icons,content:section.icons(iconIds.slice(i,i+20))});
     } else pages.push({id,heading:id==='interface'?contexts[themeId][1]:id==='application'?contexts[themeId][0]:id==='digital'?contexts[themeId][1]:headings[id] || title,content:section[id]()});
+    if(id==='cover' && product==='brand' && project.profile){
+      pages.push({id:'profile',heading:'Brand profile',content:brandProfile(project,themeId,images.stationery)});
+    }
   }
   const sheet=(pg,i)=>{
     const folio='<footer><span>Made with UI L4B</span><span>'+String(i+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0')+'</span></footer>';
     if(pg.id==='cover')return '<section class="sheet cover" id="page-1">'+pg.content+folio+'</section>';
+    if(pg.id==='profile')return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header>${pg.content}${folio}</section>`;
     const note=pg.id==='strategy' && project.voice && project.mission ? '' : introductions[pg.id] || '';
     return `<section class="sheet ${pg.id}" id="page-${i+1}"><header><span>${name}</span><span>${title}</span></header><div class="inside"><div class="heading"><h2>${pg.heading}</h2>${note?'<p>'+note+'</p>':''}</div><div class="content">${pg.content}</div></div>${folio}</section>`;
   };
