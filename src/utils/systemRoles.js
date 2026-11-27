@@ -36,7 +36,7 @@
 // Pure functions over a plain design object. This file must not import
 // designTokens.js or uiKitExport.js: both import it.
 
-import { contrast } from './styleGuideExport.js'
+import { luminance } from './styleGuideExport.js'
 import { readBook } from './bookModel.js'
 import { generateTintScale, mixHex, T_LABELS } from './colors.js'
 import { colorName } from './paletteNames.js'
@@ -61,6 +61,16 @@ export const SLOT_ORDER = ['citron', 'pine', 'lilac', 'chalk', 'ink']
 export const DERIVED_NOTE = 'Derived from your primary colour.'
 // The text colour when no primary stop reads on the canvas: plain black or
 // white. That is not taken from the primary, so DERIVED_NOTE would be false.
+/**
+ * Unrounded WCAG contrast ratio. The 2dp `contrast()` from styleGuideExport is
+ * for display; thresholds must compare the raw ratio, or 4.4977 rounds up to
+ * 4.50 and an unreadable pair passes.
+ */
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
 export const CONTRAST_NOTE = 'Set to black or white for contrast.'
 
 const SEMANTIC_COPY = Object.freeze({
