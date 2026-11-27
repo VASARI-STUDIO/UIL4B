@@ -4,10 +4,10 @@ import ExportProTag from '../ExportProTag'
 
 // What you are making, in two parts.
 //
-// ExportNav (the default export) is the rail: the four kinds of export (Branding, UI, Image, Code), one radio each. On a phone
-// it is a segmented control across the top.
-// ExportTabs is the bar of sub-category tabs along the top of the main area: what the chosen kind makes (Guidelines, Brand book,
-// Style guide, ...), each with an icon and its name.
+// ExportNav (the default export) is the rail: the four kinds of export (src/config/exportRail.js: Brand guidelines, UI style guide,
+// Image, Code), one radio each. On a phone it is a segmented control across the top, with each item's short name.
+// ExportTabs is the Layout row under the template line: what the chosen kind makes (16:9 guidelines or the A4 book; UI kit or style
+// guide), each with an icon and its name. The dialog draws it only when the kind has more than one.
 //
 // Both have one Tab stop (the chosen item). Arrows move and choose, Home and End jump, and the ends wrap (useRovingRadio).
 //
@@ -28,13 +28,13 @@ const ICONS = {
   contrast: <><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" /></>,
 }
 
-export default function ExportNav({ types, typeId, onType, disabled }) {
-  const roving = useRovingRadio(types.length, (i) => onType(types[i].id))
+export default function ExportNav({ items, itemId, onItem, disabled }) {
+  const roving = useRovingRadio(items.length, (i) => onItem(items[i].id))
   return (
     <nav className="xd-nav" aria-label="What to export">
       <div className="xd-types" role="radiogroup" aria-label="Export type">
-        {types.map((t, i) => {
-          const on = t.id === typeId
+        {items.map((t, i) => {
+          const on = t.id === itemId
           return (
             <button
               key={t.id}
@@ -43,12 +43,14 @@ export default function ExportNav({ types, typeId, onType, disabled }) {
               aria-checked={on}
               aria-disabled={disabled || undefined}
               tabIndex={on ? 0 : -1}
+              aria-label={t.label}
               className={`xd-type${on ? ' is-on' : ''}`}
               ref={(el) => { roving.refs.current[i] = el }}
-              onClick={() => { if (!disabled) onType(t.id) }}
+              onClick={() => { if (!disabled) onItem(t.id) }}
               onKeyDown={(e) => { if (!disabled) roving.onKeyDown(e, i) }}
             >
-              <span className="xd-type-n">{t.name}</span>
+              <span className="xd-type-n xd-long">{t.label}</span>
+              <span className="xd-type-n xd-short" aria-hidden="true">{t.short}</span>
             </button>
           )
         })}
@@ -57,14 +59,14 @@ export default function ExportNav({ types, typeId, onType, disabled }) {
   )
 }
 
-export function ExportTabs({ typeName, categories, categoryId, onCategory, disabled, showTags, panelId }) {
+export function ExportTabs({ label, categories, categoryId, onCategory, disabled, showTags, panelId }) {
   const roving = useRovingRadio(categories.length, (i) => onCategory(categories[i].id))
   // The chosen tab stays in view when the bar scrolls sideways.
   const chosenAt = categories.findIndex((c) => c.id === categoryId)
   const tabRefs = roving.refs
   useEffect(() => { tabRefs.current[chosenAt]?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' }) }, [chosenAt, tabRefs])
   return (
-    <div className="xd-tabs" role="tablist" aria-label={`${typeName} formats`}>
+    <div className="xd-tabs" role="tablist" aria-label={label}>
       {categories.map((c, i) => {
         const on = c.id === categoryId
         return (

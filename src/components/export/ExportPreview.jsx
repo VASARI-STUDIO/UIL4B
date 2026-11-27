@@ -2,7 +2,6 @@ import { useId, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { defaultTemplate } from '../../config/exportTemplates'
 import { pickerTheme, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
-import ExportFormatSwitch from '../ExportFormatSwitch'
 import ExportProPreview from '../ExportProPreview'
 import ExportFreePreview from './ExportFreePreview'
 import ExportStage from './ExportStage'
@@ -12,8 +11,8 @@ import useLivePage from './useLivePage'
 import { pagesOf } from './exportPages'
 import { brandOf, syncPreviewOwner } from './exportPreviewClient'
 
-// The work area of the Export dialog: the main picture, the file switch and the "Show the default template" box under it, and the
-// gallery of pages beside it (under it on a phone).
+// The work area of the Export dialog: the main picture, the "Show the default template" box under it, and the
+// gallery of pages beside it (under it on a phone). The file-type switch sits above it, drawn by ExportDialog.
 //
 // A themed file (the guidelines, the book, the UI kit) shows one page of the chosen template. It is drawn with the person's brand
 // from the server (useLivePage) when that is on offer; "Show the default template" swaps to the stock picture, and the box is ticked
@@ -52,7 +51,7 @@ function PlainPreview({ cat, file, name, fileProject, isPro, design, chosen }) {
   )
 }
 
-export default function ExportPreview({ cat, file, files, onFile, themeId, name, fileProject, isPro, checking, design, chosen }) {
+export default function ExportPreview({ cat, file, themeId, name, fileProject, isPro, checking, design, chosen }) {
   const { user } = useAuth()
   // Before any page is read from memory: a sign-out, another account or a change of plan empties what the last one was shown.
   syncPreviewOwner(user?.uid, isPro)
@@ -118,14 +117,6 @@ export default function ExportPreview({ cat, file, files, onFile, themeId, name,
               <input type="checkbox" checked={showStock} disabled={noLive} aria-describedby={noLive ? statusId : undefined} onChange={(e) => setStock(e.target.checked)} />
               <span>Show the default template</span>
             </label>
-          )}
-          {files.length > 1 && (
-            <ExportFormatSwitch
-              label={`${cat.name} file type`}
-              options={files.map((f) => ({ id: f.id, label: f.label }))}
-              value={file}
-              onChange={onFile}
-            />
           )}
         </div>
       </div>
