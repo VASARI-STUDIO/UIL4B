@@ -113,12 +113,17 @@ test.describe('public UI quality release', () => {
    *
    * '/create/color' left the loop with the colour landing's deletion — it is a
    * redirect now, so it was asserting the footer of '/create/palette' twice. */
-  // The site footer is on every page and every tool, and each has exactly one
-  // landmark. /plans is reachable from it everywhere, and from the header's
-  // Upgrade pill too.
-  test('every page and tool has exactly one footer landmark, and /plans stays reachable', async ({ page }) => {
+  // The site footer closes every page and the Icon and Emoji libraries, with exactly
+  // one landmark. The other tools fill the screen and draw none; /plans is still one
+  // click away from the header's Upgrade pill.
+  test('pages have exactly one footer landmark, other tools none, and /plans stays reachable', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/learn', '/discover', '/privacy', '/learn/help', '/create/icons', '/create/palette', '/create/aspect-ratio', '/discover/palettes', '/projects']) {
+    for (const route of ['/create/palette', '/create/aspect-ratio']) {
+      await go(page, route)
+      await expect(page.getByRole('contentinfo'), `${route} is a tool page and draws no site footer`).toHaveCount(0)
+      await expect(page.locator('.pnav a[href="/plans"]').first()).toBeVisible()
+    }
+    for (const route of ['/', '/learn', '/discover', '/privacy', '/learn/help', '/create/icons', '/discover/palettes', '/projects']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       // The homepage footer names the link Plans and the reading pages' footer Pricing; both go to /plans.
