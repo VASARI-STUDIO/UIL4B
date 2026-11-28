@@ -68,11 +68,8 @@ export default function GoogleOneTap() {
       if (cancelled || !isSignedOut || !window.google?.accounts?.id) return
 
       if (!initialised.current) {
-        // Returning Google users get automatic single-click sign-in: Google
-        // re-selects the previously used account without an extra prompt.
-        let returning = false
-        try { returning = localStorage.getItem('vs-google-returning') === '1' } catch { /* ignore */ }
-
+        // No auto_select: a returning person always confirms which account to
+        // use rather than being signed in silently.
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: async (response) => {
@@ -80,11 +77,12 @@ export default function GoogleOneTap() {
             try {
               await loginWithGoogleCredential(response.credential)
             } catch (err) {
-              // Surface only unexpected failures; closed/declined prompts are silent.
-              if (import.meta.env.DEV) console.error('Google One Tap sign-in failed', err)
+              // One Tap is optional, so a failure never blocks the page; the code
+              // alone is logged, with no account details.
+              console.warn('Google One Tap sign-in failed', err?.code || 'unknown')
             }
           },
-          auto_select: returning,
+          auto_select: false,
           cancel_on_tap_outside: true,
           context: 'signin',
           nonce: getSessionNonce(),
@@ -94,8 +92,9 @@ export default function GoogleOneTap() {
       }
 
       window.google.accounts.id.prompt()
-    }).catch(() => {
-      /* GIS unavailable (offline/blocked) — Firebase popup remains available */
+    }).catch((err) => {
+      // GIS unavailable (offline/blocked): the Firebase popup remains available.
+      console.warn('Google One Tap unavailable', err?.code || err?.type || 'unknown')
     })
 
     return () => {
