@@ -1159,7 +1159,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const place = () => { placeContextMenu(el, ctxMenu); updateScrollCue() }
     el.scrollTop = 0
     place()
+    // A key opens onto the first row; a pointer puts focus on the menu itself so
+    // the arrow keys work without any row looking pressed.
     if (ctxMenu.keyboard) el.querySelector('button[role="menuitem"]')?.focus({ preventScroll: true })
+    else if (ctxMenu.kind !== 'gap') el.focus({ preventScroll: true })
     el.addEventListener('scroll', updateScrollCue)
     const observer = new ResizeObserver(place)
     observer.observe(el)
@@ -1780,7 +1783,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const onEsc = (e) => {
       // An Escape a layer inside the preview dialog already took (its State menu, say) is not ours.
       if (e.key !== 'Escape' || e.defaultPrevented) return
-      if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, !ctxMenu?.keyboard)
+      if (ctxMenuRef.current?.getAttribute('aria-label') === 'Colour actions') returnMenuFocus(ctxTriggerRef.current, false)
       const cp = colPanelRef.current
       if (cp && !ctxMenu) panelReturnRef.current = { i: cp.i, opener: panelOpenerRef.current }
       closeAllMenus(); closePops(); setPreview(null)
@@ -3928,13 +3931,21 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         )
       })()}
       {ctxMenu && ctxMenu.kind !== 'gap' && !phone && (
-        <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxMenuRef}
+        <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxMenuRef} tabIndex={-1}
           onKeyDown={(e) => {
+            if (e.key === 'Tab') {
+              // Close without trapping: focus goes back to the trigger and this Tab carries on from it.
+              if (ctxTriggerRef.current?.isConnected) ctxTriggerRef.current.focus({ preventScroll: true })
+              setCtxMenu(null)
+              return
+            }
             if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
             e.preventDefault()
             const items = [...e.currentTarget.querySelectorAll('button[role="menuitem"]')]
             const current = items.indexOf(document.activeElement)
+            // Focus on the menu itself (no row yet): Down enters at the top, Up at the bottom.
             const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1
+              : current < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1)
               : (current + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
             items[next]?.focus({ preventScroll: true })
             items[next]?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
