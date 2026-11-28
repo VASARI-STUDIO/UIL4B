@@ -8,14 +8,14 @@
 // MEASURED on the 404 before the fix (2026-09-06 sweep, then confirmed
 // point-by-point):
 //
-//   1440x900   .app-footer-attrib 1292.2..1393.9, FAB 1303..1420
+//   1440x900   .sp-footer-attrib 1292.2..1393.9, FAB 1303..1420
 //              9 of 9 sample points across the link returned the FAB
 //              from elementFromPoint. scrollHeight === innerHeight: no scroll room.
 //   981x900    the full 101.7px of the link overlapped. Also unscrollable.
 //   1920x1080  the last tenth of the link was covered.
 //
 // So the attribution link on the 404 could not be reached by any means at all
-// at 981 and 1440. The fix is clearance reserved INSIDE `.app-footer`, which is
+// at 981 and 1440. The fix is clearance reserved INSIDE `.sp-footer`, which is
 // what makes it impossible rather than unlikely: the padding travels with the
 // footer, so the last row can never come within the FAB's height of the
 // document end, and the document end is the lowest the viewport can reach.
@@ -46,7 +46,7 @@ test.describe('the feedback button never covers the footer', () => {
       await page.setViewportSize({ width, height })
       await go(page, FOOTER_ROUTE)
       await expectRendered(page)
-      await page.evaluate(() => document.querySelector('.app-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
+      await page.evaluate(() => document.querySelector('.sp-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
       await page.waitForFunction(() => {
         const de = document.scrollingElement || document.documentElement
         const k = `${de.scrollHeight}|${Math.round(window.scrollY)}`
@@ -59,7 +59,7 @@ test.describe('the feedback button never covers the footer', () => {
 
       const result = await page.evaluate(() => {
         const fab = document.querySelector('.global-feedback-btn')
-        const controls = [...document.querySelectorAll('.app-footer-legal a, .app-footer-legal button')]
+        const controls = [...document.querySelectorAll('.sp-footer-legal a, .sp-footer-legal button')]
         const blocked = []
         for (const el of controls) {
           const r = el.getBoundingClientRect()
@@ -113,8 +113,8 @@ test.describe('the feedback button never covers the footer', () => {
     await expectRendered(page)
 
     const gap = await page.evaluate(() => {
-      const footer = document.querySelector('.app-footer')
-      const legal = document.querySelector('.app-footer-legal')
+      const footer = document.querySelector('.sp-footer')
+      const legal = document.querySelector('.sp-footer-legal')
       const fab = document.querySelector('.global-feedback-btn')
       if (!footer || !legal || !fab) return null
       const f = footer.getBoundingClientRect()

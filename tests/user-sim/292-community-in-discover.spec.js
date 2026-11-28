@@ -3,9 +3,8 @@
 // search for the words a visitor would type. Each of these was missing while
 // the row was parked as Soon.
 //
-// The footer is deliberately not covered: /community is an app page like the
-// libraries beside it, and the site footer stays off app pages
-// (src/components/nav/footerRoutes.js).
+// The footer is deliberately not covered here: it is the same site footer as on every
+// other page, and 375 test 12 checks it on the libraries.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 

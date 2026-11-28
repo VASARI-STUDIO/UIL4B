@@ -24,7 +24,7 @@
 //   window.open(url, '_blank') without 'noopener'                   -> "opens the full-screen view" (both)
 //   fullViewHref drops the hash or the query                       -> "opens the full-screen view" (both)
 //   PromptWindowButton opens in the same window (location.assign)  -> "a real window opens"
-//   App.jsx keeps <PillNav /> or <AppFooter /> when fullScreen     -> "no nav, no footer"
+//   App.jsx keeps <PillNav /> or <SpectrumFooter /> when fullScreen    -> "no nav, no footer"
 //   drop `.app-page--full{max-width:none}` from global.css         -> "no nav, no footer" (1440 width)
 //   drop `html[data-view="full"]{--nav-h:0px}` from global.css     -> "no nav, no footer" (top padding)
 //   PromptLibrary navigates with { hash } alone (no toHash search) -> "stays full-screen"
@@ -183,7 +183,7 @@ for (const { width, height } of WIDTHS) {
     await expect(page.locator('.pl-overview')).toBeVisible()
     await proLibraryArrived(page, 'the prompt library in the full-screen view')
     await expect(page.locator('.pnav'), 'no nav').toHaveCount(0)
-    await expect(page.locator('.app-footer'), 'no footer').toHaveCount(0)
+    await expect(page.getByRole('contentinfo'), 'no footer').toHaveCount(0)
     await expect(page.locator('html'), 'no phone tab bar').not.toHaveClass(/has-tabbar/)
 
     // Same library, not a fork: the same shelves in the same order.
@@ -237,7 +237,7 @@ for (const { width, height, where } of WIDTHS.filter((w) => w.width !== 768)) {
     expect(urlOf(page).search, 'a search dropped ?view=full').toBe('?view=full')
     expect(urlOf(page).hash).toBe('#all')
     await expect(page.locator('.pnav')).toHaveCount(0)
-    await expect(page.locator('.app-footer')).toHaveCount(0)
+    await expect(page.getByRole('contentinfo')).toHaveCount(0)
     await context.close()
   })
 }
@@ -266,7 +266,7 @@ for (const { width, height } of WIDTHS.filter((w) => w.width !== 768)) {
 
     await back.click()
     await expect(page.locator('.pnav'), 'the nav is back').toHaveCount(1)
-    // The discover pages close without the app footer (footerRoutes.js), so only the nav comes back.
+    // The nav comes back, and so does the footer, once the full-screen view closes.
     await expect(page.locator('#pl-results-h'), 'the same list is still open').toHaveText('Website')
     expect(urlOf(page).search, 'the normal address carries no flag').toBe('')
     expect(urlOf(page).pathname + urlOf(page).hash).toBe(`${ROUTE}#website`)

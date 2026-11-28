@@ -18,7 +18,7 @@
 // EVERY CLAIM IN IT WAS CHECKED against the code rather than imagined, because
 // the one rule that still holds absolutely is the last paragraph of this
 // header: no invented biography. So the note says he builds it alone in
-// Brisbane (which AppFooter.jsx has said since before this file existed) and
+// Brisbane (which the site footer has said since before this file existed) and
 // nothing else about him. What it says about the PRODUCT is checkable: the tool
 // list is the Create groups, "saving and downloading need a free account" is
 // useExportGate.js, and "the Pro plan is how you can back it" matches the
@@ -84,7 +84,7 @@ export const FOUNDER_NOTE = {
 /**
  * How the note is signed.
  *
- * Both facts are already public in the app — AppFooter.jsx has read "Built in
+ * Both facts are already public in the app — the site footer has read "Built in
  * Brisbane by Dylan Coleman" since before this note existed — so neither is
  * something this file invented. Nothing else about him is asserted in here,
  * which is the point: the biography is his to give, not ours to guess.
