@@ -206,11 +206,12 @@ test.describe('on a 390x844 phone', () => {
 // The wall is still
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('the wall of samples holds still', () => {
-  // MUTATION: give .pw-col in auth.css or v3-pro-auth.css an `animation: auth-drift 40s linear infinite`.
-  //   The drift count goes above 0.
+test.describe('the wall of samples drifts, and holds still for reduced motion', () => {
+  // MUTATION: delete the `html:not([data-reduced-motion="false"]) .pw .pw-col{animation:none}` rule
+  //   in the prefers-reduced-motion block of v3-pro-auth.css. The drift count goes above 0.
   test('nothing drifts, there is no pause button, and the tiles are real pictures', async ({ page }) => {
     watch(page, 'visitor on a wide screen who dislikes motion')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/login')
     await expect(page.locator('aside.pf-wall .pw-tile').first()).toBeVisible()
@@ -218,6 +219,21 @@ test.describe('the wall of samples holds still', () => {
     expect(await driftStates(page), 'a column drifts').toEqual([])
     await expect(page.locator('.aw-pause, aside.pf-wall button'), 'the still wall carries a control').toHaveCount(0)
     await expect(page.locator('aside.pf-wall [data-pro-wall]')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  // MUTATION: in ProWall.jsx drop `inert` from the copy, or in v3-pro-auth.css delete
+  //   `.pw:hover .pw-col{animation-play-state:paused}`.
+  test('seven columns drift with an inert second copy, and hover pauses them', async ({ page }) => {
+    watch(page, 'visitor on a wide screen')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/login')
+    await expect(page.locator('aside.pf-wall .pw-col')).toHaveCount(7)
+    const sets = page.locator('aside.pf-wall .pw-col > .pw-set')
+    expect(await sets.count(), 'each column holds its tiles twice').toBe(14)
+    await expect(page.locator('aside.pf-wall .pw-col > .pw-set[inert][aria-hidden="true"]')).toHaveCount(7)
+    expect(await driftStates(page), 'seven columns drift').toEqual(Array(7).fill('running'))
+    await page.locator('aside.pf-wall').hover({ position: { x: 100, y: 450 } })
+    await expect.poll(() => driftStates(page)).toEqual(Array(7).fill('paused'))
   })
 })
 

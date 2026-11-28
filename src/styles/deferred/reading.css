@@ -158,9 +158,6 @@ html[data-reduced-motion="true"] [data-reveal]{animation:none!important;opacity:
 .nf :focus-visible{outline:2px solid var(--focus-ink);outline-offset:3px}
 html[data-reduced-motion="true"] .nf .nf-card::after{transition:none;transform:translateY(-50%)!important}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .nf .nf-card::after{transition:none;transform:translateY(-50%)!important}}
-/* The guide 404 sits inside the reading shell, whose footer is a lighter surface
-   than the page. A dead end is a plain page, so its footer takes the page ground. */
-body:has(.nf) .app-footer{background:var(--bg-0)}
 
 /* The error level used to carry a red border on its own card. It is a row in
    .notice-stack now, so the strip's own bottom edge is what reddens: one line

@@ -141,7 +141,7 @@ test.describe('Discover: what is ready today', () => {
     watch(page, 'a designer moving from the libraries to the guides')
     await go(page, '/discover')
     // The footer is on this page now (it was off).
-    // MUTATION: remove '/discover' from FOOTER_ROUTES and there is no footer to use.
+    // MUTATION: drop <SpectrumFooter /> from the Discover/Learn branch of App.jsx and there is no footer to use.
     const foot = page.getByRole('contentinfo')
     await expect(foot).toBeVisible()
     await foot.getByRole('link', { name: 'Learn', exact: true }).click()
@@ -415,15 +415,19 @@ test.describe('Discover: what is ready today', () => {
     expect(await audit()).toEqual([])
   })
 
-  test('12. the footer is on the two indexes and still off the libraries beside them', async ({ page }) => {
+  test('12. the footer is on the two indexes and on the libraries beside them, and it is the V3 footer', async ({ page }) => {
     watch(page, 'a visitor looking for the footer')
-    await go(page, '/discover')
-    await expect(page.getByRole('contentinfo')).toBeVisible()
-    await go(page, '/learn')
-    await expect(page.getByRole('contentinfo')).toBeVisible()
-    // The footer stays off app pages (src/components/nav/footerRoutes.js).
-    await go(page, '/discover/palettes')
-    await expect(page.getByRole('contentinfo')).toHaveCount(0)
+    // One footer per page, the V3 one: the "Save time" line over the Spectrum link columns,
+    // and none of the retired app footer's markup.
+    // MUTATION: put <AppFooter /> back, or drop <SpectrumFooter /> from the app shell in App.jsx,
+    // and a library below fails on the count, the class or the line.
+    for (const route of ['/discover', '/learn', '/discover/palettes', '/discover/gradients']) {
+      await go(page, route)
+      await expect(page.getByRole('contentinfo'), route).toHaveCount(1)
+      await expect(page.locator('footer.sp-footer'), route).toHaveCount(1)
+      await expect(page.locator('footer.sp-footer .sp-footer-say'), route).toHaveText('Save time, and save your mind.')
+      await expect(page.locator('.app-footer'), route).toHaveCount(0)
+    }
   })
 
   test('13. the four picks change from one day to the next and hold within a day', async ({ page }) => {

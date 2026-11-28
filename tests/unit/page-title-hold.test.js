@@ -4,7 +4,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { holdPageTitle, resolveRouteTitle } from '../../src/utils/pageTitle.js'
-import { footerShowsOn } from '../../src/components/nav/footerRoutes.js'
 
 globalThis.document = { title: '' }
 
@@ -40,9 +39,3 @@ test('a release that was already replaced by a newer hold changes nothing', () =
   assert.equal(resolveRouteTitle('Route'), 'Route')
 })
 
-test('the expired-link address wears the site footer, whatever the case or trailing slash', () => {
-  for (const path of ['/reset-password', '/reset-password/', '/RESET-PASSWORD']) {
-    assert.equal(footerShowsOn(path), true, path)
-  }
-  assert.equal(footerShowsOn('/settings'), false)
-})

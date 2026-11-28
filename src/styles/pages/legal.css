@@ -247,7 +247,7 @@
 /* Links inside a clause. Underlined at rest — on a legal page, a reader
  * skimming for an obligation should be able to see which words are links
  * without hovering every line, and on touch there is no hover at all. Same
- * recipe AppFooter and SpectrumFooter use for the one link that leaves the
+ * recipe SpectrumFooter uses for the one link that leaves the
  * app: 70% of the current ink, 3px down, full strength on hover.
  *
  * --accent-text, NOT --accent-strong. global.css paints .storage-key in

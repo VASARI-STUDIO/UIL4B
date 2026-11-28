@@ -146,7 +146,7 @@ export const CREATE_HOMES_THAT_RENDER = Object.freeze([])
 //
 // The fact above says which homes are real pages. This is what a link is
 // supposed to do about it, and it exists because two surfaces were getting it
-// wrong by hand: AppFooter.jsx pointed "Imagery" at /create/imagery, and the
+// wrong by hand: the old app footer pointed "Imagery" at /create/imagery, and the
 // homepage tools grid linked every category head at `group.home` — four of the
 // six only bounce. CreateTool.jsx then 302s the visitor to the group first
 // tool, so the click cost a navigation to arrive where a direct link would have

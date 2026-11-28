@@ -63,7 +63,8 @@ export function Art({ row }) {
     case 'pair': {
       const p = G.pairs[row.id]
       const alt = t('auth.wall.pairAlt', { heading: p.heading.family, body: p.body.family })
-      return <img className="aw-img" src={`${row.asset}-${theme === 'dark' ? 'dark' : 'light'}.webp`} width="600" height="400" alt={alt} decoding="async" />
+      const file = `${row.id}-${theme === 'dark' ? 'dark' : 'light'}.webp`
+      return <img className="aw-img" src={`${row.asset}-${theme === 'dark' ? 'dark' : 'light'}.webp`} width="600" height={G.assets[file]?.height ?? 400} alt={alt} decoding="async" />
     }
     case 'guide':
       return <img className="aw-img" src={row.asset} width="600" height="270" alt={t('auth.wall.guideAlt', { name: row.name })} decoding="async" />
