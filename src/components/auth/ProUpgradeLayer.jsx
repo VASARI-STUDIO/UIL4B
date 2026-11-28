@@ -6,8 +6,9 @@ import useModalDialog from '../../hooks/useModalDialog'
 import { usePriceRetry, usePrices, useProPrice } from '../../hooks/usePrices'
 import { formatMoney } from '../../config/planLadder'
 import {
-  DEFAULT_BILLING, canCheckout, perMonth, priceState, priceStateCopy, resolveOffers,
+  canCheckout, perMonth, priceState, priceStateCopy, resolveOffers,
 } from '../../config/planFacts'
+import { buildLedger } from '../../utils/planLedger'
 import { readPick } from '../../utils/kitGalleryPick'
 import { beginProSignup, endProSignup } from '../../utils/proSignupFlow'
 import AuthForm from './AuthForm'
@@ -41,22 +42,15 @@ function PlanStep({ cadence, onCadence, account, onDone, onKeep }) {
   useEffect(() => { titleRef.current?.focus() }, [])
 
   const unit = offer.months === 12 ? 'year' : 'month'
-  const noTrial = offers.find((o) => !o.trialDays)
-  const best = offers.find((o) => o.id === DEFAULT_BILLING)
-  let line1
+  let line1 = ''
   let line2 = ''
-  if (live) {
-    line1 = offer.trialDays
-      ? t('auth.proAuth.freeThen', { days: offer.trialDays, total: money(offer.total), unit })
-      : t('auth.proAuth.billedMonthly', { label: offer.label })
-    if (offer.trialDays && noTrial?.total != null) line2 = t('auth.proAuth.monthlyNoTrial', { total: money(noTrial.total) })
-    else if (!offer.trialDays && best?.total != null && best.id !== offer.id) {
-      line2 = t('auth.proAuth.worksOut', { label: best.label, amount: money(perMonth(best.total, best.months)) })
-    }
-  } else {
+  if (!live) {
     line1 = copy.line1 || ''
     line2 = copy.line2 || ''
   }
+  const ledger = live
+    ? buildLedger({ months: offer.months, trialDays: offer.trialDays, total: offer.total, now: new Date(), locale: undefined, money })
+    : null
 
   const onKey = (event, index) => {
     const step = SEG_KEYS[event.key]
@@ -102,13 +96,36 @@ function PlanStep({ cadence, onCadence, account, onDone, onKeep }) {
       {live && (
         <p className="pl-fig">
           <span className="pl-fig-n">{money(offer.total)}</span>
-          <span className="pl-fig-u">{'a ' + unit}</span>
+          <span className="pl-fig-u">
+            {unit === 'year'
+              ? t('auth.proAuth.figYear', { perMonth: money(perMonth(offer.total, 12)) })
+              : t('auth.proAuth.figMonth')}
+          </span>
         </p>
       )}
-      <div className="pl-lines" aria-live="polite">
-        {line1 && <p>{line1}</p>}
-        {line2 && <p>{line2}</p>}
-      </div>
+      {ledger ? (
+        <div aria-live="polite" aria-atomic="true">
+          <div className="pl-ledger" role="group" aria-label={t('auth.proAuth.ledgerLabel')}>
+            {ledger.rows.map((row) => (
+              <div className="pl-row" key={row.id}>
+                <span className="pl-when">{row.when || t('auth.proAuth.ledgerToday')}</span>
+                <span className="pl-what">{t('auth.proAuth.' + row.textKey)}</span>
+                <span className="pl-amt">{row.amount}</span>
+              </div>
+            ))}
+          </div>
+          <p className="pl-cancel">
+            {ledger.cancelDate
+              ? t('auth.proAuth.cancelYearly', { date: ledger.cancelDate })
+              : t('auth.proAuth.cancelMonthly')}
+          </p>
+        </div>
+      ) : (
+        <div className="pl-lines" aria-live="polite">
+          {line1 && <p>{line1}</p>}
+          {line2 && <p>{line2}</p>}
+        </div>
+      )}
       {showAction && (
         <button
           type="button"
@@ -120,8 +137,10 @@ function PlanStep({ cadence, onCadence, account, onDone, onKeep }) {
           {actionLabel}
         </button>
       )}
-      {live && <p className="pl-fine">{t('auth.proAuth.stripe')}</p>}
-      <button type="button" className="pl-keep" onClick={onKeep}>{t('auth.proAuth.keepFree')}</button>
+      <div className="pl-foot">
+        <button type="button" className="pl-keep" onClick={onKeep}>{t('auth.proAuth.keepFree')}</button>
+        {live && <span className="pl-stripe">{t('auth.proAuth.stripe')}</span>}
+      </div>
     </div>
   )
 }

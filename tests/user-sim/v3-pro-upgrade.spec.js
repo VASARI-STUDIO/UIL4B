@@ -219,7 +219,7 @@ for (const size of SIZES) {
       await expect(layer.locator('.auth-sub')).toHaveText(/^Logged in as \S+@\S+\.\S+\.$/)
       await expect(layer.getByRole('button', { name: 'Back to plans' })).toBeVisible()
       await expect(layer.getByRole('button', { name: 'Not now, keep Free' })).toBeVisible()
-      await expect(layer.locator('.pl-fine')).toHaveText('Secure checkout by Stripe.')
+      await expect(layer.locator('.pl-stripe')).toHaveText('Secure checkout by Stripe')
     })
 
     test('7 the plan step: Yearly is picked, the arrow keys change the cadence and the price, the lines say what happens', async ({ page }) => {
@@ -233,9 +233,11 @@ for (const size of SIZES) {
       await expect(yearly).toHaveAttribute('aria-checked', 'true')
       await expect(monthly).toHaveAttribute('aria-checked', 'false')
       await expect(layer.locator('.pl-fig-n')).toContainText('48')
-      await expect(layer.locator('.pl-fig-u')).toHaveText('a year')
-      await expect(layer.locator('.pl-lines')).toContainText(/Free for 7 days, then .*48.* a year\./)
-      await expect(layer.locator('.pl-lines')).toContainText(/Monthly is .*7.* a month, with no free trial\./)
+      await expect(layer.locator('.pl-fig-u')).toHaveText(/^a year, or .*4.* a month$/)
+      const ledger = layer.getByRole('group', { name: 'What you pay and when' })
+      await expect(ledger.locator('.pl-row')).toHaveCount(3)
+      await expect(ledger).toContainText('First charge, then yearly')
+      await expect(layer.locator('.pl-lines')).toHaveCount(0)
       await expect(layer.locator('.pl-go')).toHaveText('Start 7-day free trial')
 
       await yearly.focus()
@@ -244,7 +246,8 @@ for (const size of SIZES) {
       await expect(monthly, 'the arrow key moves focus with the choice').toBeFocused()
       await expect(layer.locator('.pl-fig-n')).toContainText('7')
       await expect(layer.locator('.pl-fig-u')).toHaveText('a month')
-      await expect(layer.locator('.pl-lines')).toContainText('Billed monthly. No free trial on Monthly; billing starts today.')
+      await expect(layer.getByRole('group', { name: 'What you pay and when' }).locator('.pl-row')).toHaveCount(2)
+      await expect(layer.locator('.pl-cancel')).toHaveText('Cancel in Settings any time. Pro stays until the paid month ends.')
       await expect(layer.locator('.pl-go')).toHaveText('Upgrade to Pro')
       await page.keyboard.press('ArrowLeft')
       await expect(yearly).toHaveAttribute('aria-checked', 'true')
