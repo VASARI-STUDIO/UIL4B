@@ -43,8 +43,8 @@ export const SHOWCASE = {
   'applications.social.3': 'First chapter free.',
   'applications.card.person': 'Ellen Ward',
   'applications.card.role': 'Editor',
-  'applications.card.contact': 'ellen@margin.press',
-  'contact.email': 'design@margin.press',
+  'applications.card.contact': 'ellen@margin.example',
+  'contact.email': 'design@margin.example',
   // lines a page writes itself (read with a fallback)
   'page.cover.line': 'Brand guidelines. Version 1.0, November 2026.',
   'page.mark.idea': 'The mark is the wordmark set tight, the way a title sits on a spine.',
@@ -55,7 +55,7 @@ export const SHOWCASE = {
   'page.web.hero': 'Leave room for the reader.',
   'page.web.button': 'Read the first chapter',
   'page.contact.headline': 'Ask before you change the mark.',
-  'page.contact.body': 'Send the file and where it will run to design@margin.press. Version 1.0, November 2026.',
+  'page.contact.body': 'Send the file and where it will run to design@margin.example. Version 1.0, November 2026.',
 };
 
 const PAGE = /^page\./;
