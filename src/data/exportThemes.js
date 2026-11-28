@@ -27,7 +27,7 @@ export const EXPORT_THEMES = Object.freeze([
   // The Free pair. Guidelines-only themes: they have slides and nothing else, and those are free.
   Object.freeze({ id: '25-label', name: 'Label', rows: Object.freeze(['slides', 'guide']), free: true }),
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', rows: Object.freeze(['slides', 'guide']), free: true }),
-  Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', rows: Object.freeze(['slides', 'guide']), free: true }),
+  Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', rows: Object.freeze(['slides', 'guide']), free: true, pages: Object.freeze(['16x9', 'a4-portrait']) }),
 ])
 
 // Each row and the file formats it can download in. The UI kit is one zip; the book and the slides come as a page to print or a zip.
@@ -38,6 +38,23 @@ export const THEME_ROW_FORMATS = Object.freeze({
   // The themed style guide: A4 pages to print, a zip of the pages, fonts and style-guide.md, or the markdown alone.
   guide: Object.freeze(['pdf', 'html', 'md']),
 })
+
+// The page sizes a request may ask for (the optional `page` field), in CSS pixels. A theme offers the ones it can draw in `pages` on its
+// table entry (the server checks that list before it loads the theme) and in `meta.pages`, which the engine reads; a unit test holds the two
+// together. A request with no `page` gets the theme's own size.
+export const EXPORT_PAGES = Object.freeze({
+  '16x9': Object.freeze({ w: 1280, h: 720 }),
+  'a4-portrait': Object.freeze({ w: 794, h: 1123 }),
+  'a4-landscape': Object.freeze({ w: 1123, h: 794 }),
+})
+
+export const isExportPage = (page) => typeof page === 'string' && Object.hasOwn(EXPORT_PAGES, page)
+
+/** True when the theme can draw the page size. A theme with no `pages` list offers none. */
+export function themeHasPage(theme, page) {
+  const t = EXPORT_THEMES.find((x) => x.id === theme)
+  return Boolean(t) && isExportPage(page) && Array.isArray(t.pages) && t.pages.includes(page)
+}
 
 // Rows a theme has only when it opts in: by a rows list that names them, or by `extraRows` on a theme with no rows list (which keeps every
 // other row). The style guide is drawn by a theme's own lane (lane-guide.js), so a theme without one must not be offered it. Gating follows

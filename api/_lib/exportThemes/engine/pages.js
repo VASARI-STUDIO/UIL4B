@@ -5,6 +5,7 @@ import { pageSizeMap, largestSize } from './doc.js';
 import { applyPlaceholders } from './placeholders.js';
 import { addMockups } from './mockup.js';
 import { BRANDS } from '../brands/index.js';
+import { EXPORT_PAGES } from '../../../../src/data/exportThemes.js';
 
 // The fixed page-id lists for the two documents. Order is the order in the PDF.
 // A theme implements guidelines[id] / uikit[id] for every id. `section` is null for front matter.
@@ -77,6 +78,7 @@ function fallbackShots(ctx, T) {
 // The context a theme renders from: the brand loaded and measured, its logo and components, the page list with numbers
 // and section references. T is the theme module, kind 'guidelines' or 'uikit', loaders the reads the engine may make
 // (fontFile, icon, logoPlugin). data is the brand's data; it defaults to the sample brand the theme is written for.
+// opts.page (a key of EXPORT_PAGES, src/data/exportThemes.js) sets ctx.size for every kind; a theme that does not list it in meta.pages refuses it.
 // opts.skeleton (a plan that is not Pro, set by the route and never read from a request) sets ctx.skeleton: a theme with a shorter edition for it draws that one.
 export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].data, opts = {}) {
   // a theme may re-tone a status of the slot edition's generated brand (meta.statusTones { id: tone }): the brand's own action colour can be a
@@ -96,8 +98,13 @@ export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].d
   const list = kind === 'uikit' ? UIKIT_PAGES : kind === 'guide' ? STYLE_PAGES : GUIDE_PAGES;
   const nos = numberPages(list, (T.meta.extraPages && T.meta.extraPages[kind]) || {});
   ctx.size = kind === 'uikit' ? (T.meta.uikitPage || T.meta.guidelinesPage) : kind === 'guide' ? (T.meta.guidePage || STYLE_PAGE_SIZE) : T.meta.guidelinesPage;
-  // a page may have its own size (meta.pageSizes { id: [w, h] }): ctx.sizeOf(id) is that page's size, ctx.maxSize the viewport that fits them all
-  const own = kind === 'guide' ? {} : pageSizeMap(T.meta);
+  if (opts.page !== undefined) {
+    if (!(Array.isArray(T.meta.pages) && Object.hasOwn(EXPORT_PAGES, opts.page) && T.meta.pages.includes(opts.page))) throw new Error(`theme does not draw page size ${String(opts.page)}`);
+    ctx.size = { ...EXPORT_PAGES[opts.page] };
+  }
+  // a page may have its own size (meta.pageSizes { id: [w, h] }): ctx.sizeOf(id) is that page's size, ctx.maxSize the viewport that fits them all.
+  // A size asked for by the request is one size for every page, so a page's own size does not apply.
+  const own = kind === 'guide' || opts.page !== undefined ? {} : pageSizeMap(T.meta);
   ctx.pageSizes = own; ctx.sizeOf = (id) => own[id] || ctx.size; ctx.maxSize = largestSize(ctx.size, own);
   // a guide theme's own order numbers the pages by reading order; its extras follow the seven
   if (kind === 'guide') { if (typeof T.guide?.order === 'function') guideOrder(T, edition, ctx).forEach((id, i) => { nos[id] = i + 1; }); else guideOrder(T, edition, ctx).slice(list.length).forEach((id, i) => { nos[id] = list.length + 1 + i; }); }
