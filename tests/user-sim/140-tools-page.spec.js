@@ -83,7 +83,7 @@ test.describe('/tools content', () => {
     const card = page.locator('.mk-card[data-tool="palette"]')
     const ramp = card.locator('.mk-ramp li').first()
     const before = await ramp.evaluate((el) => getComputedStyle(el).backgroundColor)
-    await card.getByRole('button', { name: 'Cobalt seed' }).click()
+    await card.getByRole('button', { name: 'Signal seed' }).click()
     await expect.poll(() => ramp.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
     await page.getByRole('button', { name: 'Ratio 1.333' }).click()
     await expect(page.getByRole('button', { name: 'Ratio 1.333' })).toHaveAttribute('aria-pressed', 'true')
@@ -177,9 +177,17 @@ test.describe('/tools content', () => {
     }
   })
 
+  test('the page opens on the blue Cobalt seed, in the hero and the Palette card', async ({ page }) => {
+    await go(page, '/tools')
+    // Mutation: SEED_START back to 'Signal' in SpectrumTools.jsx -> the orange seed is pressed.
+    await expect(page.locator('.mk-pal').getByRole('button', { name: 'Cobalt seed' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.mk-card[data-tool="palette"]').getByRole('button', { name: 'Cobalt seed' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   test('the Signal ramp is the board orange, not salmon', async ({ page }) => {
     await go(page, '/tools')
     const card = page.locator('.mk-card[data-tool="palette"]')
+    await card.getByRole('button', { name: 'Signal seed' }).click()
     await expect(card.getByRole('button', { name: 'Signal seed' })).toHaveAttribute('aria-pressed', 'true')
     // Mutation: put Signal back to its old salmon h / c in spectrumKit.js -> the 400 step is a paler salmon.
     const hexes = await card.locator('.mk-ramp li span').allInnerTexts()
