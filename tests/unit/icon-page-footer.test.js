@@ -19,15 +19,16 @@ test('only the Icon and Emoji libraries add the licence notice to the footer', (
   }
 })
 
-test('every page and tool wears SpectrumFooter, and the old app footer is gone', () => {
+test('app pages and the Icon and Emoji libraries wear SpectrumFooter, other tools wear none, and the old app footer is gone', () => {
   assert.ok(!fs.existsSync('src/components/AppFooter.jsx'), 'AppFooter.jsx is back')
   const app = stripComments(read('src/App.jsx'))
   // The app shell (every account, library, legal and system page) and the two surface indexes.
   assert.equal((app.match(/<SpectrumFooter \/>/g) || []).length, 2, 'App.jsx should mount SpectrumFooter in the shell and on the indexes')
   assert.ok(app.includes('{!fullScreen && <SpectrumFooter />}'), 'the shell footer is no longer dropped only for the full-screen view')
-  // Every Create tool: the footer is unconditional, and the notice is the only thing that varies.
+  // Create tools fill the screen and end without a footer; the Icon and Emoji libraries end with it.
   const tool = stripComments(read('src/pages/CreateTool.jsx'))
-  assert.match(tool, /<SpectrumFooter notice=\{carriesCredits \? <IconCredits/, 'CreateTool no longer mounts SpectrumFooter for every tool')
+  assert.match(tool, /\{carriesCredits && <SpectrumFooter notice=\{<IconCredits/, 'CreateTool no longer mounts SpectrumFooter on the Icon and Emoji libraries only')
+  assert.equal((tool.match(/<SpectrumFooter/g) || []).length, 1, 'CreateTool mounts a second footer')
   for (const file of fs.readdirSync('src', { recursive: true })) {
     if (!/\.jsx?$/.test(file)) continue
     assert.ok(!/AppFooter/.test(stripComments(read(`src/${file}`))), `${file} still uses AppFooter`)
