@@ -22,7 +22,7 @@ import * as T from '../../api/_lib/exportThemes/themes/33-flyleaf/index.js'
 const FONTS = { heading: { family: 'Barlow Condensed', weight: 700, category: 'sans-serif' }, body: { family: 'Roboto', weight: 400, category: 'sans-serif' } }
 const design = { palette: { base: '#2E7BB8', harmony: 'auto', colors: ['#2E7BB8', '#06070A', '#F2B544', '#EEF3F8'] }, fonts: FONTS }
 const E = await loadEngine()
-const ids = (html) => [...html.matchAll(/data-page="([a-z]+)"/g)].map((m) => m[1])
+const ids = (html) => [...html.matchAll(/data-page="([a-z0-9-]+)"/g)].map((m) => m[1])
 const make = (row, format, page) => renderThemeExport({ theme: '33-flyleaf', row, format, design, projectName: 'Kerbside', ...(page === undefined ? {} : { page }) }, E)
 const ROWS = [['slides', 'pdf'], ['guide', 'pdf']]
 

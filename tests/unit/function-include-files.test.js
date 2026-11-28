@@ -78,6 +78,8 @@ const includeFilesGlob = () => vercel.functions?.['api/ai.js']?.includeFiles || 
 
 /** The one alternative outside src/ and public/: the export themes' own font folder (`*` or `**`; the folder is flat). */
 const EXPORT_THEME_FONTS = /^api\/_lib\/exportThemes\/fonts\/\*{1,2}$/
+/** The other: Flyleaf's photographs, read with fs from its own folder (one folder, one extension, so the glob stays tight). */
+const FLYLEAF_PHOTOS = 'api/_lib/exportThemes/themes/33-flyleaf/01_photos/*.jpg'
 
 /**
  * Expands brace groups, nested or not:
@@ -165,7 +167,7 @@ function bundledByArea(area) {
   const all = expandBraces(glob)
   for (const a of all) {
     // The export themes read their font files from disk by name, so their folder is named whole (checked by its own test below).
-    if (EXPORT_THEME_FONTS.test(a)) continue
+    if (EXPORT_THEME_FONTS.test(a) || a === FLYLEAF_PHOTOS) continue
     assert.match(a, /^(src|public)\//, `includeFiles is "${glob}", which has an alternative outside src/ and public/ — this file cannot read it`)
   }
   const files = all.filter((a) => a.startsWith(`${area}/`)).map((a) => a.slice(area.length + 1)).flatMap((rel) => expandStars(rel, area))
@@ -463,6 +465,31 @@ test('includeFiles carries the export themes font folder, and the loader reads t
   assert.ok(files.some((f) => f.endsWith('.ttf')) && files.some((f) => f.endsWith('.woff2')), 'the font folder has no .ttf and .woff2 files')
   const loader = fs.readFileSync(path.join(root, 'api', '_lib', 'exportThemes', 'node-loaders.js'), 'utf8')
   assert.match(loader, /new URL\('\.\/fonts\/', import\.meta\.url\)/, 'the loader reads fonts from somewhere other than the folder includeFiles names')
+})
+
+// Flyleaf reads its photographs with fs (photos.js), which the file tracer does not follow, so a photo the glob misses passes locally and
+// fails in the deploy ("That file didn't build"). Every file the theme can read must be matched, and nothing else in the folder is.
+test('includeFiles carries every photograph and light layer Flyleaf can read, and nothing broader', async () => {
+  const alternatives = expandBraces(includeFilesGlob()).filter((a) => a === FLYLEAF_PHOTOS)
+  assert.equal(alternatives.length, 1, `includeFiles must name ${FLYLEAF_PHOTOS} exactly once`)
+  const dir = path.join(root, 'api', '_lib', 'exportThemes', 'themes', '33-flyleaf', '01_photos')
+  const onDisk = fs.readdirSync(dir)
+  const { PHOTOS } = await import('../../api/_lib/exportThemes/themes/33-flyleaf/photos.js')
+  const { QUADS } = await import('../../api/_lib/exportThemes/themes/33-flyleaf/mockups.js')
+  const readable = new Set(Object.values(PHOTOS).map((p) => p[0]))
+  for (const [img, areas] of Object.entries(QUADS)) for (const area of Object.keys(areas)) {
+    readable.add(`light-${img}-${area}.jpg`)
+    if (area === 'screen') readable.add(`glare-${img}-${area}.jpg`)
+  }
+  assert.ok(readable.size >= 18, 'the readable set is built from the theme itself')
+  const glob = new RegExp(`^${FLYLEAF_PHOTOS.split('/').pop().replace(/\./g, '\\.').replace(/\*/g, '[^/]*')}$`)
+  for (const f of readable) {
+    assert.ok(onDisk.includes(f), `${f} can be read by the theme but is not in 01_photos`)
+    assert.match(f, glob, `${f} is not matched by the includeFiles glob`)
+  }
+  assert.deepEqual(onDisk.filter((f) => !readable.has(f)), [], 'a file in 01_photos the theme never reads is shipped for nothing')
+  assert.ok(onDisk.every((f) => glob.test(f)), 'every file in 01_photos is matched by the glob')
+  assert.ok(!glob.test('notes.md') && !glob.test('sub/x.jpg'), 'the glob stays on .jpg files of that one folder')
 })
 
 test('CONTROL: an alternative outside src/, public/ and the export themes font folder is still refused', () => {
