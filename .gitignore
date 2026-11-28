@@ -129,3 +129,14 @@ brand/email/
 scripts/design-md.mjs
 tests/unit/claude-md-external-assets.test.js
 tests/unit/design-md-mirrors-css.test.js
+
+# Local working files that live beside the source but are never published.
+# tests/unit/local-paths-untracked.test.js fails if any of them is tracked.
+/handover/
+/memory/
+/_qa_*
+/qa-*
+/qa*.mjs
+/.claude-*.log
+/*.png
+/x
