@@ -91,6 +91,11 @@ test.describe('the upgrade button, reached from a marketing page', () => {
     await expect(page).toHaveURL(/\/plans$/)
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=yearly')
     await proCta(page).click()
+    // A signed-in free account opens the layer on its plan step; its button leaves for checkout.
+    const layer = page.locator('[data-pro-layer]')
+    await expect(layer).toHaveAttribute('data-step', '3')
+    await expect(page).toHaveURL(/\/plans\?up=3$/)
+    await layer.locator('.pl-go').click()
     await expect(page).toHaveURL(/\/checkout\?plan=yearly$/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })

@@ -92,8 +92,18 @@ test.describe('desktop, 1440', () => {
     await ctx.close()
   })
 
-  test('the pill opens /plans with the cadence and the gate, and shows the busy state', async ({ browser }) => {
+  test('the trial pill closes the popup and opens the sign-up layer on the plan step', async ({ browser }) => {
     const { ctx, page, dialog } = await open(browser, DESK)
+    await pillOf(dialog).click()
+    await expect(page.locator('[data-pro-layer]')).toHaveAttribute('data-step', '3')
+    await expect(page).toHaveURL(/\/create\/palette\?up=3$/)
+    await expect(page.getByRole('dialog', { name: TITLE }), 'the popup stayed up under the layer').toHaveCount(0)
+    await ctx.close()
+  })
+
+  test('a plan without a trial leaves for /plans and the pill shows the busy state', async ({ browser }) => {
+    const { ctx, page, dialog } = await open(browser, DESK)
+    await dialog.locator('[data-seg="monthly"]').click()
     const pill = pillOf(dialog)
     await pill.click()
     await expect(pill).toHaveText('Opening plans…')
@@ -101,7 +111,7 @@ test.describe('desktop, 1440', () => {
     await expect(pill).toHaveAttribute('aria-disabled', 'true')
     expect(await pill.evaluate((el) => el.disabled), 'a busy pill is never disabled').toBe(false)
     await expect(pill, 'a busy pill keeps focus').toBeFocused()
-    await page.waitForURL(/\/plans\?plan=yearly&gate=palette-harmony-system/)
+    await page.waitForURL(/\/plans\?plan=monthly&gate=palette-harmony-system/)
     await ctx.close()
   })
 
@@ -190,6 +200,8 @@ test.describe('closing, focus and the keyboard', () => {
     // its own, so the history entry is not written: the location stays put and
     // the pill stays busy until its give-up timer, long after these checks.
     await page.evaluate(() => { window.history.pushState = () => {} })
+    // Only a plan without a trial leaves for /plans and goes busy.
+    await dialog.locator('[data-seg="monthly"]').click()
     await pillOf(dialog).click()
     await expect(pillOf(dialog)).toHaveAttribute('aria-busy', 'true')
     await page.keyboard.press('Escape')
@@ -284,10 +296,11 @@ for (const size of [[390, 844], [320, 568]]) {
       await ctx.close()
     })
 
-    test('the pill still opens /plans with the gate', async ({ browser }) => {
+    test('the trial pill still opens the sign-up layer', async ({ browser }) => {
       const { ctx, page, dialog } = await open(browser, size)
       await pillOf(dialog).click()
-      await page.waitForURL(/\/plans\?plan=yearly&gate=palette-harmony-system/)
+      await expect(page.locator('[data-pro-layer]')).toHaveAttribute('data-step', '3')
+      await expect(page).toHaveURL(/\/create\/palette\?up=3$/)
       await ctx.close()
     })
 

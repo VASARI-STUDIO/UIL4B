@@ -7,7 +7,7 @@ import { FreeList, ProList } from '../components/home/PlanLists'
 import { PLAN_ICON_PATHS, bandHue } from '../components/home/planListArt'
 import { GoArrow, PlanFigure } from '../components/plans/PlanParts'
 import { useAuth } from '../contexts/AuthContext'
-import useProUpgradeLayer from '../hooks/useProUpgradeLayer'
+import { useProLayer } from '../contexts/ProLayerContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { usePriceRetry, usePrices, useProPrice } from '../hooks/usePrices'
@@ -205,20 +205,19 @@ export default function Pricing() {
   const freeAmount = money(0)
 
   // THE PRO CTA IS THE REAL CHECKOUT WIRING. Every paid button links to
-  // /checkout for the chosen cadence. Signed in, the click follows the link.
-  // Signed out, the login popup opens over this page and, once the visitor has
-  // an account, carries on to that checkout. `from` makes a new account come
-  // back to the same checkout after onboarding. A modified click (new tab or
+  // /checkout for the chosen cadence. A plain click opens the sign-up layer over
+  // this page: signed out it starts at the account step, signed in at the plan
+  // step, and it hands off to checkout from there. A modified click (new tab or
   // window) keeps the plain link, and /checkout still asks for an account.
-  const proLayer = useProUpgradeLayer({ billing: offer.id })
+  const proLayer = useProLayer()
   const proTo = `/checkout?plan=${offer.checkoutPlan}`
   const proBusy = subLoading || !price.loaded
   const openPro = (event) => {
     if (proBusy) { event.preventDefault(); return }
-    if (user || authLoading) return
+    if (authLoading) return
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
-    proLayer.openLayer()
+    proLayer.openLayer({ billing: offer.id })
   }
   const label = ctaLabel(offer)
 
@@ -711,7 +710,6 @@ export default function Pricing() {
       )}
 
       <SpectrumFooter toolkitTo="/projects" home pageColumn={false} />
-      {proLayer.node}
     </div>
   )
 }

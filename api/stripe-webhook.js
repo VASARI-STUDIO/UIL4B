@@ -20,6 +20,8 @@ import {
   writeSubscriptionForEvent,
 } from './_lib/billing.js'
 
+import { sendTrialReminder } from './_lib/trialReminder.js'
+
 export const config = { api: { bodyParser: false } }
 
 async function buffer(readable) {
@@ -1023,7 +1025,14 @@ async function dispatchStripeEvent(stripe, event, { db = null } = {}) {
       break
     }
     case 'customer.subscription.trial_will_end': {
-      await flagTrialEnding(event.data.object)
+      const subscription = event.data.object
+      await flagTrialEnding(subscription)
+      const uid = subscription.metadata?.firebaseUid || await uidForCustomer(subscription.customer, db)
+      // Stripe sends this event once per trial, so a temporary mail failure is
+      // thrown: the event is released and Stripe delivers it again.
+      if (uid && await sendTrialReminder(subscription, uid, { db: db || adminDb(), stripe }) === 'retry') {
+        throw new Error('trial reminder: mail provider unavailable, retry')
+      }
       break
     }
   }
