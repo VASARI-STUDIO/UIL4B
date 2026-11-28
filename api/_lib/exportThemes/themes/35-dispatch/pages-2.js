@@ -3,7 +3,7 @@
 // LP label proportion (palette), BY bays (tints), RD reading distance (pairs), DK docket (values).
 // Kerbside's words come from showcase.js through copy(); a fallback here is neutral. A slot is set at its real size as ghost type with one mono note.
 import { ratio, hexToRgb } from '../../engine/color.js';
-import { timeOf, fullFolio, groundsOf, tones, onTone, mix, at, hr, vr, fill, svgAt, field, measure, word, page, n1, codeOf } from './kit.js';
+import { timeOf, fullFolio, groundsOf, tones, onTone, mix, at, hr, vr, fill, svgAt, field, measure, word, page, n1, codeOf, consign } from './kit.js';
 import { copy } from './showcase.js';
 
 export const realOf = (ctx, s) => (typeof ctx.real === 'function' ? ctx.real(s) : String(s));
@@ -223,7 +223,7 @@ export const guidelines = {
     const rh = Math.min(112, Math.floor(448 / cs.length)), Y0 = 196, chip = Math.min(80, rh - 24);
     const cols = hasCmyk ? { hex: 520, rgb: 688, cmyk: 836, ratio: 980 } : { hex: 520, rgb: 704, ratio: 940 };
     const heads = [['Item', 48], ['Colour', 96], ['Use', 192], ['HEX', cols.hex], ['RGB', cols.rgb], hasCmyk ? ['CMYK', cols.cmyk] : null, ['Ratio on White', cols.ratio]].filter(Boolean);
-    const head = hr(48, 48, 1088) + at(48, 62, 300, 36, `<div class="lb">Consignment</div><div class="m13">${E(copy(ctx, 'page.code', 'BRAND00'))}</div>`)
+    const head = hr(48, 48, 1088) + at(48, 62, 300, 36, `<div class="lb">Consignment</div><div class="m13">${E(consign(ctx))}</div>`)
       + vr(352, 62, 34) + at(368, 62, 300, 36, `<div class="lb">Items</div><div class="m13">${cs.length} colours</div>`)
       + vr(672, 62, 34) + at(688, 62, 300, 36, `<div class="lb">Due</div><div class="m13">${timeOf(fullFolio('values'))}</div>`)
       + H1('Values', 48, 104, 400);

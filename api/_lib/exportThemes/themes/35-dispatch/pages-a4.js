@@ -4,7 +4,7 @@
 // nothing is a squeezed 16:9 page, nothing is rotated. Kerbside's words come from showcase.js through copy(); a fallback here is neutral.
 import { ratio, hexToRgb } from '../../engine/color.js';
 import {
-  SECTIONS, fullFolio, timeOf, pad, groundsOf, tones, onTone, markTone, mix, at, hr, vr, fill, svgAt, field, measure, word, ghost, ghostRule, isGhost, PHOTO_NOTE, MARK, codeOf, page, n1,
+  SECTIONS, fullFolio, timeOf, pad, groundsOf, tones, onTone, markTone, mix, at, hr, vr, fill, svgAt, field, measure, word, ghost, ghostRule, isGhost, PHOTO_NOTE, MARK, codeOf, consign, page, n1,
 } from './kit.js';
 import { logoAt, coloursBy, shareSizes, own } from './pages-2.js';
 import { barcodeRects } from './barcode.js';
@@ -48,14 +48,14 @@ function opener(ctx, open) {
 function cover(ctx) {
   const G = groundsOf(ctx), t = tones(ctx, G.primary), M = measure(ctx), E = ctx.esc, slot = slotOn(ctx);
   const ver = String(ctx.versionLine || 'Version 1.0, November 2026');
-  const head = hr(L, 40, CW) + cells([['Consignment', E(copy(ctx, 'page.code', 'BRAND00'))], ['Items', ctx.skeleton ? '7 pages' : '31 pages'], ['Version', E(ver.replace(/^Version\s+/, ''))]]);
+  const head = hr(L, 40, CW) + cells([['Consignment', E(consign(ctx))], ['Items', ctx.skeleton ? '7 pages' : '31 pages'], ['Version', E(ver.replace(/^Version\s+/, ''))]]);
   let mark;
   if (!slot) {
     const g = ctx.logo.geo, s = CW / g.width;
     mark = at(L, 330 - g.cap * s, CW, g.height * s, logoHtml(ctx, 'colour', { width: CW, colourway: 'on-signal' }));
   } else {
-    const size = M.fit('Your wordmark', CW, 300);
-    mark = word(M, L, 330, 'Your wordmark', size, { style: 'color:var(--soft)' }) + at(L, 350, 600, 16, '<span class="nt">Your logo, SVG.</span>');
+    const nm = (typeof ctx.real === 'function' ? ctx.real(ctx.brand.name) : String(ctx.brand.name || '')) || 'Your wordmark', size = M.fit(nm, CW, 300);
+    mark = word(M, L, 330, E(nm), size) + at(L, 350, 600, 16, '<span class="nt">Your logo, SVG, replaces the name.</span>');
   }
   const size = Math.min(M.fit('10:00', 666, 280), M.fit('12:00', 666, 280));
   const a = copy(ctx, 'page.cover.a', ''), b = copy(ctx, 'page.cover.b', '');
@@ -314,7 +314,7 @@ function values(ctx) {
   const G = groundsOf(ctx), g = G.surface, t = tones(ctx, g), E = ctx.esc;
   const cs = coloursBy(ctx), hasCmyk = cs.some((c) => Array.isArray(c.cmyk) && c.cmyk.length === 4);
   const rh = Math.min(148, Math.floor(640 / cs.length)), Y0 = 232, chip = Math.min(72, rh - 28);
-  const head = hr(L, 40, CW) + cells([['Consignment', E(copy(ctx, 'page.code', 'BRAND00'))], ['Items', `${cs.length} colours`], ['Due', timeOf(fullFolio('values'))]]) + H1('Values', L, 108, 400);
+  const head = hr(L, 40, CW) + cells([['Consignment', E(consign(ctx))], ['Items', `${cs.length} colours`], ['Due', timeOf(fullFolio('values'))]]) + H1('Values', L, 108, 400);
   const cap = [['Item', L], ['Colour', 84], ['Use', 168], ['HEX', 440]].map(([l, x]) => at(x, Y0 - 24, 200, 16, `<span class="lb">${l}</span>`)).join('')
     + at(R - 140, Y0 - 24, 140, 16, '<span class="lb" style="display:block;text-align:right">Ratio on White</span>') + hr(L, Y0 - 4, CW);
   const rows = cs.map((c, i) => {

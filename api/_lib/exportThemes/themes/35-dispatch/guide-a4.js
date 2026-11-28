@@ -9,7 +9,7 @@ import { componentsCss } from '../../engine/components.js';
 import { GRADE_NOTE, fontName } from '../../engine/styleguide.js';
 import { barcodeRects } from './barcode.js';
 import { copy } from './showcase.js';
-import { css as kitCss, groundsOf, tones, varsOf, timeOf, pad, at, hr, vr, fill, svgAt, field, measure, word, n1 } from './kit.js';
+import { css as kitCss, groundsOf, tones, varsOf, timeOf, pad, at, hr, vr, fill, svgAt, field, measure, word, n1, consign } from './kit.js';
 import { realOf } from './pages-2.js';
 import { uiOrder, UI_PAGES, NAMES, SHOWS } from './guide-helpers.js';
 
@@ -33,7 +33,7 @@ export function guideCss(ctx) {
 
 // ---- the label: ground, body, the A4 stub at the foot (the page's place in the guide, not in the brand book) ----
 const place = (ctx, id) => { const o = uiOrder(ctx), i = o.indexOf(id); return { n: (i < 0 ? UI_PAGES.indexOf(id) : i) + 1, N: o.length }; };
-const codeOf = (ctx, id) => `${copy(ctx, 'page.code', 'BRAND00')}-G${pad(place(ctx, id).n)}`;
+const codeOf = (ctx, id) => `${consign(ctx)}-G${pad(place(ctx, id).n)}`;
 function stub(ctx, id, t) {
   const { n, N } = place(ctx, id), free = !!ctx.skeleton, G = groundsOf(ctx), g = ctx.logo.geos.symbol, mh = free ? 28 : 32, mw = mh * g.w / g.h;
   const cw = t.ground === G.primary ? 'on-signal' : t.ground === G.panel ? 'on-concrete' : t.ground === G.ink ? 'reversed' : 'colour';
@@ -123,7 +123,7 @@ export const pages = {
   // ---- 1 Cover: the name at the full measure on Signal; the screen on a heavy rule at the foot ----
   cover(ctx) {
     const G = groundsOf(ctx), M = measure(ctx), E = ctx.esc, N = uiOrder(ctx).length, ver = String(ctx.versionLine || 'Version 1.0, November 2026');
-    const cells = [['Consignment', E(copy(ctx, 'page.code', 'BRAND00'))], ['Items', `${N} pages`], ['Version', E(ver.replace(/^Version\s+/, ''))]].map(([l, v], i) => at(L + i * 238 + (i ? 16 : 0), 54, 214, 36, `<div class="lb">${l}</div><div class="m13">${v}</div>`)).join('');
+    const cells = [['Consignment', E(consign(ctx))], ['Items', `${N} pages`], ['Version', E(ver.replace(/^Version\s+/, ''))]].map(([l, v], i) => at(L + i * 238 + (i ? 16 : 0), 54, 214, 36, `<div class="lb">${l}</div><div class="m13">${v}</div>`)).join('');
     const size = Math.max(48, M.fit(own(ctx, ctx.brand.name), CW, 180)), s = 0.5, base = 124 + size * 0.8;
     const rows = [['Pages', `${N}`], ['Sets', 'Light and dark'], ['Size', 'A4 portrait']].map(([l, v], i) => hr(L, 660 + i * 52, 190, i ? 'var(--hair)' : 'var(--ink)', i ? 1 : 4) + at(L, 674 + i * 52, 190, 40, `<div class="lb">${l}</div><div class="m13">${v}</div>`)).join('');
     const body = hr(L, 40, CW) + cells + vr(L + 238, 44, 44) + vr(L + 476, 44, 44) + hr(L, 100, CW)

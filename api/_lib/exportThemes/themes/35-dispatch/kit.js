@@ -107,7 +107,13 @@ export const PHOTO_NOTE = 'Your photograph. Example: your work or your place, in
 export const MARK = { w: 323.61, h: 200, paths: ['M0 0H100V123.61A123.61 123.61 0 0 0 126.43 200H76.39A76.39 76.39 0 0 1 0 123.61Z', 'M125 0H177.79A47.21 47.21 0 0 1 225 47.21V125H276.39A47.21 47.21 0 0 1 323.61 172.21V200H201.39A76.39 76.39 0 0 1 125 123.61Z'] };
 
 // ---- the stub ----
-export const codeOf = (ctx, id) => `${copy(ctx, 'page.code', 'BRAND00')}-${pad(fullFolio(id), 3)}`;
+// the consignment code: the showcase keeps its own (KBS0412); a customer's comes from their brand name (Lumen: LMN01)
+export function consign(ctx) {
+  const nm = ctx.brand?.name || '', L = String(typeof ctx.real === 'function' ? ctx.real(nm) : nm).toUpperCase().replace(/[^A-Z]/g, '');
+  const code = L ? (L[0] + L.slice(1).replace(/[AEIOU]/g, '') + L.slice(1)).slice(0, 3).padEnd(3, 'X') + '01' : 'BRAND01';
+  return copy(ctx, 'page.code', code);
+}
+export const codeOf = (ctx, id) => `${consign(ctx)}-${pad(fullFolio(id), 3)}`;
 function stubMark(ctx, ground) {
   const G = groundsOf(ctx), g = ctx.logo.geos.symbol, w = 32 * g.w / g.h;
   const cw = ground === G.primary ? 'on-signal' : ground === G.panel ? 'on-concrete' : ground === G.ink ? 'reversed' : 'colour';

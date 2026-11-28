@@ -1,6 +1,6 @@
 // Theme 35, Dispatch: pages 1 to 7 (cover, contents, the Brand opener, who we are, voice, words, the Logo opener).
 // Kerbside's words come from showcase.js through copy(); a fallback here is neutral. A slot is set at its real size as ghost type with one mono note.
-import { SECTIONS, fullFolio, timeOf, pad, groundsOf, tones, onTone, markTone, mix, at, hr, vr, fill, svgAt, field, measure, word, ghost, ghostRule, isGhost, PHOTO_NOTE, MARK, codeOf, page, n1 } from './kit.js';
+import { SECTIONS, fullFolio, timeOf, pad, groundsOf, tones, onTone, markTone, mix, at, hr, vr, fill, svgAt, field, measure, word, ghost, ghostRule, isGhost, PHOTO_NOTE, MARK, codeOf, consign, page, n1 } from './kit.js';
 import { barcodeRects } from './barcode.js';
 import { copy } from './showcase.js';
 import { photo } from './photos.js';
@@ -37,14 +37,14 @@ function cover(ctx) {
   const G = groundsOf(ctx), t = tones(ctx, G.primary), M = measure(ctx), E = ctx.esc, slot = ctx.edition === 'slot';
   const ver = String(ctx.versionLine || 'Version 1.0, November 2026');
   const cell = (x, label, val) => at(x, 62, 300, 36, `<div class="lb">${label}</div><div class="m13">${val}</div>`);
-  const head = hr(48, 48, 1088) + cell(48, 'Consignment', E(copy(ctx, 'page.code', 'BRAND00'))) + vr(352, 62, 34) + cell(368, 'Items', ctx.skeleton ? '7 pages' : '31 pages') + vr(672, 62, 34) + cell(688, 'Version', E(ver.replace(/^Version\s+/, '')));
+  const head = hr(48, 48, 1088) + cell(48, 'Consignment', E(consign(ctx))) + vr(352, 62, 34) + cell(368, 'Items', ctx.skeleton ? '7 pages' : '31 pages') + vr(672, 62, 34) + cell(688, 'Version', E(ver.replace(/^Version\s+/, '')));
   let mark;
   if (!slot) {
     const g = ctx.logo.geo, s = 1088 / g.width;
     mark = at(48, 280 - g.cap * s, 1088, g.height * s, logoHtml(ctx, 'colour', { width: 1088, colourway: 'on-signal' }));
   } else {
-    const size = M.fit('Your wordmark', 1088, 400);
-    mark = word(M, 48, 280, 'Your wordmark', size, { style: 'color:var(--soft)' }) + at(48, 300, 600, 16, '<span class="nt">Your logo, SVG.</span>');
+    const nm = (typeof ctx.real === 'function' ? ctx.real(ctx.brand.name) : String(ctx.brand.name || '')) || 'Your wordmark', size = M.fit(nm, 1088, 400);
+    mark = word(M, 48, 280, E(nm), size) + at(48, 300, 600, 16, '<span class="nt">Your logo, SVG, replaces the name.</span>');
   }
   const size = Math.min(M.fit('10:00', 504, 280), M.fit('12:00', 504, 280));
   const a = copy(ctx, 'page.cover.a', ''), b = copy(ctx, 'page.cover.b', '');

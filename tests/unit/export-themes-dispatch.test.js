@@ -235,3 +235,15 @@ test('the Dispatch style guide draws 13 pages on Pro, 7 on Free, no demo copy, a
     assert.match(html, /<section[^>]*data-page="/, `the guide preview for ${page} draws a page`)
   }
 })
+
+// THE COVER NAMES THE CUSTOMER: with no logo the brand cover sets the project's own name in the wordmark slot, and the consignment
+// code comes from that name; the stand-in code BRAND00 never prints.
+// Break: set the cover's wordmark slot back to the ghost "Your wordmark", or the code back to BRAND00 (themes/35-dispatch).
+test('the Dispatch cover sets the project name and a code made from it, at both sizes', async () => {
+  for (const page of SIZES) for (const skeleton of [false, true]) {
+    const { html } = await make({ format: 'pdf', page, skeleton })
+    const cover = html.split(/<section\b/)[1] || ''
+    assert.ok(markup(cover).includes(NAME), `${page} ${skeleton ? 'Free' : 'Pro'}: the cover names ${NAME}`)
+    assert.ok(!html.includes('BRAND00'), `${page} ${skeleton ? 'Free' : 'Pro'}: the stand-in code BRAND00 prints`)
+  }
+})
