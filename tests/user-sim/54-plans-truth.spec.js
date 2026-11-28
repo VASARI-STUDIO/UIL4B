@@ -40,6 +40,7 @@ import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
+import { numberWord as planWord } from '../../src/config/planFacts.js'
 import { PROMPT_LIBRARY_OPEN } from '../../src/data/toolTree.js'
 
 // /plans is the plan ledger (src/pages/Pricing.jsx): one table whose columns are
@@ -230,7 +231,9 @@ test.describe('/plans advertises only what the product has', () => {
     // The Pro card: the row title has a numeral, its sub-line (a sentence) a word.
     const proCard = await page.locator('.hpl-pro').evaluate((el) => el.textContent)
     expect(proCard).toContain(`All ${EXPORT_THEMES.length} export themes`)
-    expect(proCard).toContain(`${numberWord(EXPORT_THEMES.length - freeThemes().length, { capital: true })} more than Free`)
+    // the page spells the count with planFacts' own words, so the expectation does too
+    const more = planWord(EXPORT_THEMES.length - freeThemes().length)
+    expect(proCard).toContain(`${more.charAt(0).toUpperCase()}${more.slice(1)} more than Free`)
     expect(proCard).not.toMatch(/\b(?:ten|eight|two) (?:export )?themes\b/i)
   })
 
