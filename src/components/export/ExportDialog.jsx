@@ -216,6 +216,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     setView('templates')
     requestAnimationFrame(() => {
       const grid = mainRef.current?.querySelector('.xd-tpl-grid')
+      if (grid?.contains(document.activeElement)) return // a card already has focus (a quick Tab or click): leave it there
       ;(grid?.querySelector('.xd-tpl-card.is-on') || grid?.querySelector('.xd-tpl-card'))?.focus()
     })
   }
