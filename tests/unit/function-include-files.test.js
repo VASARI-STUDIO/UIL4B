@@ -465,9 +465,9 @@ test('includeFiles carries the export themes font folder, and the loader reads t
   assert.match(loader, /new URL\('\.\/fonts\/', import\.meta\.url\)/, 'the loader reads fonts from somewhere other than the folder includeFiles names')
 })
 
-// Flyleaf and Set Square read their photographs with fs (photos.js), which the file tracer does not follow, so a photo the glob misses passes locally and
+// Flyleaf, Set Square and Dispatch read their photographs with fs (photos.js), which the file tracer does not follow, so a photo the glob misses passes locally and
 // fails in the deploy ("That file didn't build"). Every file the theme can read must be matched, and nothing else in the folder is.
-for (const [theme, label, minFiles] of [['33-flyleaf', 'Flyleaf', 18], ['34-set-square', 'Set Square', 13]]) test(`includeFiles carries every photograph and light layer ${label} can read, and nothing broader`, async () => {
+for (const [theme, label, minFiles] of [['33-flyleaf', 'Flyleaf', 18], ['34-set-square', 'Set Square', 13], ['35-dispatch', 'Dispatch', 16]]) test(`includeFiles carries every photograph and light layer ${label} can read, and nothing broader`, async () => {
   // the photographs sit in a subfolder of the font folder, so its alternative must reach subfolders (`**`)
   const alternatives = expandBraces(includeFilesGlob()).filter((a) => EXPORT_THEME_FONTS.test(a))
   assert.deepEqual(alternatives, ['api/_lib/exportThemes/fonts/**'], 'includeFiles must carry the font folder with its subfolders, once')
