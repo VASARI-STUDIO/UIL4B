@@ -16,7 +16,13 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 let stubQueueApi = false
-export function initialize(data) { stubQueueApi = Boolean(data && data.queueApi) }
+// With data.env (an object), `import.meta.env` in the project's own source files reads as that object,
+// which is what Vite supplies at build time. Without it, sources load untouched.
+let stubEnv = null
+export function initialize(data) {
+  stubQueueApi = Boolean(data && data.queueApi)
+  stubEnv = data && data.env && typeof data.env === 'object' ? data.env : null
+}
 
 const STUBS = {
   'stub:firestore': `
@@ -62,5 +68,12 @@ export async function resolve(specifier, context, nextResolve) {
 
 export async function load(url, context, nextLoad) {
   if (STUBS[url]) return { format: 'module', source: STUBS[url], shortCircuit: true }
-  return nextLoad(url, context)
+  const out = await nextLoad(url, context)
+  if (stubEnv && url.startsWith('file:') && url.includes('/src/') && out.source != null) {
+    const text = String(out.source)
+    if (text.includes('import.meta.env')) {
+      return { ...out, source: text.replaceAll('import.meta.env', `(${JSON.stringify(stubEnv)})`), shortCircuit: true }
+    }
+  }
+  return out
 }

@@ -379,6 +379,16 @@ export default function FontMatcher({ onCopy, toast }) {
     [catalog, bodyName],
   )
 
+  // Request the opening pair by name before the catalogue has answered: a
+  // family needs only its name and weight to be fetched, and waiting for the
+  // catalogue first leaves the first paint in the fallback face.
+  useEffect(() => {
+    loadFont(headingName, [headingW])
+    loadFont(bodyName, [bodyW])
+    // Opening pair only; later changes load through the effects below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Load what the specimen draws, so nothing on it is faux-bolded: the heading
   // weight, and for the body its regular weight and the status pill's. The
   // other role's default weight rides along so a Swap lands on faces that are

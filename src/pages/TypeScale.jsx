@@ -347,6 +347,16 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     [catalog, bodyName],
   )
 
+  // Request the opening pair by name before the catalogue has answered: a
+  // family needs only its name and weight to be fetched, and waiting for the
+  // catalogue first leaves the first paint in the fallback face.
+  useEffect(() => {
+    loadFont(headingName, [headingW])
+    loadFont(bodyName, [bodyW])
+    // Opening pair only; later changes load through the effects below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Load exactly the two weights the preview renders, so nothing is synthesised.
   useEffect(() => {
     if (headingFont) loadFont(headingFont.family, [headingW])
