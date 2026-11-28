@@ -146,7 +146,7 @@ export function normaliseIconSvg(source) {
   // reviewer's queue downloads, and both count UTF-8.
   const bytes = iconBytes(svg)
   if (bytes > ICON_MAX_BYTES) {
-    return { error: `That SVG is ${Math.ceil(bytes / 1024)} KB. Icons are stored up to ${ICON_MAX_LABEL} — export it again without the editor metadata.` }
+    return { error: `That SVG is ${Math.ceil(bytes / 1024)} KB. Icons are stored up to ${ICON_MAX_LABEL}. Export it again without the editor metadata.` }
   }
 
   // Without a coordinate system there is no honest size to draw it at, and a

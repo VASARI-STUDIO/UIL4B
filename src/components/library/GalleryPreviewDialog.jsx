@@ -227,21 +227,21 @@ export default function GalleryPreviewDialog({ kind, items, index, onIndex, onCl
         onKeyDown={onKeyDown}
       >
         <div className="gpd-head" data-drag-close="true" onPointerDown={down} onPointerUp={up}>
-          <button type="button" className="gpd-icon gpd-close" onClick={onClose} aria-label="Close">
-            <GlyphClose />
-          </button>
-          {many && (
+          {many ? (
             <>
+              <span className="gpd-count" aria-hidden="true">{index + 1} of {items.length}</span>
+              <span className="sr-only" aria-live="polite">{item.name}, {index + 1} of {items.length}</span>
               <button type="button" className="gpd-icon gpd-prev" onClick={() => step(-1)} aria-label={`Previous ${noun}`}>
                 <GlyphStep dir={-1} />
               </button>
               <button type="button" className="gpd-icon gpd-next" onClick={() => step(1)} aria-label={`Next ${noun}`}>
                 <GlyphStep dir={1} />
               </button>
-              <span className="gpd-count" aria-hidden="true">{index + 1} of {items.length}</span>
-              <span className="sr-only" aria-live="polite">{item.name}, {index + 1} of {items.length}</span>
             </>
-          )}
+          ) : <span className="gpd-count" aria-hidden="true" />}
+          <button type="button" className="gpd-icon gpd-close" onClick={onClose} aria-label="Close">
+            <GlyphClose />
+          </button>
         </div>
         <div className="gpd-preview" style={previewStyle} aria-hidden="true" onPointerDown={down} onPointerUp={up}>
           {isPalette && item.colors.map((hex, i) => <span key={`${hex}-${i}`} className="gpd-band" style={{ background: hex }} />)}

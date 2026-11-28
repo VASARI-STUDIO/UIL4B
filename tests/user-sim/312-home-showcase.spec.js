@@ -25,9 +25,9 @@
 //      button and a click on the scrim each close it, and focus returns to the same tile.
 //      While it is open the page behind is locked on <html> (never on body, no
 //      scrollbar-gutter) and inert; closing releases both.
-//   5. THE PHONE SHEET (390 and 320, touch). The dialog is the whole screen, Previous, Close
-//      and Next sit in one bottom bar of controls at least 44px square, and "n of 5" is at
-//      the top right. A tap on the sheet's empty space does not close it. A swipe steps.
+//   5. THE PHONE SHEET (390 and 320, touch). The dialog is the whole screen; "n of 5" is at
+//      the top left and Previous, Next and Close sit at the top right in controls at least
+//      44px square (the same order as on desktop). A tap on the sheet's empty space does not close it. A swipe steps.
 //      Nothing scrolls sideways.
 //   6. MOTION. The viewer enters with a fade plus a scale from .96 over 200ms. Tiles lift
 //      1.02 on a pointer hover (transform only, with a shadow and hairline that fade in),
@@ -542,7 +542,7 @@ async function swipe(page, from, to, y) {
 
 for (const { width, height } of [{ width: 390, height: 844 }, { width: 320, height: 640 }]) {
   test.describe(`the page viewer at ${width} on a touch phone`, () => {
-    test('is a full-screen sheet with Previous, Close and Next in one bottom bar of 44px controls', async ({ browser }) => {
+    test('is a full-screen sheet with the count at the left and Previous, Next and Close in a top bar of 44px controls', async ({ browser }) => {
       const { ctx, page } = await openSection(browser, { width, height, touch: true })
       await tile(page, 2).tap()
       await expect(dialog(page)).toBeVisible()
@@ -560,15 +560,17 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 320, heig
       }
       const tops = Object.values(buttons).map((b) => Math.round(b.y))
       expect(new Set(tops).size, 'the three controls share one row').toBe(1)
-      expect(buttons['Previous page'].x, 'Previous, then Close, then Next').toBeLessThan(buttons.Close.x)
-      expect(buttons.Close.x).toBeLessThan(buttons['Next page'].x)
-      expect(buttons.Close.y + buttons.Close.height, 'the bar is in thumb reach: the lowest 120px').toBeGreaterThan(height - 120)
-      expect(buttons['Next page'].x + buttons['Next page'].width, 'and inside the screen').toBeLessThanOrEqual(width)
-      expect(buttons['Previous page'].x, 'both ends').toBeGreaterThanOrEqual(0)
+      expect(buttons['Previous page'].x, 'Previous, then Next, then Close').toBeLessThan(buttons['Next page'].x)
+      expect(buttons['Next page'].x).toBeLessThan(buttons.Close.x)
+      expect(buttons.Close.y, 'the bar is at the top').toBeLessThan(60)
+      expect(buttons.Close.x + buttons.Close.width, 'Close is in the far right corner').toBeGreaterThan(width - 24)
+      expect(buttons.Close.x + buttons.Close.width, 'and inside the screen').toBeLessThanOrEqual(width)
+      expect(buttons['Previous page'].x, 'Previous is clear of the count').toBeGreaterThanOrEqual(0)
 
       const c = await count(page).boundingBox()
-      expect(c.x + c.width, 'the count is at the right').toBeGreaterThan(width - 40)
+      expect(c.x, 'the count is at the left').toBeLessThan(40)
       expect(c.y, 'at the top').toBeLessThan(60)
+      expect(c.x + c.width, 'clear of Previous').toBeLessThanOrEqual(buttons['Previous page'].x)
 
       const overflow = await page.evaluate(() => ({
         sheet: document.querySelector('.hsv-ov').scrollWidth - document.querySelector('.hsv-ov').clientWidth,
@@ -580,11 +582,10 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 320, heig
         const meta = await page.evaluate(() => {
           const t = document.querySelector('.hsv-title')
           const b = document.querySelector('.hsv-brand')
-          const text = t.getBoundingClientRect().right - parseFloat(getComputedStyle(t).paddingRight)
-          return { brand: b.textContent, brandCut: b.scrollWidth > b.clientWidth, titleEnd: text, countStart: document.querySelector('.hsv-count').getBoundingClientRect().left }
+          return { brand: b.textContent, brandCut: b.scrollWidth > b.clientWidth, titleCut: t.scrollWidth > t.clientWidth }
         })
         expect(meta.brandCut, `page ${i}: the brand line "${meta.brand}" shows in full`).toBe(false)
-        expect(meta.titleEnd, `page ${i}: the title stops short of the count`).toBeLessThanOrEqual(meta.countStart)
+        expect(meta.titleCut, `page ${i}: the title shows in full`).toBe(false)
         if (i < PAGES) {
           await dialog(page).getByRole('button', { name: 'Next page' }).tap()
           await expect(count(page)).toHaveText(`${i + 1} of ${PAGES}`)

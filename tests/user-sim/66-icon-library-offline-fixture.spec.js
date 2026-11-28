@@ -179,7 +179,7 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   // exists at all.
   const notice = page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ })
   await expect(notice).toBeVisible({ timeout: 15000 })
-  await expect(notice).toContainText('showing built-in icons')
+  await expect(notice).toContainText(/showing built-in icons/i)
   expect(await page.locator('.ic').count(), 'the built-in set is on screen, not an empty grid').toBeGreaterThan(20)
   // The fallback's count is in the toolbar now (the "Built-in icons" label has no text of its own: the notice above says it).
   await expect(page.locator('#ig-result-count')).toHaveText(/^[\d,]+ icons$/)
@@ -222,7 +222,7 @@ test('during an outage the fallback keeps to the chosen category', async ({ brow
 
   await go(page, '/create/icons?category=animated')
   await expect(notice).toBeVisible({ timeout: 15000 })
-  await expect(notice).toContainText('no built-in icons in this category')
+  await expect(notice).toContainText(/no built-in icons in this category/i)
   // One message and one retry: the notice says it, the grid does not repeat it.
   await expect(page.getByText('No built-in icons in this category right now.')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(1)
@@ -231,7 +231,7 @@ test('during an outage the fallback keeps to the chosen category', async ({ brow
 
   await go(page, '/create/icons?category=editable')
   await expect(notice).toBeVisible({ timeout: 15000 })
-  await expect(notice).toContainText('showing built-in icons')
+  await expect(notice).toContainText(/showing built-in icons/i)
   await expect.poll(() => page.locator('.ig .ic:not(.ig-skel)').count(), { timeout: 15000 }).toBeGreaterThan(20)
   await ctx.close()
 })
@@ -771,7 +771,7 @@ test('an expired collection keeps its pack available when collection requests fa
     await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'lucide')
     // The pack's full listing is requested, refused, and the copy saved on this device stands in for it.
     await expect.poll(() => requests).toBeGreaterThan(0)
-    const quiet = page.getByRole('status').filter({ hasText: /showing the copy saved on this device/ })
+    const quiet = page.getByRole('status').filter({ hasText: /showing the copy saved on this device/i })
     await expect(quiet).toBeVisible({ timeout: 20000 })
     await expect(quiet.getByRole('button', { name: 'Try again' })).toBeVisible()
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
@@ -804,7 +804,7 @@ test('Try again sends at most one collection request per pack on each click', as
 
     // One pack's full listing is refused: its first icons stand in, with a quiet line.
     await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'tabler')
-    const notice = page.getByRole('status').filter({ hasText: /showing its first icons/ })
+    const notice = page.getByRole('status').filter({ hasText: /showing its first icons/i })
     await expect(notice).toBeVisible({ timeout: 20000 })
     expect(requests).toEqual(['tabler'])
     await notice.getByRole('button', { name: 'Try again' }).click()

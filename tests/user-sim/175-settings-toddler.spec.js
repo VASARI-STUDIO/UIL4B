@@ -124,7 +124,7 @@ test.describe('settings, password change', () => {
     await expect(section.getByLabel('New password', { exact: true })).toHaveJSProperty('readOnly', true)
 
     await expect(section.locator('.settings-field-ok')).toHaveCount(1)
-    await expect(section.locator('.settings-field-ok')).toContainText('Password updated successfully')
+    await expect(section.locator('.settings-field-ok')).toContainText('Password updated')
     await expect(section.locator('.settings-field-err')).toHaveCount(0)
     const calls = await page.evaluate(() => window.__UIL4B_TEST_AUTH__.calls.filter((c) => c === 'updatePassword').length)
     expect(calls, 'Firebase was asked to change the password more than once').toBe(1)

@@ -62,7 +62,7 @@ test('one pack whose listing is refused still shows its first icons, with a quie
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20_000 })
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'tabler')
 
-  const quiet = page.getByRole('status').filter({ hasText: /showing its first icons/ })
+  const quiet = page.getByRole('status').filter({ hasText: /showing its first icons/i })
   await expect(quiet).toBeVisible({ timeout: 15_000 })
   await expect(quiet.getByRole('button', { name: 'Try again' })).toBeVisible()
   await expect(page.getByText(BUILT_IN)).toHaveCount(0)

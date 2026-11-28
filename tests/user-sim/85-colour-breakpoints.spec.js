@@ -290,7 +290,7 @@ test.describe('the palette board across the width matrix', () => {
     // Contrast is not in the menu because it is on the colour itself: the
     // drawn AA chip (D:1032), Pro-gated, named for what it checks.
     await page.keyboard.press('Escape')
-    await expect(page.locator('.plb-col').first().getByRole('button', { name: /^Contrast of .* a Pro check$/ })).toBeVisible()
+    await expect(page.locator('.plb-col').first().getByRole('button', { name: /^Contrast of .* \(a Pro check\)$/ })).toBeVisible()
     await ctx.close()
   })
 

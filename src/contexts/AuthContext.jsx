@@ -159,9 +159,9 @@ async function saveProfileToFirestore(uid, data) {
 
 function profileSaveMessage(code) {
   if (code === 'permission-denied') {
-    return 'We couldn’t save that to your account — the change is only on this device. Sign out and back in, then try again.'
+    return 'We couldn’t save that to your account. The change is only on this device. Sign out and back in, then try again.'
   }
-  return 'We couldn’t save that to your account — the change is only on this device. Please try again.'
+  return 'We couldn’t save that to your account. The change is only on this device. Try again.'
 }
 
 export function AuthProvider({ children }) {

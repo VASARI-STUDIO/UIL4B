@@ -88,7 +88,9 @@
 .ied-ground--checker{background:var(--ied-checker) 0 0/16px 16px}
 .ied-stage-host{display:grid;place-items:center;line-height:0}
 .ied-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width 200ms var(--ied-out),height 200ms var(--ied-out)}
-.ied-stage-host svg,.ied-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
+.ied-stage-host svg,.ied-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join);stroke-miterlimit:var(--ig-miter,4)}
+.ied-locked :is(.ied-seg button,.ied-tile,.ied-disc,.ied-in,.ied-rg){cursor:not-allowed}
+.ied-locked :is(.ied-seg,.ied-tiles,.ied-strokehead,.ied-rgw,.ied-disc){opacity:.5}
 .ied-stage-host svg *{stroke-width:calc(var(--ig-stroke) / var(--ig-k,1))}
 .ied-stage-img{display:block;max-width:100%;height:auto}
 .ied-stage-wait{position:absolute;inset:0;margin:auto;flex-shrink:0}

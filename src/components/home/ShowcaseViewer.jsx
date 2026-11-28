@@ -11,7 +11,8 @@ import { preloadPage } from './showcasePreload'
 // The page viewer: one theme's pages at a large size, stepping through a few of its
 // export pages (the one clicked first). useModalDialog supplies the focus trap, Escape,
 // the scroll lock on <html> and the return of focus to the tile that opened it.
-// Below 768px it is a full-screen sheet with its controls in a bottom bar.
+// Below 768px it is a full-screen sheet. Either way the top bar reads: the count at the
+// left, Previous, Next and Close at the right (DOM and tab order match).
 // Only the page in view is fetched when the viewer opens; its neighbours are warmed after.
 
 // How long the leaving animation runs before the viewer unmounts.
@@ -210,6 +211,17 @@ export default function ShowcaseViewer({ themeIndex, kindId, onClose }) {
           <p className="hsv-brand">{theme.brand}, sample brand<span className="hsv-kind">{kindName(pageKind)} page</span></p>
         </div>
         <p className="hsv-count">{index + 1} of {total}</p>
+        <button type="button" className="hsv-btn hsv-prev" aria-label="Previous page" onClick={() => step(-1)}>
+          <Chevron back />
+        </button>
+        <button type="button" className="hsv-btn hsv-next" aria-label="Next page" onClick={() => step(1)}>
+          <Chevron />
+        </button>
+        <button type="button" className="hsv-btn hsv-close" aria-label="Close" onClick={requestClose}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
 
         <div className="hsv-stage" data-hsv-close="" data-dir={dir} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           {under !== null && (
@@ -233,19 +245,6 @@ export default function ShowcaseViewer({ themeIndex, kindId, onClose }) {
           )}
         </div>
 
-        <button type="button" className="hsv-btn hsv-prev" aria-label="Previous page" onClick={() => step(-1)}>
-          <Chevron back />
-          <span className="hsv-steptext" aria-hidden="true">Previous</span>
-        </button>
-        <button type="button" className="hsv-btn hsv-next" aria-label="Next page" onClick={() => step(1)}>
-          <span className="hsv-steptext" aria-hidden="true">Next</span>
-          <Chevron />
-        </button>
-        <button type="button" className="hsv-btn hsv-close" aria-label="Close" onClick={requestClose}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
         <p className="sr-only" role="status" aria-live="polite">{announce}</p>
       </div>
     </div>,

@@ -54,7 +54,8 @@ const cleanBytes = (theme, row, n) => (HAVE_CLEAN ? fs.readFileSync(path.join(SE
 const isFree = (theme, row) => ['25-label', '27-swissfield'].includes(theme) || (theme === '04-standards' && row === 'ui-kit')
 const pairs = []
 // The style guide has no preview pictures yet, so its row is left out of this walk until they are made.
-for (const { id: theme } of EXPORT_THEMES) for (const row of Object.keys(THEME_ROW_FORMATS)) if (row !== 'guide' && themeHasRow(theme, row)) pairs.push({ theme, row, free: isFree(theme, row) })
+// Flyleaf has no preview pictures yet either: it is left out of this walk until they are made.
+for (const { id: theme } of EXPORT_THEMES) for (const row of Object.keys(THEME_ROW_FORMATS)) if (row !== 'guide' && theme !== '33-flyleaf' && themeHasRow(theme, row)) pairs.push({ theme, row, free: isFree(theme, row) })
 const PRO_PAIR = { theme: '01-presentation', row: 'slides' }
 
 test('the manifest covers every theme and row, with numbered pages, labels and sizes', () => {

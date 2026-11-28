@@ -125,7 +125,7 @@ function FontTile({ font, selected, onPick, onInspect }) {
           ref={ref}
           aria-pressed={selected}
           onClick={() => onPick(font)}
-          aria-label={`Use ${font.family} — ${categoryLabel(font.category)}, ${weightCount(font.variants.length)}`}
+          aria-label={`Use ${font.family}: ${categoryLabel(font.category)}, ${weightCount(font.variants.length)}`}
         >
           <span
             className={ready ? 'fbd-sample' : 'fbd-sample fbd-sample--pending'}
@@ -163,7 +163,7 @@ function FontTile({ font, selected, onPick, onInspect }) {
           type="button"
           className="fbd-info"
           onClick={() => onInspect(font)}
-          aria-label={`About ${font.family} — weights, designer and examples`}
+          aria-label={`About ${font.family}: weights, designer and examples`}
         >
           <InfoIcon />
         </button>

@@ -66,24 +66,24 @@ function runChecks({ title, description, url, keyword }) {
 
   const tl = title.trim().length
   if (!tl) {
-    checks.push({ id: 'title', label: 'Title tag', status: 'fail', detail: 'Add a title — it’s the single biggest on-page SEO signal.', weight: 3 })
+    checks.push({ id: 'title', label: 'Title tag', status: 'fail', detail: 'Add a title. It’s the single biggest on-page SEO signal.', weight: 3 })
   } else if (tl >= TITLE_MIN && tl <= TITLE_MAX) {
-    checks.push({ id: 'title', label: 'Title length', status: 'pass', detail: `${tl} characters — in the ideal ${TITLE_MIN}–${TITLE_MAX} range.`, weight: 3 })
+    checks.push({ id: 'title', label: 'Title length', status: 'pass', detail: `${tl} characters, in the ideal ${TITLE_MIN} to ${TITLE_MAX} range.`, weight: 3 })
   } else if (tl < TITLE_MIN) {
-    checks.push({ id: 'title', label: 'Title length', status: 'warn', detail: `${tl} characters — short. Aim for ${TITLE_MIN}–${TITLE_MAX} to use the full SERP width.`, weight: 3 })
+    checks.push({ id: 'title', label: 'Title length', status: 'warn', detail: `${tl} characters is short. Aim for ${TITLE_MIN} to ${TITLE_MAX} to use the full SERP width.`, weight: 3 })
   } else {
-    checks.push({ id: 'title', label: 'Title length', status: tl > 65 ? 'fail' : 'warn', detail: `${tl} characters — Google will truncate past ~60. Trim it.`, weight: 3 })
+    checks.push({ id: 'title', label: 'Title length', status: tl > 65 ? 'fail' : 'warn', detail: `${tl} characters. Google will truncate past ~60. Trim it.`, weight: 3 })
   }
 
   const dl = description.trim().length
   if (!dl) {
-    checks.push({ id: 'desc', label: 'Meta description', status: 'fail', detail: 'Add a description — it drives click-through from search.', weight: 2 })
+    checks.push({ id: 'desc', label: 'Meta description', status: 'fail', detail: 'Add a description. It drives click-through from search.', weight: 2 })
   } else if (dl >= DESC_MIN && dl <= DESC_MAX) {
-    checks.push({ id: 'desc', label: 'Description length', status: 'pass', detail: `${dl} characters — in the ideal ${DESC_MIN}–${DESC_MAX} range.`, weight: 2 })
+    checks.push({ id: 'desc', label: 'Description length', status: 'pass', detail: `${dl} characters, in the ideal ${DESC_MIN} to ${DESC_MAX} range.`, weight: 2 })
   } else if (dl < DESC_MIN) {
-    checks.push({ id: 'desc', label: 'Description length', status: 'warn', detail: `${dl} characters — short. Aim for ${DESC_MIN}–${DESC_MAX}.`, weight: 2 })
+    checks.push({ id: 'desc', label: 'Description length', status: 'warn', detail: `${dl} characters is short. Aim for ${DESC_MIN} to ${DESC_MAX}.`, weight: 2 })
   } else {
-    checks.push({ id: 'desc', label: 'Description length', status: dl > 170 ? 'fail' : 'warn', detail: `${dl} characters — Google truncates past ~160. Tighten it.`, weight: 2 })
+    checks.push({ id: 'desc', label: 'Description length', status: dl > 170 ? 'fail' : 'warn', detail: `${dl} characters. Google truncates past ~160. Tighten it.`, weight: 2 })
   }
 
   const rawUrl = url.trim()
@@ -97,7 +97,7 @@ function runChecks({ title, description, url, keyword }) {
     if (/\s/.test(slug)) issues.push('spaces')
     if (slug.length > 75) issues.push('it’s long')
     if (issues.length) {
-      checks.push({ id: 'url', label: 'URL slug', status: 'warn', detail: `Tidy the slug — ${issues.join(', ')}.`, weight: 1 })
+      checks.push({ id: 'url', label: 'URL slug', status: 'warn', detail: `Tidy the slug: ${issues.join(', ')}.`, weight: 1 })
     } else {
       checks.push({ id: 'url', label: 'URL slug', status: 'pass', detail: 'Clean, readable slug.', weight: 1 })
     }
@@ -110,7 +110,7 @@ function runChecks({ title, description, url, keyword }) {
     checks.push({
       id: 'kw-title', label: 'Keyword in title',
       status: inTitle ? (title.toLowerCase().trim().startsWith(kw) ? 'pass' : 'warn') : 'fail',
-      detail: inTitle ? (title.toLowerCase().trim().startsWith(kw) ? 'Present and near the front — ideal.' : 'Present. Moving it earlier can help.') : 'Add your target keyword to the title.',
+      detail: inTitle ? (title.toLowerCase().trim().startsWith(kw) ? 'Present and near the front. Ideal.' : 'Present. Moving it earlier can help.') : 'Add your target keyword to the title.',
       weight: 2,
     })
     checks.push({ id: 'kw-desc', label: 'Keyword in description', status: inDesc ? 'pass' : 'warn', detail: inDesc ? 'Present in the description.' : 'Work the keyword naturally into the description.', weight: 1 })

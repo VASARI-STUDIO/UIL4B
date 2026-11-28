@@ -81,8 +81,8 @@ test('Pro: a request for any row in any theme gets past the gate', async () => {
   }
 })
 
-test('the free themes are the two guidelines-only themes: slides, and Swiss Field\'s style guide', () => {
-  assert.deepEqual(FREE_THEMES, ['25-label', '27-swissfield'])
+test('the free themes are the three guidelines-only themes: slides, and the style guide of Swiss Field and Flyleaf', () => {
+  assert.deepEqual(FREE_THEMES, ['25-label', '27-swissfield', '33-flyleaf'])
   for (const theme of FREE_THEMES) {
     const has = ['slides', 'guide']
     assert.deepEqual(Object.keys(THEME_ROW_FORMATS).filter((row) => themeHasRow(theme, row)), has)

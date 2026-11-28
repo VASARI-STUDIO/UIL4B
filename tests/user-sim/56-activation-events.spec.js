@@ -65,7 +65,7 @@ test.describe('upgrade gates report under their own name', () => {
     // POSITIVE CONTROL 2: the control exists and opening it really raises the
     // canonical modal. Without this, an assertion about the counter would pass
     // on a page where the button had silently stopped rendering.
-    await page.getByRole('button', { name: 'Contrast of PRIMARY — a Pro check' }).click()
+    await page.getByRole('button', { name: 'Contrast of PRIMARY (a Pro check)' }).click()
     await expect(page.getByRole('dialog', { name: 'Check contrast, light and dark' })).toBeVisible()
 
     await counter(page, 'gate:palette-contrast-view').toBe(1)

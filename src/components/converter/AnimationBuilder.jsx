@@ -132,7 +132,7 @@ export default function AnimationBuilder({ toast }) {
   // ── Adding frames ─────────────────────────────────────────────────────────
   const addFiles = useCallback(async (list) => {
     const files = Array.from(list).filter(f => f.type.startsWith('image/') || IMAGE_NAME.test(f.name))
-    if (!files.length) { toast('Please choose image files — PNG, JPEG, WebP, GIF, SVG, BMP or AVIF', 'error'); return }
+    if (!files.length) { toast('Choose image files: PNG, JPEG, WebP, GIF, SVG, BMP or AVIF', 'error'); return }
     // One selection arrives in whatever order the OS hands it over; name order
     // with numbers read as numbers ("frame-2" before "frame-10") is the order
     // an exported sequence was written in.
@@ -156,7 +156,7 @@ export default function AnimationBuilder({ toast }) {
       }
     }
     if (failed) toast(`${failed} file${failed > 1 ? 's' : ''} could not be read as an image`, 'error')
-    if (files.length > take.length) toast(`Added ${take.length} — an animation here holds up to ${MAX_FRAMES} frames`, 'info')
+    if (files.length > take.length) toast(`Added ${take.length}. An animation here holds up to ${MAX_FRAMES} frames`, 'info')
     if (!loaded.length) return
     const wasEmpty = live.current.frames.length === 0
     dropCleared(cleared)
@@ -285,7 +285,7 @@ export default function AnimationBuilder({ toast }) {
   const build = async () => {
     if (!n || busy) return
     if (!engineLoaded() && !navigator.onLine) {
-      toast('You appear to be offline — the converter engine needs a connection to load', 'error')
+      toast('You appear to be offline. The converter engine needs a connection to load', 'error')
       return
     }
     const run = ++runRef.current
@@ -384,7 +384,7 @@ export default function AnimationBuilder({ toast }) {
         multiple
         onFiles={addFiles}
         hint="Drop image frames here or click to browse"
-        sub="One image per frame, put in file-name order — PNG, JPEG, WebP, GIF, SVG, BMP, AVIF"
+        sub="One image per frame, put in file-name order. PNG, JPEG, WebP, GIF, SVG, BMP, AVIF"
       />
     )
   }
@@ -458,7 +458,7 @@ export default function AnimationBuilder({ toast }) {
             <p className="fc-meta">
               {resultFmt.label} · {result.w}×{result.h} · {formatBytes(result.bytes)} · {describeTiming(result.frames, result.fps)}
             </p>
-            {stale && <p className="fc-note fc-note--warn">Settings or frames changed since this was built — build again to include them.</p>}
+            {stale && <p className="fc-note fc-note--warn">Settings or frames changed since this was built. Build again to include them.</p>}
             <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, `animation.${resultFmt.ext}`, 'download the animation')}>
               Download {resultFmt.label}
             </button>
@@ -473,8 +473,8 @@ export default function AnimationBuilder({ toast }) {
           <MenuSelect label="Output format" id="fc-an-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
             {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
           </MenuSelect>
-          {fmt.id === 'gif' && <p className="fc-note">GIF keeps transparency as on/off only — soft edges come out hard</p>}
-          {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency — clear areas take the background colour</p>}
+          {fmt.id === 'gif' && <p className="fc-note">GIF keeps transparency as on/off only, so soft edges come out hard</p>}
+          {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency, so clear areas take the background colour</p>}
         </div>
 
         <div className="fc-insp-sec">
@@ -492,7 +492,7 @@ export default function AnimationBuilder({ toast }) {
               </MenuSelect>
             </div>
           </div>
-          {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
+          {!fmt.loops && <p className="fc-note">Video files store no loop count. The player decides</p>}
           <p className="fc-note">{describeTiming(n, fpsVal)}</p>
         </div>
 
@@ -504,7 +504,7 @@ export default function AnimationBuilder({ toast }) {
           <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px on the longer side</p>
           <div className="fc-outsize">
             <span className="fc-outsize-k">Output</span>
-            <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px — the first frame sets the shape</span>
+            <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px. The first frame sets the shape</span>
           </div>
           {fmt.alpha ? (
             <label className="fc-check">
@@ -525,7 +525,7 @@ export default function AnimationBuilder({ toast }) {
           <MenuSelect label="Quality" id="fc-an-quality" className="fc-field" value={quality} onChange={nextValue => setQuality(nextValue)} disabled={busy || fmt.id === 'apng'}>
             {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
           </MenuSelect>
-          {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+          {fmt.id === 'apng' && <p className="fc-note">APNG is lossless, so quality doesn&apos;t apply</p>}
         </div>
 
       </aside>

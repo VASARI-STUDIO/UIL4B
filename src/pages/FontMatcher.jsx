@@ -611,7 +611,7 @@ export default function FontMatcher({ onCopy, toast }) {
       // opens on its own default instead of the blank project's seed.
       scale: ownTypeScale(design) ? { base: design.typeScale.base, ratio: design.typeScale.ratio } : undefined,
     })
-    if (!staged) { toast?.('Choose a family first — the type scale needs a font to preview.'); return }
+    if (!staged) { toast?.('Choose a family first. The type scale needs a font to preview.'); return }
     navigate('/create/type-scale')
   }
 

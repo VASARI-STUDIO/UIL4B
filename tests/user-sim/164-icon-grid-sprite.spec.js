@@ -49,7 +49,8 @@ const STROKE = '<path fill="none" stroke="currentColor" stroke-width="2" stroke-
 // What Copy SVG and Download SVG gave for the fixture's icon (fixtures/iconify/icon.svg) before the
 // sprite existed, at the customiser's old default 48px (it opens at 24 now, so the width and height below are 24): recorded from a build of origin/main (88d65517),
 // whose grid drew <img>. Its path is the fixture's own, character for character.
-const EXPECTED_EXPORT = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + STROKE + '</svg>'
+// The stroke settings sit on the stroked shape, where the customiser writes them.
+const EXPECTED_EXPORT = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' + STROKE + '</svg>'
 // A body with an id and a reference to it, the same in every icon on purpose: unless the sprite
 // renames them per icon, every symbol holds a clip path called "a".
 const CLIPPED = `<defs><clipPath id="a"><rect width="24" height="24"/></clipPath></defs><g clip-path="url(#a)">${STROKE}</g>`

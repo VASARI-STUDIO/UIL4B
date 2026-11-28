@@ -318,7 +318,7 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
       <div className="hx-grid">
         <div className="hx-say">
           <h3>From small jobs.</h3>
-          <p>Pull out the palette on its own, the type scale on its own, a folder of compressed images or a custom icon kit. Each one leaves as a real file, named and ready to commit.</p>
+          <p>Pull out the palette on its own, the type scale on its own, a folder of compressed images or a custom icon kit. Each one comes out as a named file, ready to commit.</p>
           <p className="hx-note">Shown with Kerbside, a sample brand. Photos from Unsplash.</p>
           <div className="hx-list hx-list--pieces" role="group" aria-label="What to export">
             {PIECES.map((p, i) => (

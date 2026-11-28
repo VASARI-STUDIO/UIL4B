@@ -19,32 +19,33 @@ test('the picker lists every export theme in the table order, and the UI kit is 
   assert.equal(defaultThemeId(true), '01-presentation')
 })
 
-test('a file lists only the themes that have its row; Label and Swiss Field are guidelines only', () => {
+test('a file lists only the themes that have its row; Label, Swiss Field and Flyleaf are guidelines only', () => {
   const ids = (file) => pickerThemesFor(file).map((t) => t.id)
   const full = PICKER_THEMES.filter((t) => !t.rows).length
   assert.equal(full, EXPORT_THEMES.filter((t) => !t.rows).length)
   for (const file of ['kit', 'book', 'book-html']) {
     assert.equal(ids(file).length, full, file)
-    assert.ok(!ids(file).includes('25-label') && !ids(file).includes('27-swissfield'), file)
+    assert.ok(!ids(file).includes('25-label') && !ids(file).includes('27-swissfield') && !ids(file).includes('33-flyleaf'), file)
   }
   for (const file of ['guidelines', 'guidelines-html']) {
     assert.equal(ids(file).length, PICKER_THEMES.length, file)
-    assert.ok(ids(file).includes('25-label') && ids(file).includes('27-swissfield'), file)
+    assert.ok(ids(file).includes('25-label') && ids(file).includes('27-swissfield') && ids(file).includes('33-flyleaf'), file)
   }
   assert.equal(themeFitsFile('25-label', 'kit'), false)
   assert.equal(themeFitsFile('25-label', 'guidelines'), true)
   assert.equal(themeFitsFile('nope', 'guidelines'), false)
 })
 
-test('the guidelines of Label and Swiss Field are free, and a free account starts each file on a theme it is free in', () => {
+test('the guidelines of Label, Swiss Field and Flyleaf are free, and a free account starts each file on a theme it is free in', () => {
   for (const file of ['guidelines', 'guidelines-html']) {
     assert.equal(themedFileIsPro(file, '25-label'), false, file)
     assert.equal(themedFileIsPro(file, '27-swissfield'), false, file)
+    assert.equal(themedFileIsPro(file, '33-flyleaf'), false, file)
     assert.equal(defaultThemeId(false, file), '25-label', file)
   }
   assert.equal(defaultThemeId(false, 'kit'), '04-standards')
   assert.equal(defaultThemeId(false, 'book'), '01-presentation')
-  assert.equal(freeGuidelinesThemeNames(), 'Label and Swiss Field')
+  assert.equal(freeGuidelinesThemeNames(), 'Label, Swiss Field and Flyleaf')
   assert.equal(freeThemeNames('kit'), 'Standards')
   assert.equal(freeThemeNames('book'), '')
   const label = PICKER_THEMES.find((t) => t.id === '25-label')
@@ -64,12 +65,13 @@ test('a themed file is Pro by the route\'s own rule, and the book as PNG pages t
 const PREMIUM_IDS = ['21-presentation', '22-ticket', '23-broadsheet', '24-standards', '26-notebook', '28-riso', '29-blueprint', '30-fluted', '31-contact', '32-dieline']
 const CLASSIC_IDS = ['01-presentation', '02-poster', '03-broadsheet', '04-standards', '05-specimen', '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse']
 
-test('premium themes are the ten new ones that are Pro for the file, in id order, and never Label or Swiss Field', () => {
+test('premium themes are the ten new ones that are Pro for the file, in id order, and never Label, Swiss Field or Flyleaf', () => {
   for (const file of ['kit', 'book', 'book-html', 'guidelines', 'guidelines-html']) {
     assert.deepEqual(premiumThemesFor(file).map((t) => t.id), PREMIUM_IDS, file)
   }
   assert.equal(isPremiumTheme('guidelines', '25-label'), false)
   assert.equal(isPremiumTheme('guidelines', '27-swissfield'), false)
+  assert.equal(isPremiumTheme('guidelines', '33-flyleaf'), false)
   assert.equal(isPremiumTheme('kit', '04-standards'), false)
   assert.equal(isPremiumTheme('kit', '10-inuse'), false)
   assert.equal(isPremiumTheme('kit', '21-presentation'), true)
@@ -77,9 +79,9 @@ test('premium themes are the ten new ones that are Pro for the file, in id order
 
 test('the picker order is premium first, then the themes free for the file, then the rest', () => {
   const ids = (file) => orderedThemesFor(file).map((t) => t.id)
-  // The UI kit is free in Standards, so it leads the classics; the guidelines are free in Label and Swiss Field; the book is free in none.
+  // The UI kit is free in Standards, so it leads the classics; the guidelines are free in Label, Swiss Field and Flyleaf; the book is free in none.
   assert.deepEqual(ids('kit'), [...PREMIUM_IDS, '04-standards', ...CLASSIC_IDS.filter((id) => id !== '04-standards')])
-  assert.deepEqual(ids('guidelines'), [...PREMIUM_IDS, '25-label', '27-swissfield', ...CLASSIC_IDS])
+  assert.deepEqual(ids('guidelines'), [...PREMIUM_IDS, '25-label', '27-swissfield', '33-flyleaf', ...CLASSIC_IDS])
   assert.deepEqual(ids('book'), [...PREMIUM_IDS, ...CLASSIC_IDS])
   // The same themes, none dropped or doubled, and the picker's own table order is untouched.
   for (const file of ['kit', 'guidelines', 'book']) assert.deepEqual([...ids(file)].sort(), pickerThemesFor(file).map((t) => t.id).sort(), file)

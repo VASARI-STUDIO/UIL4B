@@ -332,7 +332,7 @@ export function ProjectProvider({ children }) {
     // touches existing projects (non-destructive) and never blocks sync merges.
     const current = allProjects[userKey] || []
     if (current.length >= projectLimit) {
-      throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+      throw new Error(`Free plan saves up to ${projectLimit} projects. Go Pro for unlimited.`)
     }
     const id = newId()
     const base = opts.blank ? DEFAULT_DESIGN : (opts.from || design)
@@ -384,7 +384,7 @@ export function ProjectProvider({ children }) {
     // No known-count check as in saveProject(): the source is in this list, so the list has been read.
     const current = allProjects[userKey] || []
     if (current.length >= projectLimit) {
-      throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+      throw new Error(`Free plan saves up to ${projectLimit} projects. Go Pro for unlimited.`)
     }
     const source = current.find((p) => p.id === id)
     if (!source) throw new Error('That project no longer exists')
