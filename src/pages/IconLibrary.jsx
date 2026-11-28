@@ -36,7 +36,7 @@ import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
-import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke } from '../utils/iconEditable'
+import { COLORED_PACKS, STROKE_PACKS, cdnPackIsStroke, isGalleryEditable } from '../utils/iconEditable'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
 import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
@@ -45,10 +45,11 @@ import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/ico
 import { clearPreviewDraft, readPreviewDraft, stampPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
 import { BACK_TO_FREE_NOTE, proPreview } from '../utils/iconProPreview'
 import {
-  STROKE_PX, STROKE_REFERENCE_SIZE, STROKE_UNIT_REF, canPinWithVectorEffect, customIconStroke, draftStrokePx,
+  STROKE_PX, STROKE_REFERENCE_SIZE, STROKE_UNIT_REF, customIconStroke, draftStrokePx,
   markupHasStroke, parseViewBoxRect, stickyStrokePx, stickyStrokeToken, strokeAttrForPx, strokeScaleCaption,
   transformScale, viewBoxOf, zoomedStroke,
 } from '../utils/iconStroke'
+import { MITER_LIMIT, applyBake, measureBake, namesAStroke, viewBoxText } from '../utils/iconBake'
 import {
   CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, DEFAULT_EXPORT_SIZE, ICON_SIZE_PRESETS, INSPECT_PX, INSPECT_PX_SHEET,
   NARROW_RAIL_BELOW, isPresetSize, isProSetting, parseCustomSize, railPresets,
@@ -64,7 +65,7 @@ import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
 import {
-  SEARCH_TEASE_COPY, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
+  SEARCH_TEASE_COPY, freeRowCandidates, isFreeRowPack, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
 } from '../utils/iconSearchTease'
 // The closing arrow shared with the homepage's closing band.
 import PhGlyph from '../components/spectrum/PhGlyph'
@@ -576,6 +577,9 @@ const askedFor = (pack) => {
   if (!s) { s = new Set(); GLYPH_ASKED.set(pack, s) }
   return s
 }
+
+// The free row's tiles never warm anything: their drawings are asked for once, in a batch.
+const noWarm = () => {}
 
 // A batch that fails while the others succeed (one big flag pack timing out, say)
 // must not leave its cells blank for the session. Its names come out of the asked
@@ -1205,6 +1209,8 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
       ref={cellRef}
       className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
       data-ic={ghost ? undefined : iconCellKey(icon)}
+      // The pencil on hover is drawn by CSS from this flag (see `.ic[data-editable]::after`): decorative, never named.
+      data-editable={!ghost && isGalleryEditable(icon) ? '' : undefined}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
@@ -1327,8 +1333,6 @@ function transformAttr(rotate, flipH, flipV, cx, cy) {
 // Bake the live customiser values into REAL SVG attributes so copied/saved/
 // downloaded markup matches the Stage exactly (a workaround for Lucide's copy
 // resetting to default attributes — never fall back to defaults).
-const SHAPE_TAGS = new Set(['path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon'])
-
 // A chosen colour has to reach children that carry a colour of their own. Single-colour
 // artwork has its explicit fills and strokes mapped to currentColor (`none` stays); artwork
 // with several colours or a gradient keeps them, since one colour cannot stand for all.
@@ -1358,7 +1362,9 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
     // explicit fill/stroke below still covers icons that bake literal colours.
     svg.setAttribute('color', color)
     if (isStroke) {
-      svg.setAttribute('stroke', color)
+      // A root stroke is inherited by every child, so it is only written when no element names a
+      // stroke of its own: otherwise a filled shape in a mixed glyph would gain one.
+      if (!namesAStroke(svg)) svg.setAttribute('stroke', color)
       if (svg.getAttribute('fill') && svg.getAttribute('fill') !== 'none') svg.setAttribute('fill', color)
     } else {
       svg.setAttribute('fill', color)
@@ -1369,28 +1375,15 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
   // otherwise a 2 lands on screen as 4px at the default size. `strokeAttrForPx`
   // owns that conversion and the Stage calls the same function, so preview and
   // exported file cannot disagree. See src/utils/iconStroke.js.
-  const box = viewBoxOf(rawSvg)
-  // The Stage forces stroke width/cap/join on the svg AND every descendant
-  // (CSS `svg, svg *`). Mirror that here so icons whose child shapes carry their
-  // own stroke attributes export with the edits applied, not the originals.
-  if (isStroke) {
-    const shapes = [svg, ...svg.querySelectorAll('*')]
-    // An element inside a scaled group is drawn at that scale, so its width is divided by it.
-    const insideOf = (el) => {
-      let k = 1
-      for (let n = el; n && n !== svg.parentNode; n = n.parentNode) k *= transformScale(n.getAttribute?.('transform'))
-      return k
-    }
-    const scaled = shapes.map(insideOf)
-    const pin = absStroke && canPinWithVectorEffect({ size, viewBox: box, scaledGroups: scaled.some(k => k !== 1) })
-    shapes.forEach((el, i) => {
-      const strokeAttr = strokeAttrForPx({ px: stroke, size, viewBox: box, absolute: absStroke, inside: scaled[i] })
-      if (strokeAttr != null) el.setAttribute('stroke-width', String(strokeAttr))
-      if (pin && SHAPE_TAGS.has(el.localName)) el.setAttribute('vector-effect', 'non-scaling-stroke')
-      if (cap) el.setAttribute('stroke-linecap', cap)
-      if (join) el.setAttribute('stroke-linejoin', join)
-    })
-  }
+  // The Stage forces stroke width/cap/join on every descendant (CSS `svg, svg *`). Mirror that
+  // here so icons whose child shapes carry their own stroke attributes export with the edits
+  // applied, but only on elements that draw a stroke. `measureBake` also works out the viewBox
+  // that holds the wider, squarer or turned stroke (src/utils/iconBake.js), as the Stage does.
+  const plan = measureBake(svg, isStroke
+    ? { size, stroke, absStroke, cap, join, rotate }
+    : { size, stroke: null, rotate })
+  if (isStroke) applyBake(svg, plan, { cap, join })
+  else if (plan.frame) svg.setAttribute('viewBox', viewBoxText(plan.frame))
   const vb = parseViewBoxRect(svg.getAttribute('viewBox'))
   const cx = vb.x + vb.w / 2
   const cy = vb.y + vb.h / 2
@@ -1402,6 +1395,11 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
     svg.appendChild(g)
   }
   return svg.outerHTML
+}
+
+// Test seam: the specs bake an icon at settings the buttons cannot reach (a 45 degree turn).
+if (typeof window !== 'undefined' && (import.meta.env.DEV || import.meta.env.MODE === 'test')) {
+  window.__iconBake = serializeCustomizedSvg
 }
 
 // Robust clipboard write: async Clipboard API with a legacy execCommand
@@ -1516,8 +1514,12 @@ const LineArt = ({ markup }) => <SizeArt markup={markup} className="ied-line-art
 // and an always-visible number field. Pointer drags are pulled to the snaps (snapToTarget);
 // keys step exactly (stepFromKey), so a keyboard user can leave a snap. Double-click resets.
 // The thumb centre sits at 10px + (100% - 20px) * p, which is how the fill and ticks are placed.
-function IedStroke({ id, value, onChange }) {
+const FILLED_NOTE = 'This icon is filled, so it has no stroke to change.'
+
+function IedStroke({ id, value, onChange: change, locked = false, describedBy }) {
   const { min, max, step, snaps, inputMin, inputMax } = STROKE_PX
+  const onChange = (v) => { if (!locked) change(v) }
+  const lock = locked ? { 'aria-disabled': true, 'aria-describedby': describedBy } : {}
   const pointerRef = useRef(false)
   const [draft, setDraft] = useState(null)
   const fmt = (v) => String(Number((+v).toFixed(2)))
@@ -1544,8 +1546,10 @@ function IedStroke({ id, value, onChange }) {
             autoComplete="off"
             spellCheck={false}
             aria-label="Stroke width in pixels"
+            {...lock}
+            readOnly={locked}
             value={draft ?? fmt(value)}
-            onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6))}
+            onChange={(e) => { if (!locked) setDraft(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6)) }}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={() => { if (draft !== null) commitDraft() }}
             onKeyDown={(e) => {
@@ -1572,6 +1576,7 @@ function IedStroke({ id, value, onChange }) {
           value={trackValue}
           aria-label="Stroke width"
           aria-valuetext={`${fmt(value)} pixels`}
+          {...lock}
           onPointerDown={() => { pointerRef.current = true }}
           onPointerUp={endPointer}
           onPointerCancel={endPointer}
@@ -1587,6 +1592,7 @@ function IedStroke({ id, value, onChange }) {
             if (next !== trackValue) onChange(next)
           }}
           onDoubleClick={() => onChange(STROKE_PX.default)}
+          tabIndex={locked ? -1 : undefined}
           title={`Double-click to reset to ${fmt(STROKE_PX.default)}px`}
         />
       </div>
@@ -1889,20 +1895,33 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
     if (!stage) return
     // The stage always draws at the inspection size, so the stroke is scaled to it:
     // the drawing keeps the proportions of the file exported at `size`.
+    const drawPx = zoomedStroke({ px: stroke, absolute: absStroke, drawSize: inspectPx, exportSize: size })
+    // The same frame the exported file gets (src/utils/iconBake.js): the viewBox grows to hold the
+    // wider, squarer or turned stroke. The first viewBox is kept so a smaller edit can put it back.
+    let frame = null
+    const art = hostRef.current?.querySelector('svg')
+    if (art && isStroke) {
+      if (!art.hasAttribute('data-ig-vb')) art.setAttribute('data-ig-vb', art.getAttribute('viewBox') || '')
+      const first = art.getAttribute('data-ig-vb')
+      if (first) art.setAttribute('viewBox', first)
+      frame = measureBake(art, { size: inspectPx, stroke: drawPx, absStroke, cap, join, rotate }).frame
+      if (frame) art.setAttribute('viewBox', viewBoxText(frame))
+    }
     const strokeAttr = strokeAttrForPx({
-      px: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: inspectPx, exportSize: size }), size: inspectPx, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
+      px: drawPx, size: inspectPx, viewBox: (absStroke && frame) || viewBoxOf(baseSvgText), absolute: absStroke,
     })
     stage.style.setProperty('--ig-size', `${inspectPx}px`)
     stage.style.setProperty('--ig-stroke', String(strokeAttr ?? STROKE_PX.default))
     stage.style.setProperty('--ig-color', color || themeInk)
     stage.style.setProperty('--ig-cap', cap)
     stage.style.setProperty('--ig-join', join)
+    stage.style.setProperty('--ig-miter', String(join === 'miter' ? MITER_LIMIT : 4))
     const tf = []
     if (rotate) tf.push(`rotate(${rotate}deg)`)
     if (flipH) tf.push('scaleX(-1)')
     if (flipV) tf.push('scaleY(-1)')
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
-  }, [size, inspectPx, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
+  }, [size, inspectPx, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText, isStroke, isColoredPack, rendersInline])
 
   // Lock page scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
@@ -2898,13 +2917,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
                 )}
               </div>
 
-              {isStroke && (
-                <div id="ied-sec-stroke">
+              {/* A filled icon shows these locked, but only once its artwork has arrived: until
+                  then the pack list is a guess, and a wrong "filled" reason is worse than none. */}
+              {(isStroke || (activeIcon && baseSvgText)) && (
+                <div id="ied-sec-stroke" className={isStroke ? undefined : 'ied-locked'}>
                   {/* The `px` unit is half the fix: the control reports the width the exported
-                      file actually measures, at any size. */}
+                      file actually measures, at any size. A filled icon has no stroke: the
+                      controls stay in view, locked, with the reason beside them. */}
                   <IedStroke
                     id="ied-stroke"
                     value={stroke}
+                    locked={!isStroke}
+                    describedBy="ied-stroke-note"
                     onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
                   />
                   {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
@@ -2916,19 +2940,22 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
                         type="button"
                         role="radio"
                         aria-checked={absStroke === abs}
+                        aria-disabled={isStroke ? undefined : true}
                         tabIndex={absStroke === abs ? 0 : -1}
-                        onClick={() => { setAbsStroke(abs); markDirty() }}
+                        onClick={() => { if (isStroke) { setAbsStroke(abs); markDirty() } }}
                       >{name}</button>
                     ))}
                   </div>
                   <p id="ied-stroke-note" className="ied-note">
-                    {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
+                    {isStroke
+                      ? <>{strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}</>
+                      : FILLED_NOTE}
                   </p>
                 </div>
               )}
 
-              {isStroke && (
-                <div id="ied-sec-line">
+              {(isStroke || (activeIcon && baseSvgText)) && (
+                <div id="ied-sec-line" className={isStroke ? undefined : 'ied-locked'}>
                   <div className="ied-lblrow">
                     <span className="ied-lbl" id="ied-line-label">Line style</span>
                   </div>
@@ -2945,13 +2972,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
                           role="radio"
                           aria-checked={on}
                           aria-label={s.pro && !isPro ? `${s.name}, Pro` : s.name}
-                          aria-describedby={`ied-line-note-${s.id}`}
+                          aria-describedby={isStroke ? `ied-line-note-${s.id}` : 'ied-line-reason'}
+                          aria-disabled={isStroke ? undefined : true}
                           tabIndex={on || (!lineStyle && i === 0) ? 0 : -1}
                           className="ied-tile"
                           data-style={s.id}
-                          onClick={() => pickLineStyle(s)}
+                          onClick={() => { if (isStroke) pickLineStyle(s) }}
                         >
-                          <LineArt markup={lineArt[s.id]} />
+                          <LineArt markup={lineArt[s.id] || ''} />
                           <span className="nm">
                             {s.name}
                             {s.pro && !isPro && <span className="ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
@@ -2968,13 +2996,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
                     className="ied-disc"
                     aria-expanded={splitShown}
                     aria-controls="ied-line-split"
-                    aria-disabled={lineStyle ? undefined : true}
-                    onClick={() => { if (lineStyle) setSplitOpen(o => !o) }}
+                    aria-disabled={lineStyle && isStroke ? undefined : true}
+                    aria-describedby={isStroke ? undefined : 'ied-line-reason'}
+                    onClick={() => { if (lineStyle && isStroke) setSplitOpen(o => !o) }}
                   >
                     <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
                     Set ends and corners separately
                   </button>
-                  <div className="ied-split" id="ied-line-split" hidden={!splitShown}>
+                  {!isStroke && <p id="ied-line-reason" className="ied-note">{FILLED_NOTE}</p>}
+                  <div className="ied-split" id="ied-line-split" hidden={!splitShown || !isStroke}>
                     <div>
                       <p className="ied-split-lbl" id="ied-ends-label">Ends</p>
                       <div className="ied-seg" role="radiogroup" aria-labelledby="ied-ends-label" onKeyDown={steerRadios}>
@@ -4301,11 +4331,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   /* ── THE MATCHES THIS VIEWER CANNOT OPEN YET ─────────────────────────────
      Called once the viewer's own search has answered. A viewer below Pro gets
-     ONE more /search, scoped to the packs they may not browse, and only its
-     COUNT is used: the ids are reduced to a summary (counts and pack labels)
-     and dropped. Nothing here fetches a glyph for those packs, so the rule in
-     src/utils/lockedPreview.js (a locked thing's payload never reaches the
-     browser) holds; the band that reads the summary draws built-in glyphs only.
+     ONE more /search, scoped to the packs they may not browse. The ids are
+     reduced to a summary (counts and pack labels) and dropped, with one
+     exception: a signed-out viewer keeps up to 24 NAMES from free-tier packs
+     for the one free row (freeRowIcons). Nothing here fetches a glyph; the row
+     asks for its own few, from free-tier packs only, and the band draws
+     built-in glyphs only. Pro, brand, blocked and animated packs' drawings
+     still never reach the browser (src/utils/lockedPreview.js).
 
      No request for Pro, for a single pack filter, or once the icon service has
      failed. It is guarded by `reqId` like the search itself, so an answer for a
@@ -4324,10 +4356,18 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       packs: ALL_PACKS, tier, packFilter, groupPacks: groupKey ? ICON_GROUPS[groupKey].packs : null,
     })
     const finish = (probeIds) => {
-      const summary = summariseLockedMatches({
+      const counted = summariseLockedMatches({
         probeIds, probed, mainIds, tier, limit: API_LIMIT, labelOf: packLabel,
         accept: (p, n) => matchesWeight(p, n, weight),
       })
+      // A signed-out visitor also gets the NAMES of matches in free-account packs,
+      // for the one free row above the band (see freeRowIcons). Names only: the
+      // drawings are asked for later, for the few the row shows, and for no other
+      // locked pack.
+      const row = tier === 'anon'
+        ? freeRowCandidates({ probeIds, probed, accept: (p, n) => matchesWeight(p, n, weight) })
+        : []
+      const summary = counted && row.length ? { ...counted, row } : counted
       if (SEARCH_TEASE_CACHE.size >= SEARCH_TEASE_CACHE_MAX) SEARCH_TEASE_CACHE.delete(SEARCH_TEASE_CACHE.keys().next().value)
       SEARCH_TEASE_CACHE.set(key, summary)
       if (rid === reqId.current) { land(summary); setTeasePending(false) }
@@ -4755,7 +4795,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // remembered (weightRef is left alone) and comes back with All; the style choice inside the category starts empty.
   // The current pack stays when the new category can hold it, otherwise the scope goes to "All packs".
   const handleCategory = (next) => {
-    if (next === category) return
+    // Pressing the pressed category (not All) turns it off, back to All.
+    if (next === category) { if (next !== 'all') handleCategory('all'); return }
     clearTimeout(timer.current)
     const allowed = categoryPacks(next)
     let nextPack = pack && pack !== 'custom' && (!allowed || allowed.includes(pack)) ? pack : ''
@@ -5328,6 +5369,45 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       canSee,
     })
   }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee, builtin])
+
+  /* THE FREE ROW. A signed-out search that found matches in free-account packs
+     shows ONE row of them above the sign-in band: exactly `gridCols` tiles, so
+     it is a whole row at every width, or no row at all. It is drawn from the
+     names the locked-pack probe already returned (see probeLockedMatches),
+     from packs in the 'free' tier only (isFreeRowPack): never a blocked set,
+     never an animated one, never a Pro or brand pack. Only these few tiles'
+     drawings are asked for, below, and no other locked pack's.
+
+     It is also held back when the sample grid is already at its signed-out cap
+     (anonCap), so the page never shows more than the cap plus this one row. */
+  const freeRowIcons = useMemo(() => {
+    if (tier !== 'anon' || source !== 'search' || !gridCols || !searchTease?.row) return []
+    if (teaseBand !== 'empty' && teaseBand !== 'anon') return []
+    if (searchTease.row.length < gridCols) return []
+    if (icons.length + gridCols > anonCap) return []
+    return searchTease.row
+      .filter((r) => isFreeRowPack(r.pack))
+      .slice(0, gridCols)
+      .map((r) => ({ id: r.id, pack: r.pack, name: r.name, cdn: true }))
+  }, [tier, source, gridCols, searchTease, teaseBand, icons, anonCap])
+  const freeRowShown = freeRowIcons.length > 0 && freeRowIcons.length === gridCols
+  useEffect(() => {
+    if (!freeRowShown || cdnOk.current === false) return
+    const byPack = new Map()
+    for (const { pack, name } of freeRowIcons) {
+      if (!isFreeRowPack(pack) || GLYPH_BODY.has(svgKey(pack, name)) || askedFor(pack).has(name)) continue
+      if (!byPack.has(pack)) byPack.set(pack, [])
+      byPack.get(pack).push(name)
+    }
+    for (const [pack, names] of byPack) {
+      const asked = askedFor(pack)
+      for (const n of names) asked.add(n)
+      loadGlyphBatchOutcome(pack, names).then((r) => {
+        if (!r.ok) for (const n of names) asked.delete(n)
+        if (mountedRef.current) setGlyphTick((n) => n + 1)
+      })
+    }
+  }, [freeRowShown, freeRowIcons])
 
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
@@ -5987,6 +6067,35 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* The signed-out free row (see freeRowIcons): one row of matches from
+                free-account packs, directly above the sign-in band. A tile opens the
+                customiser like any other; sign-in comes at save or export. */}
+            {freeRowShown && (
+              <div
+                className="ig-free-row"
+                role="group"
+                aria-label={`Matches in sets a free account opens: ${freeRowIcons.length} shown`}
+                style={{ '--ig-free-cols': gridCols }}
+              >
+                {freeRowIcons.map((icon, idx) => (
+                  <IconCell
+                    key={`free:${icon.id}`}
+                    icon={icon}
+                    src={glyphSrc(icon.pack, icon.name)}
+                    gone={GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
+                    showPack
+                    packInName={false}
+                    picked={false}
+                    ghost={0}
+                    idx={idx}
+                    onPick={onPick}
+                    onWarm={noWarm}
+                    onGlyphError={noteGlyphFailure}
+                  />
+                ))}
               </div>
             )}
 

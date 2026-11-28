@@ -25,7 +25,7 @@ test('Relative and Fixed are a two-way radio choice described by the live captio
   assert.match(src, /\[\['Relative', false\], \['Fixed', true\]\]/)
   assert.match(src, /aria-checked=\{absStroke === abs\}/)
   assert.match(src, /strokeScaleCaption\(\{ size, stroke, absolute: absStroke \}\)/)
-  assert.match(src, /<p id="ied-stroke-note" className="ied-note">\r?\n\s*\{strokeCaption\.prefix\}<b>\{strokeCaption\.effect\}<\/b>\{strokeCaption\.suffix\}\r?\n/)
+  assert.match(src, /<p id="ied-stroke-note" className="ied-note">\s*\{isStroke\s*\?\s*<>\{strokeCaption\.prefix\}<b>\{strokeCaption\.effect\}<\/b>\{strokeCaption\.suffix\}<\/>\s*:\s*FILLED_NOTE\}\s*<\/p>/)
 })
 
 test('the PNG is serialised at its own pixel size with the slider value, not a scaled copy of it', () => {
