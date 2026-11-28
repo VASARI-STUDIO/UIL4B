@@ -38,7 +38,7 @@ const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
 const COMPONENT = stripJs(read('src/components/FounderNote.jsx'))
 const DATA = stripJs(read('src/data/founderNote.js'))
-const FOOTER = stripJs(read('src/components/AppFooter.jsx'))
+const FOOTER = stripJs(read('src/components/spectrum/SpectrumFooter.jsx'))
 const CSS = read('src/styles/global.css').replace(/\/\*[\s\S]*?\*\//g, '')
 
 /** A note with every slot filled, for the written-state assertions. */
@@ -84,7 +84,7 @@ test('3 · a filled note renders four trimmed paragraphs in prompt order', () =>
 })
 
 test('4 · the signature asserts only what the app already says in public', () => {
-  // AppFooter has read "Built in Brisbane by Dylan Coleman" since before this
+  // The footer has read "Built in Brisbane by Dylan Coleman" since before this
   // note existed, so neither fact is invented here. Nothing else about the
   // author is stated anywhere in the module — a fabricated origin story is the
   // opposite of the effect this note is for.
@@ -93,7 +93,7 @@ test('4 · the signature asserts only what the app already says in public', () =
   assert.match(FOOTER, /Dylan Coleman/, 'the footer is where these two facts already come from')
   assert.match(FOOTER, /Built in Brisbane/)
   // The name links to the same portfolio the footer's credit already links to.
-  assert.ok(FOOTER.includes(`'${FOUNDER_SIGNATURE.url}'`), 'the portfolio address comes from the footer')
+  assert.ok(FOOTER.includes(FOUNDER_SIGNATURE.url), 'the portfolio address comes from the footer')
   assert.match(COMPONENT, /href=\{FOUNDER_SIGNATURE\.url\} target="_blank" rel="noopener noreferrer"/)
 })
 
@@ -160,7 +160,7 @@ test('8 · the trigger is actually mounted, and the panel is a real dialog', () 
   // modal-contract.test.js makes the point this borrows: check a surface is
   // REACHABLE before spending anything on it. A note nothing renders is a note
   // nobody can open.
-  assert.match(FOOTER, /import FounderNote from '\.\/FounderNote'/)
+  assert.match(FOOTER, /import FounderNote from '\.\.\/FounderNote'/)
   assert.match(FOOTER, /<FounderNote \/>/)
 
   // The dialog half is enforced app-wide by modal-contract.test.js; what is

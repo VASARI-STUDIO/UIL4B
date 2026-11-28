@@ -6,8 +6,8 @@
 //      FounderNote.jsx is that it never opens itself, and the footer is where
 //      it is reached. Spectrum ships its own footer, so the note has to be
 //      carried across rather than inherited.
-//   2. NOTHING IS DROPPED FROM THE FOOTER. Spectrum's footer replaces AppFooter
-//      on its route, and a footer link is functionality: the redesign must not
+//   2. NOTHING IS DROPPED FROM THE FOOTER. Spectrum's footer is the only footer
+//      on the site (the retired AppFooter's links were folded into it), and a footer link is functionality: the redesign must not
 //      remove any functionality of the app.
 //   3. THE REDUCED-MOTION COMPANIONS AND THE VISIBLE RESTING STATE SURVIVE. A
 //      word reveal is a transform that hides text, and `useReveal`'s own comment
@@ -40,7 +40,6 @@ const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)\b[^>]*\/>/g, (tag, name) => {
   return fs.existsSync(file) ? stripComments(read(file)) : tag
 })
 const FOOTER = stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
-const APP_FOOTER = stripComments(read('src/components/AppFooter.jsx'))
 const WORDS = stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
 // Comments stripped first — see the note in spectrum-truth.test.js. The header
 // of spectrum.css quotes the very strings these tests ban.
@@ -66,8 +65,8 @@ test('the stripper still works, so every source read below can be trusted', () =
 test('the Spectrum footer carries the founder\'s note', () => {
   assert.ok(FOOTER.includes("from '../FounderNote'"),
     'SpectrumFooter.jsx no longer imports FounderNote. His "little about message" is an open '
-    + 'founder ask and this footer replaces AppFooter on the front door, so dropping it removes '
-    + 'the only way to reach it from the homepage.')
+    + 'founder ask and this footer is the only footer on the site, so dropping it removes '
+    + 'the only way to reach it from any page.')
   assert.ok(/<FounderNote\s*\/>/.test(FOOTER),
     'SpectrumFooter.jsx imports FounderNote but never renders it')
 })
@@ -114,21 +113,23 @@ function destinations(src) {
   return out
 }
 
-test('the Spectrum footer reaches everywhere AppFooter reaches', () => {
+// The retired AppFooter's destinations, kept as a floor now that the file is gone: this footer is
+// the only one on the site, so losing any of them loses it for every page.
+const FOOTER_MUST_REACH = ['/learn/help', '/info', '/feedback', '/privacy', '/terms', '/credits']
+
+test('the Spectrum footer keeps every destination the old app footer reached', () => {
   const mine = destinations(FOOTER)
-  const theirs = destinations(APP_FOOTER)
   // POSITIVE CONTROL: the extractor found a real footer, not an empty set.
-  assert.ok(theirs.size >= 8, `only ${theirs.size} destinations found in AppFooter.jsx — the extractor is blind`)
-  const missing = [...theirs].filter((route) => !mine.has(route))
+  assert.ok(mine.size >= 8, `only ${mine.size} destinations found in SpectrumFooter.jsx — the extractor is blind`)
+  const missing = FOOTER_MUST_REACH.filter((route) => !mine.has(route))
   assert.deepEqual(missing, [],
-    `SpectrumFooter.jsx has lost ${missing.join(', ')}, which AppFooter.jsx still links. `
-    + 'Spectrum replaces AppFooter on its route, so a destination only AppFooter has is a '
-    + 'destination the front door cannot reach.')
+    `SpectrumFooter.jsx has lost ${missing.join(', ')}. It is the only footer on the site, `
+    + 'so a destination it drops is a destination no page can reach from its foot.')
 })
 
 test('the Spectrum footer reads its Create destinations from the tool tree', () => {
   assert.ok(FOOTER.includes('categoryDestination('),
-    'SpectrumFooter.jsx types its Create routes. AppFooter\'s own comment records the trap: '
+    'SpectrumFooter.jsx types its Create routes. the old footer\'s own comment recorded the trap: '
     + '"Imagery" pointed at /create/imagery, a category home with no screen of its own.')
   assert.ok(!/to="\/create\//.test(FOOTER),
     'SpectrumFooter.jsx carries a literal /create/ route again')

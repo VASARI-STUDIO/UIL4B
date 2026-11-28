@@ -2,7 +2,7 @@
 // bar and sheet, and the footer. Written as people use them: open, click, press
 // keys, change width, change theme. Test seam: the rendered header at /create/palette
 // (selectors: .pnav, .pnav-trigger, .pnav-act, .pnav-upgrade, .pnav-avatar-btn,
-// .pnav-more, .pnav-mobile, .pnav-tab, .pnav-sheet, .app-footer).
+// .pnav-more, .pnav-mobile, .pnav-tab, .pnav-sheet, .sp-footer).
 //
 // Run: LANE=shell PLAYWRIGHT_PORT=4310 npx playwright test -c pw-lane.config.js tests/user-sim/v3-shell.spec.js
 //
@@ -239,10 +239,10 @@ test.describe('desktop bar at 1440', () => {
     await ctx.close()
   })
 
-  // The site footer shows on the reading and legal pages (nav/footerRoutes.js), not on app pages such as /projects.
+  // The one site footer (SpectrumFooter) shows on every page.
   test('the footer links go to real pages', async ({ browser }) => {
     const { ctx, page } = await open(browser, WIDE, { url: '/privacy' })
-    const footer = page.locator('.app-footer')
+    const footer = page.locator('footer.sp-footer')
     await footer.scrollIntoViewIfNeeded()
     const hrefs = await footer.locator('a[href^="/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')))
     expect(hrefs.length).toBeGreaterThan(5)
@@ -386,9 +386,10 @@ test.describe('phone at 390 (touch)', () => {
 
   test('footer: two columns of links, every link a 44px target', async ({ browser }) => {
     const { ctx, page } = await open(browser, PHONE, { touch: true, url: '/privacy' })
-    const footer = page.locator('.app-footer')
+    const footer = page.locator('footer.sp-footer')
     await footer.scrollIntoViewIfNeeded()
-    const hs = await footer.locator('.app-footer-links a').evaluateAll((as) => as.map((a) => a.getBoundingClientRect().height))
+    // The Legal column is hidden on a phone (its links sit in the baseline row), so a zero-height box is not a target.
+    const hs = (await footer.locator('.sp-footer-links a').evaluateAll((as) => as.map((a) => a.getBoundingClientRect().height))).filter((h) => h > 0)
     expect(hs.length).toBeGreaterThan(5)
     for (const h of hs) expect(h).toBeGreaterThanOrEqual(43.5)
     await ctx.close()

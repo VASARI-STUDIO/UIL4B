@@ -137,8 +137,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     })
     await page.evaluate(() => window.scrollTo(0, 0))
 
-    // No site footer under a tool.
-    await expect(page.locator('.app-footer')).toHaveCount(0)
+    // The one site footer sits under a tool, after the workspace.
+    await expect(page.locator('footer.sp-footer')).toHaveCount(1)
   })
 
   test('shared chrome uses the wide desktop span', async ({ page }) => {
@@ -417,9 +417,9 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
       expect(overflow).toBeLessThanOrEqual(1)
 
-      // No site footer under a tool; the header's gutter is 24px,
+      // The one site footer sits under a tool; the header's gutter is 24px,
       // or 16px on a phone header.
-      await expect(page.locator('.app-footer')).toHaveCount(0)
+      await expect(page.locator('footer.sp-footer')).toHaveCount(1)
       const navPad = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.pnav-inner')).paddingLeft))
       expect(navPad).toBe(width < 768 ? 16 : 24)
     })

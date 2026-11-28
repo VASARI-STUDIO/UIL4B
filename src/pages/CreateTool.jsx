@@ -1,10 +1,9 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import AppFooter from '../components/AppFooter'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import IconCredits from '../components/library/IconCredits'
-import { toolWearsSpectrumFooter } from '../components/nav/footerRoutes'
+import { toolCarriesCredits } from '../components/nav/footerRoutes'
 import { findCreateGroup, resolveTool, soonRedirect } from '../data/toolTree'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { readSessionHint } from '../utils/sessionHint'
@@ -191,10 +190,10 @@ export default function CreateTool({ toast }) {
     try { trackToolAction(toolSlug) } catch { /* never break a tool */ }
   }, [toolSlug])
 
-  // The Icon and Emoji libraries end with the sales pages' footer, carrying the
-  // licence notice for the sets on screen. The library reports those rows (and
+  // Every tool ends with SpectrumFooter. The Icon and Emoji libraries add the
+  // licence notice for the sets on screen to it. The library reports those rows (and
   // whether they are for the whole page or one group) up to here.
-  const wearsSpectrumFooter = toolWearsSpectrumFooter(location.pathname)
+  const carriesCredits = toolCarriesCredits(location.pathname)
   const [credits, setCredits] = useState({ rows: [], scope: 'page' })
   const reportCredits = useCallback((rows, scope = 'page') => {
     setCredits((c) => (c.rows === rows && c.scope === scope ? c : { rows, scope }))
@@ -279,7 +278,7 @@ export default function CreateTool({ toast }) {
         >
           {LiveTool ? (
             <Suspense fallback={<RouteLoading />}>
-              <LiveTool key={restoredCount} onCopy={copy} onExport={exportCopy} toast={toast} onCredits={wearsSpectrumFooter ? reportCredits : undefined} />
+              <LiveTool key={restoredCount} onCopy={copy} onExport={exportCopy} toast={toast} onCredits={carriesCredits ? reportCredits : undefined} />
             </Suspense>
           ) : (
             <SoonState title={isHome ? group.label : name} isPro={isPro} />
@@ -287,9 +286,7 @@ export default function CreateTool({ toast }) {
         </main>
       </div>
 
-      {wearsSpectrumFooter
-        ? <SpectrumFooter notice={<IconCredits rows={credits.rows} scope={credits.scope} />} />
-        : <AppFooter compact />}
+      <SpectrumFooter notice={carriesCredits ? <IconCredits rows={credits.rows} scope={credits.scope} /> : null} />
     </>
   )
 }

@@ -16,7 +16,7 @@
 //   - Tab runs from the end block's last action into the footer.
 //
 // HOW TO SEE EACH FAIL (src/ unless named):
-//   CreateTool.jsx renders <AppFooter compact /> on the icon routes     -> "one contentinfo" and "licence row"
+//   CreateTool.jsx renders a second footer on the icon routes          -> "one contentinfo" and "licence row"
 //   IconEmojiLibrary.jsx renders a .ig-close block or a SpectrumRamp     -> "no close, no strip" and "nothing scrolls sideways"
 //   IconLibrary.jsx goes back to the bare sentinel (no .ig-more)         -> "Show 120 more icons"
 //   IconCredits.jsx drops the links, or IconGroups stops reporting        -> "licence row" and "group"

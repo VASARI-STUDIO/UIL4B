@@ -125,15 +125,13 @@ test.describe('the phone chrome', () => {
 })
 
 test.describe('the site footer', () => {
-  test('is gone from app pages and stays on reading pages', async ({ page }) => {
-    await go(page, '/projects')
-    await expect(page.locator('.app-footer')).toHaveCount(0)
-    await go(page, '/discover/palettes')
-    await expect(page.locator('.app-footer')).toHaveCount(0)
-    await go(page, '/privacy')
-    await expect(page.locator('.app-footer')).toHaveCount(1)
-    await go(page, '/learn/colour-contrast')
-    await expect(page.locator('.app-footer')).toHaveCount(1)
+  test('is the V3 footer on app pages, libraries and reading pages alike', async ({ page }) => {
+    // MUTATION: drop <SpectrumFooter /> from the app shell in App.jsx and /projects fails.
+    for (const route of ['/projects', '/discover/palettes', '/privacy', '/learn/colour-contrast']) {
+      await go(page, route)
+      await expect(page.locator('footer.sp-footer'), route).toHaveCount(1)
+      await expect(page.locator('.app-footer'), route).toHaveCount(0)
+    }
   })
 })
 

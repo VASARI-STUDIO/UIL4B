@@ -327,12 +327,10 @@ test('the credits page is built from the registries, not typed', () => {
   'a pack name or a licence label has been typed into Credits.jsx rather than derived')
 })
 
-test('both footers reach /credits, so every page discharges the notice', () => {
-  // SpectrumFooter replaces AppFooter on the front door, so a link only one of
-  // them carries is a notice the other half of the site does not give. The
-  // parity test in spectrum-structure.test.js catches the AppFooter→Spectrum
-  // direction; this catches both, and says why.
-  for (const file of ['src/components/AppFooter.jsx', 'src/components/spectrum/SpectrumFooter.jsx']) {
+test('the footer reaches /credits, so every page discharges the notice', () => {
+  // SpectrumFooter is the one footer on every page and tool, so this is the
+  // single place the link to the notices has to survive.
+  for (const file of ['src/components/spectrum/SpectrumFooter.jsx']) {
     assert.match(stripComments(read(file)), /\['\/credits', '[^']+'\]/,
       `${file} does not link /credits. The CC-BY icon sets, the OFL typefaces and the `
       + 'Apache-2.0 SDK all ask that their notices be reachable from wherever the work is, '

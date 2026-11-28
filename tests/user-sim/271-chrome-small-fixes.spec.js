@@ -2,9 +2,8 @@
 //
 //   1. The floating Feedback button is not drawn below 768px, for any pointer;
 //      the footer link and the right-click menu still reach the form at 390.
-//   2. The footer content sits in the same 1240px column as the Learn hub, so
-//      the footer logo and the hub heading share a left edge at 1440 and 1920,
-//      with the header still full-bleed.
+//   2. The footer content is one centred column, capped at 1400px, on a
+//      1920px monitor.
 //   3. A GIF the builder reveals on a phone-width screen ends above the fixed
 //      tab bar and the action bar, and Build sits above the tab bar.
 //   4. At 767px and narrower (where the legal contents is the "Contents"
@@ -17,9 +16,8 @@
 //     fail on the mouse window (a phone's coarse pointer already hid it);
 //   - global.css: make that media query `(max-width:700px)`: the 767 case fails;
 //   - global.css: hide the button at every width: "still there from 768" fails;
-//   - global.css: delete `max-width:1240px` from `.app-footer-inner`: "the
-//     footer logo lines up with the hub heading" fails at 1440 and 1920, and
-//     "one 1240px column" fails at 1920;
+//   - spectrum-chrome.css: delete `max-width:1400px` from `.sp-footer .sp-footer-inner`:
+//     "the footer content is capped at 1400px" fails at 1920;
 //   - shared.js: delete the `tabbarH` term from `revealResult`'s `bottom`: "a
 //     rebuilt result that was half-hidden is scrolled clear" fails, because the
 //     result is judged already visible while its foot is under the bars;
@@ -99,7 +97,7 @@ test.describe('1 · the floating Feedback button on a narrow mouse window', () =
     await expect(dialog).toHaveCount(0)
 
     // The footer's "Send feedback" link goes to the feedback page, which holds the form.
-    const link = page.locator('.app-footer').getByRole('link', { name: 'Send feedback' })
+    const link = page.locator('footer.sp-footer').getByRole('link', { name: 'Send feedback' })
     await link.scrollIntoViewIfNeeded()
     await link.click()
     await expect(page).toHaveURL(/\/feedback$/)
@@ -107,43 +105,18 @@ test.describe('1 · the floating Feedback button on a narrow mouse window', () =
   })
 })
 
-test.describe('2 · the footer shares the page content edge', () => {
-  for (const [width, height] of [[1440, 900], [1920, 1080]]) {
-    test(`on /learn the footer logo lines up with the hub heading at ${width}`, async ({ page }) => {
-      watch(page, 'someone scrolling the Learn hub to its footer')
-      await page.setViewportSize({ width, height })
-      await go(page, '/learn')
-      await expect(page.locator('.srf-h1')).toBeVisible()
-      const edges = await page.evaluate(() => {
-        const left = (s) => document.querySelector(s).getBoundingClientRect().left
-        const nav = document.querySelector('.pnav').getBoundingClientRect()
-        return {
-          h1: left('.srf-h1'),
-          footer: left('.app-footer-brand'),
-          navLeft: nav.left,
-          navWidth: nav.width,
-          viewport: document.documentElement.clientWidth,
-        }
-      })
-      expect(Math.abs(edges.footer - edges.h1),
-        `footer logo at x=${edges.footer}, hub heading at x=${edges.h1}`).toBeLessThanOrEqual(1)
-      // The header is still the full-bleed bar.
-      expect(edges.navLeft, 'the header starts at the left edge').toBe(0)
-      expect(edges.navWidth, 'the header runs the full width').toBeGreaterThanOrEqual(edges.viewport - 1)
-    })
-  }
-
-  // /plans draws its own marketing footer, not the site footer, so it is not here.
+test.describe('2 · the footer content is one centred column on a wide monitor', () => {
+  // The V3 footer (SpectrumFooter) caps its content at 1400px. /plans draws the same footer, so it is not listed twice.
   for (const route of ['/learn', '/learn/help', '/privacy']) {
-    test(`${route}: at 1920 the footer content is one 1240px column, centred`, async ({ page }) => {
+    test(`${route}: at 1920 the footer content is capped at 1400px, centred`, async ({ page }) => {
       watch(page, 'someone on a wide monitor')
       await page.setViewportSize({ width: 1920, height: 1080 })
       await go(page, route)
-      const box = await page.locator('.app-footer-inner').evaluate((el) => {
+      const box = await page.locator('footer.sp-footer .sp-footer-inner').evaluate((el) => {
         const r = el.getBoundingClientRect()
         return { left: r.left, right: r.right, width: r.width, viewport: document.documentElement.clientWidth }
       })
-      expect(Math.round(box.width), `footer content is ${box.width}px wide`).toBe(1240)
+      expect(Math.round(box.width), `footer content is ${box.width}px wide`).toBe(1400)
       expect(Math.abs(box.left - (box.viewport - box.right)),
         `footer content is off-centre: ${box.left}px left, ${box.viewport - box.right}px right`).toBeLessThanOrEqual(1)
     })

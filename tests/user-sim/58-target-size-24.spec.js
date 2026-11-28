@@ -5,8 +5,8 @@
 // found the SAME four controls under the minimum in 260 of 260 cells:
 //
 //   .app-footer-note   "About this project"   109.8 x 21.4   every surface, every width
-//   .app-footer-links a  the footer nav        94.8 x 21.4   every surface, every width
-//   .app-footer-start  "Start with colour"     133 x 23.1    every surface, every width
+//   .sp-footer-links a   the footer nav        94.8 x 21.4   every surface, every width
+//   (the old footer's .app-footer-start "Start with colour" was 133 x 23.1; that footer is retired)
 //   .seo-seg button    Desktop / Mobile      67.6/59.1 x 21  /seo, every width
 //   .plb-hex           copy-a-hex             67.5 x 21      /, 320 through 768
 //
@@ -14,7 +14,7 @@
 //
 // THE TWO EXCEPTIONS IN THE SUCCESS CRITERION ARE IMPLEMENTED HERE, because a
 // check that ignores them reports conforming controls as defects and gets
-// switched off. `.app-footer-attrib` (the credit name, inside the sentence
+// switched off. `.sp-footer-attrib` (the credit name, inside the sentence
 // "Built in Brisbane by …") is 94.7x18 and legitimately exempt under Inline;
 // asserting on it would have forced a pointless change to a link that is fine.
 //
@@ -64,7 +64,7 @@ function measureTargets(min) {
   // display is therefore the criterion rather than a proxy for it.
   //
   // Measured on the same run, this narrows the exemption and nothing else: the
-  // 16 genuinely inline waivers all survive - `.app-footer-attrib` on every
+  // 16 genuinely inline waivers all survive - `.sp-footer-attrib` on every
   // surface, and the prose links on /privacy (support@uil4b.com, oaic.gov.au,
   // "Settings -> Your data") - while all 23 block-level ones are now reported.
   const inlineInSentence = (el) => {
@@ -107,7 +107,7 @@ test.describe('no control in the shell or on a sales surface is under 24x24', ()
         await expectRendered(page)
         // The footer is the surface three of the five fixed controls live on,
         // and it is below the fold on every one of these routes.
-        await page.evaluate(() => document.querySelector('.app-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
+        await page.evaluate(() => document.querySelector('.sp-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
         // Settle on GEOMETRY, and include the nav's animated CTA pill in the
         // key: the document stops growing long before that pill finishes its
         // entrance, so a document-only settle returns while it is still 5.8px
@@ -151,7 +151,7 @@ test.describe('no control in the shell or on a sales surface is under 24x24', ()
     await page.setViewportSize({ width: 390, height: 900 })
     await go(page, '/privacy')
     await expectRendered(page)
-    await page.evaluate(() => document.querySelector('.app-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
+    await page.evaluate(() => document.querySelector('.sp-footer')?.scrollIntoView({ block: 'end', behavior: 'instant' }))
 
     const heights = await page.evaluate(() => {
       const read = (sel) => {
@@ -160,8 +160,7 @@ test.describe('no control in the shell or on a sales surface is under 24x24', ()
       }
       return {
         note: read('.app-footer-note'),
-        start: read('.app-footer-start'),
-        link: read('.app-footer-links a'),
+        link: read('.sp-footer-links a'),
       }
     })
 

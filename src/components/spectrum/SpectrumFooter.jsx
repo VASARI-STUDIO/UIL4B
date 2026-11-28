@@ -22,12 +22,12 @@ import '../../styles/pages/home-footer.css'
 //
 // WHERE IT DEPARTS FROM THE FILE, AND WHY:
 //
-//   · TWO EXTRA COLUMNS, EXPLORE AND SUPPORT. This footer replaces AppFooter
-//     on the marketing screens, and every destination AppFooter reaches has to
-//     stay reachable (tests/unit/spectrum-structure.test.js holds that). The
+//   · TWO EXTRA COLUMNS, EXPLORE AND SUPPORT. This is the one footer on every
+//     page, and the old app footer's destinations have to stay reachable
+//     (tests/unit/spectrum-structure.test.js holds that). The
 //     three drawn columns have no room for Discover, Learn, Community,
 //     Principles, Plans and Sitemap, so they share EXPLORE; Help, Info and
-//     Feedback get their own SUPPORT column, with AppFooter's heading and
+//     Feedback get their own SUPPORT column, with the old footer's heading and
 //     order, so a person looking for help finds it under that name. Both sit
 //     in the same style, before LEGAL.
 //   · CREDITS SITS IN LEGAL, where Cookies was. There is no cookies page, so
@@ -61,7 +61,7 @@ const PROJECT = [
   ['#plans', 'Plans'],
 ]
 
-// EXPLORE — the destinations AppFooter reaches that the drawn columns do not.
+// EXPLORE — the destinations the old app footer reached that the drawn columns do not.
 const EXPLORE = [
   ['/discover', 'Discover'],
   ['/learn', 'Learn'],
@@ -72,7 +72,7 @@ const EXPLORE = [
   ['/sitemap', 'Sitemap'],
 ]
 
-// SUPPORT — the same three links, heading and order as AppFooter's Support.
+// SUPPORT — the same three links, heading and order as the old app footer's Support.
 const SUPPORT = [
   ['/learn/help', 'Help centre'],
   ['/info', 'Info centre'],

@@ -241,6 +241,11 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
   .sp-footer[data-curtain][data-curtain-near]{position:sticky;bottom:0;z-index:1}
 }
 .sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-right,0px)) clamp(48px,6vw,80px) max(clamp(20px,4vw,52px),env(safe-area-inset-left,0px))}
+/* The feedback button (.global-feedback-btn) floats bottom right from 768px up, so on a short page it
+   would sit on the legal row. The footer reserves its height inside its own bottom padding, which
+   travels with the footer, so the last row can never come within the button's reach. The home
+   footer is a closing screen with its own ending and keeps its own padding. */
+.sp-footer:not(.sp-footer--home) .sp-footer-inner{padding-bottom:max(clamp(48px,6vw,80px),66px)}
 /* The brand cell and five link columns (Tools, Project, Explore, Support,
    Legal) in one row. */
 .sp-footer .sp-footer-grid{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(0,1fr));gap:36px;align-items:start}

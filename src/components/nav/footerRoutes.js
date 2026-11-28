@@ -1,23 +1,13 @@
-// WHERE THE SITE FOOTER RENDERS — on /, /plans, /mobile, the two indexes, the reading and
-// legal pages and the link-expired page, never on app pages. The App design draws no footer under a
-// tool, a library or the workspace, so every other route returns nothing here. `/` and `/home` render
-// SpectrumFooter themselves and never mount this component.
-export const FOOTER_ROUTES = new Set([
-  '/plans', '/mobile', '/tools',
-  '/discover', '/learn', '/learn/principles', '/learn/help', '/info', '/sitemap',
-  '/privacy', '/terms', '/credits', '/reset-password',
-])
-
-export function footerShowsOn(pathname) {
-  const path = (pathname || '/').toLowerCase().replace(/\/+$/, '') || '/'
-  return FOOTER_ROUTES.has(path) || path.startsWith('/learn/')
-}
-
-// The Icon and Emoji libraries close with the sales pages' ending (a close, the
-// spectrum strip, then SpectrumFooter) instead of the plain app footer, which
-// draws nothing under a tool. Covers /create/icons, everything beneath it
-// (the Groups tab and its detail views) and /create/emoji.
-export function toolWearsSpectrumFooter(pathname) {
+// WHERE THE SITE FOOTER RENDERS — everywhere. SpectrumFooter closes every page and every tool,
+// from the front door to the app shell and the Create tools; the only pages without it are the
+// full-screen ones (the login and onboarding screens, the maintenance page and a library's
+// `?view=full` window). So there is no route list to keep: a page that should have no footer is a
+// page that renders outside the shell, not an entry here.
+//
+// What does vary is the small print. The Icon and Emoji libraries owe a licence notice for the sets
+// on screen, and SpectrumFooter carries it in its `notice` row.
+// Covers /create/icons, everything beneath it (the Groups tab and its detail views) and /create/emoji.
+export function toolCarriesCredits(pathname) {
   const path = (pathname || '/').toLowerCase().replace(/\/+$/, '') || '/'
   return path === '/create/emoji' || path === '/create/icons' || path.startsWith('/create/icons/')
 }

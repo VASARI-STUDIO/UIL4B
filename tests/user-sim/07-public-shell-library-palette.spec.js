@@ -94,12 +94,11 @@ test.describe('public UI quality release', () => {
 
   /* ONE FOOTER LANDMARK, COUNTED AS A LANDMARK.
    *
-   * This asserted `.app-footer` on every route until `/` became Spectrum, which
-   * renders its own `<footer>` (`.sp-footer`) instead of AppFooter — deliberately,
-   * because mounting both would give the front door TWO contentinfo landmarks
-   * and two copyright lines. Counting the class would now fail on a correct page
-   * and, worse, would pass on the actual defect it exists to catch: two footers
-   * stacked, one of each kind.
+   * This asserted `.app-footer` on every route until `/` became Spectrum, and the
+   * retired AppFooter is gone now: SpectrumFooter (`.sp-footer`) is the only
+   * footer. Mounting two would give a page TWO contentinfo landmarks and two
+   * copyright lines. Counting a class would pass on the actual defect it exists
+   * to catch: two footers stacked, one of each kind.
    *
    * So it counts the `contentinfo` LANDMARK, which is the thing the rule is
    * actually about and what a screen reader's landmark list shows.
@@ -114,23 +113,16 @@ test.describe('public UI quality release', () => {
    *
    * '/create/color' left the loop with the colour landing's deletion — it is a
    * redirect now, so it was asserting the footer of '/create/palette' twice. */
-  // The site footer is on /, /plans, /mobile, the /discover index (commit
-  // 1d8c9d3f8 put it there on purpose)
-  // and the reading and legal pages, and on no tool page. Where it renders there
-  // is exactly one landmark; where it does not, /plans is still one click away
-  // from the header's Upgrade pill.
-  test('reading pages have exactly one footer landmark, app pages none, and /plans stays reachable', async ({ page }) => {
+  // The site footer is on every page and every tool, and each has exactly one
+  // landmark. /plans is reachable from it everywhere, and from the header's
+  // Upgrade pill too.
+  test('every page and tool has exactly one footer landmark, and /plans stays reachable', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/learn', '/discover', '/privacy', '/learn/help', '/create/icons']) {
+    for (const route of ['/', '/learn', '/discover', '/privacy', '/learn/help', '/create/icons', '/create/palette', '/create/aspect-ratio', '/discover/palettes', '/projects']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       // The homepage footer names the link Plans and the reading pages' footer Pricing; both go to /plans.
       await expect(page.getByRole('contentinfo').getByRole('link', { name: /^(Pricing|Plans)$/ }).and(page.locator('a[href="/plans"]')).last()).toBeVisible()
-    }
-    for (const route of ['/create/palette', '/create/aspect-ratio']) {
-      await go(page, route)
-      await expect(page.getByRole('contentinfo'), `${route} is a tool page and draws no site footer`).toHaveCount(0)
-      await expect(page.locator('.pnav a[href="/plans"]').first()).toBeVisible()
     }
   })
 
@@ -148,14 +140,11 @@ test.describe('public UI quality release', () => {
     watch(page, 'visitor wondering who made this')
     for (const route of ['/', '/learn', '/privacy']) {
       await go(page, route)
-      // BOTH footers, because '/' is Spectrum and mounts `.sp-footer` while the
-      // app routes mount `.app-footer`. The credit is owed on every route, so the
-      // selector covers whichever one the
-      // route renders rather than quietly skipping the front door.
+      // The credit is owed on every route, and SpectrumFooter is the one footer.
       // The landmark, not the tag: /create/palette also has a `<footer>` inside
       // <main> for its ADJUST toolbar, which is not a contentinfo landmark.
       const footer = page.getByRole('contentinfo')
-      const attrib = footer.locator('.app-footer-attrib, .sp-footer-attrib')
+      const attrib = footer.locator('.sp-footer-attrib')
       await attrib.waitFor()
 
       await expect(footer, `${route} should credit the founder`).toContainText('Built in Brisbane by Dylan Coleman')
@@ -201,9 +190,7 @@ test.describe('public UI quality release', () => {
           // The underline is semi-transparent, so composite it over the footer
           // ground before measuring — the painted colour is what a user sees.
           const deco = toRgba(style.textDecorationColor)
-          // `.app-footer` until '/' became Spectrum, where this returned null
-          // and getComputedStyle threw. The ground is whichever footer the link
-          // is actually painted on.
+          // The ground is the footer the link is actually painted on.
           const bg = toRgba(getComputedStyle(el.closest('footer')).backgroundColor)
           const over = [0, 1, 2].map((i) => deco[i] * deco[3] + bg[i] * (1 - deco[3]))
           const [a, b2] = [lum(over) + 0.05, lum(bg) + 0.05]

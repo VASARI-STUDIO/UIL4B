@@ -240,8 +240,8 @@ test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301',
   const dead = retired()
   const bounces = bouncingHomes()
   const known = renderable()
-  const { always: paths } = footerPaths('src/components/AppFooter.jsx')
-  assert.ok(paths.length >= 8, `only ${paths.length} paths read out of AppFooter.jsx`)
+  const { always: paths } = footerPaths('src/components/spectrum/SpectrumFooter.jsx')
+  assert.ok(paths.length >= 8, `only ${paths.length} paths read out of SpectrumFooter.jsx`)
   for (const to of paths) {
     assert.ok(!bounces.includes(to), `the footer links ${to}, a category home that only redirects`)
     assert.ok(!dead.has(to), `the footer links ${to}, which is a retired URL`)
@@ -254,7 +254,7 @@ test('a footer link behind the roadmap flag is a real page when the flag is on, 
   const bounces = bouncingHomes()
   const on = renderableWithFlag(true)
   const off = renderableWithFlag(false)
-  for (const file of ['src/components/AppFooter.jsx', 'src/components/spectrum/SpectrumFooter.jsx']) {
+  for (const file of ['src/components/spectrum/SpectrumFooter.jsx']) {
     const { gated, src } = footerPaths(file)
     assert.ok(gated.includes('/roadmap'), `${file} lost its flagged Roadmap link, so this check would pass vacuously`)
     assert.match(src, /import \{ TOOL_VOTES_ON \} from/, `${file} gates a link on a flag it does not import`)
@@ -277,13 +277,11 @@ test('the footer names Create groups rather than typing their URLs', () => {
   // asks the tree like every other row. The expected list is empty, which is the
   // strongest form of this assertion: the file may not type a /create/ route at
   // all.
-  const src = stripComments(read('src/components/AppFooter.jsx'))
+  const src = stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
   const createPaths = [...src.matchAll(/(['"])(\/create\/[a-z0-9-]+)\1/g)].map((m) => m[2])
   assert.deepEqual([...new Set(createPaths)], [],
-    'AppFooter.jsx types a /create/ category URL again — name the group id and let the tree answer')
+    'SpectrumFooter.jsx types a /create/ category URL again — name the group id and let the tree answer')
   assert.match(src, /categoryDestination\(groupId\)/, 'the footer no longer derives its Create links')
-  assert.match(src, /categoryDestination\('colour'\)/,
-    'the "Start with colour" CTA no longer derives its destination')
 })
 
 // ── THE HOMEPAGE TOOLS GRID AND STEP RAIL ───────────────────────────────────

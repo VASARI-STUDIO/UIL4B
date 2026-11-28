@@ -5,16 +5,32 @@
 // This file holds what can be checked without a browser.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import { read, stripComments } from './helpers/source-text.js'
-import { toolWearsSpectrumFooter } from '../../src/components/nav/footerRoutes.js'
+import { toolCarriesCredits } from '../../src/components/nav/footerRoutes.js'
 import { creditRows } from '../../src/data/iconPackCredits.js'
 
-test('the Icon and Emoji libraries wear the sales footer, and no other tool does', () => {
+test('only the Icon and Emoji libraries add the licence notice to the footer', () => {
   for (const path of ['/create/icons', '/create/icons/', '/CREATE/EMOJI', '/create/icons/groups', '/create/icons/groups/arrows']) {
-    assert.equal(toolWearsSpectrumFooter(path), true, path)
+    assert.equal(toolCarriesCredits(path), true, path)
   }
   for (const path of ['/create/palette', '/create/font-gallery', '/create/iconsx', '/tools', '/', '', undefined]) {
-    assert.equal(toolWearsSpectrumFooter(path), false, String(path))
+    assert.equal(toolCarriesCredits(path), false, String(path))
+  }
+})
+
+test('every page and tool wears SpectrumFooter, and the old app footer is gone', () => {
+  assert.ok(!fs.existsSync('src/components/AppFooter.jsx'), 'AppFooter.jsx is back')
+  const app = stripComments(read('src/App.jsx'))
+  // The app shell (every account, library, legal and system page) and the two surface indexes.
+  assert.equal((app.match(/<SpectrumFooter \/>/g) || []).length, 2, 'App.jsx should mount SpectrumFooter in the shell and on the indexes')
+  assert.ok(app.includes('{!fullScreen && <SpectrumFooter />}'), 'the shell footer is no longer dropped only for the full-screen view')
+  // Every Create tool: the footer is unconditional, and the notice is the only thing that varies.
+  const tool = stripComments(read('src/pages/CreateTool.jsx'))
+  assert.match(tool, /<SpectrumFooter notice=\{carriesCredits \? <IconCredits/, 'CreateTool no longer mounts SpectrumFooter for every tool')
+  for (const file of fs.readdirSync('src', { recursive: true })) {
+    if (!/\.jsx?$/.test(file)) continue
+    assert.ok(!/AppFooter/.test(stripComments(read(`src/${file}`))), `${file} still uses AppFooter`)
   }
 })
 
