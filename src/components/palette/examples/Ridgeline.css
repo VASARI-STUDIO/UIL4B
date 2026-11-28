@@ -70,7 +70,7 @@
 .rl-read-km{font-size:15px;font-weight:600;color:var(--pv-text)}
 .rl-chart{position:relative;height:160px}
 .rl-chart svg{display:block;width:100%;height:100%}
-.rl-area{fill:var(--pv-subtle)}
+.rl-area{fill:var(--rl-ground,var(--pv-subtle))}
 .rl-line,.rl-line-steep,.rl-line-case{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .rl-line{stroke:var(--pv-secondary);stroke-width:1.5}
 .rl-line-case{stroke:var(--pv-canvas);stroke-width:11}

@@ -254,5 +254,8 @@ export function ridgelineVars(r) {
     '--rl-accent-ink': own(r.accent, r.onAccent),
     '--rl-accent-edge': fieldEdge(r.accent, r.canvas, r.borderStrong),
     '--rl-subtle-edge': fieldEdge(r.subtle, r.canvas, r.borderStrong),
+    // The chart's ground: the subtle field as is in light, sunk into the canvas in dark so a
+    // pale subtle does not paint a light block on a dark page.
+    '--rl-ground': r.mode === 'dark' ? mixHex(r.subtle, r.canvas, 0.72) : r.subtle,
   }
 }
