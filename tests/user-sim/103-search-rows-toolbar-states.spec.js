@@ -225,7 +225,15 @@ test.describe('Palette Builder toolbar fits on one line', () => {
 // ── Random from the palette (Colours: Palette) ───────────────────────────────
 
 const NEEDS = 'Needs a palette with two or more colours'
-const randomPanel = (page) => page.getByRole('complementary', { name: 'Gradient controls' })
+const randomPanel = (page) => page.getByRole('region', { name: 'Random settings' })
+// The Random filters open from the toolbar's "Random settings" button, which
+// moves into the More sheet on the narrowest screens.
+const openTray = async (page) => {
+  const direct = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Random settings', exact: true })
+  if (await direct.isVisible()) return direct.click()
+  await page.getByRole('button', { name: 'More', exact: true }).click()
+  await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Random settings', exact: true }).click()
+}
 const coloursRow = (page) => randomPanel(page).getByRole('radiogroup', { name: 'Colours' })
 const paletteChoice = (page) => coloursRow(page).getByRole('radio', { name: 'Palette', exact: true })
 const anyChoice = (page) => coloursRow(page).getByRole('radio', { name: 'Any', exact: true })
@@ -248,6 +256,7 @@ test.describe('Gradient · Colours: Palette without a usable palette says so', (
       if (colors) await withPaletteOf(page, colors)
       await page.setViewportSize({ width: 1440, height: 900 })
       await go(page, '/create/gradient')
+      await openTray(page)
       const palette = paletteChoice(page)
       await expect(palette).toBeVisible()
       // aria-disabled keeps the choice focusable and pressable, so the reason is read and the press can explain itself.
@@ -281,9 +290,10 @@ test.describe('Gradient · Colours: Palette without a usable palette says so', (
   }
 
   for (const width of [320, 390]) {
-    test(`at ${width}px the Colours row and the reason fit the screen, no More sheet needed`, async ({ page }) => {
+    test(`at ${width}px the Colours row and the reason fit the screen`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 })
       await go(page, '/create/gradient')
+      await openTray(page)
       const row = coloursRow(page)
       await expect(row).toBeVisible()
       for (const choice of await row.getByRole('radio').all()) {
@@ -302,6 +312,7 @@ test.describe('Gradient · Colours: Palette without a usable palette says so', (
     await withPaletteOf(page, PALETTE)
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
+    await openTray(page)
     const palette = paletteChoice(page)
     await expect(palette).not.toHaveAttribute('aria-disabled', /.*/)
     await palette.click()
