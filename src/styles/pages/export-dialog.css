@@ -356,3 +356,21 @@ html[data-reduced-motion="true"] .xd-live{animation:none}
 html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-tab,.xd-thumb,.xd-gal-b,.xd-tpl-card,.xd-more > summary::before,.xd-frame .exp-preview-retry){transition:none}
 /* The logo buttons come from the shared identity fields at 40px; below 1024 every target here is 44px. */
 @media (max-width:1023.98px){.xd .exp-logo-acts .btn-s{min-height:44px}}
+
+/* Board A: the template line and the Layout row sit together above the scrolling area; the file-type switch is the first thing in it. */
+.xd-top{flex:none;display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-4) var(--s-6) 0;border-bottom:1px solid var(--border)}
+.xd[data-layout="menu"] .xd-top{padding-inline:var(--s-5)}
+.xd[data-layout="strip"] .xd-top{padding-inline:var(--s-4)}
+.xd-top .xd-tabs{padding:0;border-bottom:0;margin-left:calc(-1 * var(--s-3))}
+.xd[data-layout="strip"] .xd-top .xd-tabs{margin-left:calc(-1 * var(--s-2))}
+.xd-tline{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);min-width:0}
+.xd-tline-n{display:flex;align-items:baseline;gap:var(--s-2);min-width:0;margin:0;font-size:var(--fs-body-s);color:var(--t1);white-space:nowrap}
+.xd-tline-n strong{flex:none;font-size:16px;font-weight:600;color:var(--t0)}
+.xd-tline-k{flex:none}
+.xd-tline-m{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.xd-tline-b{flex:none}
+.xd-filetype{min-width:0}
+/* The rail's names: the long one on the rail and the tablet, the short one in the phone's segmented control. */
+.xd-short{display:none}
+.xd[data-layout="strip"] .xd-long{display:none}
+.xd[data-layout="strip"] .xd-short{display:inline}

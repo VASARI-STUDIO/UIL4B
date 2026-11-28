@@ -2,16 +2,16 @@
 //
 // The UI kit, the book and the slides (PDF and HTML) used to offer a Layout step with three template tiles each (Studio, Manual,
 // Showcase; Specification, Monograph, Atlas; Presentation, Poster, Grid). Those files now take one of the templates in the grid
-// behind "View templates" instead (191-export-theme-picker.spec.js covers the grid). This spec keeps the other half true:
+// behind "Change template" instead (191-export-theme-picker.spec.js covers the grid). This spec keeps the other half true:
 //
-//   1. For a free and a Pro account, the themed files offer "View templates" and no Template tiles and no Layout heading.
+//   1. For a free and a Pro account, the themed files offer "Change template" and no Template tiles and no Layout heading.
 //   2. The book as PNG pages still has its Layout note (inside "File details"), with the one-layout line and no tiles, and no
-//      "View templates".
+//      "Change template".
 //   3. A themed request carries a theme and never a template.
 //
 // MUTATION
 //   - ExportSteps: showLayout loses its `!themed &&`   -> test 1 (the Layout heading and the tiles come back for the themed files).
-//   - ExportDialog: `templates` is passed for every file -> test 2 (PNG pages offer View templates).
+//   - ExportDialog: `templates` is passed for every file -> test 2 (PNG pages offer Change template).
 //   - useExportRunner: the themed request adds `template` -> test 3.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
@@ -32,17 +32,17 @@ const step = (panel, name) => panel.getByRole('heading', { level: 3, name, exact
 
 for (const plan of ['free', 'pro']) {
   for (const file of ['kit', 'book', 'book-html', 'guidelines', 'guidelines-html']) {
-    test(`${plan}: ${file} offers View templates and has no Layout step or template tiles`, async ({ page }) => {
+    test(`${plan}: ${file} offers Change template and has no Layout step or template tiles`, async ({ page }) => {
       watch(page, `a ${plan} account looking for a layout choice on ${file}`)
       const panel = await openProject(page, plan)
       await chooseFormat(panel, file)
-      await expect(panel.getByRole('button', { name: 'View templates' })).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Change template' })).toBeVisible()
       await openDetails(panel)
       await expect(step(panel, 'Layout')).toHaveCount(0)
       await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
       await expect(panel.getByRole('radiogroup', { name: 'Theme' })).toHaveCount(0)
       await expect(panel.locator('.exp-tpl-tile')).toHaveCount(0)
-      // The templates sit behind View templates as cards, so no template name is a radio anywhere in the dialog.
+      // The templates sit behind Change template as cards, so no template name is a radio anywhere in the dialog.
       const offered = (await panel.getByRole('radio').allInnerTexts()).join('\n')
       for (const name of TEMPLATE_NAMES) expect(offered, `${name} is not a radio in the dialog`).not.toMatch(new RegExp(`^${name}\b`, 'm'))
     })
@@ -56,7 +56,7 @@ for (const plan of ['free', 'pro']) {
     await expect(step(panel, 'Layout')).toBeVisible()
     await expect(panel.getByText('PNG pages use one layout.')).toBeVisible()
     await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
-    await expect(panel.getByRole('button', { name: 'View templates' })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Change template' })).toHaveCount(0)
   })
 }
 

@@ -56,7 +56,7 @@ const rootOf = (panelOrPage) => (
 
 // The names the popup's rail and tabs had before the four-category layout, mapped to today's, so a spec that still says "Brand book" or
 // "Slides" reaches the right place. Branding, UI, Image and Code are the rail; every category is a tab in the bar over the preview.
-const RAIL = { 'Brand book': 'Branding', 'UI kit': 'UI' }
+const RAIL = { Branding: 'Brand guidelines', 'Brand book': 'Brand guidelines', UI: 'UI style guide', 'UI kit': 'UI style guide' }
 const TAB = { Book: 'Brand book', Slides: 'Guidelines' }
 
 /** The rail's type radio: "Branding", "UI", "Image" or "Code". */
@@ -79,12 +79,26 @@ export const primaryButton = (panelOrPage) => rootOf(panelOrPage).locator('.xd-p
 export const dockStatus = (panelOrPage) => rootOf(panelOrPage).locator('.xd-dock .xd-status')
 export const dockError = (panelOrPage) => rootOf(panelOrPage).locator('.xd-error')
 
-/** Choose a file: its type, then its category (Brand book only), then its pill where the category has a switch. */
+// Which rail item holds each category since the four-item rail (src/config/exportRail.js), written out here.
+const CATEGORY_RAIL = {
+  Guidelines: 'Brand guidelines', 'Brand book': 'Brand guidelines',
+  'UI kit': 'UI style guide', 'Style guide': 'UI style guide', 'App-ready bundle': 'UI style guide',
+  'Style guide image': 'Image', 'Book pages': 'Image',
+  Tokens: 'Code', Contrast: 'Code',
+}
+
+/** Reach a category the way a person does: the rail item that holds it (when its tab is not already showing), then the tab. */
+export async function pickCategory(panelOrPage, categoryName) {
+  const tab = categoryRadio(panelOrPage, categoryName)
+  if (!(await tab.count())) await typeRadio(panelOrPage, CATEGORY_RAIL[categoryName]).click()
+  await tab.click()
+}
+
+/** Choose a file: the rail item and tab that hold its category, then its pill where the category has a switch. */
 export async function chooseFormat(panelOrPage, id) {
   const panel = rootOf(panelOrPage)
-  const { type, category } = locationOf(id)
-  await typeRadio(panel, type.name).click()
-  if (type.categories.length > 1) await categoryRadio(panel, category.name).click()
+  const { category } = locationOf(id)
+  await pickCategory(panel, category.name)
   if (category.files.length > 1) {
     await fileGroup(panel, category.name).getByRole('radio', { name: FILE_LABEL[id], exact: true }).click()
   }
@@ -103,11 +117,11 @@ export async function exportAs(page, id) {
 /** The gallery's grid. The premium strip in the main view is a .xd-tpl-grid too (.xd-prem-grid), so it is left out here. */
 export const GALLERY = '.xd-tpl-grid:not(.xd-prem-grid)'
 
-/** Open "View templates" (the grid of templates in the dialog) if it is not open, and return the grid. */
+/** Open "Change template" (the grid of templates in the dialog) if it is not open, and return the grid. */
 export async function openTemplates(panelOrPage) {
   const panel = rootOf(panelOrPage)
   const grid = panel.locator(GALLERY)
-  if (!(await grid.count())) await panel.getByRole('button', { name: 'View templates' }).click()
+  if (!(await grid.count())) await panel.getByRole('button', { name: 'Change template' }).click()
   await grid.waitFor()
   return grid
 }
@@ -117,7 +131,7 @@ export const templateCard = (panelOrPage, name) => rootOf(panelOrPage)
   .locator(`${GALLERY} .xd-tpl-card`)
   .filter({ has: rootOf(panelOrPage).page().locator('.xd-tpl-n').getByText(name, { exact: true }) })
 
-/** Choose a template the way a person does: View templates, then the card. The dialog returns to the preview with it chosen. */
+/** Choose a template the way a person does: Change template, then the card. The dialog returns to the preview with it chosen. */
 export async function chooseTemplate(panelOrPage, name) {
   const panel = rootOf(panelOrPage)
   await openTemplates(panel)

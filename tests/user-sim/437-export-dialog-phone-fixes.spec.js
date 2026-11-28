@@ -19,7 +19,7 @@ import { GALLERY, chooseFormat, exportPanel, openTemplates, typeRadio } from './
 
 const ROUTE = '/projects/harbour/export'
 const PHONES = [[360, 740], [375, 667], [390, 844]]
-const RAIL = ['Branding', 'UI', 'Image', 'Code']
+const RAIL = ['Brand guidelines', 'UI style guide', 'Image', 'Code']
 
 function savedProject() {
   const design = structuredClone(DEFAULT_DESIGN)

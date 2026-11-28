@@ -223,7 +223,7 @@ export default function ExportSteps({ cat, file, name, fileProject = '', project
 // `onPrimary` decides what the click does: after an export it is "Done" and closes the
 // dialog, and `onAnother` is the other way on, back to the file step. After a 429 the
 // button counts `retryIn` seconds down (aria-disabled, and still readable), then is live again.
-export function ExportDock({ cat, file, busy, stage, error, notice, done, retryIn = 0, onPrimary, onAnother, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn, templates = null, wayOut = null, onWayOut }) {
+export function ExportDock({ cat, file, busy, stage, error, notice, done, retryIn = 0, onPrimary, onAnother, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn, wayOut = null, onWayOut }) {
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
   const checking = planKnown === false
@@ -268,11 +268,6 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, retryI
         {error && <p className="xd-error" role="alert">{error}</p>}
       </div>
       <div className="xd-dock-acts">
-        {templates && (
-          <button type="button" className="btn xd-act xd-templates" onClick={templates.onClick} aria-pressed={templates.open} disabled={busy}>
-            {templates.open ? 'Back to preview' : 'View templates'}
-          </button>
-        )}
         {locked && wayOut && !done && (
           <button type="button" className="xd-link xd-wayout" onClick={onWayOut} disabled={busy}>
             {wayOut.label}

@@ -355,12 +355,12 @@ test.describe('with the keyboard', () => {
     const panel = await settled(page)
     await expect(panel.getByRole('heading', { level: 2 }), 'focus starts on the title').toBeFocused()
 
-    await typeRadio(panel, 'Branding').focus()
+    await typeRadio(panel, 'Brand guidelines').focus()
     await page.keyboard.press('ArrowDown')
     await expect(typeRadio(panel, 'UI')).toBeFocused()
     await expect(typeRadio(panel, 'UI')).toHaveAttribute('aria-checked', 'true')
-    // UI opens on its UI kit tab; the arrow along the tabs reaches the App-ready bundle.
-    await categoryRadio(panel, 'UI kit').focus()
+    // UI opens on its UI kit tab; the arrow along the tabs (UI kit, Style guide, App-ready bundle) reaches the App-ready bundle.
+    await categoryRadio(panel, 'Style guide').focus()
     await page.keyboard.press('ArrowRight')
     await expect(categoryRadio(panel, 'App-ready bundle')).toBeFocused()
     await expect(categoryRadio(panel, 'App-ready bundle')).toHaveAttribute('aria-selected', 'true')

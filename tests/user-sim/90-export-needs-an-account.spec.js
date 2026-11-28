@@ -26,7 +26,7 @@
 // this measurement did.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { categoryRadio } from './export-rows.js'
+import { pickCategory } from './export-rows.js'
 
 const PERSONA = 'someone trying the tools before signing up for anything'
 
@@ -137,7 +137,7 @@ test.describe('a file needs a free account', () => {
     await expect(panel, 'the export panel never opened').toBeVisible({ timeout: 15000 })
     // The popup opens on the free Guidelines PDF; the style guide is another free file a
     // visitor can build, so that one has to ask for an account too.
-    await categoryRadio(panel, 'Style guide').click()
+    await pickCategory(panel, 'Style guide')
     const run = panel.getByRole('button', { name: /^export/i }).last()
     await expect(run, 'the export panel never rendered its own export action')
       .toBeVisible({ timeout: 15000 })
