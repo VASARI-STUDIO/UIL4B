@@ -35,10 +35,12 @@ test('monthly: Pro starts today and the next charge is one calendar month on', (
 })
 
 test('a month-end date lands on the last day of the next month', () => {
-  assert.equal(shortDate(addMonth(new Date(2026, 0, 31)), 'en-GB'), '28 Feb')
-  assert.equal(shortDate(addMonth(new Date(2028, 0, 31)), 'en-GB'), '29 Feb')
-  assert.equal(shortDate(addMonth(new Date(2026, 7, 31)), 'en-GB'), '30 Sep')
-  assert.equal(shortDate(addMonth(new Date(2026, 11, 31)), 'en-GB'), '31 Jan')
+  const ymd = (d) => [d.getFullYear(), d.getMonth() + 1, d.getDate()]
+  assert.deepEqual(ymd(addMonth(new Date(2026, 0, 31))), [2026, 2, 28])
+  assert.deepEqual(ymd(addMonth(new Date(2028, 0, 31))), [2028, 2, 29])
+  assert.deepEqual(ymd(addMonth(new Date(2026, 7, 31))), [2026, 9, 30])
+  assert.deepEqual(ymd(addMonth(new Date(2026, 11, 31))), [2027, 1, 31])
+  assert.equal(shortDate(new Date(2026, 1, 28), 'en-GB'), '28 Feb')
 })
 
 test('amounts go through the money function, never a fixed figure', () => {
