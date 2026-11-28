@@ -171,7 +171,7 @@ const noDemo = (html, what) => {
 
 test('CONTROL: the trade-word check fails on each demo word', () => {
   for (const w of ['Kerbside', 'courier', 'rider', 'parcel', 'Melbourne', 'Brunswick', 'Richmond', 'Fitzroy', 'Swan Street']) {
-    assert.throws(() => assert.ok(!TRADE.exec(markup(`<p>${w}</p>`)), w), w)
+    assert.throws(() => assert.ok(!TRADE.exec(markup(`<p>${w}</p>`)), w), assert.AssertionError, w)
   }
 })
 
