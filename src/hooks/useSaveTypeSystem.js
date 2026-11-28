@@ -93,7 +93,7 @@ export function useSaveTypeSystem({ gate, label, summary, toast }) {
       saveProject(trimmed)
       setName('')
       setOpen(false)
-      toast?.(`${trimmed} saved — fonts and type scale included`)
+      toast?.(`${trimmed} saved, with fonts and type scale`)
     } catch (err) {
       // Not the cap: the account's list is still loading or did not load. Nothing was
       // created and the menu stays open so the name can be sent again.

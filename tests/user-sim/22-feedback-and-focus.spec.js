@@ -194,7 +194,7 @@ for (const modal of [true, false]) {
       await expect(heading(page)).toBeVisible()
       await expect(heading(page)).toBeFocused()
       await expect(surface(page).getByRole('status')).toContainText('Sent')
-      await expect(surface(page).getByText('Thanks — sending your message now.')).toBeVisible()
+      await expect(surface(page).getByText('Thanks. Sending your message now.')).toBeVisible()
       await expect(surface(page).getByRole('button', { name: modal ? 'Send another' : 'Submit another' })).toBeDisabled()
       await expect.poll(() => server.posted.length).toBe(1)
       expect(server.posted[0].requestId).toMatch(/^fb-[A-Za-z0-9-]{16,}$/)

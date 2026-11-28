@@ -169,7 +169,7 @@ export default function AiPromptGenerator({ toast }) {
     // MONTHLY limit could refuse a user every local check said was fine — and
     // that refusal then read as a generic error.
     if (quota.blocked || !canUseFeature(TOOL_ID, dailyLimit)) {
-      toast?.(quota.message || 'Daily limit reached — resets at 00:00 UTC')
+      toast?.(quota.message || 'Daily limit reached. Resets at 00:00 UTC')
       return
     }
     setBusy(true)

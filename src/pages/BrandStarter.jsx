@@ -373,7 +373,7 @@ export function BrandStarterWorkbench({ planId = 'free', signedOut = false, getT
       setStatus('done')
       toast?.('Brand starter ready')
     } catch (err) {
-      setError(err.message || 'Something went wrong.')
+      setError(err.message || 'Couldn’t make the brand starter. Try again.')
       setStatus('error')
     }
   }, [canGenerate, ensureAccount, getToken, trimmed, toast])

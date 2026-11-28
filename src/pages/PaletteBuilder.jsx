@@ -2823,7 +2823,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const openInGradient = () => {
     closeAllMenus()
     if (!setGradientDraft(adjusted)) {
-      toast?.('A gradient needs two different colours — add another to the board first')
+      toast?.('A gradient needs two different colours. Add another to the board first')
       return
     }
     setLiveMsg('Opening your palette in the Gradient Generator')
@@ -2831,7 +2831,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       navigate('/create/gradient')
     } catch {
       resetGradientDraft()
-      toast?.('Couldn’t open the Gradient Generator — try again')
+      toast?.('Couldn’t open the Gradient Generator. Try again')
     }
   }
 
@@ -2858,14 +2858,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const openInTint = (hex) => {
-    if (!setTintDraft([hex])) { toast?.('That colour couldn’t be handed over — try another'); return }
+    if (!setTintDraft([hex])) { toast?.('That colour couldn’t be handed over. Try another'); return }
     setTintsIdx(null)
     setLiveMsg(`Opening ${hex} in the Tint Generator`)
     try {
       navigate('/create/tint')
     } catch {
       resetTintDraft()
-      toast?.('Couldn’t open the Tint Generator — try again')
+      toast?.('Couldn’t open the Tint Generator. Try again')
     }
   }
 
@@ -3053,14 +3053,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
     try {
       await publishToQueue({ ...queued, localId })
-      toast?.('Submitted to the community — thanks!')
+      toast?.('Submitted to the community. Thanks!')
     } catch (err) {
       // Never claim it reached the queue when it did not. The local copy is
       // kept, so nothing the user made is lost. A refusal by the post limits
       // gets its own words, because trying again at once cannot work.
       toast?.(isPostLimit(err)
         ? `${err.message} Your palette is saved in this browser.`
-        : 'Saved locally — we could not reach the review queue. Try again later.')
+        : 'Saved locally. We could not reach the review queue. Try again later.')
     }
   }
 

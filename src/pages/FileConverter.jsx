@@ -403,7 +403,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
     if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images', 'error'); return 0 }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
-    if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`, 'info')
+    if (big) toast(`Heads up: ${big.name} is over 50 MB. It may be slow`, 'info')
     const next = imgs.map(f => ({
       id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 7)}`,
       name: f.name,
@@ -566,7 +566,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       renderScale,
     })
     if (exceedsCanvasLimit(plan.w, plan.h)) {
-      throw new Error(plan.exact ? 'Too large to export — pick a smaller size' : `Too large to export at @${renderScale}x — pick a smaller size`)
+      throw new Error(plan.exact ? 'Too large to export. Pick a smaller size' : `Too large to export at @${renderScale}x. Pick a smaller size`)
     }
     // canvas.toBlob yields null — or quietly a PNG — when the browser can't
     // encode the requested format (notably AVIF in some browsers), and a
@@ -1384,7 +1384,7 @@ function VideoConvert({ toast }) {
     const animImage = /^image\/(gif|webp)$/.test(f.type) || /\.(gif|webp)$/i.test(f.name)
     const okType = f.type.startsWith('video/') || /\.(mp4|webm|mov|avi|gif|webp)$/i.test(f.name)
     if (!okType) { toast('Please choose a video, animated GIF or animated WebP', 'error'); return }
-    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — conversion may be slow or run out of memory', 'info')
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB. Conversion may be slow or run out of memory', 'info')
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     if (result?.url) URL.revokeObjectURL(result.url)
     setFile(f)
@@ -1505,7 +1505,7 @@ function VideoConvert({ toast }) {
       return
     }
     if (!engineLoaded() && !navigator.onLine) {
-      toast('You appear to be offline — the converter engine needs a connection to load', 'error')
+      toast('You appear to be offline. The converter engine needs a connection to load', 'error')
       return
     }
     const run = ++runRef.current
@@ -2252,7 +2252,7 @@ function VideoFrames({ toast }) {
       toast('Please choose a video file (MP4, WebM, MOV, AVI)', 'error')
       return
     }
-    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB. Extraction may be slow', 'info')
     // A run in flight belongs to the old file: stop it before its source URL goes.
     if (disposeRun()) {
       abortRef.current = null
@@ -2371,7 +2371,7 @@ function VideoFrames({ toast }) {
       // frames (stopped: …)" and then this line toasted "Extracted N frames" in
       // the same tick — the second replaced the first before it painted, so a
       // run that stopped early reported itself as a clean success.
-      if (signal.aborted) toast(out.length ? `Extraction cancelled — kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
+      if (signal.aborted) toast(out.length ? `Extraction cancelled. Kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
       else if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
       else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
       else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames, the most one run makes`, 'info')

@@ -823,7 +823,7 @@ export default function FontGallery({ onCopy, toast }) {
       heading: draft.heading,
       ...(draft.body ? { body: draft.body } : {}),
     })
-    if (!setPairDraft(draft)) { toast?.('Couldn’t carry that selection over — try again.'); return }
+    if (!setPairDraft(draft)) { toast?.('Couldn’t carry that selection over. Try again.'); return }
     setSelected(null)
     navigate('/create/font-pair')
   }, [navigate, setFonts, toast])
@@ -834,7 +834,7 @@ export default function FontGallery({ onCopy, toast }) {
       body: { family: font.family, weight: bodyWeight(font), category: font.category },
     }
     setFonts(draft)
-    if (!setScaleDraft(draft)) { toast?.('Couldn’t carry that selection over — try again.'); return }
+    if (!setScaleDraft(draft)) { toast?.('Couldn’t carry that selection over. Try again.'); return }
     setSelected(null)
     navigate('/create/type-scale')
   }, [navigate, setFonts, toast])

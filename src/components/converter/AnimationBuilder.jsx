@@ -132,7 +132,7 @@ export default function AnimationBuilder({ toast }) {
   // ── Adding frames ─────────────────────────────────────────────────────────
   const addFiles = useCallback(async (list) => {
     const files = Array.from(list).filter(f => f.type.startsWith('image/') || IMAGE_NAME.test(f.name))
-    if (!files.length) { toast('Please choose image files — PNG, JPEG, WebP, GIF, SVG, BMP or AVIF', 'error'); return }
+    if (!files.length) { toast('Choose image files: PNG, JPEG, WebP, GIF, SVG, BMP or AVIF', 'error'); return }
     // One selection arrives in whatever order the OS hands it over; name order
     // with numbers read as numbers ("frame-2" before "frame-10") is the order
     // an exported sequence was written in.
@@ -156,7 +156,7 @@ export default function AnimationBuilder({ toast }) {
       }
     }
     if (failed) toast(`${failed} file${failed > 1 ? 's' : ''} could not be read as an image`, 'error')
-    if (files.length > take.length) toast(`Added ${take.length} — an animation here holds up to ${MAX_FRAMES} frames`, 'info')
+    if (files.length > take.length) toast(`Added ${take.length}. An animation here holds up to ${MAX_FRAMES} frames`, 'info')
     if (!loaded.length) return
     const wasEmpty = live.current.frames.length === 0
     dropCleared(cleared)
@@ -285,7 +285,7 @@ export default function AnimationBuilder({ toast }) {
   const build = async () => {
     if (!n || busy) return
     if (!engineLoaded() && !navigator.onLine) {
-      toast('You appear to be offline — the converter engine needs a connection to load', 'error')
+      toast('You appear to be offline. The converter engine needs a connection to load', 'error')
       return
     }
     const run = ++runRef.current
@@ -458,7 +458,7 @@ export default function AnimationBuilder({ toast }) {
             <p className="fc-meta">
               {resultFmt.label} · {result.w}×{result.h} · {formatBytes(result.bytes)} · {describeTiming(result.frames, result.fps)}
             </p>
-            {stale && <p className="fc-note fc-note--warn">Settings or frames changed since this was built — build again to include them.</p>}
+            {stale && <p className="fc-note fc-note--warn">Settings or frames changed since this was built. Build again to include them.</p>}
             <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, `animation.${resultFmt.ext}`, 'download the animation')}>
               Download {resultFmt.label}
             </button>

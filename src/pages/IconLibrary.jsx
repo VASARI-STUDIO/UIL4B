@@ -3370,8 +3370,8 @@ const REVEAL_CHUNK = 40
 
 const SOFT_NOTICE_COPY = {
   partial: 'Some icon sets couldn’t load.',
-  stale: 'Couldn’t refresh this set — showing the copy saved on this device.',
-  sample: 'Couldn’t load the whole set — showing its first icons.',
+  stale: 'Couldn’t refresh this set. Showing the copy saved on this device.',
+  sample: 'Couldn’t load the whole set. Showing its first icons.',
 }
 
 function firstPageReady(count, settled, total, pageSize, timedOut = false) {
@@ -5925,7 +5925,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
               // same class of error as a masthead pill saying "Live library
               // connected" directly above this notice.
               <div className="ig-notice" role="status">
-                <span>{hasBuiltins(category) ? 'Couldn’t reach the icon service — showing built-in icons.' : 'Couldn’t reach the icon service — no built-in icons in this category.'}</span>
+                <span>{hasBuiltins(category) ? 'Couldn’t reach the icon service. Showing built-in icons.' : 'Couldn’t reach the icon service. No built-in icons in this category.'}</span>
                 <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
               </div>
             )}
