@@ -144,7 +144,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
           <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" aria-label="Prompt title" className="pl-input-title" />
           <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." aria-label="Prompt" className="pl-textarea" />
           <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" aria-label="Tags" />
-          <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional — portfolio, X, Dribbble)" aria-label="Profile link" />
+          <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional: portfolio, X, Dribbble)" aria-label="Profile link" />
         </div>
         <div className="pl-add-actions">
           <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>

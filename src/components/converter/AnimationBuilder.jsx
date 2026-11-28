@@ -384,7 +384,7 @@ export default function AnimationBuilder({ toast }) {
         multiple
         onFiles={addFiles}
         hint="Drop image frames here or click to browse"
-        sub="One image per frame, put in file-name order — PNG, JPEG, WebP, GIF, SVG, BMP, AVIF"
+        sub="One image per frame, put in file-name order. PNG, JPEG, WebP, GIF, SVG, BMP, AVIF"
       />
     )
   }
@@ -473,8 +473,8 @@ export default function AnimationBuilder({ toast }) {
           <MenuSelect label="Output format" id="fc-an-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={busy}>
             {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
           </MenuSelect>
-          {fmt.id === 'gif' && <p className="fc-note">GIF keeps transparency as on/off only — soft edges come out hard</p>}
-          {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency — clear areas take the background colour</p>}
+          {fmt.id === 'gif' && <p className="fc-note">GIF keeps transparency as on/off only, so soft edges come out hard</p>}
+          {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency, so clear areas take the background colour</p>}
         </div>
 
         <div className="fc-insp-sec">
@@ -492,7 +492,7 @@ export default function AnimationBuilder({ toast }) {
               </MenuSelect>
             </div>
           </div>
-          {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
+          {!fmt.loops && <p className="fc-note">Video files store no loop count. The player decides</p>}
           <p className="fc-note">{describeTiming(n, fpsVal)}</p>
         </div>
 
@@ -504,7 +504,7 @@ export default function AnimationBuilder({ toast }) {
           <p className="fc-note">Up to {MAX_ANIMATION_SIDE} px on the longer side</p>
           <div className="fc-outsize">
             <span className="fc-outsize-k">Output</span>
-            <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px — the first frame sets the shape</span>
+            <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px. The first frame sets the shape</span>
           </div>
           {fmt.alpha ? (
             <label className="fc-check">
@@ -525,7 +525,7 @@ export default function AnimationBuilder({ toast }) {
           <MenuSelect label="Quality" id="fc-an-quality" className="fc-field" value={quality} onChange={nextValue => setQuality(nextValue)} disabled={busy || fmt.id === 'apng'}>
             {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
           </MenuSelect>
-          {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+          {fmt.id === 'apng' && <p className="fc-note">APNG is lossless, so quality doesn&apos;t apply</p>}
         </div>
 
       </aside>

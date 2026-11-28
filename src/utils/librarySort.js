@@ -45,8 +45,8 @@ export function useLibrarySort() {
 export function sortOptions(searching, packLabel = 'Pack') {
   return [
     { value: 'recommended', label: searching ? 'Best match' : 'Recommended' },
-    { value: 'az', label: 'Name A–Z' },
-    { value: 'za', label: 'Name Z–A' },
+    { value: 'az', label: 'Name A to Z' },
+    { value: 'za', label: 'Name Z to A' },
     { value: 'pack', label: packLabel },
   ]
 }

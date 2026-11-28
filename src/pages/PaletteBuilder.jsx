@@ -3449,7 +3449,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     <button
                       type="button"
                       className={pickerIdx === i ? 'plb-tool plb-tool--quick plb-tool--on' : 'plb-tool plb-tool--quick'}
-                      title={isPro ? 'Edit in HCT' : 'Edit in HCT — Pro'}
+                      title={isPro ? 'Edit in HCT' : 'Edit in HCT (Pro)'}
                       aria-label={`Edit ${role} in HCT`}
                       aria-haspopup="dialog"
                       aria-expanded={pickerIdx === i}
@@ -3533,7 +3533,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   type="button"
                   className="plb-ramp"
                   title={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900`}
-                  aria-label={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900 — view all tints`}
+                  aria-label={`Tints of ${adjusted[i].toUpperCase()}, 100 to 900, view all tints`}
                   onClick={() => { panelOpenerRef.current = 'ramp'; setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
                 >
                   {ramp.map((rc, k) => (
@@ -3559,8 +3559,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <button
                     type="button"
                     className="plb-aa plb-aa--locked"
-                    title="Contrast check — Pro"
-                    aria-label={`Contrast of ${role} — a Pro check`}
+                    title="Contrast check (Pro)"
+                    aria-label={`Contrast of ${role} (a Pro check)`}
                     onClick={() => openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })}
                   >
                     <span>
@@ -3633,8 +3633,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <button
                     type="button"
                     className="plb-gap"
-                    aria-label={`Insert a colour between position ${i + 1} and ${i + 2} — right-click, or open the menu key, to insert more than one`}
-                    title="Insert a colour here — right-click for more"
+                    aria-label={`Insert a colour between position ${i + 1} and ${i + 2}. Right-click, or open the menu key, to insert more than one`}
+                    title="Insert a colour here. Right-click for more"
                     onClick={() => insertBetween(i)}
                     onContextMenu={(e) => {
                       e.preventDefault()
@@ -3981,7 +3981,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
             </div>
             {history.length === 0 ? (
-              <div className="plb-menu-sub">No history yet — every palette you build lands here automatically</div>
+              <div className="plb-menu-sub">No history yet. Every palette you build lands here automatically</div>
             ) : (
               <>
                 <div className="plb-scrolllist">

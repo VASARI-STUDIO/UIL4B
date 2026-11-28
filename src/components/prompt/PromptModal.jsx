@@ -87,7 +87,7 @@ function LiveFrame({ id, title, onEscape }) {
         )}
       </div>
       <p className="pl-modal-live-note">
-        Generated from this prompt. Interactive — hover, scroll and click inside it.
+        Generated from this prompt. Interactive: hover, scroll and click inside it.
       </p>
     </div>
   )

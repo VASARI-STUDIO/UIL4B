@@ -70,12 +70,12 @@ export function exceedsCanvasLimit(w, h) {
 // ladder even where the names do not.
 export const SIZE_PRESETS = [
   { id: 0, label: 'Keep original size' },
-  { id: 3840, label: '4K — 3840 px' },
-  { id: 2560, label: '2K — 2560 px' },
-  { id: 1920, label: 'Full HD — 1920 px' },
-  { id: 1280, label: '720p — 1280 px' },
-  { id: 1024, label: '1K — 1024 px' },
-  { id: 640, label: 'Small — 640 px' },
+  { id: 3840, label: '4K (3840 px)' },
+  { id: 2560, label: '2K (2560 px)' },
+  { id: 1920, label: 'Full HD (1920 px)' },
+  { id: 1280, label: '720p (1280 px)' },
+  { id: 1024, label: '1K (1024 px)' },
+  { id: 640, label: 'Small (640 px)' },
 ]
 
 // Render scales. Everything below @1x is new: the control offered @1x and @2x

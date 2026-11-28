@@ -748,7 +748,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       onFiles={addFiles}
       compact={items.length > 0}
       hint={items.length ? 'Add more images' : 'Drop images here or click to browse'}
-      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
+      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO. Batch supported"
     />
   )
 
@@ -850,7 +850,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     ariaLabel="JPEG background colour"
                     triggerClassName="fc-bg-pick"
                   />
-                  <p className="fc-note">Background — fills transparency, JPEG has no alpha</p>
+                  <p className="fc-note">Background: fills transparency, JPEG has no alpha</p>
                 </div>
               )}
             </div>
@@ -864,7 +864,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 disabled={busy || !fmt.lossy || fitOn}
                 ariaLabel="Output quality"
               />
-              {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+              {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless, so quality doesn&apos;t apply</p>}
               {fmt.lossy && fitOn && <p className="fc-note">Fit under a size picks the quality.</p>}
             </div>
 
@@ -2084,7 +2084,7 @@ function VideoConvert({ toast }) {
                   </MenuSelect>
                 </div>
               </div>
-              {!fmt.loops && !isFrameExport && <p className="fc-note">Video files store no loop count — the player decides</p>}
+              {!fmt.loops && !isFrameExport && <p className="fc-note">Video files store no loop count. The player decides</p>}
             </div>
             <div className="fc-insp-sec">
               <div className="fc-pair">
@@ -2126,7 +2126,7 @@ function VideoConvert({ toast }) {
                       </MenuSelect>
                     </div>
                   </div>
-                  {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+                  {fmt.id === 'apng' && <p className="fc-note">APNG is lossless, so quality doesn&apos;t apply</p>}
                 </>
               )}
             </div>
@@ -2407,7 +2407,7 @@ function VideoFrames({ toast }) {
     <>
       {!srcUrl ? (
         <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
-          hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
+          hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI. Output is a ZIP of image frames" />
       ) : (
         <div className="fc-bench">
           <div className="fc-bench-main">
@@ -2459,7 +2459,7 @@ function VideoFrames({ toast }) {
                   disabled={extracting || !fmt.lossy}
                   ariaLabel="Frame quality"
                 />
-                {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+                {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless, so quality doesn&apos;t apply</p>}
               </div>
               <div className="fc-insp-sec">
                 <span className="fc-eyebrow">Range (seconds)</span>

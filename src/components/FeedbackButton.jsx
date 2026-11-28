@@ -106,7 +106,7 @@ export default function FeedbackButton() {
           type="button"
           className={'global-feedback-btn' + (onForm ? ' global-feedback-btn--form' : '')}
           onClick={openFromButton}
-          title="Share feedback — or right-click anywhere to report what is under your pointer"
+          title="Share feedback, or right-click anywhere to report what is under your pointer"
           aria-label="Share feedback"
           aria-haspopup="dialog"
         >

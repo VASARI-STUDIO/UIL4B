@@ -79,9 +79,9 @@ function analyze(text, keyword) {
     }
     const density = (count / Math.max(1, wordCount)) * 100
     let verdict
-    if (count === 0) verdict = { text: 'Not found — add it to your copy.', tone: 'err' }
-    else if (density > 3) verdict = { text: 'High — may read as keyword stuffing.', tone: 'warn' }
-    else if (density < 0.4) verdict = { text: 'Low — could appear a little more.', tone: 'warn' }
+    if (count === 0) verdict = { text: 'Not found. Add it to your copy.', tone: 'err' }
+    else if (density > 3) verdict = { text: 'High. It may read as keyword stuffing.', tone: 'warn' }
+    else if (density < 0.4) verdict = { text: 'Low. It could appear a little more.', tone: 'warn' }
     else verdict = { text: 'Healthy density.', tone: 'ok' }
     keywordStat = { count, density, verdict }
   }

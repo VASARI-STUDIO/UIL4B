@@ -71,7 +71,7 @@ const SAMPLE_BODY = { family: 'IBM Plex Sans', weight: 400, category: 'sans-seri
 
 const SORTS = [
   { id: 'popularity', label: 'Popular' },
-  { id: 'alphabetical', label: 'A–Z' },
+  { id: 'alphabetical', label: 'A to Z' },
   { id: 'weights', label: 'Most weights' },
 ]
 
@@ -503,7 +503,7 @@ function GalleryCard({
         className="fg-card-open"
         ref={ref}
         onClick={() => { if (!tiles) bands.tap(font.family); onOpen(font) }}
-        aria-label={`Open the ${font.family} specimen — ${sentence(catWord(font.category))}, ${weightLabel}`}
+        aria-label={`Open the ${font.family} specimen: ${sentence(catWord(font.category))}, ${weightLabel}`}
       >
         {/* The band is decorative to assistive tech: the button's own label
             already names the family, its category and its weight count, so the

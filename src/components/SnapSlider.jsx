@@ -190,7 +190,7 @@ export default function SnapSlider({
             if (e.key === 'Enter') commitDraft()
             else if (e.key === 'Escape') setEditing(false)
           }}
-          aria-label={`${ariaLabel || 'Value'} — custom value`}
+          aria-label={`${ariaLabel || 'Value'}, custom value`}
         />
       ) : (
         <button
