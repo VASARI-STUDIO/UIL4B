@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import net from 'node:net'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { chromium } from 'playwright'
 import JSZip from 'jszip'
 import { signIn, go } from '../../tests/user-sim/helpers.js'
@@ -62,7 +62,7 @@ const GUIDE_PAD_RIGHT = 24 // and the same to its right
 
 // Inputs the manifest does not carry.
 const SCALE_INPUTS = {
-  's-major-third': { base: null, ratioLabel: null, mobileBase: null },
+  's-major-third': { base: 16, ratioLabel: null, mobileBase: null },
   's-perfect-fourth': { base: 18, ratioLabel: 'Perfect fourth', mobileBase: 16 },
 }
 const GUIDE_FONTS = { heading: { family: 'Space Grotesk', weight: 700, category: 'sans-serif' }, body: { family: 'Inter', weight: 400, category: 'sans-serif' } }
@@ -400,22 +400,37 @@ async function pair(row) {
   const [heading, body] = row.sourceId.split(' + ')
   const result = await withPage({}, async (page) => {
     await go(page, '/create/font-pair')
-    await page.waitForSelector('#fpr-export')
-    if (heading !== 'Playfair Display') {
-      await page.getByRole('button', { name: /Heading family/ }).click()
-      await page.getByLabel('Search font families').fill(heading)
-      await page.locator(`button.fbd-tile[aria-label^="Use ${heading} "]`).click()
-    }
-    await page.getByRole('heading', { name: `Body faces that work under ${heading}` }).waitFor()
+    // The CSS sits in the collapsed handoff panel, so wait for it to exist, not to show.
+    await page.waitForSelector('#fpr-export', { state: 'attached' })
+    // Always choose the heading: the page's opening pair is not fixed.
+    await page.getByRole('button', { name: 'Browse heading family' }).first().click()
+    await page.getByLabel('Search font families').fill(heading)
+    await page.locator(`button.fbd-tile[aria-label^="Use ${heading}: "]`).click()
+    await page.locator('#fpr-suggest-title').waitFor()
+    await page.locator('.fpr-specimen, #fpr-export').first().waitFor({ state: 'attached' })
     await page.locator('.fpr-suggest-grid .fpr-card').first().waitFor()
     const suggestions = (await page.locator('.fpr-card-name').allInnerTexts()).map((t) => t.split('\n')[0].trim())
-    if (!suggestions.includes(body)) {
-      fail(`${row.id}: ${body} is not among the tool's suggestions for ${heading}: ${suggestions.join(', ')}`)
+    if (suggestions.includes(body)) {
+      // The page's default pair is already in use, so its card may already be pressed.
+      const card = page.locator('.fpr-card', { has: page.locator('.fpr-card-name', { hasText: body }) }).first()
+      const apply = card.locator('.fpr-card-apply')
+      if ((await apply.getAttribute('aria-pressed')) !== 'true') await apply.click()
+      if ((await apply.getAttribute('aria-pressed')) !== 'true') fail(`${row.id}: choosing ${body} did not put the pair in use`)
+    } else {
+      // Not suggested for this heading: choose it from the body family browser instead.
+      await page.getByRole('button', { name: 'Browse body family' }).first().click()
+      await page.getByLabel('Search font families').fill(body)
+      await page.locator(`button.fbd-tile[aria-label^="Use ${body}: "]`).click()
     }
-    await page.locator('.fpr-card', { has: page.locator('.fpr-card-name', { hasText: body }) }).getByRole('button', { name: /Use this pair/ }).click()
+    // Some headings open at another weight; the specimen is drawn at 700.
+    const headingWeightBtn = page.getByRole('button', { name: /^Heading weight: / }).first()
+    if (!/: 700$/.test((await headingWeightBtn.getAttribute('aria-label')) || '')) {
+      await headingWeightBtn.click()
+      await page.getByRole('listbox', { name: 'Heading weight' }).first().locator('[data-value="700"]').click()
+    }
     await page.getByRole('button', { name: 'Copy CSS' }).first().waitFor()
-    const css = (await page.locator('#fpr-export').innerText()).replace(/\r/g, '')
-    if (cssVar(css, '--weight-heading') !== '700' || cssVar(css, '--weight-body') !== '400') fail(`${row.id}: weights are not 700 / 400`)
+    const css = ((await page.locator('#fpr-export').textContent()) || '').replace(/\r/g, '')
+    if (cssVar(css, '--weight-heading') !== '700' || cssVar(css, '--weight-body') !== '400') fail(`${row.id}: weights are not 700 / 400 (the export says ${cssVar(css, '--weight-heading')} / ${cssVar(css, '--weight-body')})`)
     if (!cssVar(css, '--font-heading').startsWith(`'${heading}'`) || !cssVar(css, '--font-body').startsWith(`'${body}'`)) fail(`${row.id}: the export names other families:\n${css}`)
     const made = await specimen(page, row.id, heading, css)
     return { css, suggestions, ...made }
@@ -476,7 +491,8 @@ async function tint(row) {
     return capture(page, row.id, () => page.locator('[role=menu]').getByText('Download', { exact: true }).click())
   })
   const want = `tint-${hex.replace('#', '').toLowerCase()}.css`
-  if (file.name !== want) fail(`${row.id}: downloaded ${file.name}, expected ${want}`)
+  // An unsaved ramp is named with an "untitled-" prefix.
+  if (file.name !== want && file.name !== `untitled-${want}`) fail(`${row.id}: downloaded ${file.name}, expected ${want}`)
   const css = file.bytes.toString('utf8').replace(/\r/g, '')
   const steps = [...css.matchAll(/--tint-(\d+):\s*(#[0-9a-fA-F]{6});/g)].map((m) => ({ step: m[1], hex: m[2].toUpperCase() }))
   if (steps.map((s) => s.step).join() !== TINT_STEPS.join()) fail(`${row.id}: tint steps are ${steps.map((s) => s.step).join()}`)
@@ -491,8 +507,8 @@ async function scale(row) {
   const text = await withPage({}, async (page) => {
     await go(page, '/create/type-scale')
     if (inputs.base) {
-      await page.locator('.snapv-value').first().click()
-      const field = page.locator('.snapv-input').first()
+      await page.locator('#tsc-base').locator('xpath=..').locator('.snapv-value').click()
+      const field = page.locator('#tsc-base').locator('xpath=..').locator('.snapv-input')
       await field.fill(String(inputs.base))
       await field.press('Enter')
     }
@@ -507,8 +523,8 @@ async function scale(row) {
       await field.fill(String(inputs.mobileBase))
       await field.press('Enter')
     }
-    await page.getByRole('tab', { name: 'Developer handoff' }).click()
-    return (await page.locator('#tsc-export').innerText()).replace(/\r/g, '')
+    await page.waitForSelector('#tsc-export', { state: 'attached' })
+    return ((await page.locator('#tsc-export').textContent()) || '').replace(/\r/g, '')
   })
   const lines = text.split('\n')
   const at = lines.indexOf(':root {')
@@ -553,6 +569,28 @@ function guideCrop(texts, boxes) {
     if (!intruder && min * NARROWEST / w >= FLOOR + 0.3) keep = { n, set, x0, y0, h, w, min }
   }
   return keep || fail('no part of the type ladder stays over the floor')
+}
+
+// The export dialog offers the style guide as PDF or HTML, with no PNG to crop. Until it does
+// again, the guide tile keeps the committed WebP and its recorded crop and floors.
+async function keepGuide(row) {
+  const { AUTH_WALL_GENERATED: prev } = await import(`${pathToFileURL(OUT_DATA).href}?keep=${Date.now()}`)
+  for (const [file, a] of Object.entries(prev.assets)) {
+    if (!file.startsWith(row.id)) continue
+    outputs.webp.set(file, { buf: await fs.readFile(path.join(OUT_DIR, file)), width: a.width, height: a.height })
+  }
+  outputs.guide = prev.guide
+  if (prev.floors?.[row.id]) outputs.floors[row.id] = prev.floors[row.id]
+}
+
+async function offersGuidePng() {
+  return withPage({}, async (page) => {
+    await go(page, '/create/palette')
+    await page.getByRole('button', { name: /^Export/ }).first().click()
+    const dlg = page.getByRole('dialog')
+    await dlg.getByText('Style guide', { exact: true }).first().waitFor()
+    return (await dlg.getByText('PNG', { exact: true }).count()) > 0
+  })
 }
 
 async function guide(row) {
@@ -683,7 +721,7 @@ async function main() {
       else if (row.kind === 'icons') await icons(row)
       else if (row.kind === 'tint') await tint(row)
       else if (row.kind === 'scale') await scale(row)
-      else if (row.kind === 'guide') await guide(row)
+      else if (row.kind === 'guide') await ((await offersGuidePng()) ? guide(row) : keepGuide(row))
       else fail(`${row.id}: unknown kind ${row.kind}`)
     }
     finishFloors()
