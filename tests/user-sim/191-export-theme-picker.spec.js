@@ -1,7 +1,7 @@
 // THE EXPORT DIALOG'S TEMPLATES.
 //
-// The UI kit and the book (PDF and HTML) take any template in the THEMES list below; the slides (PDF and HTML) take those and four more,
-// Label, Swiss Field, Flyleaf and Set Square, which draw the guidelines only. The templates are a grid inside the dialog, opened by "View templates" and
+// The UI kit and the book (PDF and HTML) take any template in the THEMES list below; the slides (PDF and HTML) take those and five more,
+// Label, Swiss Field, Flyleaf, Set Square and Dispatch, which draw the guidelines only. The templates are a grid inside the dialog, opened by "View templates" and
 // left by choosing a card or "Back to preview": one card per template, its picture, its name and its sample brand. The ten premium
 // templates (21 up) come first in id order, then the templates the file is free in, then the rest; the order is the same for every
 // account and while the plan is being read. The Pro ones carry a Pro mark for a free account. A free account can have the UI kit in Standards (for now) and the guidelines in Label and Swiss Field; every other
@@ -41,12 +41,12 @@ const THEMES = [
 const NAMES = THEMES.map(([, name]) => name)
 const FREE_KIT = ['Standards']
 // The guidelines list: every template above, then the three guidelines-only templates, which are free.
-const GUIDE_NAMES = [...NAMES, 'Set Square', 'Label', 'Swiss Field', 'Flyleaf']
+const GUIDE_NAMES = [...NAMES, 'Set Square', 'Dispatch', 'Label', 'Swiss Field', 'Flyleaf']
 // The premium templates (21 up) in id order: first in every list that has them as Pro. Label, Swiss Field and Flyleaf are free for the guidelines, so not premium.
 const PREMIUM = ['Keynote', 'Stub', 'Front Page', 'Standards Plate', 'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline']
 const FREE_GUIDE = ['Label', 'Swiss Field', 'Flyleaf']
-// Set Square is Pro and has the guidelines only (no UI kit, no book), so it is the eleventh premium template for the guidelines and absent from the kit and the book.
-const premiumFor = (file) => (isGuide(file) ? [...PREMIUM, 'Set Square'] : PREMIUM)
+// Set Square and Dispatch are Pro and have no UI kit or book, so they are the eleventh and twelfth premium templates for the guidelines and absent from the kit and the book.
+const premiumFor = (file) => (isGuide(file) ? [...PREMIUM, 'Set Square', 'Dispatch'] : PREMIUM)
 const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label, Swiss Field and Flyleaf.'
 const isGuide = (file) => file.startsWith('guidelines')
 const namesFor = (file) => (isGuide(file) ? GUIDE_NAMES : NAMES)

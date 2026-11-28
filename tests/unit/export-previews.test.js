@@ -54,8 +54,8 @@ const cleanBytes = (theme, row, n) => (HAVE_CLEAN ? fs.readFileSync(path.join(SE
 const isFree = (theme, row) => ['25-label', '27-swissfield'].includes(theme) || (theme === '04-standards' && row === 'ui-kit')
 const pairs = []
 // The style guide has no preview pictures yet, so its row is left out of this walk until they are made.
-// Flyleaf and Set Square have no page preview pictures yet either: they are left out of this walk until they are made.
-for (const { id: theme } of EXPORT_THEMES) for (const row of Object.keys(THEME_ROW_FORMATS)) if (row !== 'guide' && !['33-flyleaf', '34-set-square'].includes(theme) && themeHasRow(theme, row)) pairs.push({ theme, row, free: isFree(theme, row) })
+// Flyleaf, Set Square and Dispatch have no page preview pictures yet either: they are left out of this walk until they are made.
+for (const { id: theme } of EXPORT_THEMES) for (const row of Object.keys(THEME_ROW_FORMATS)) if (row !== 'guide' && !['33-flyleaf', '34-set-square', '35-dispatch'].includes(theme) && themeHasRow(theme, row)) pairs.push({ theme, row, free: isFree(theme, row) })
 const PRO_PAIR = { theme: '01-presentation', row: 'slides' }
 
 test('the manifest covers every theme and row, with numbered pages, labels and sizes', () => {
@@ -310,8 +310,8 @@ test('no clean preview is committed: git tracks no picture under api/, and the s
   const { execFileSync } = await import('node:child_process')
   const tracked = execFileSync('git', ['ls-files', '--', 'api'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n').filter((f) => /\.(webp|png|jpe?g|avif|gif)$/i.test(f))
-    // Flyleaf's and Set Square's own photographs are theme assets read at export time (function-include-files.test.js carries them), not previews.
-    .filter((f) => !/^api\/_lib\/exportThemes\/fonts\/3[34]-[a-z-]+\//.test(f))
+    // Flyleaf's, Set Square's and Dispatch's own photographs are theme assets read at export time (function-include-files.test.js carries them), not previews.
+    .filter((f) => !/^api\/_lib\/exportThemes\/fonts\/3[345]-[a-z-]+\//.test(f))
   assert.deepEqual(tracked, [], 'a picture is committed under api/')
   const ignored = execFileSync('git', ['check-ignore', '--no-index', 'api/_lib/pro/export-previews/01-presentation/slides/1.webp'], { cwd: ROOT, encoding: 'utf8' })
   assert.match(ignored, /export-previews/)

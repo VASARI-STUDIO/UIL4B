@@ -29,7 +29,7 @@ const WIDTHS = [
   { name: '390', size: { width: 390, height: 844 }, count: 2 },
 ]
 const FILES = [
-  { id: 'guidelines', cat: 'Guidelines', total: 24, wayOut: 'Use the free Guidelines (Label)' },
+  { id: 'guidelines', cat: 'Guidelines', total: 25, wayOut: 'Use the free Guidelines (Label)' },
   { id: 'kit', cat: 'UI kit', total: 20, wayOut: 'Use the free UI kit (Standards)' },
 ]
 
@@ -73,10 +73,10 @@ test.describe('the gallery lists the premium ten first', () => {
       const panel = await open(page, { plan, file: f.id })
       const read = await readTemplates(panel)
       expect(read.names.slice(0, 10), 'premium, in id order').toEqual(PREMIUM)
-      if (f.id === 'guidelines') expect(read.names[10], 'Set Square, the eleventh, is Pro for the guidelines only').toBe('Set Square')
+      if (f.id === 'guidelines') expect(read.names.slice(10, 12), 'Set Square and Dispatch, the eleventh and twelfth, are Pro for the guidelines only').toEqual(['Set Square', 'Dispatch'])
       expect(read.names, 'every template once').toHaveLength(f.total)
       expect(new Set(read.names).size, 'no template twice').toBe(f.total)
-      if (f.id === 'guidelines') expect(read.names.slice(11, 14), 'Label, Swiss Field and Flyleaf follow, they are free').toEqual(['Label', 'Swiss Field', 'Flyleaf'])
+      if (f.id === 'guidelines') expect(read.names.slice(12, 15), 'Label, Swiss Field and Flyleaf follow, they are free').toEqual(['Label', 'Swiss Field', 'Flyleaf'])
       else expect(read.names[10], 'Standards follows, the kit is free in it').toBe('Standards')
       expect(read.names.indexOf('Presentation'), 'the classics come after').toBeGreaterThan(10)
     })
