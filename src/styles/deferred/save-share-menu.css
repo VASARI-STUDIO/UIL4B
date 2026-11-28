@@ -77,6 +77,19 @@
    draws no ring of its own. */
 .plb-savemenu:focus { outline: none; }
 /* An empty-name refusal, held under the field it refused. */
+/* Rows meet the menu row height (36px, a 20px line and 8px above and below), and
+   44px on a phone sheet or touch screen. The row stays a block so a long project
+   name still ends in an ellipsis; the icon gets its own space from the label. */
+.plb-savemenu .plb-menu-item {
+  box-sizing: border-box;
+  min-height: var(--menu-row-h, 36px);
+  padding-block: var(--s-2, 8px);
+  line-height: 20px;
+}
+.plb-savemenu .plb-menu-item > svg { margin-right: var(--s-2, 8px); vertical-align: -2px; }
+@media (max-width: 767px), (pointer: coarse) {
+  .plb-savemenu .plb-menu-item { min-height: 44px; padding-block: var(--s-3, 12px); }
+}
 .plb-savemenu .plb-menu-error {
   margin: var(--s-2, 8px) 2px 0;
   font-size: var(--fs-caption, 12px);

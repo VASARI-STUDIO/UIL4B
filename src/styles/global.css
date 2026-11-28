@@ -3079,6 +3079,8 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-reco-link{display:flex;align-items:center;gap:10px;text-decoration:none}
 .pnav-reco-link:hover,.pnav-reco-link:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-reco-link:focus-visible{outline:2px solid var(--focus-ink);outline-offset:-2px}
+/* The phone sheet's recommended rows are touch targets: 44px, whatever the preview inside is. */
+.pnav-sheet .pnav-reco-link{min-height:44px}
 .pnav-reco-prev{display:flex;flex:0 0 auto;box-sizing:border-box;overflow:hidden}
 .pnav-reco-prev--strip > span{flex:1}
 .pnav-reco-prev--type{align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:600;line-height:1}
