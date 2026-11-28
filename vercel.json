@@ -318,6 +318,14 @@
       "destination": "/api/share?c=:code"
     },
     {
+      "source": "/__/auth/:path*",
+      "destination": "https://uil4b-357c5.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/:path*",
+      "destination": "https://uil4b-357c5.firebaseapp.com/__/firebase/:path*"
+    },
+    {
       "source": "/community",
       "destination": "/community/index.html"
     },
@@ -637,11 +645,20 @@
       ]
     },
     {
-      "source": "/((?!previews/).*)",
+      "source": "/((?!previews/|__/).*)",
       "headers": [
         {
           "key": "X-Frame-Options",
           "value": "DENY"
+        }
+      ]
+    },
+    {
+      "source": "/__/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
         }
       ]
     },
