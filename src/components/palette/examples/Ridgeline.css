@@ -72,7 +72,7 @@
 .rl-chart svg{display:block;width:100%;height:100%}
 .rl-area{fill:var(--rl-ground,var(--pv-subtle))}
 .rl-line,.rl-line-steep,.rl-line-case{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.rl-line{stroke:var(--pv-secondary);stroke-width:1.5}
+.rl-line{stroke:var(--rl-line,var(--pv-secondary));stroke-width:1.5}
 .rl-line-case{stroke:var(--pv-canvas);stroke-width:11}
 .rl-line-steep{stroke:var(--pv-accent);stroke-width:6}
 .rl-cursor{position:absolute;top:0;bottom:0;width:1px;background:var(--pv-text);opacity:.5}
