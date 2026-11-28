@@ -8,7 +8,7 @@
 //   5  the cadence rides in the URL: a reload of ?up=2&upplan=monthly keeps Monthly
 //   6  only one layer node is ever in the document
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, homeSectionsLoaded, signIn, watch } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 
@@ -20,9 +20,12 @@ const stubPrices = (page) => page.route('**/api/get-prices*', (r) => r.fulfill({
 const homeCta = (page) => page.locator('.hpl-go')
 const billing = (layer) => layer.getByRole('radiogroup', { name: 'Billing' })
 
-async function reachHomeCta(page) {
+// A signed-in account is sent from `/` to its dashboard; `/home` renders the sales page for it.
+async function reachHomeCta(page, path = '/') {
   await stubPrices(page)
-  await go(page, '/')
+  await go(page, path)
+  // The plans section is lazy: a stand-in holds its place until the page is nudged.
+  await homeSectionsLoaded(page)
   const cta = homeCta(page)
   await cta.scrollIntoViewIfNeeded()
   await expect(cta, 'the home button never got its trial wording').toHaveText('Start your 7-day free trial')
@@ -64,15 +67,14 @@ for (const size of [{ name: '1440', width: 1440, height: 900 }, { name: '390', w
       await expect(cta).toHaveText('Start 7-day free trial')
       await cta.click()
       await expect(layerOf(page)).toHaveAttribute('data-step', '3')
-      await expect(page).toHaveURL(/\/plans\?up=1$/)
+      await expect(page).toHaveURL(/\/plans\?up=3$/)
       await expect(layerOf(page)).toHaveCount(1)
     })
 
     test('3 a Pro account clicking the home CTA lands on /projects with no layer', async ({ page }) => {
       watch(page, 'a Pro account on the home page')
       await signIn(page, { plan: 'pro' })
-      const cta = await reachHomeCta(page).catch(() => homeCta(page))
-      await cta.scrollIntoViewIfNeeded()
+      const cta = await reachHomeCta(page, '/home')
       await cta.click()
       await expect(page).toHaveURL(/\/projects/)
       await expect(layerOf(page)).toHaveCount(0)

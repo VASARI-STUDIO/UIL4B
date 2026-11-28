@@ -314,7 +314,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await choose(page, 'Monthly')
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=monthly')
     await proCta(page).click()
-    await expect(page).toHaveURL(/\/plans\?up=1&upplan=monthly$/)
+    await expect(page).toHaveURL(/\/plans\?up=3&upplan=monthly$/)
     const layer = page.locator('[data-pro-layer]')
     await expect(layer).toHaveAttribute('data-step', '3')
     await expect(layer.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: /^Monthly/ })).toHaveAttribute('aria-checked', 'true')
@@ -398,7 +398,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
 
     await page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' }).click()
     await expect(popup, 'the closing Choose Pro did not open the upgrade layer').toBeVisible()
-    await expect(page).toHaveURL(/\/plans\?up=1$/)
+    await expect(page).toHaveURL(/\/plans\?up=1&upplan=monthly$/)
   })
 
   // The continuation of the test above: the visitor clicks the prompt, logs in
