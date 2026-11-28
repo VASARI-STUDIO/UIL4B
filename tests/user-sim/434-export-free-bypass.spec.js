@@ -1,8 +1,10 @@
 // A FREE ACCOUNT CANNOT GET A PRO EXPORT, WHATEVER THE BROWSER SAYS.
 //
 // The rule: every Pro theme, format and page is checked on the server, against the Firebase ID token and the plan in the account's own
-// user document. A Free account gets 403 and no file. Nothing the request or the page carries (a flag, a stored key, a query string,
-// an edited body) can unlock Pro.
+// user document. A Free account gets 403 and no file, with one exception: the guidelines and the style guide of a Pro theme are served
+// as the free edition, cut on the server to seven pages with "Made with UIL4B" on every page. The UI kit, the book, the whole page set
+// and a copy without the credit stay Pro. Nothing the request or the page carries (a flag, a stored key, a query string, an edited
+// body) can unlock Pro or the whole edition.
 //
 // `vite preview` has no /api, so the export route is answered here by the REAL serveExportDocument (api/_lib/exportDocument.js) with
 // the account's user document standing in for Firestore, the same way helpers.js runs the library routes. So the plan is decided by the
@@ -22,14 +24,16 @@
 // The two file formats (app-bundle, book-png) are asked the way the page asks: the bundle with its date and name, the book pages with a
 // small measuring table (METRICS). The server must refuse Free before it reads either.
 //
-// MUTATION (each must fail this spec and tests/unit/theme-access.test.js): make assertThemeAccess in api/_lib/themeAccess.js return
-// { ok: true } for every plan.
+// MUTATION (each must fail this spec): make assertThemeAccess in api/_lib/themeAccess.js return { ok: true } for every plan; let the
+// free edition include 'ui-kit' or 'book' in FREE_EDITION_ROWS; drop the page cap in pagesDoc or styleGuide; drop withFreeCredit in
+// api/_lib/exportThemeRoute.js.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { EXPORT_THEMES, THEME_ROW_FORMATS, themeHasRow } from '../../src/data/exportThemes.js'
 import { chooseFormat, chooseTemplate, exportPanel, primaryButton } from './export-rows.js'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
+import JSZip from 'jszip'
 
 const ROUTE = '/projects/harbour/export'
 const ACCOUNTS = {
@@ -46,11 +50,15 @@ const EXPORT_ROUTE = (url) => url.pathname === '/api/ai' && url.searchParams.get
 
 // The free tier, written out (not read from src/): the guidelines in Label, Swiss Field and Flyleaf, the UI kit in Standards.
 const isFree = (theme, row) => ['25-label', '27-swissfield', '33-flyleaf'].includes(theme) || (theme === '04-standards' && row === 'ui-kit')
+// The free edition, written out too: the guidelines (row slides) and the style guide (row guide) of a Pro theme, seven pages at most.
+const FREE_EDITION_ROWS = ['slides', 'guide']
+const FREE_EDITION_PAGES = 7
 const PRO_COMBOS = []
+const FREE_EDITION_COMBOS = []
 for (const { id: theme } of EXPORT_THEMES) {
   for (const [row, formats] of Object.entries(THEME_ROW_FORMATS)) {
-    if (!themeHasRow(theme, row)) continue
-    for (const format of formats) if (!isFree(theme, row)) PRO_COMBOS.push({ theme, row, format })
+    if (!themeHasRow(theme, row) || isFree(theme, row)) continue
+    for (const format of formats) (FREE_EDITION_ROWS.includes(row) ? FREE_EDITION_COMBOS : PRO_COMBOS).push({ theme, row, format })
   }
 }
 
@@ -136,6 +144,45 @@ function expectRefusal(r, what) {
   expect(fields, what + ': only the error fields (' + Object.keys(json) + ')').toBe(true)
   expect(r.text, what + ': no document in the body').not.toMatch(/<html|<!doctype|<svg|"ops"/i)
 }
+// A page frame (an element whose class list holds "pg") and the free credit drawn on it. The phone edition's own credit line carries a
+// second class, so it is not counted as a page's credit.
+const FRAME = /<[a-z][a-z0-9]*\b[^>]*\bclass="(?:[^"]*\s)?pg(?:\s[^"]*)?"[^>]*>/g
+const CREDIT = 'Made with UIL4B'
+const PAGE_CREDIT = /<p class="uil4b-credit">Made with UIL4B<\/p>/g
+const countOf = (text, re) => (text.match(re) || []).length
+
+/** The html and markdown documents in one answer the server gave: a print document, the files of a zip, or a markdown file. */
+async function documentsOf(entry) {
+  const type = String(entry.headers['Content-Type'] || '')
+  if (entry.json && typeof entry.json.html === 'string') return { html: [['print document', entry.json.html]], md: [] }
+  if (/markdown/.test(type)) return { html: [], md: [['markdown', String(entry.bytes)]] }
+  const out = { html: [], md: [] }
+  if (!/zip/.test(type)) return out
+  const zip = await JSZip.loadAsync(entry.bytes)
+  for (const f of Object.values(zip.files)) {
+    if (f.dir) continue
+    if (/\.html$/.test(f.name)) out.html.push([f.name, await f.async('string')])
+    else if (/\.md$/.test(f.name)) out.md.push([f.name, await f.async('string')])
+  }
+  return out
+}
+
+/** What the free edition must be: served, every html document at most seven pages with the credit on each, every markdown credited. */
+async function expectFreeEdition(entry, what) {
+  expect(entry.status, what + ': served').toBe(200)
+  const { html, md } = await documentsOf(entry)
+  expect(html.length + md.length, what + ': a document').toBeGreaterThan(0)
+  for (const [name, doc] of html) {
+    const frames = countOf(doc, FRAME)
+    expect(frames, what + ', ' + name + ': drawn as pages').toBeGreaterThan(0)
+    expect(frames, what + ', ' + name + ': seven pages at most').toBeLessThanOrEqual(FREE_EDITION_PAGES)
+    expect(countOf(doc, PAGE_CREDIT), what + ', ' + name + ': the credit on every page').toBe(frames)
+  }
+  for (const [name, doc] of md) expect(doc.trimEnd().endsWith(CREDIT), what + ', ' + name + ': the credit').toBe(true)
+  // a style guide zip holds index.html, one file per page and style-guide.md: seven page files at most
+  expect(html.filter(([n]) => !/(^|\/)index\.html$/.test(n)).length, what + ': page files').toBeLessThanOrEqual(FREE_EDITION_PAGES)
+}
+
 const expectUncached = (r, what) => {
   expect(r.cacheControl, what + ': Cache-Control').toBe('private, no-store')
   expect(r.vary, what + ': Vary').toMatch(/Authorization/i)
@@ -183,7 +230,8 @@ test.describe('(a) direct calls', () => {
     watch(page, 'a Free account calling every Pro themed export')
     await serveExport(page)
     await go(page, '/')
-    expect(PRO_COMBOS.length, 'the walk must be wide').toBeGreaterThanOrEqual(80)
+    expect(PRO_COMBOS.length, 'the walk must be wide').toBeGreaterThanOrEqual(50)
+    expect(PRO_COMBOS.some((c) => FREE_EDITION_ROWS.includes(c.row)), 'no free edition row in the Pro walk').toBe(false)
     const results = await page.evaluate(async (combos) => {
       const out = []
       for (const c of combos) {
@@ -200,6 +248,29 @@ test.describe('(a) direct calls', () => {
     const bad = results.filter((r) => r.status !== 403 || r.cc !== 'private, no-store' || !/Authorization/i.test(r.vary || '')
       || JSON.parse(r.text).code !== 'pro_required' || /<html|PK/.test(r.text))
     expect(bad.map((r) => r.c.theme + ' ' + r.c.row + ' ' + r.c.format + ' -> ' + r.status), 'every Pro combination refused, uncached').toEqual([])
+  })
+
+  test('a Free token gets only the seven-page edition, credited on every page, of every Pro guidelines and style guide', async ({ page }) => {
+    test.setTimeout(300_000)
+    watch(page, 'a Free account calling every Pro guidelines and style guide')
+    const { log } = await serveExport(page)
+    await go(page, '/')
+    expect(FREE_EDITION_COMBOS.length, 'the walk must be wide').toBeGreaterThanOrEqual(40)
+    for (const c of FREE_EDITION_COMBOS) {
+      const what = 'Free ' + c.theme + ' ' + c.row + ' ' + c.format
+      expectUncached(await post(page, { ...c, projectName: 'Harbour', design: DESIGN }), what)
+      await expectFreeEdition(log.at(-1), what)
+    }
+    // The control: Pro gets the whole document with no credit, and it is longer than seven pages, so the cap above is a real cut.
+    const longest = []
+    for (const c of FREE_EDITION_COMBOS.filter((x) => x.format === 'pdf')) {
+      const r = await post(page, { ...c, projectName: 'Harbour', design: DESIGN }, 'tok-pro')
+      expect(r.status, 'Pro ' + c.theme + ' ' + c.row).toBe(200)
+      const html = JSON.parse(r.text).html
+      expect(countOf(html, PAGE_CREDIT), 'Pro ' + c.theme + ' ' + c.row + ': no free credit on the pages').toBe(0)
+      longest.push(countOf(html, FRAME))
+    }
+    expect(Math.max(...longest), 'a Pro guidelines or style guide longer than the free edition').toBeGreaterThan(FREE_EDITION_PAGES)
   })
 
   test('a Free token gets 403 for every Pro document, and the same request from Pro is served', async ({ page }) => {
@@ -280,8 +351,6 @@ test.describe('(b) an edited body', () => {
     ['a Pro theme swapped in', (b) => ({ ...b, theme: '01-presentation' })],
     ['the book row swapped in', (b) => ({ ...b, row: 'book', format: 'pdf' })],
     ['the book as html swapped in', (b) => ({ ...b, row: 'book', format: 'html' })],
-    ['the slides swapped in', (b) => ({ ...b, row: 'slides', format: 'html' })],
-    ['a Pro theme and the slides', (b) => ({ ...b, theme: '24-standards', row: 'slides', format: 'pdf' })],
     ['a Pro document format (the theme and row dropped)', (b) => ({ format: 'book', projectName: b.projectName, design: b.design })],
     ['a Pro document format beside a free theme', (b) => ({ ...b, theme: undefined, row: undefined, format: 'guidelines' })],
     ['a plan claimed in the body', (b) => ({ ...b, theme: '03-broadsheet', plan: 'pro', pro: true, isPro: true, user: { plan: 'pro' } })],
@@ -302,6 +371,26 @@ test.describe('(b) an edited body', () => {
     })
   }
 
+  // Rewritten to a Pro theme's guidelines or style guide, the answer is the free edition and never the whole document, whatever the
+  // body claims about the plan or the edition.
+  const toFreeEdition = [
+    ['the guidelines swapped in', (b) => ({ ...b, row: 'slides', format: 'html' })],
+    ['a Pro theme and the guidelines', (b) => ({ ...b, theme: '24-standards', row: 'slides', format: 'pdf' })],
+    ['a Pro style guide as markdown', (b) => ({ ...b, theme: '24-standards', row: 'guide', format: 'md' })],
+    ['the whole edition claimed in the body', (b) => ({ ...b, theme: '24-standards', row: 'guide', format: 'html', plan: 'pro', isPro: true,
+      freeEdition: false, edition: 'full', skeleton: false, credit: false, pages: 99 })],
+  ]
+  for (const [name, tamper] of toFreeEdition) {
+    test('a Free kit request rewritten to ' + name + ' gets only the free edition', async ({ page }) => {
+      watch(page, 'a Free account whose kit request is edited: ' + name)
+      const { panel, log, state } = await openDialog(page, { client: 'free', server: 'free', file: 'kit' })
+      state.tamper = tamper
+      await primaryButton(panel).click()
+      await expect.poll(() => log.length, 'the request reached the server').toBe(1)
+      await expectFreeEdition(log[0], name)
+    })
+  }
+
   test('the control: the same request untouched is served and downloads', async ({ page }) => {
     watch(page, 'a Free account exporting the free kit')
     const { panel, log } = await openDialog(page, { client: 'free', server: 'free', file: 'kit' })
@@ -314,7 +403,7 @@ test.describe('(b) an edited body', () => {
 test.describe('(c) a flipped client', () => {
   test('stored keys, a window flag and a query string claiming Pro do not change the answer', async ({ page }) => {
     watch(page, 'a Free account claiming Pro from the page')
-    await serveExport(page)
+    const { log } = await serveExport(page)
     await page.addInitScript(() => {
       for (const k of ['vs-plan', 'plan', 'pro', 'isPro', 'uil4b-pro', 'uil4b-plan', 'vs-pro']) localStorage.setItem(k, 'pro')
       localStorage.setItem('subscription', JSON.stringify({ status: 'active' }))
@@ -326,6 +415,10 @@ test.describe('(c) a flipped client', () => {
       expectRefusal(await post(page, { ...c, projectName: 'Harbour', design: DESIGN }), c.theme + ' ' + c.row + ' ' + c.format)
     }
     for (const format of PRO_DOCS) expectRefusal(await post(page, { format, design: DESIGN }), format)
+    for (const c of [{ theme: '24-standards', row: 'slides', format: 'pdf' }, { theme: '24-standards', row: 'guide', format: 'md' }]) {
+      await post(page, { ...c, projectName: 'Harbour', design: DESIGN })
+      await expectFreeEdition(log.at(-1), 'a flipped client asking for ' + c.row + ' ' + c.format)
+    }
   })
 
   test('a page that believes it is Pro, over a Free account, gets 403 for the UI kit in a Pro theme', async ({ page }) => {
@@ -342,7 +435,7 @@ test.describe('(c) a flipped client', () => {
     expect(out.downloads).toBe(0)
   })
 
-  for (const file of ['book', 'book-html', 'guidelines', 'guidelines-html']) {
+  for (const file of ['book', 'book-html']) {
     test('a page that believes it is Pro, over a Free account, gets 403 and nothing for ' + file, async ({ page }) => {
       watch(page, 'a tampered client exporting ' + file)
       const { panel, log } = await openDialog(page, { client: 'pro', server: 'free', file })
@@ -353,6 +446,18 @@ test.describe('(c) a flipped client', () => {
       expect(log[0].bytes).toBeNull()
       expect(JSON.stringify(log[0].json)).not.toMatch(/<html/i)
       expect(out.downloads).toBe(0)
+    })
+  }
+})
+
+test.describe('(c) a flipped client: the guidelines', () => {
+  for (const file of ['guidelines', 'guidelines-html']) {
+    test('a page that believes it is Pro, over a Free account, gets only the free edition of ' + file, async ({ page }) => {
+      watch(page, 'a tampered client exporting ' + file)
+      const { panel, log } = await openDialog(page, { client: 'pro', server: 'free', file })
+      await primaryButton(panel).click()
+      await expect.poll(() => log.length).toBe(1)
+      await expectFreeEdition(log[0], 'a tampered client, ' + file)
     })
   }
 })
