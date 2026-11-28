@@ -230,7 +230,7 @@ export const pages2 = {
     // the icons: one set out at 4x on its 24 px tile, then the grid
     const F = iconFacts(ctx), icons = iconSet(ctx), iy = ry + 134, tx = X0 + 40, Z = 4;
     const first = icons[0] || 'plus';
-    let svg = ''; try { svg = ui.icon(first, 24); } catch { svg = ''; }
+    let svg; try { svg = ui.icon(first, 24); } catch { svg = ''; }
     const tile = `<div class="a" style="left:${tx}px;top:${iy}px;width:96px;height:96px;box-shadow:0 0 0 1px var(--ink);background:var(--g)"></div>`
       + svgAt(tx, iy, 96, 96, `<g stroke="${dc}" stroke-width="1" fill="none"><rect x="8.5" y="8.5" width="79" height="79" stroke-dasharray="4 3"/><path d="M48.5 0V96M0 48.5H96" stroke="${t.hair}"/></g>`)
       + at(tx, iy, 96, 96, `<div class="ui tr" data-theme="light" style="zoom:${Z};width:24px;height:24px;color:var(--ink)">${svg}</div>`)
