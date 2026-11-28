@@ -1,6 +1,6 @@
 // Theme 33, Flyleaf: a book-like edition. Every page is placed on a grid in px (16:9 on 12 columns, A4 portrait on 6), set in the brand's own faces with DM Mono for
 // every label, running head, caption and value. Sections open on a leaf of solid brand colour. No photographs and no mockups: flat colour, hairlines and type.
-// The brand guidelines live in brand-a.js (sections 1 to 3) and the files that follow; the UI style guide (the `guide` row) is still the as-built layout (ui-pages.js).
+// The brand guidelines live in brand-a.js (sections 1 to 3) and the files that follow; the UI style guide (the `guide` row) is drawn by guide-a4.js (pages 1 to 7, with their own `.pg.gf` styles) and ui-pages.js (the older pages).
 import { guidelines as brandA } from './brand-a.js';
 import { guidelines as brandB } from './brand-b.js';
 import { guidelines as brandC } from './brand-c.js';
@@ -45,6 +45,10 @@ export const previewId = {
   typefaces: 'faces', hierarchy: 'scale', 'type-in-use': 'hierarchy', 'type-rules': 'type-rules',
   grid: 'grid', layouts: 'compositions', 'business-card': 'print', social: 'social', digital: 'digital', summary: 'summary', 'contact-scope': 'contact',
 };
+
+// the style guide's own map: the dialog's older guide ids to this guide's pages (interface is the screen; colour and contrast are the roles page;
+// the components and icons pages are now buttons and space)
+export const guidePreviewId = { interface: 'screen', colour: 'roles', contrast: 'roles', components: 'buttons', icons: 'space' };
 
 export function css(ctx) {
   const B = ctx.brand, d = B.fonts.display, b = B.fonts.body, W = ctx.weights, K = geo(ctx);
@@ -95,4 +99,4 @@ ${ph}
 ${photoCss(ctx)}`;
 }
 
-export const guideCss = () => '';
+export { guideCss } from './guide-a4.js';

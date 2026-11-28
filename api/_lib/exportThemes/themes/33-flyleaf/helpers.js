@@ -4,18 +4,19 @@
 import { readableOn } from '../../engine/color.js';
 
 export const BRAND_PAGES = ['cover', 'application', 'digital', 'logo', 'colour', 'specimen', 'type', 'strategy', 'composition', 'reference'];
-export const UI_PAGES = ['cover', 'interface', 'components', 'feedback', 'colour', 'tints', 'contrast', 'type', 'icons', 'handoff'];
+// The 13 pages of the Circular-level guide (13_ui_style_guide/02_spec.md). Pages 8, 9, 11 and 12 are drawn in slice 2; the route skips an id with no function.
+export const UI_PAGES = ['cover', 'contents', 'screen', 'dark', 'roles', 'tints', 'type', 'buttons', 'fields', 'feedback', 'overlays', 'space', 'handoff'];
 // The Free skeleton: a fixed shorter list, chosen from the account's plan in the route (ctx.skeleton) and never from a request.
 export const BRAND_SKELETON = ['cover', 'logo', 'colour', 'type', 'reference'];
-export const UI_SKELETON = ['cover', 'colour', 'type', 'components'];
+export const UI_SKELETON = ['cover', 'screen', 'roles', 'type', 'buttons', 'fields', 'handoff'];
 
 export const brandOrder = (ctx) => (ctx.skeleton ? BRAND_SKELETON : BRAND_PAGES);
 export const uiOrder = (ctx) => (ctx.skeleton ? UI_SKELETON : UI_PAGES);
 
 export const NAMES = {
   cover: 'Cover', application: 'Application', digital: 'Digital', logo: 'Logo', colour: 'Colour', specimen: 'Specimen', type: 'Type', strategy: 'Strategy',
-  composition: 'Composition', reference: 'Reference', interface: 'Interface', components: 'Components', feedback: 'Feedback', tints: 'Tints', contrast: 'Contrast',
-  icons: 'Icons', handoff: 'Handoff',
+  composition: 'Composition', reference: 'Reference', interface: 'Interface', components: 'Components', feedback: 'Feedback', tints: 'Tints and pairs', contrast: 'Contrast',
+  icons: 'Icons', handoff: 'Handoff', contents: 'Contents', screen: 'Screen', dark: 'Dark', roles: 'Colour roles', buttons: 'Buttons', fields: 'Fields', overlays: 'Overlays', space: 'Space',
 };
 
 // Every Flyleaf page carries a small credit line when the edition is the skeleton (the Free plan); the full edition has none.

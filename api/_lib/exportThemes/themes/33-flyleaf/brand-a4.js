@@ -300,7 +300,7 @@ export const a4 = {
     const px = 231, py = 373, pw = K.W - px, ph = K.H - py;
     const img = at(px, py, pw, ph, pic(ctx, 'train', { w: pw, h: ph, fx: 0.64, fy: 0.5, alt: 'A reader on a train seat holding an open pocket book' }), { style: 'overflow:hidden' });
     const slotEd = !isShowcase(ctx), text = big(K.L - 2, 112, slotEd ? 330 : 660, E(head), slotEd ? 34 : 58, { lh: 1.02 }) + (slotEd ? at(400, 112, K.W - K.R - 400, null, small(E(para), 14)) : at(K.L, 250, 330, null, small(E(para), 14)));
-    const side = at(K.L, py + 8, 150, 40, `<div class="m i">${L.length ? E((L.find((s) => s.token === 'headline') || L[0]).name) : ''}</div><div class="m i">Set on the quiet half of the photograph</div>`);
+    const side = at(K.L, py + 8, px - K.L - 16, 60, `<div class="m i">${L.length ? E((L.find((s) => s.token === 'headline') || L[0]).name) : ''}</div><div class="m i" style="white-space:normal">Set on the quiet half of the photo</div>`);
     return page(ctx, 'hierarchy', { ground: g, body: img + text + side });
   },
 
