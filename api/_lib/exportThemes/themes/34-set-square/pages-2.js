@@ -44,11 +44,11 @@ export const guidelines = {
     const m = markAt(ctx, M, t, X, Y, W), h = Math.round(m.h);
     const br = t.dim;
     const lines = svgAt(0, 0, 1280, 720, `<g stroke="${br}" stroke-width="1" fill="none"><path d="M${X + 0.5} ${Y - 40}V${Y + h + 40}M${X + W + 0.5} ${Y - 40}V${Y + h + 40}M${X - 40} ${Y + 0.5}H${X + W + 40}M${X - 40} ${Y + h + 0.5}H${X + W + 40}"/><path d="M${X - 40} ${Y + h * 0.55}H${X + W + 40}" stroke-dasharray="4 4"/></g>`);
-    const body = H1('The mark') + NOTE(ctx, 'page.mark.text', 'A plumb line hangs from the l. It is the one line we never draw crooked.', 64, 152, 360)
+    const body = H1('The mark') + NOTE(ctx, 'page.mark.text', 'Use the mark as drawn. Never redraw, stretch or recolour it.', 64, 152, 360)
       + `<div data-contrast="demo">${word(M, 1090 - M.width('960', 240), 640, '960', 240, { style: `color:${mix(g, t.ink, 0.12)}` })}</div>`
       + lines + m.html
       + dim(ctx, 'h', X, Y - 40, W, W, { ground: g, ext: 6 }) + dim(ctx, 'v', X + W + 40, Y, h, h, { ground: g, ext: 6 })
-      + at(X, Y + h + 52, 400, 16, '<span class="m">Width, height and the line through the x-height, drawn in Brick.</span>');
+      + at(X, Y + h + 52, 400, 16, `<span class="m">${ctx.esc(copy(ctx, 'page.mark.dims', 'Width, height and the line through the x-height, drawn in the accent.'))}</span>`);
     return sheet(ctx, 'mark', { ground: g, body });
   },
 
@@ -96,7 +96,7 @@ export const guidelines = {
   // ---- 11 Misuse (DL): a defects list, six 88 px rows ----
   misuse(ctx) {
     const G = groundsOf(ctx), g = G.panel, t = tones(ctx, g), M = measure(ctx), L = ctx.logo;
-    const rows = [['Plumb line removed.', ''], ['Line at an angle.', 'transform:rotate(-8deg)'], ['Mark stretched.', 'transform:scaleX(1.6)'], ['Wrong ground.', ''], ['Outline added.', ''], ['Mark in a box.', '']];
+    const rows = [[copy(ctx, 'page.misuse.0', 'Part of the mark removed.'), ''], ['Line at an angle.', 'transform:rotate(-8deg)'], ['Mark stretched.', 'transform:scaleX(1.6)'], ['Wrong ground.', ''], ['Outline added.', ''], ['Mark in a box.', '']];
     const names = rows.map((r) => r[0]);
     const out = rows.map(([label, st], i) => {
       const y = 120 + i * 88, thumbBg = i === 3 ? G.accent : g, tt = tones(ctx, thumbBg), w = 112;
@@ -133,7 +133,7 @@ export const guidelines = {
         + at(bx, 100, w, 22, `<span class="d" style="font-size:22px;line-height:22px;letter-spacing:-.02em;display:block;padding-left:4px;font-variant-numeric:tabular-nums">${Math.round((c.share / tot) * 100)}%</span>`)
         + dim(ctx, 'h', bx, 138, w, w, { ground: g, ext: 6 });
     }).join('');
-    const head = at(64, 40, 312, 52, '<h1 class="d h1" style="line-height:48px">Palette</h1>') + at(284, 66, 600, 16, `<span class="m">${ctx.esc(copy(ctx, 'page.palette.caption', 'Plaster is the wall. Brick marks the measurements.'))}</span>`);
+    const head = at(64, 40, 312, 52, '<h1 class="d h1" style="line-height:48px">Palette</h1>') + at(284, 66, 600, 16, `<span class="m">${ctx.esc(copy(ctx, 'page.palette.caption', 'The first colour is the ground. The accent marks the measurements.'))}</span>`);
     return sheet(ctx, 'palette', { ground: g, body: bands + head + dim(ctx, 'v', 1244, Y, H, H, { ground: g, ext: 6 }), gridOpts: { y0: 128 } });
   },
 
@@ -202,7 +202,7 @@ export const guidelines = {
         + at(312, y + rh / 2 - ns * 0.6 - 10, 280, ns * 1.2, `<span class="d h2" style="font-size:${ns}px;line-height:1.2">${own(ctx, c.name)}</span>`)
         + at(312, y + rh / 2 + ns * 0.6 - 6, 280, 16, `<span class="m">${(own(ctx, c.roleText) || ROLE[c.role] || '')}</span>`)
         + word(M, 600, y + rh / 2 + M.cap * hs / 2, c.hex.toUpperCase(), hs, { style: 'font-variant-numeric:tabular-nums;letter-spacing:-.02em', track: -0.02 })
-        + at(884, y + rh / 2 - 27, 332, 54, kv('RGB', rgb) + (hasCmyk ? kv('CMYK', Array.isArray(c.cmyk) ? c.cmyk.join(' ') : '') : kv('On White', `${(Math.round(ratio(c.hex, G.panel) * 10) / 10).toFixed(1)}:1`)) + kv('On Plaster', `${(Math.round(onG * 10) / 10).toFixed(1)}:1`));
+        + at(884, y + rh / 2 - 27, 332, 54, kv('RGB', rgb) + (hasCmyk ? kv('CMYK', Array.isArray(c.cmyk) ? c.cmyk.join(' ') : '') : kv('On White', `${(Math.round(ratio(c.hex, G.panel) * 10) / 10).toFixed(1)}:1`)) + kv(copy(ctx, 'page.values.on', 'On ground'), `${(Math.round(onG * 10) / 10).toFixed(1)}:1`));
     }).join('');
     const head = at(64, 40, 312, 52, `<h1 class="d h1" style="line-height:48px">${ctx.skeleton ? 'Tokens' : 'Values'}</h1>`) + at(284, 66, 600, 16, '<span class="m">Every value as written, HEX first.</span>')
       + hr(64, Y0, 1152, 'var(--ink)') + at(312, Y0 - 22, 200, 16, '<span class="m i">Name and use</span>') + at(600, Y0 - 22, 200, 16, '<span class="m i">HEX</span>') + at(884, Y0 - 22, 200, 16, '<span class="m i">RGB, CMYK, ratio</span>');

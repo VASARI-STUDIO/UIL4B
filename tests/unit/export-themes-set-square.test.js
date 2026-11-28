@@ -157,7 +157,9 @@ const MOCKUP_PHOTOS = ['hoarding', 'phone', 'stationery']
 const noDemo = (html, what) => {
   assert.ok(DEMO.length > 10, 'the demo list is built from the showcase table')
   for (const line of DEMO) assert.ok(!html.includes(line), `${what}: the demo line "${line}" is printed`)
-  assert.ok(!/plumbline|ballarat/i.test(markup(html)), `${what}: Plumbline words are printed`)
+  // the demo brand's trade words: a customer's kit names none of them, the pages' own fallback lines included
+  const trade = /\b(?:plumbline|plumb line|plaster|brick|timber|bluestone|ballarat|renovation|hoarding)\b/i.exec(markup(html))
+  assert.ok(!trade, `${what}: the demo brand's word "${trade && trade[0]}" is printed`)
   assert.ok(!/matrix3d|mix-blend-mode/.test(html), `${what}: a mockup scene is drawn`)
   for (const id of MOCKUP_PHOTOS) assert.ok(!html.includes(`ss-im-${id}`), `${what}: the ${id} mockup photograph is embedded`)
 }

@@ -172,10 +172,10 @@ export const a4 = {
     const G = groundsOf(ctx), g = G.panel, t = tones(ctx, g), M = measure(ctx), W = 600, X = 96, Y = 350;
     const m = markAt2(ctx, M, t, X, Y, W), h = Math.round(m.h);
     const lines = svgAt(0, 0, 794, 1123, `<g stroke="${t.dim}" stroke-width="1" fill="none"><path d="M${X + 0.5} ${Y - 40}V${Y + h + 40}M${X + W + 0.5} ${Y - 40}V${Y + h + 40}M${X - 40} ${Y + 0.5}H${X + W + 40}M${X - 40} ${Y + h + 0.5}H${X + W + 40}"/><path d="M${X - 40} ${Y + h * 0.55}H${X + W + 40}" stroke-dasharray="4 4"/></g>`);
-    const body = H1('The mark', X0, 76) + NOTE(ctx, 'page.mark.text', 'A plumb line hangs from the l. It is the one line we never draw crooked.', X0, 134, 360)
+    const body = H1('The mark', X0, 76) + NOTE(ctx, 'page.mark.text', 'Use the mark as drawn. Never redraw, stretch or recolour it.', X0, 134, 360)
       + `<div data-contrast="demo">${word(M, 700 - M.width('600', 330), 1000, '600', 330, { style: `color:${mix(g, t.ink, 0.12)}` })}</div>`
       + lines + m.html + dim(ctx, 'h', X, Y - 40, W, W, { ground: g, ext: 6 }) + dim(ctx, 'v', X + W + 40, Y, h, h, { ground: g, ext: 6 })
-      + at(X, Y + h + 52, 460, 40, '<div class="m w">Width, height and the line through the x-height, drawn in Brick.</div>');
+      + at(X, Y + h + 52, 460, 40, `<div class="m w">${ctx.esc(copy(ctx, 'page.mark.dims', 'Width, height and the line through the x-height, drawn in the accent.'))}</div>`);
     return sheet(ctx, 'mark', { ground: g, body });
   },
 
@@ -221,7 +221,7 @@ export const a4 = {
   // ---- 11 Misuse (DL): a defects list, six rows of 146 ----
   misuse(ctx) {
     const G = groundsOf(ctx), g = G.panel, t = tones(ctx, g), M = measure(ctx), L = ctx.logo;
-    const rows = [['Plumb line removed.', ''], ['Line at an angle.', 'transform:rotate(-8deg)'], ['Mark stretched.', 'transform:scaleX(1.6)'], ['Wrong ground.', ''], ['Outline added.', ''], ['Mark in a box.', '']];
+    const rows = [[copy(ctx, 'page.misuse.0', 'Part of the mark removed.'), ''], ['Line at an angle.', 'transform:rotate(-8deg)'], ['Mark stretched.', 'transform:scaleX(1.6)'], ['Wrong ground.', ''], ['Outline added.', ''], ['Mark in a box.', '']];
     const out = rows.map(([label, st], i) => {
       const y = 140 + i * 146, thumbBg = i === 3 ? G.accent : g, tt = tones(ctx, thumbBg), w = 120, TW = 240, TH = 128;
       const ar = slotOn(ctx) ? 4 : L.geo.aspect, h = w / ar, ink = i === 3 ? G.primary : tt.ink;
@@ -253,7 +253,7 @@ export const a4 = {
         + at(GW - 20 - 260, 14, 260, 90, line(26, 30, c.hex.toUpperCase(), true) + line(12, 18, `RGB ${rgb}`, false) + (cm ? line(12, 18, `CMYK ${cm}`, false) : ''));
       return field(ctx, X0, by, GW, h, c.hex, inner, `box-shadow:inset 0 0 0 .5px ${t.hair};overflow:hidden`) + dim(ctx, 'v', 764, by, h, h, { ground: g, ext: 6 });
     }).join('');
-    return sheet(ctx, 'palette', { ground: g, body: bands + H1('Palette', X0, 60) + at(X0 + 230, 78, 440, 16, `<span class="m">${ctx.esc(copy(ctx, 'page.palette.caption', 'Plaster is the wall. Brick marks the measurements.'))}</span>`), gridOpts: { y0: 128 } });
+    return sheet(ctx, 'palette', { ground: g, body: bands + H1('Palette', X0, 60) + at(X0 + 230, 78, 440, 16, `<span class="m">${ctx.esc(copy(ctx, 'page.palette.caption', 'The first colour is the ground. The accent marks the measurements.'))}</span>`), gridOpts: { y0: 128 } });
   },
 
   // ---- 14 Tints (ST): a drawn schedule, a column of ten large chips to each colour, the base step ringed and called out by one Brick leader up the margin ----
@@ -310,7 +310,7 @@ export const a4 = {
       const y = TY + i * rh, ct = tones(ctx, c.hex), rgb = hexToRgb(c.hex).join(' '), th = rh - 10, tw = 190;
       const tag = `<svg class="a" style="left:0;top:0" width="${tw}" height="${th}" aria-hidden="true"><path d="M.5 .5H${tw - 36}L${tw - 0.5} ${th / 2}L${tw - 36} ${th - 0.5}H.5Z" fill="${c.hex}" stroke="${t.hair}" stroke-width="1"/></svg>`;
       const kv = (k, v) => `<span class="m" style="font-size:12px">${k} </span><span class="m i" style="font-size:12px;margin-right:16px">${v}</span>`;
-      const lastLine = kv('RGB', rgb) + (hasCmyk && Array.isArray(c.cmyk) ? kv('CMYK', c.cmyk.join(' ')) : '') + kv('Plaster', `${(Math.round(ratio(c.hex, G.surface) * 10) / 10).toFixed(1)}:1`) + kv('White', `${(Math.round(ratio(c.hex, G.panel) * 10) / 10).toFixed(1)}:1`);
+      const lastLine = kv('RGB', rgb) + (hasCmyk && Array.isArray(c.cmyk) ? kv('CMYK', c.cmyk.join(' ')) : '') + kv(copy(ctx, 'page.values.on.a4', 'Ground'), `${(Math.round(ratio(c.hex, G.surface) * 10) / 10).toFixed(1)}:1`) + kv('White', `${(Math.round(ratio(c.hex, G.panel) * 10) / 10).toFixed(1)}:1`);
       return hr(X0, y, GW, i ? 'var(--hair)' : 'var(--ink)') + `<div class="a" style="left:${X0}px;top:${y + 5}px;width:${tw}px;height:${th}px">${tag}</div>`
         + at(X0 + 16, y + 5 + th / 2 - 10, 80, 20, `<span class="m" style="font-size:14px;line-height:20px;color:${ct.ink}">C-0${i + 1}</span>`)
         + at(X0 + 214, y + 14, 330, 32, `<span class="d h2" style="font-size:26px;line-height:32px">${own(ctx, c.name)}</span>`) + at(X0 + 214, y + 48, 440, 16, `<span class="m">${(own(ctx, c.roleText) || ROLE[c.role] || '')}</span>`)
@@ -339,7 +339,7 @@ export const a4 = {
     }).join('');
     const digits = hr(X0, 188, 300, 'var(--ink)') + at(X0, 196, 300, 32, '<span style="font-family:var(--body);font-size:24px;line-height:32px;letter-spacing:.04em;white-space:nowrap;font-variant-numeric:tabular-nums">0123456789</span>')
       + at(X0, 230, 300, 16, '<span class="m">One glyph to a 96 px module.</span>');
-    const body = H1('Typefaces', X0, 76, 320) + NOTE(ctx, 'page.faces.note', 'Two faces, set one glyph to a module. The l hangs its plumb line.', X0, 134, 300) + roles + digits + cells;
+    const body = H1('Typefaces', X0, 76, 320) + NOTE(ctx, 'page.faces.note', 'Two faces, set one glyph to a module.', X0, 134, 300) + roles + digits + cells;
     return sheet(ctx, 'faces', { ground: g, body });
   },
 
@@ -385,12 +385,12 @@ export const a4 = {
       const q = areaOnPage(ctx, 'IMG-05', 'board', frame).quad, xs = q.map((p) => p[0]), ys = q.map((p) => p[1]), bx = Math.min(...xs), by = Math.min(...ys);
       top = voidField(ctx, 0, 0, FW, FH, G.ink, PHOTO_NOTE) + field(ctx, bx, by, Math.max(...xs) - bx, Math.max(...ys) - by, g, `<div class="d" style="position:absolute;left:20px;top:16px;right:20px;font-size:32px;line-height:1.05;white-space:normal;color:${ht.quiet}">Your headline, up to 8 words.</div>`);
     }
-    const tab = field(ctx, X0, 0, 330, 28, g, '<span class="m i" style="position:absolute;left:12px;top:6px">T-03  Type on a hoarding, board 2400 mm wide</span>');
+    const tab = field(ctx, X0, 0, 330, 28, g, `<span class="m i" style="position:absolute;left:12px;top:6px">T-03  ${ctx.esc(copy(ctx, 'page.hoarding.tab', 'Type on a large sign'))}, board 2400 mm wide</span>`);
     const k = GW / aw, fy = 604, f = flat({ html: art, w: aw, h: ah }, X0, fy, GW, `box-shadow:0 0 0 1px ${ht.ink}`);
     const cell = (i, a, b) => hr(X0 + i * 168, 930, 156, 'var(--ink)') + at(X0 + i * 168, 938, 156, 16, `<span class="m">${a}</span>`) + at(X0 + i * 168, 956, 156, 18, `<span class="m i">${b}</span>`);
     const flatPart = at(X0, 548, 500, 18, '<span class="m i">T-03.1</span><span class="lb" style="margin-left:12px">The board, flat</span>') + f.html
       + dim(ctx, 'h', X0, fy - 16, GW, '2400 mm', { ground: g, ext: 4 }) + dim(ctx, 'v', X1 + 22, fy, Math.round(ah * k), '1080 mm', { ground: g, ext: 4 })
-      + cell(0, 'Headline', `232 mm, weight ${ctx.weights.heading}`) + cell(1, 'Margin', '144 mm') + cell(2, 'Brick rule', '320 x 16 mm') + cell(3, 'Line', '68 mm');
+      + cell(0, 'Headline', `232 mm, weight ${ctx.weights.heading}`) + cell(1, 'Margin', '144 mm') + cell(2, copy(ctx, 'page.hoarding.rule', 'Accent rule'), '320 x 16 mm') + cell(3, 'Line', '68 mm');
     return sheet(ctx, 'hierarchy', { ground: g, body: top + tab + flatPart, gridOpts: { y0: 540 } });
   },
 
@@ -525,7 +525,7 @@ export const a4 = {
   print(ctx) {
     const G = groundsOf(ctx), g = G.surface, t = tones(ctx, g), E = ctx.esc, A = printArt(ctx), dd = d(ctx, g), on = mockupsOn(ctx) && !slotOn(ctx);
     const piece = (a, x, y, w, h) => at(x, y, w, h, `<div style="width:${a.w}px;height:${a.h}px;transform:scale(${w / a.w},${h / a.h});transform-origin:0 0" data-contrast="demo">${a.html}</div>`, { style: `overflow:hidden;box-shadow:0 0 0 1px ${t.ink}` });
-    const rows = (x, y, w, step) => [['U-02.1', 'Card, front', '90 x 55 mm'], ['U-02.2', 'Card, back', '90 x 55 mm'], ['U-02.3', 'Quote', '210 x 297 mm']].map(([c, n, v], i) => hr(x, y + i * step, w, 'var(--ink)')
+    const rows = (x, y, w, step) => [['U-02.1', 'Card, front', '90 x 55 mm'], ['U-02.2', 'Card, back', '90 x 55 mm'], ['U-02.3', copy(ctx, 'page.print.tag.quote', 'Document'), '210 x 297 mm']].map(([c, n, v], i) => hr(x, y + i * step, w, 'var(--ink)')
       + at(x, y + i * step + 8, 56, 16, `<span class="m i">${c}</span>`) + at(x + 62, y + i * step + 8, 90, 16, `<span class="lb i">${n}</span>`) + at(x, y + i * step + 8 + (step > 44 ? 18 : 0), w, 16, `<span class="m" style="display:block;text-align:right">${v}</span>`)).join('') + hr(x, y + 3 * step, w, 'var(--ink)');
     if (on) {
       const FH = 560, frame = { left: 0, top: 0, w: 794, h: FH, fx: 0.4, fy: 0.5, zoom: 1 };
@@ -534,7 +534,7 @@ export const a4 = {
       const dot = (x, y) => `<circle cx="${n1(x)}" cy="${n1(y)}" r="3" fill="${t.dim}" stroke="${g}" stroke-width="1.5"/>`;
       const cx0 = cb[3][0] + 34, cy0 = cb[3][1], qx = sq[0][0], qy = sq[0][1] + 70;
       const leaders = svgAt(0, 0, 794, FH, `<path d="M${n1(cx0)} ${n1(cy0)}V${n1(cy0 + 60)}" stroke="${tg}" stroke-width="1" fill="none"/>${dot(cx0, cy0)}<path d="M${n1(qx)} ${n1(qy)}H${n1(qx - 52)}" stroke="${tg}" stroke-width="1" fill="none"/>${dot(qx, qy)}`)
-        + tag(cx0 - 34, cy0 + 60, E(copy(ctx, 'page.print.tag.card', 'Business card')), '90 x 55 mm') + tag(qx - 52 - 176, qy - 20, E(copy(ctx, 'page.print.tag.quote', 'Quote')), 'A4, 210 x 297 mm');
+        + tag(cx0 - 34, cy0 + 60, E(copy(ctx, 'page.print.tag.card', 'Business card')), '90 x 55 mm') + tag(qx - 52 - 176, qy - 20, E(copy(ctx, 'page.print.tag.quote', 'Document')), 'A4, 210 x 297 mm');
       const top = at(0, 0, 794, FH, photo(ctx, 'stationery', { w: 794, h: FH, fx: frame.fx, fy: frame.fy }), { style: 'overflow:hidden' })
         + warp(ctx, 'IMG-07', 'sheet', frame, A.quote) + warp(ctx, 'IMG-07', 'card-a', frame, A.front) + warp(ctx, 'IMG-07', 'card-b', frame, A.back) + leaders
         + field(ctx, X0, 0, 330, 28, g, '<span class="m i" style="position:absolute;left:12px;top:6px">U-02  Stationery on plywood</span>');
@@ -601,7 +601,7 @@ export const a4 = {
       + dd('v', 694, by(4), RISE, String(RISE), 4)
       + at(430, 820, 100, 64, '<div class="m w">Plates 960 x 600, step 117 across and 150 up.</div>');
     const head = H1('On one page', X0, 64, 520)
-      + at(X0, 124, 300, 80, `<div class="b">${E(copy(ctx, 'page.summary.note', 'Mark, palette, type and two photographs, stood on the stair at 30 degrees.'))}</div>`);
+      + at(X0, 124, 300, 80, `<div class="b">${E(copy(ctx, 'page.summary.note', 'Mark, palette, type and two photographs, drawn on one page.'))}</div>`);
     return sheet(ctx, 'summary', { ground: g, body: head + angle + body + stairDims + hr(X0, DATUM, GW, 'var(--ink)') + at(X1 - 116, DATUM - 22, 116, 16, '<span class="m" style="display:block;text-align:right">FFL 0.00</span>') });
   },
 
@@ -617,7 +617,7 @@ export const a4 = {
     const big = at(X0 + 16, Yb + 16, GW - 32, 60, '<div class="lb">Questions about the mark</div>') + fill(X0 + 16, Y1b - 112, 96, 8, t.dim)
       + at(X0 + 16, Y1b - 88, GW - 32, 72, `<div class="d" style="font-size:44px;line-height:52px;white-space:normal;letter-spacing:-.02em">${email}</div>`);
     const frame = svgAt(0, 0, K.W, K.H, `<g stroke="${t.hair}" stroke-width="1" fill="none"><rect x="${X0 + 0.5}" y="${Y0b + 0.5}" width="${GW}" height="${Y1b - Y0b}"/><path d="M${X0} ${Y0b + RH + 0.5}H${X1}M${X0} ${Y0b + 2 * RH + 0.5}H${X1}M${X0} ${Yb + 0.5}H${X1}M${XS + 0.5} ${Y0b}V${Yb}"/></g>`);
-    const head = at(X0, 96, GW, 190, `<h1 class="d h1" style="white-space:normal;font-size:56px;line-height:60px">${E(copy(ctx, 'page.contact.headline', 'Check the drawing before you build on it.'))}</h1>`);
+    const head = at(X0, 96, GW, 190, `<h1 class="d h1" style="white-space:normal;font-size:56px;line-height:60px">${E(copy(ctx, 'page.contact.headline', 'Questions about the brand? Ask before you change it.'))}</h1>`);
     return sheet(ctx, 'contact', { ground: g, body: head + frame + cells + big });
   },
 };

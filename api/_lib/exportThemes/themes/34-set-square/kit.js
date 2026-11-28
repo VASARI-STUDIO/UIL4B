@@ -188,8 +188,8 @@ export function voidField(ctx, x, y, w, h, ground, note, { noteY } = {}) {
   const t = tones(ctx, ground), diag = `<svg class="a" style="left:0;top:0" width="${n1(w)}" height="${n1(h)}" viewBox="0 0 ${n1(w)} ${n1(h)}" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0L${n1(w)} ${n1(h)}M${n1(w)} 0L0 ${n1(h)}" stroke="var(--quiet)" stroke-width="1" fill="none" vector-effect="non-scaling-stroke"/></svg>`;
   return field(ctx, x, y, w, h, ground, `${diag}${at(24, noteY ?? h - 44, w - 48, 20, `<span class="m nt">${note}</span>`)}`);
 }
-export const PHOTO_NOTE = 'Your photograph. Example: a kitchen mid-renovation, daylight from the left.';
-export const PHONE_NOTE = 'Your photograph. Example: a hand holding a phone on site, timber frame behind.';
+export const PHOTO_NOTE = 'Your photograph. Example: your work or your place, in daylight from the left.';
+export const PHONE_NOTE = 'Your photograph. Example: a hand holding a phone, your work behind.';
 // a rule the user has still to write, set as ghost type with one mono note under it (the slot edition of the Compositions page)
 export const ghostRule = (ctx, line, note) => `<span class="ph-b"><span class="ph-w">${ctx.esc(line)}</span><span class="ph-m">${ctx.esc(note)}</span></span>`;
 

@@ -55,7 +55,7 @@ export const guidelines = {
     }).join('');
     const digits = at(64, 552, 272, 40, `<span style="font-family:var(--body);font-size:24px;line-height:32px;letter-spacing:.04em;white-space:nowrap;font-variant-numeric:tabular-nums">0123456789</span>`)
       + hr(64, 544, 272, 'var(--ink)') + at(64, 600, 272, 16, '<span class="m">One glyph to a 96 px module.</span>');
-    const body = H1('Typefaces', 64, 88, 272) + NOTE('Two faces, set one glyph to a module. The l hangs its plumb line.', 64, 148, 250) + roles + digits + cells;
+    const body = H1('Typefaces', 64, 88, 272) + NOTE(copy(ctx, 'page.faces.note', 'Two faces, set one glyph to a module.'), 64, 148, 250) + roles + digits + cells;
     return sheet(ctx, 'faces', { ground: g, body });
   },
 
@@ -86,7 +86,7 @@ export const guidelines = {
   hierarchy(ctx) {
     const G = groundsOf(ctx), g = G.surface, M = measure(ctx), E = ctx.esc;
     const frame = { left: 0, top: 0, w: 1280, h: 648, fx: 0.5, fy: 0.5, zoom: 1 };
-    const tab = field(ctx, 64, 0, 340, 28, g, '<span class="m i" style="position:absolute;left:12px;top:6px">T-03  Type on a hoarding, board 2400 x 1080 mm</span>');
+    const tab = field(ctx, 64, 0, 340, 28, g, `<span class="m i" style="position:absolute;left:12px;top:6px">T-03  ${ctx.esc(copy(ctx, 'page.hoarding.tab', 'Type on a large sign'))}, board 2400 x 1080 mm</span>`);
     let body;
     if (mockupsOn(ctx) && !slotOn(ctx)) {
       const head = copy(ctx, 'page.hoarding.headline', 'Your headline'), line = copy(ctx, 'page.hoarding.line', '');

@@ -34,18 +34,18 @@ export function printArt(ctx) {
   const mk = markAt(ctx, M, 64, 64, 250, tp.ink, tp.quiet);
   const quote = artBox(ctx, 794, 1106, paper,
     mk.html
-    + at(494, 70, 236, 24, `<span class="m i" style="font-size:18px;line-height:24px;display:block;text-align:right">${slot ? '<span style="color:var(--quiet)">Quote number</span>' : line(0, '')}</span>`)
-    + at(64, 176, 666, 84, `<div style="${heavy(ctx)};font-size:76px;line-height:84px">Quote</div>`)
+    + at(494, 70, 236, 24, `<span class="m i" style="font-size:18px;line-height:24px;display:block;text-align:right">${slot ? '<span style="color:var(--quiet)">'+E(copy(ctx, 'page.print.ref', 'Reference number'))+'</span>' : line(0, '')}</span>`)
+    + at(64, 176, 666, 84, `<div style="${heavy(ctx)};font-size:76px;line-height:84px">${E(copy(ctx, 'page.print.doc', 'Document'))}</div>`)
     + hr(64, 292, 666, tp.ink)
-    + at(64, 316, 120, 20, '<span class="lb" style="font-size:15px">Job</span>')
-    + at(64, 344, 666, 80, `<div style="font-family:var(--display);font-weight:${ctx.weights.heading};font-size:34px;line-height:40px;letter-spacing:-.01em;color:${col}">${line(1, 'The job and its address')}</div>`)
+    + at(64, 316, 120, 20, `<span class="lb" style="font-size:15px">${E(copy(ctx, 'page.print.label.0', 'Subject'))}</span>`)
+    + at(64, 344, 666, 80, `<div style="font-family:var(--display);font-weight:${ctx.weights.heading};font-size:34px;line-height:40px;letter-spacing:-.01em;color:${col}">${line(1, 'What this document is about')}</div>`)
     + hr(64, 464, 666, tp.hair)
-    + at(64, 488, 160, 20, '<span class="lb" style="font-size:15px">Price</span>')
-    + at(64, 520, 666, 160, `<div style="${heavy(ctx)};font-size:60px;line-height:64px;white-space:normal;color:${col}">${line(2, 'Fixed price: $0,000.')}</div>`)
+    + at(64, 488, 160, 20, `<span class="lb" style="font-size:15px">${E(copy(ctx, 'page.print.label.1', 'Figure'))}</span>`)
+    + at(64, 520, 666, 160, `<div style="${heavy(ctx)};font-size:60px;line-height:64px;white-space:normal;color:${col}">${line(2, 'The one figure that matters.')}</div>`)
     + fill(64, 628, 120, 8, slot ? tp.dim : G.primary)
     + hr(64, 704, 666, tp.hair)
-    + at(64, 728, 160, 20, '<span class="lb" style="font-size:15px">Start</span>')
-    + at(64, 756, 666, 80, `<div style="font-family:var(--display);font-weight:${ctx.weights.heading};font-size:34px;line-height:40px;letter-spacing:-.01em;color:${col}">${line(3, 'Start: day, date, time.')}</div>`)
+    + at(64, 728, 160, 20, `<span class="lb" style="font-size:15px">${E(copy(ctx, 'page.print.label.2', 'Date'))}</span>`)
+    + at(64, 756, 666, 80, `<div style="font-family:var(--display);font-weight:${ctx.weights.heading};font-size:34px;line-height:40px;letter-spacing:-.01em;color:${col}">${line(3, 'Date: day, date, time.')}</div>`)
     + hr(64, 1010, 666, tp.ink)
     + at(64, 1030, 666, 24, `<span class="m" style="font-size:16px;line-height:24px;color:${tp.quiet}">${E(copy(ctx, 'page.hoarding.line', 'Your name and contact line'))}</span>`));
   const mf = markAt(ctx, M, 72, 72, 380, tb.ink, tb.quiet, kindFor(ctx, G.ink));
@@ -172,7 +172,7 @@ export const guidelines = {
       const body = at(0, 0, 1280, 648, photo(ctx, 'stationery', { w: 1280, h: 648, fx: frame.fx, fy: frame.fy }), { style: 'overflow:hidden' })
         + warp(ctx, 'IMG-07', 'sheet', frame, A.quote) + warp(ctx, 'IMG-07', 'card-a', frame, A.front) + warp(ctx, 'IMG-07', 'card-b', frame, A.back)
         + tagLeader(ctx, ca[0][0], (ca[0][1] + ca[3][1]) / 2, ca[0][0] - 36, (ca[0][1] + ca[3][1]) / 2, E(copy(ctx, 'page.print.tag.card', 'Business card')), '90 x 55 mm', g)
-        + tagLeader(ctx, sq[1][0], sq[1][1] + 120, sq[1][0] + 64, sq[1][1] + 120, E(copy(ctx, 'page.print.tag.quote', 'Quote')), 'A4, 210 x 297 mm', g);
+        + tagLeader(ctx, sq[1][0], sq[1][1] + 120, sq[1][0] + 64, sq[1][1] + 120, E(copy(ctx, 'page.print.tag.quote', 'Document')), 'A4, 210 x 297 mm', g);
       return sheet(ctx, 'print', { ground: g, body, grid: false });
     }
     const K = 1.8, aw = Math.round(210 * K), ah = Math.round(297 * K), cw = Math.round(90 * K), ch = Math.round(55 * K), t = tones(ctx, g);
@@ -184,7 +184,7 @@ export const guidelines = {
       + piece(A.quote, ax, ay, aw, ah) + piece(A.front, cx, cy, cw, ch) + piece(A.back, cx, cy2, cw, ch)
       + d('h', ax, ay - 14, aw, '210 mm') + d('v', ax + aw + 24, ay, ah, '297 mm') + d('h', cx, cy - 14, cw, '90 mm') + d('v', cx + cw + 24, cy, ch, '55 mm') + d('v', cx + cw + 24, cy2, ch, '55 mm')
       + at(cx, cy2 + ch + 24, 220, 60, '<div class="m w">Front and back, 350 gsm uncoated board.</div>')
-      + [['U-02.1', 'Card, front', '90 x 55 mm'], ['U-02.2', 'Card, back', '90 x 55 mm'], ['U-02.3', 'Quote', '210 x 297 mm']].map(([c, n, v], i) => hr(64, 424 + i * 40, 320) + at(64, 436 + i * 40, 70, 16, `<span class="m i">${c}</span>`) + at(140, 436 + i * 40, 150, 16, `<span class="lb i">${n}</span>`) + at(290, 436 + i * 40, 94, 16, `<span class="m" style="display:block;text-align:right">${v}</span>`)).join('') + hr(64, 544, 320);
+      + [['U-02.1', 'Card, front', '90 x 55 mm'], ['U-02.2', 'Card, back', '90 x 55 mm'], ['U-02.3', copy(ctx, 'page.print.tag.quote', 'Document'), '210 x 297 mm']].map(([c, n, v], i) => hr(64, 424 + i * 40, 320) + at(64, 436 + i * 40, 70, 16, `<span class="m i">${c}</span>`) + at(140, 436 + i * 40, 150, 16, `<span class="lb i">${n}</span>`) + at(290, 436 + i * 40, 94, 16, `<span class="m" style="display:block;text-align:right">${v}</span>`)).join('') + hr(64, 544, 320);
     return sheet(ctx, 'print', { ground: g, body });
   },
 
@@ -222,7 +222,7 @@ export const guidelines = {
       return slab + face + at(b[0] - 100, DATUM + 8, 200, 34, `<div class="m i" style="text-align:center">${code}</div><div class="lb" style="text-align:center">${E(name)}</div>`);
     }).join('');
     const head = at(64, 88, 560, 52, '<h1 class="d h1" style="line-height:48px">On one page</h1>')
-      + at(64, 152, 300, 80, `<div class="b">${E(copy(ctx, 'page.summary.note', 'Mark, palette, type and two photographs, stood on the stair at 30 degrees.'))}</div>`);
+      + at(64, 152, 300, 80, `<div class="b">${E(copy(ctx, 'page.summary.note', 'Mark, palette, type and two photographs, drawn on one page.'))}</div>`);
     return sheet(ctx, 'summary', { ground: g, body: head + body + hr(64, DATUM, 1152, 'var(--ink)') + at(1100, DATUM - 22, 116, 16, '<span class="m" style="display:block;text-align:right">FFL 0.00</span>') });
   },
 
@@ -232,7 +232,7 @@ export const guidelines = {
     const X0 = 64, X1 = 1216, Y0 = 312, Y1 = 640, rowY = [Y0, Y0 + 96, Y0 + 192], line = t.hair;
     const rev = String(ctx.versionLine || 'Version 1.0, November 2026').replace(/^Version/, 'Rev');
     const email = isGhost(ctx, copy(ctx, 'contact.email')) ? ghostRule(ctx, 'Your contact email', 'Who to ask before changing the mark.') : ghost(ctx, copy(ctx, 'contact.email'), 'contact.email', 'Your contact email', { what: false });
-    const head = at(64, 96, 760, 120, `<h1 class="d h1" style="white-space:normal">${E(copy(ctx, 'page.contact.headline', 'Check the drawing before you build on it.'))}</h1>`);
+    const head = at(64, 96, 760, 120, `<h1 class="d h1" style="white-space:normal">${E(copy(ctx, 'page.contact.headline', 'Questions about the brand? Ask before you change it.'))}</h1>`);
     const cell = (x, y, w, label, val, mono = true) => at(x + 16, y + 14, w - 32, 70, `<div class="lb">${label}</div><div class="${mono ? 'm i' : 'b'}" style="margin-top:6px;font-size:15px;line-height:22px">${val}</div>`);
     const cols = [[X0, 448], [448, 736], [736, 928], [928, 1216]];
     const rows1 = [['Project', `${E(ctx.real ? ctx.real(B.name) : B.name)} brand guidelines`], ['Sheet', E(R.title)], ['Sheet no.', R.sheet], ['Scale', '1:1']];
