@@ -1367,7 +1367,7 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             data-live={moment && t.id === liveId ? '' : undefined}
                             aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
                             aria-current={isHere(t) ? 'page' : undefined}
-                            aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
+                            aria-label={t.soon ? `${t.label} (coming soon)` : t.beta ? `${t.label} (beta)` : undefined}
                             onClick={onPick}
                             data-pnav-menuitem
                           >

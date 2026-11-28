@@ -116,7 +116,7 @@ export async function serveExportLivePreview(req, res, { verifyIdToken, readUser
 
   try {
     const out = await renderThemePage({
-      theme: body.theme, kind: page.kind, page: page.engine, design: brand.design, projectName: brand.name,
+      theme: body.theme, kind: page.kind, page: page.engine, design: brand.design, projectName: brand.name, skeleton: free,
     }, engine)
     if (typeof out.html !== 'string' || !out.html) throw new Error('empty document')
     return res.status(200).json({ ok: true, html: free ? watermarked(out.html) : out.html })

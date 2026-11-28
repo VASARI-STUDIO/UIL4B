@@ -27,6 +27,7 @@ export const EXPORT_THEMES = Object.freeze([
   // The Free pair. Guidelines-only themes: they have slides and nothing else, and those are free.
   Object.freeze({ id: '25-label', name: 'Label', rows: Object.freeze(['slides', 'guide']), free: true }),
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', rows: Object.freeze(['slides', 'guide']), free: true }),
+  Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', rows: Object.freeze(['slides', 'guide']), free: true }),
 ])
 
 // Each row and the file formats it can download in. The UI kit is one zip; the book and the slides come as a page to print or a zip.
@@ -44,7 +45,7 @@ export const THEME_ROW_FORMATS = Object.freeze({
 // Keynote's and Stub's are Pro only. Label (25) and Swiss Field (27) stay on a rows list because they are guidelines-only (no UI kit, no book).
 const OPT_IN_ROWS = Object.freeze(['guide'])
 
-// The themes whose UI kit a free account can download. Interim: Standards, until the Free pair (Label and Swiss Field) has UI kits
+// The themes whose UI kit a free account can download. Interim: Standards, until the Free pair (Label, Swiss Field and Flyleaf) has UI kits
 // of its own; the pair draws the guidelines only for now. Every other theme and row is Pro. src/config/exportFormats.js mirrors
 // this as Standards' `freeExports`, and a unit test holds the two together.
 export const FREE_UI_KIT_THEMES = Object.freeze(['04-standards'])

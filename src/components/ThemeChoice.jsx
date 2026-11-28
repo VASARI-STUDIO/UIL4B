@@ -59,7 +59,7 @@ export default function ThemeChoice() {
           aria-pressed={themePref === c.value}
           // Says WHICH way System currently resolves, so a screen-reader user
           // choosing it is not left guessing what they just asked for.
-          aria-label={c.value === 'system' ? `System theme — currently ${theme}` : `${c.label} theme`}
+          aria-label={c.value === 'system' ? `System theme (currently ${theme})` : `${c.label} theme`}
           onClick={() => setTheme(c.value)}
         >
           <c.Glyph />

@@ -142,9 +142,9 @@ export const PAGE_DESCRIPTIONS = {
   // The same deleted clause as DEFAULT_DESCRIPTION above: the CSS export is
   // not live, so the promise of one came out. The rest is what the page does.
   '/create/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps and accessibility checks.',
-  '/create/semantic-color': 'Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.',
-  '/create/tint': 'Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.',
-  '/create/gradient': 'Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.',
+  '/create/semantic-color': 'Generate semantic UI colours for success, warning, error and info that stay legible and consistent with your palette in light and dark mode.',
+  '/create/tint': 'Turn any colour into a production-ready 50 to 950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.',
+  '/create/gradient': 'Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle. Copy production-ready CSS in one click.',
   '/create/contrast': 'Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.',
   '/create/typography': 'Typography tools for designers and developers. Pair fonts, build type scales, and browse the Google Fonts catalogue.',
   '/create/type-scale': 'Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.',
@@ -152,24 +152,24 @@ export const PAGE_DESCRIPTIONS = {
   '/create/font-gallery': 'Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.',
   '/create/icons': 'Search icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
   '/create/icons/groups': 'Sets of icons from multiple packs that follow a similar style and fit a theme or task. Recolour a whole set and export it in one go.',
-  '/create/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
+  '/create/imagery': 'Image tools for the web. Convert and compress images, extract video frames, and calculate aspect ratios.',
   '/create/icons-emoji': 'Search icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
   '/discover': 'The UI L4B library of curated colour palettes, CSS gradients and copy-ready buttons, plus community inspiration.',
   '/discover/gradients': 'Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
-  '/learn': 'Reference guides on colour, typography, accessibility and psychology for people who build interfaces — the thresholds, formulas and standards they come from.',
+  '/learn': 'Reference guides on colour, typography, accessibility and psychology for people who build interfaces, with the thresholds, formulas and standards behind them.',
   '/create/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
   '/create/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
-  '/create/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
+  '/create/ai-tools': 'AI design tools for image prompts, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
   '/create/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
   '/discover/prompts': 'A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.',
   '/discover/buttons': 'Ten button designs with hover, pressed, focus and disabled states. Copy the HTML and CSS free; edit size, corners and colour, and get an AI prompt, with Pro.',
   '/create/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
-  '/create/aspect-ratio': 'Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.',
+  '/create/aspect-ratio': 'Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio for exact dimensions, PPI, and diagonal with a live shape preview.',
   '/create/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
-  '/create/components': 'Design UI components with live preview and production-ready CSS out — buttons, cards, inputs and the shadows under them.',
+  '/create/components': 'Design UI components with live preview and production-ready CSS for buttons, cards, inputs and the shadows under them.',
   '/create/component-designer': 'Build complete UI design systems with guided steps. Pick colours, fonts, type scales, and export production-ready CSS.',
-  '/create/auto-builder': 'Describe what you are making and get a palette, a font pairing and a type scale to start from — each opens in the tool that owns it.',
+  '/create/auto-builder': 'Describe what you are making and get a palette, a font pairing and a type scale to start from. Each one opens in its own tool.',
   '/projects': 'Manage and organise your saved design projects. Access colour palettes, font selections, and exported assets.',
   '/settings': 'Customise your UI L4B experience. Manage theme, appearance, subscription, and account preferences.',
   '/login': 'Log in to UI L4B to keep your palettes, type scales and icon sets as projects.',
@@ -179,7 +179,7 @@ export const PAGE_DESCRIPTIONS = {
   // The Spectrum design's own sentence for its "On mobile" screen, verbatim —
   // see src/pages/SpectrumMobile.jsx for what was checked against the product.
   '/mobile': 'Every tool runs the same on a phone. Pick colours on the train, check contrast in a meeting, then copy the tokens when you get back to your desk.',
-  '/plans': 'Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.',
+  '/plans': 'Honest pricing for UI L4B. The toolkit is free forever: palettes, type scales and exports. Pro adds AI capacity and watermark-free export.',
   '/tools': 'Every UI L4B tool in one place: palettes, contrast, fonts, type scales, icons, file conversion and more. Try them live, no account needed.',
   '/checkout': 'Upgrade to UI L4B Pro for higher AI capacity, advanced colour controls, unlimited saved projects and watermark-free export.',
   // A CLAUSE DELETED, NOT A SENTENCE REWRITTEN. This ended "and connect with
@@ -197,7 +197,7 @@ export const PAGE_DESCRIPTIONS = {
   '/feedback': 'Share your feedback, report bugs, or request features for UI L4B. We read every submission.',
   '/learn/help': 'Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.',
   '/learn/principles': 'The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.',
-  '/info': 'The UI L4B Information Centre — a single, searchable guide to every tool, keyboard shortcuts, privacy, and a live screen-size inspector.',
+  '/info': 'The UI L4B Information Centre: one searchable guide to every tool, keyboard shortcuts, privacy, and a live screen-size inspector.',
   '/seo': 'Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.',
   '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
   '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
@@ -205,8 +205,8 @@ export const PAGE_DESCRIPTIONS = {
   // promise: the icon sets come from iconPackTiers.js, the typefaces from
   // public/fonts/, the packages from package.json. It names the licences a
   // reader is most likely to be looking for rather than describing the page.
-  '/credits': 'Every icon set, typeface and package UI L4B is built on, with its licence — CC BY, MIT, Apache 2.0 and the SIL Open Font License — and a link to each project.',
-  '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
+  '/credits': 'Every icon set, typeface and package UI L4B is built on, with its licence (CC BY, MIT, Apache 2.0 or the SIL Open Font License) and a link to each project.',
+  '/sitemap': 'The complete UI L4B sitemap: every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
   '/admin': DEFAULT_DESCRIPTION,
   '/create/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
   // Functional, not marketing: what it opens, what it writes, where the work

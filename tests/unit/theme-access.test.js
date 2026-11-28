@@ -2,7 +2,7 @@
 //
 // What is pinned, and the change that makes each fail:
 //  1. FREE IS REFUSED EVERYWHERE PRO: every theme x row x format on a Free plan is 403 pro_required, except the free tier written out
-//     below (the guidelines in Label and Swiss Field, the UI kit in Standards). The expected tier is written here, not read back
+//     below (the guidelines in Label, Swiss Field and Flyleaf, the UI kit in Standards). The expected tier is written here, not read back
 //     from isThemeExportPro, so loosening the table fails this too.
 //     Break: make assertThemeAccess return { ok: true } for every plan.
 //  2. PRO IS ALLOWED: the same walk on a Pro plan is ok for every combination in the tables.
@@ -21,8 +21,8 @@ import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 const FREE = { id: 'free' }
 const PRO = { id: 'pro' }
 
-// The free tier, written out: Label and Swiss Field are free in every row they have; Standards' UI kit is free. Nothing else is.
-const FREE_THEMES = ['25-label', '27-swissfield']
+// The free tier, written out: Label, Swiss Field and Flyleaf are free in every row they have; Standards' UI kit is free. Nothing else is.
+const FREE_THEMES = ['25-label', '27-swissfield', '33-flyleaf']
 const isFree = (theme, row) => FREE_THEMES.includes(theme) || (theme === '04-standards' && row === 'ui-kit')
 
 const combos = []

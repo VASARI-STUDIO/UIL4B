@@ -142,9 +142,9 @@ test.describe('Extract frames: Cancel', () => {
     await cancelBtn(page).click()
 
     const toast = page.locator('.toast.show')
-    await expect(toast).toContainText(/Extraction cancelled — kept \d+ frames?/, { timeout: 10000 })
+    await expect(toast).toContainText(/Extraction cancelled\. Kept \d+ frames?/, { timeout: 10000 })
     await expect(toast, 'a cancel is not an error').toHaveClass(/toast-info/)
-    const kept = Number(/kept (\d+) frame/.exec(await toast.textContent())[1])
+    const kept = Number(/Kept (\d+) frame/.exec(await toast.textContent())[1])
     expect(kept, 'Cancel threw away every frame').toBeGreaterThan(0)
     expect(kept, 'Cancel did not stop the run: it made every one of the 120 frames').toBeLessThan(120)
 

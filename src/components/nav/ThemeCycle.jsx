@@ -56,7 +56,7 @@ export default function ThemeCycle({ className = 'pnav-iconbtn pnav-theme', glyp
   const label = glyphs === 'phosphor'
     ? `Theme: ${word(current)}. Switch to ${word(next)}.`
     : next === 'system'
-      ? `Switch to the system theme — currently ${theme}`
+      ? `Switch to the system theme (currently ${theme})`
       : `Switch to the ${NAME[next].toLowerCase()} theme`
 
   return (

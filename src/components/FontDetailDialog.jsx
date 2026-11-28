@@ -519,7 +519,7 @@ export default function FontDetailDialog({
             {loadState === 'unknown' && (
               <div className="fgd-note" role="status">
                 <span className="fgd-note-spinner" aria-hidden="true" />
-                <span>Still loading this preview — showing a fallback face until {font.family} arrives.</span>
+                <span>Still loading this preview. Showing a fallback face until {font.family} arrives.</span>
               </div>
             )}
 

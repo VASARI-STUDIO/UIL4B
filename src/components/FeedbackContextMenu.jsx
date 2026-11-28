@@ -154,7 +154,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
       'sep',
       { type: 'note', text: 'You review everything attached before anything is sent.' },
     ]
-    if (!phone) rows.push({ id: 'cancel', label: 'Cancel — use the browser menu with Shift+right-click', compact: true, attrs: { 'data-fbx-cancel': '' }, onSelect: () => {} })
+    if (!phone) rows.push({ id: 'cancel', label: 'Cancel (use the browser menu with Shift+right-click)', compact: true, attrs: { 'data-fbx-cancel': '' }, onSelect: () => {} })
     return rows
   }, [at, onReport, phone])
 

@@ -38,7 +38,7 @@ export function FontCatalogNotice({ online, degraded, onRetry, retrying, count, 
       <div className="typ-notice" role="status" aria-live="polite">
         <WarnIcon />
         <div>
-          <strong>You&rsquo;re offline — previews will use system fonts.</strong>
+          <strong>You&rsquo;re offline. Previews will use system fonts.</strong>
           {!compact && <span>
             Everything else keeps working: the {count ? `${count.toLocaleString()} ` : ''}families
             already loaded stay browsable, and your settings and exports are unaffected. The full

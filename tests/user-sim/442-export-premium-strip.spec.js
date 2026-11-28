@@ -28,7 +28,7 @@ const WIDTHS = [
   { name: '390', size: { width: 390, height: 844 }, count: 2 },
 ]
 const FILES = [
-  { id: 'guidelines', cat: 'Guidelines', total: 22, wayOut: 'Use the free Guidelines (Label)' },
+  { id: 'guidelines', cat: 'Guidelines', total: 23, wayOut: 'Use the free Guidelines (Label)' },
   { id: 'kit', cat: 'UI kit', total: 20, wayOut: 'Use the free UI kit (Standards)' },
 ]
 
@@ -74,7 +74,7 @@ test.describe('the gallery lists the premium ten first', () => {
       expect(read.names.slice(0, 10), 'premium, in id order').toEqual(PREMIUM)
       expect(read.names, 'every template once').toHaveLength(f.total)
       expect(new Set(read.names).size, 'no template twice').toBe(f.total)
-      if (f.id === 'guidelines') expect(read.names.slice(10, 12), 'Label and Swiss Field follow, they are free').toEqual(['Label', 'Swiss Field'])
+      if (f.id === 'guidelines') expect(read.names.slice(10, 13), 'Label, Swiss Field and Flyleaf follow, they are free').toEqual(['Label', 'Swiss Field', 'Flyleaf'])
       else expect(read.names[10], 'Standards follows, the kit is free in it').toBe('Standards')
       expect(read.names.indexOf('Presentation'), 'the classics come after').toBeGreaterThan(10)
     })

@@ -403,7 +403,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
     if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images', 'error'); return 0 }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
-    if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`, 'info')
+    if (big) toast(`Heads up: ${big.name} is over 50 MB. It may be slow`, 'info')
     const next = imgs.map(f => ({
       id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 7)}`,
       name: f.name,
@@ -566,7 +566,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       renderScale,
     })
     if (exceedsCanvasLimit(plan.w, plan.h)) {
-      throw new Error(plan.exact ? 'Too large to export — pick a smaller size' : `Too large to export at @${renderScale}x — pick a smaller size`)
+      throw new Error(plan.exact ? 'Too large to export. Pick a smaller size' : `Too large to export at @${renderScale}x. Pick a smaller size`)
     }
     // canvas.toBlob yields null — or quietly a PNG — when the browser can't
     // encode the requested format (notably AVIF in some browsers), and a
@@ -748,7 +748,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       onFiles={addFiles}
       compact={items.length > 0}
       hint={items.length ? 'Add more images' : 'Drop images here or click to browse'}
-      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
+      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO. Batch supported"
     />
   )
 
@@ -850,7 +850,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     ariaLabel="JPEG background colour"
                     triggerClassName="fc-bg-pick"
                   />
-                  <p className="fc-note">Background — fills transparency, JPEG has no alpha</p>
+                  <p className="fc-note">Background: fills transparency, JPEG has no alpha</p>
                 </div>
               )}
             </div>
@@ -864,7 +864,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 disabled={busy || !fmt.lossy || fitOn}
                 ariaLabel="Output quality"
               />
-              {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+              {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless, so quality doesn&apos;t apply</p>}
               {fmt.lossy && fitOn && <p className="fc-note">Fit under a size picks the quality.</p>}
             </div>
 
@@ -1384,7 +1384,7 @@ function VideoConvert({ toast }) {
     const animImage = /^image\/(gif|webp)$/.test(f.type) || /\.(gif|webp)$/i.test(f.name)
     const okType = f.type.startsWith('video/') || /\.(mp4|webm|mov|avi|gif|webp)$/i.test(f.name)
     if (!okType) { toast('Please choose a video, animated GIF or animated WebP', 'error'); return }
-    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — conversion may be slow or run out of memory', 'info')
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB. Conversion may be slow or run out of memory', 'info')
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     if (result?.url) URL.revokeObjectURL(result.url)
     setFile(f)
@@ -1505,7 +1505,7 @@ function VideoConvert({ toast }) {
       return
     }
     if (!engineLoaded() && !navigator.onLine) {
-      toast('You appear to be offline — the converter engine needs a connection to load', 'error')
+      toast('You appear to be offline. The converter engine needs a connection to load', 'error')
       return
     }
     const run = ++runRef.current
@@ -2084,7 +2084,7 @@ function VideoConvert({ toast }) {
                   </MenuSelect>
                 </div>
               </div>
-              {!fmt.loops && !isFrameExport && <p className="fc-note">Video files store no loop count — the player decides</p>}
+              {!fmt.loops && !isFrameExport && <p className="fc-note">Video files store no loop count. The player decides</p>}
             </div>
             <div className="fc-insp-sec">
               <div className="fc-pair">
@@ -2126,7 +2126,7 @@ function VideoConvert({ toast }) {
                       </MenuSelect>
                     </div>
                   </div>
-                  {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+                  {fmt.id === 'apng' && <p className="fc-note">APNG is lossless, so quality doesn&apos;t apply</p>}
                 </>
               )}
             </div>
@@ -2252,7 +2252,7 @@ function VideoFrames({ toast }) {
       toast('Please choose a video file (MP4, WebM, MOV, AVI)', 'error')
       return
     }
-    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB. Extraction may be slow', 'info')
     // A run in flight belongs to the old file: stop it before its source URL goes.
     if (disposeRun()) {
       abortRef.current = null
@@ -2371,7 +2371,7 @@ function VideoFrames({ toast }) {
       // frames (stopped: …)" and then this line toasted "Extracted N frames" in
       // the same tick — the second replaced the first before it painted, so a
       // run that stopped early reported itself as a clean success.
-      if (signal.aborted) toast(out.length ? `Extraction cancelled — kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
+      if (signal.aborted) toast(out.length ? `Extraction cancelled. Kept ${out.length} ${out.length === 1 ? 'frame' : 'frames'}` : 'Extraction cancelled', 'info')
       else if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
       else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
       else if (wanted > MAX_FRAMES && idx >= MAX_FRAMES) toast(`Extracted ${out.length} frames, the most one run makes`, 'info')
@@ -2407,7 +2407,7 @@ function VideoFrames({ toast }) {
     <>
       {!srcUrl ? (
         <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
-          hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
+          hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI. Output is a ZIP of image frames" />
       ) : (
         <div className="fc-bench">
           <div className="fc-bench-main">
@@ -2459,7 +2459,7 @@ function VideoFrames({ toast }) {
                   disabled={extracting || !fmt.lossy}
                   ariaLabel="Frame quality"
                 />
-                {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+                {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless, so quality doesn&apos;t apply</p>}
               </div>
               <div className="fc-insp-sec">
                 <span className="fc-eyebrow">Range (seconds)</span>

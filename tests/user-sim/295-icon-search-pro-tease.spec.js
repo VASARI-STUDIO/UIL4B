@@ -6,7 +6,9 @@
 //   * results that have run out: the same rows and band sit under the grid;
 //   * any match that needs Pro: the button is a link to /plans. Signed out with only account-tier
 //     matches: it opens the login popup.
-// A Pro viewer gets nothing. No request ever asks for a locked pack's drawing.
+// A Pro viewer gets nothing. No request ever asks for a locked pack's drawing, with ONE exception: a signed-out
+// search that finds at least a row of matches in free-tier packs draws that one row (446), so those packs'
+// drawings may be fetched. Pro, brand, blocked and animated packs never are, signed out or not.
 //
 // The fixture (tests/user-sim/fixtures/iconify/search.json) already answers these queries:
 //   "apple"       logos, devicon, simple-icons                  (Pro only)
@@ -139,6 +141,7 @@ test('signed out, with only account-tier matches, the button opens the login pop
   await expect(b.getByRole('link'), 'a login, not a link to /plans').toHaveCount(0)
   await b.getByRole('button', { name: 'Log in' }).click()
   await expect(page.getByRole('dialog').filter({ has: page.locator('#ui-login-title') })).toBeVisible()
+  // One match is less than a row, so no free row is drawn and solar's drawing is not asked for either.
   expectNoGlyphFor(urls, ['solar', ...PRO_PACKS])
 })
 

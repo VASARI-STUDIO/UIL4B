@@ -227,7 +227,7 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
       navigate('/create/gradient')
     } catch {
       resetGradientDraft()
-      toast?.('Couldn’t open the Gradient Generator — try again')
+      toast?.('Couldn’t open the Gradient Generator. Try again')
     }
   }, [navigate, toast])
 
@@ -245,7 +245,7 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
         action: { label: 'Open', onAction: () => navigate(`/projects/${id}`) },
       })
     } catch (err) {
-      toast?.(err?.message || 'Couldn’t save the palette — try again', 'error')
+      toast?.(err?.message || 'Couldn’t save the palette. Try again', 'error')
     }
   }, [saveProject, navigate, toast])
 

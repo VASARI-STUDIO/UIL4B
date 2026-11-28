@@ -396,7 +396,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(paletteToolbar(page).getByRole('button', { name: /Contrast/i })).toHaveCount(0)
     // The AA chip on each colour (D:1032) is the Pro contrast check; free, it
     // says so on the chip and opens the explanation.
-    const chip = page.locator('.plb-col').first().getByRole('button', { name: 'Contrast of PRIMARY — a Pro check' })
+    const chip = page.locator('.plb-col').first().getByRole('button', { name: 'Contrast of PRIMARY (a Pro check)' })
     await expect(chip).toHaveText(/AA · Pro/)
     await chip.click()
     await expect(page.getByRole('dialog', { name: 'Check contrast, light and dark' })).toBeVisible()

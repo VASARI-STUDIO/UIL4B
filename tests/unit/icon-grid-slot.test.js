@@ -17,10 +17,12 @@ import { stripCss } from '../helpers/strip-comments.js'
 
 const css = stripCss(readFileSync(new URL('../../src/styles/deferred/library.css', import.meta.url), 'utf8'))
 const rules = [...css.matchAll(/([^{}@;]+)\{([^{}]*)\}/g)].map((m) => ({
-  selectors: m[1].split(',').map((s) => s.trim().replace(/\s+/g, ' ')),
+  selectors: m[1].split(/,(?![^()]*\))/).map((s) => s.trim().replace(/\s+/g, ' ')),
   body: m[2].replace(/\s+/g, ''),
 }))
-const declares = (selector, decl) => rules.filter((r) => r.selectors.includes(selector) && r.body.includes(decl))
+// The free row above the sign-in prompt shares the grid's cell rules through :is(.ig,.ig-free-row).
+const gridScopes = (selector) => [selector, selector.replace('.lib-surface .ig ', '.lib-surface :is(.ig,.ig-free-row) ')]
+const declares = (selector, decl) => rules.filter((r) => gridScopes(selector).some((s) => r.selectors.includes(s)) && r.body.includes(decl))
 
 test('a glyph chip takes 24px of layout in every grid cell, with or without a pack line', () => {
   assert.ok(declares('.lib-surface .ig .ic .ig-chip', 'margin-block:-6px').length > 0,
