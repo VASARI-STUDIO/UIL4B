@@ -942,9 +942,9 @@ test.describe('what the popup remembers and says', () => {
     await typeRadio(panel, 'Code').click()
     await typeRadio(panel, 'Image').click()
     expect((await shownPick(panel)).file).toBe('JPEG')
-    // A type opens on its first tab.
+    // A rail item reopens on the tab last used in it.
     await typeRadio(panel, 'Brand guidelines').click()
-    expect((await shownPick(panel)).category, 'back in Branding').toBe('Guidelines')
+    expect((await shownPick(panel)).category, 'back in Brand guidelines').toBe('Brand book')
   })
 
   test('PNG pages replace the layout tiles with "PNG pages use one layout.", and take no template', async ({ page }) => {
