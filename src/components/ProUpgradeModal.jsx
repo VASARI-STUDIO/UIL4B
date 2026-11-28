@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useProLayer } from '../contexts/ProLayerContext'
 import { usePrices, refreshPrices } from '../hooks/usePrices'
 import { detectCurrency } from '../utils/currency'
 import { PRO_POINTS } from '../config/planFacts'
@@ -184,6 +185,7 @@ function buildStops(plan, signedIn) {
 
 export default function ProUpgradeModal({ opts = {}, onClose }) {
   const navigate = useNavigate()
+  const { openLayer } = useProLayer()
   const location = useLocation()
   const { user } = useAuth()
   const { prices, settled } = usePrices()
@@ -257,6 +259,16 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
   const go = () => {
     if (startingRef.current) return
     if (priceUnavailable) { refreshPrices(); return }
+    // A plan with a trial opens the sign-up layer on that cadence once the modal
+    // has faded out; a plan without one goes on to /plans.
+    if (shown?.trialDays) {
+      if (closingRef.current) return
+      closingRef.current = true
+      setClosing(true)
+      onLeave?.()
+      timers.current.push(setTimeout(() => { onClose(); openLayer({ billing: shown.id }) }, CLOSE_MS))
+      return
+    }
     startingRef.current = true
     setStarting(true)
     startKey.current = location.key
