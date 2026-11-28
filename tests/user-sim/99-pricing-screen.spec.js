@@ -303,7 +303,7 @@ test.describe('the comparison head carries the Pro price once the pair has scrol
 })
 
 test.describe('the Pro CTA starts the real upgrade', () => {
-  test('signed in, it goes straight to checkout for the chosen cadence', async ({ page }) => {
+  test('signed in, a plain click opens the layer on the plan step for the chosen cadence', async ({ page }) => {
     watch(page, 'a free account upgrading')
     await signIn(page, { plan: 'free' })
     await stubPrices(page)
@@ -314,6 +314,11 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await choose(page, 'Monthly')
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=monthly')
     await proCta(page).click()
+    await expect(page).toHaveURL(/\/plans\?up=1&upplan=monthly$/)
+    const layer = page.locator('[data-pro-layer]')
+    await expect(layer).toHaveAttribute('data-step', '3')
+    await expect(layer.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: /^Monthly/ })).toHaveAttribute('aria-checked', 'true')
+    await layer.locator('.pl-go').click()
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
   })
 
@@ -342,7 +347,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await proCta(page).click()
     // Start trial is a full-screen layer now, step 1 of the sign-up (its own journey is in the upgrade spec).
     await expect(page.locator('[data-pro-layer]')).toBeVisible()
-    await expect(page).toHaveURL(/\/plans\?up=1$/)
+    await expect(page).toHaveURL(/\/plans\?up=1&upplan=monthly$/)
     // The Pro sign-up skips onboarding, so there is no resume stash to carry the plan: step 3 of the
     // layer hands off to checkout itself (covered in the upgrade spec).
     expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')), 'the layer left a resume stash for a flow that skips onboarding').toBeNull()
@@ -416,7 +421,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
       // Logging in inside the layer lands on its plan step, with the cadence still the one chosen;
       // the plan step then hands off to checkout (the layer's own journey is in the upgrade spec).
       await logInThroughPopup(page)
-      await expect(page).toHaveURL(/\/plans\?up=3$/)
+      await expect(page).toHaveURL(new RegExp(`/plans\\?up=3${cadence === 'monthly' ? '&upplan=monthly' : ''}$`))
       const layer = page.locator('[data-pro-layer]')
       await expect(layer.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: new RegExp(`^${word}`) })).toHaveAttribute('aria-checked', 'true')
       expect(sessions, 'a payment session was asked for before the plan step was confirmed').toEqual([])

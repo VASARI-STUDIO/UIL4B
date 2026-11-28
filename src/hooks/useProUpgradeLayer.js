@@ -11,9 +11,18 @@ const stepOf = (search) => {
   const n = Number(new URLSearchParams(search).get('up'))
   return n >= 1 && n <= 3 ? n : 0
 }
-const withUp = (search, n) => {
+const planOf = (search) => {
+  const id = new URLSearchParams(search).get('upplan')
+  return BILLING_OPTIONS.some((o) => o.id === id) ? id : null
+}
+// Sets the step and, with it, the cadence the layer shows. The cadence rides in
+// the URL so a reload keeps the same plan selected.
+const withUp = (search, n, plan) => {
   const p = new URLSearchParams(search)
   if (n) p.set('up', String(n)); else p.delete('up')
+  // The default cadence is not written, so the common URL stays `?up=1`.
+  if (!n || plan === DEFAULT_BILLING) p.delete('upplan')
+  else if (plan) p.set('upplan', plan)
   const s = p.toString()
   return s ? '?' + s : ''
 }
@@ -23,13 +32,14 @@ const withUp = (search, n) => {
  * Returns whether it is open, how to open it, and the node to render (a portal
  * to the body).
  */
-export default function useProUpgradeLayer({ billing } = {}) {
+export default function useProUpgradeLayer() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
   const up = stepOf(location.search)
   const depth = Number(location.state?.proDepth) || 0
-  const [cadence, setCadence] = useState(billing || DEFAULT_BILLING)
+  const [picked, setPicked] = useState(DEFAULT_BILLING)
+  const cadence = planOf(location.search) || picked
   const [fresh, setFresh] = useState(null)
   // The step shown last, kept for the 150ms fade-out after the entry has gone.
   const [lastUp, setLastUp] = useState(0)
@@ -37,15 +47,22 @@ export default function useProUpgradeLayer({ billing } = {}) {
   if (up && up !== lastUp) setLastUp(up)
   const leaving = !up && lastUp > 0
 
-  const goUp = (n, opts) => navigate({ pathname: location.pathname, search: withUp(location.search, n), hash: location.hash }, opts)
+  const goUp = (n, opts, plan) => navigate({ pathname: location.pathname, search: withUp(location.search, n, plan), hash: location.hash }, opts)
   const close = () => {
     if (depth > 0) navigate(-depth)
     else goUp(0, { replace: true })
   }
-  const openLayer = () => {
-    setCadence(BILLING_OPTIONS.some((o) => o.id === billing) ? billing : DEFAULT_BILLING)
+  const openLayer = ({ billing } = {}) => {
+    const plan = BILLING_OPTIONS.some((o) => o.id === billing) ? billing : DEFAULT_BILLING
+    setPicked(plan)
     setFresh(null)
-    goUp(1, { state: { proDepth: 1 } })
+    // Signed in, there is no account to make, so the layer opens on the plan step.
+    goUp(user ? 3 : 1, { state: { proDepth: 1 } }, plan)
+  }
+  // A cadence chosen inside the layer replaces the entry, so Back does not step through it.
+  const setCadence = (id) => {
+    setPicked(id)
+    if (up) goUp(up, { replace: true, state: location.state }, id)
   }
   const onStep = (n) => {
     if (n > up) goUp(n, { state: { proDepth: depth ? depth + 1 : 0 } })
