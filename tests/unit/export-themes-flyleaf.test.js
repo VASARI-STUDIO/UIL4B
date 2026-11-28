@@ -183,3 +183,18 @@ test('no request field turns the showcase or the mockups on', async () => {
     else assert.equal(res.code, 400, `body ${JSON.stringify(extra)} is refused or ignored`)
   }
 })
+
+// THE FONT LICENCE TRAVELS WITH THE FONT: every Flyleaf zip that carries DM Mono also carries its SIL Open Font License.
+// Break: drop the meta.fontLicences loop in engine/doc.js fontFiles.
+test('every Flyleaf zip that carries DM Mono carries its licence beside it', async () => {
+  const { default: JSZip } = await import('jszip')
+  const { renderThemeExport } = await import('../../api/_lib/exportThemeRoute.js')
+  const E = await loadEngine()
+  for (const row of ['slides', 'guide']) {
+    const { zip } = await renderThemeExport({ theme: '33-flyleaf', row, format: 'html', design: {}, projectName: 'Kerbside' }, E)
+    const names = Object.keys((await JSZip.loadAsync(zip)).files)
+    const mono = names.filter((n) => /assets\/fonts\/DMMono-[^/]+\.woff2$/.test(n))
+    if (!mono.length) continue
+    assert.ok(names.some((n) => n.endsWith('assets/fonts/DMMono-OFL.txt')), `${row}: DM Mono ships without its licence`)
+  }
+})

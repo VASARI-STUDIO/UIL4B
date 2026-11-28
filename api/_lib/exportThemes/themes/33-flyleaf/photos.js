@@ -1,4 +1,4 @@
-// Theme 33, Flyleaf: the photo loader. The photographs live in ./01_photos as JPEG q88 at the size they were made (never resized up). A page asks for a frame:
+// Theme 33, Flyleaf: the photo loader. The photographs live in ../../fonts/33-flyleaf (the folder the export function ships, vercel.json includeFiles) as JPEG q88 at the size they were made (never resized up). A page asks for a frame:
 //
 //   photo(ctx, 'paperbacks', { w: 512, h: 720, fx: 0.5, fy: 0.62 })   returns the html of one box (w x h px, no position of its own: wrap it in an absolute box)
 //   photo(ctx, 'proofs', { w: 1280, h: 720, fx: 0.3, fy: 0.5, zoom: 1.2 })   a tighter crop of the same image
@@ -10,7 +10,7 @@
 // Real exports allow `img-src data:` only, which is why nothing here is a file URL.
 import fs from 'node:fs';
 
-const DIR = new URL('./01_photos/', import.meta.url);
+const DIR = new URL('../../fonts/33-flyleaf/', import.meta.url);
 export const MAX_UPSCALE = 1.25;
 
 // id: [file, width px, height px, what it shows]

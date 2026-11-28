@@ -21,6 +21,7 @@ export const meta = {
   id: '33-flyleaf', name: 'Flyleaf', tier: 'Free',
   brand: 'margin',
   pages: ['16x9', 'a4-portrait'],  // the sizes a request may ask for (EXPORT_PAGES); the table entry in src/data/exportThemes.js lists the same
+  fontLicences: ['DMMono-OFL.txt'],  // the SIL Open Font License travels in every zip beside the DM Mono files
   realCopy,  // the project's own name and colours print as words in the slot edition, not as placeholder boxes (see real-copy.js)
   mockups: false, // photo scenes on the mockup pages: false in a real export; the harness turns it on for the showcase (kit.js mockupsOn)
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 }, guidePage: { w: 794, h: 1123 },

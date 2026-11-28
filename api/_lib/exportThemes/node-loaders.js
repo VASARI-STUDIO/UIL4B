@@ -20,6 +20,13 @@ export const nodeLoaders = {
     }
     return cache.get(name);
   },
+  fontLicence(name) {
+    if (!/^[A-Za-z0-9_-]+\.txt$/.test(name)) throw new Error(`fontLicence: bad request ${name}`);
+    if (!cache.has(name)) {
+      try { cache.set(name, fs.readFileSync(FONT_DIR + name)); } catch { throw Object.assign(new Error(`fontLicence: no file ${name} in fonts/`), { code: 'font_missing' }); }
+    }
+    return cache.get(name);
+  },
   icon(name) {
     const inner = Object.prototype.hasOwnProperty.call(ICONS, name) ? ICONS[name] : undefined;
     if (inner === undefined) throw new Error(`icon: no icon "${name}" in icons.js`);

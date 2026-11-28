@@ -27,6 +27,7 @@ const loaders = {
   fontFile: (stem, ext) => { fonts.add(`${stem}.${ext}`); return base.fontFile(stem, ext); },
   icon: (name) => { icons.add(name); return base.icon(name); },
   logoPlugin: (slug) => base.logoPlugin(slug),
+  fontLicence: (name) => base.fontLicence(name),
 };
 
 const { makeCtx, GUIDE_PAGES, UIKIT_PAGES } = await mod(path.join(ET, 'engine', 'pages.js'));

@@ -16,6 +16,8 @@ export const allFaces = (ctx, theme) => [...ctx.faces, ...chromeFaces(theme)];
 export function fontFiles(ctx, theme) {
   const files = {};
   for (const f of allFaces(ctx, theme)) files[`assets/fonts/${f.stem}.woff2`] = ctx.loaders.fontFile(f.stem, 'woff2');
+  // a licence the theme's own faces must travel with (meta.fontLicences: file names in fonts/), beside the fonts it covers
+  for (const name of theme.meta.fontLicences || []) files[`assets/fonts/${name}`] = ctx.loaders.fontLicence(name);
   return files;
 }
 
