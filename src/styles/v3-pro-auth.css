@@ -107,14 +107,28 @@
 /* ---- The wall ------------------------------------------------------------ */
 .pw{position:absolute;inset:0;overflow:hidden;background:var(--v3-raised);pointer-events:none}
 .pw-tilt{position:absolute;left:50%;top:50%;display:flex;align-items:flex-start;gap:16px;width:max-content;transform:translate(-50%,-50%) rotate(-20deg)}
-.pw-col{display:flex;flex-direction:column;gap:16px;width:200px;flex:none}
+.pw-col{display:flex;flex-direction:column;width:200px;flex:none}
 .pw-col:nth-child(even){margin-top:120px}
+.pw-set{display:flex;flex-direction:column;gap:16px;padding-bottom:16px}
 .pw-tile{position:relative;width:200px;border-radius:8px;overflow:hidden;background:var(--v3-l2)}
 .pw-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--v3-outl);pointer-events:none}
 .pw-tile .aw-img{display:block;width:100%;height:auto;outline:0}
-.pw-tile .aw-icons{padding:12px;color:var(--v3-ink)}
+.pw-tile .aw-icons{grid-template-columns:repeat(3,1fr);gap:22px;padding:22px 24px 8px;justify-items:center;color:var(--v3-ink)}
+.pw-tile .aw-ico{height:auto}
+.pw-tile .aw-ico svg{width:26px;height:26px}
+.pw-cap{display:block;padding:10px 14px 12px;font-size:11px;line-height:1.4;color:var(--v3-sec)}
 .pw-tile .aw-ramp{display:flex;flex-direction:column}
 .pw-label{position:absolute;z-index:1;right:24px;bottom:24px;padding:6px 12px;border-radius:999px;background:var(--v3-ground);color:var(--v3-sec);font-size:12px;line-height:1.5;box-shadow:0 0 0 1px var(--v3-hair)}
+/* The wall drifts: each column holds its tiles twice and slides one copy up, so the loop has no seam.
+   The tilt is centred on the first copy so the second fills what the first leaves. */
+.pw--wall{pointer-events:auto}
+.pw--wall .pw-tilt{transform:translate(-50%,-25%) rotate(-20deg);transform-origin:50% 25%}
+.pw--wall .pw-col{animation:pw-drift 170s linear infinite}
+.pw--wall .pw-col:nth-child(odd){animation-duration:140s}
+.pw:hover .pw-col{animation-play-state:paused}
+@keyframes pw-drift{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+html[data-reduced-motion="true"] .pw .pw-col{animation:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .pw .pw-col{animation:none}}
 .pw--strip{position:relative;inset:auto;height:88px;background:var(--v3-raised)}
 .pw--strip .pw-tilt{transform:translate(-50%,-50%) rotate(-20deg)}
 
