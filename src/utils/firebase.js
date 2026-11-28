@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
+import { authDomainFor } from './authDomain'
 
 // Firebase config — these are client-side keys, NOT secrets. The Firebase web
 // API key is a public project identifier that ships in every Firebase web app's
@@ -13,7 +14,7 @@ import { getStorage } from 'firebase/storage'
 // when creating the database in Firebase Console.
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyADQoAyU3qwAls2bUW6rfE1csZa0Ud6EKE',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'uil4b-357c5.firebaseapp.com',
+  authDomain: authDomainFor(typeof window !== 'undefined' ? window.location.hostname : '', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'uil4b-357c5',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'uil4b-357c5.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '30029260768',

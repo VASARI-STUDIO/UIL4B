@@ -41,9 +41,18 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // matrix, and the sitemap is the advertised subset of it.
 export { prerenderRoutes }
 
+export const FIREBASE_PROXY_REWRITES = ['auth', 'firebase'].map((dir) => ({
+  source: `/__/${dir}/:path*`,
+  destination: `https://uil4b-357c5.firebaseapp.com/__/${dir}/:path*`,
+}))
+
 export function buildRewrites(routes, clientOnly = clientOnlyRoutes()) {
   return [
     { source: '/p/:code', destination: '/api/share?c=:code' },
+    // The Firebase sign-in helper, served from this site so Google's account
+    // chooser names it (src/utils/authDomain.js). Only /__/ is proxied, so the
+    // 404 for an unknown page path is untouched.
+    ...FIREBASE_PROXY_REWRITES,
     ...routes.map(r => ({ source: r, destination: `${r}/index.html` })),
     // Client-only routes get the NOINDEX 404 shell, by exact path. The SPA
     // boots from it and renders the real page (/settings, /projects, …), which

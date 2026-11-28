@@ -115,7 +115,7 @@ test('the CSP allows what the code actually loads', () => {
     ['script-src', 'https://accounts.google.com', 'src/components/GoogleOneTap.jsx'],
     ['frame-src', 'https://accounts.google.com', 'src/components/GoogleOneTap.jsx'],
     ['script-src', 'https://apis.google.com', null],
-    ['frame-src', 'https://uil4b-357c5.firebaseapp.com', 'src/utils/firebase.js'],
+    ['frame-src', 'https://uil4b-357c5.firebaseapp.com', 'src/utils/authDomain.js'],
     ['connect-src', 'https://firestore.googleapis.com', null],
     ['connect-src', 'https://identitytoolkit.googleapis.com', null],
     ['connect-src', 'https://securetoken.googleapis.com', null],

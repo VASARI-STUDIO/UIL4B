@@ -60,6 +60,13 @@ function resolve(p) {
 test('there is no catch-all rewrite, so an unknown path can be a 404', () => {
   for (const r of config.rewrites) {
     if (r.source === '/p/:code') continue
+    // The Firebase sign-in proxy is a pattern on purpose, held to /__/ and to
+    // the project's own host, so it never answers for a page path.
+    if (r.source.startsWith('/__/')) {
+      assert.match(r.source, /^\/__\/(auth|firebase)\/:path\*$/)
+      assert.match(r.destination, /^https:\/\/uil4b-357c5\.firebaseapp\.com\/__\/(auth|firebase)\/:path\*$/)
+      continue
+    }
     assert.match(r.source, /^\/[a-z0-9/-]*$/,
       `rewrite ${r.source} is a pattern, not a path — a pattern here is how every `
       + 'unknown URL became a 200')
