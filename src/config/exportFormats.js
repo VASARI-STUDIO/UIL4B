@@ -183,7 +183,7 @@ export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_G
 
 // ── Export themes ────────────────────────────────────────────────────────────
 //
-// Twenty-five designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, ten more Pro looks, the three Free themes, then Set Square and Dispatch. They are their own data, NOT
+// Twenty-six designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, ten more Pro looks, the three Free themes, then Set Square and Dispatch. They are their own data, NOT
 // entries in EXPORT_FORMATS: a format listed there as `pro` must be `live`
 // (assertFormatsCoherent). The export panel's Theme row picks one of them.
 
@@ -253,6 +253,7 @@ export const EXPORT_THEMES = Object.freeze([
   // Pro, with the Free skeleton: the brand guidelines only.
   Object.freeze({ id: '34-set-square', name: 'Set Square', brand: 'Plumbline', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
   Object.freeze({ id: '35-dispatch', name: 'Dispatch', brand: 'Kerbside', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
+  Object.freeze({ id: '36-doorlist', name: 'Doorlist', brand: 'Encore', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
 ].map(withGate))
 
 // ships with the export themes

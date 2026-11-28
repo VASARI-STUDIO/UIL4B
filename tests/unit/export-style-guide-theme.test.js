@@ -47,6 +47,7 @@ const KEYNOTE = '21-presentation'
 const FLYLEAF = '33-flyleaf'
 const SET_SQUARE = '34-set-square'
 const DISPATCH = '35-dispatch'
+const DOORLIST = '36-doorlist'
 const PAGES = ['cover', 'logo', 'colour', 'ruler', 'applied', 'type', 'contrast', 'tokens', 'usage']
 const drawnPages = (html) => [...html.matchAll(/<section class="pg" data-page="([a-z]+)"/g)].map((m) => m[1])
 
@@ -56,12 +57,12 @@ test('the row is opt-in: only a theme that names it has it, and the others keep 
   assert.equal(themeHasRow(plain.id, 'guide'), false)
   assert.equal(themeHasRow(plain.id, 'book'), true)
   assert.equal(themeHasRow(plain.id, 'ui-kit'), true)
-  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', FLYLEAF, SET_SQUARE, DISPATCH, ...IDS].sort())
+  assert.deepEqual(EXPORT_THEMES.filter((t) => themeHasRow(t.id, 'guide')).map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', FLYLEAF, SET_SQUARE, DISPATCH, DOORLIST, ...IDS].sort())
   assert.deepEqual(THEME_ROW_FORMATS.guide, ['pdf', 'html', 'md'])
 })
 
 test('the picker offers the style guide only on Standards Plate, Label, Swiss Field, Drawing Sheet, Print Shop, Keynote, Stub, Flyleaf, Set Square and Dispatch, in the three formats', () => {
-  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', FLYLEAF, SET_SQUARE, DISPATCH, ...IDS].sort())
+  assert.deepEqual(pickerThemesFor('style-guide').map((t) => t.id).sort(), [KEYNOTE, '22-ticket', '28-riso', FLYLEAF, SET_SQUARE, DISPATCH, DOORLIST, ...IDS].sort())
   assert.deepEqual(themedFile('style-guide'), { row: 'guide', format: 'pdf' })
   assert.deepEqual(themedFile('style-guide-html'), { row: 'guide', format: 'html' })
   assert.deepEqual(themedFile('style-guide-md'), { row: 'guide', format: 'md' })
