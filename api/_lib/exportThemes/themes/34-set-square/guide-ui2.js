@@ -68,13 +68,13 @@ export const pages2 = {
     const states = ['Default', 'Hover', 'Pressed', 'Focus', 'Disabled', 'Pressed with focus'], keys = ['', 'hover', 'pressed', 'focus', 'disabled', 'pf'];
     const btn = (v, label, st) => { const h = ui.btn(label, { variant: v, state: st === 'pf' ? 'pressed' : st || undefined }); return st === 'pf' ? h.replace('is-pressed', 'is-pressed is-focus') : h; };
     const SY = 404, HH = 66, RH = 62, c0 = X0 + 88, CW = 96;
-    let sch = lab(X0, SY - 24, 'Button schedule, 1:1', true) + hr(X0, SY, GW, 'var(--ink)');
+    let sch = lab(X0, SY - 24, 'Button schedule, 1:1, sides at 10 px to fit the cells', true) + hr(X0, SY, GW, 'var(--ink)');
     states.forEach((s, i) => { sch += hexTag(c0 + i * CW + 26, SY + 6, `B-${pad2(i + 1)}`) + at(c0 + i * CW, SY + 48, CW, 16, `<span class="lb i" style="display:block;text-align:center;white-space:normal;line-height:13px">${s === 'Pressed with focus' ? 'Pressed + focus' : s}</span>`); });
     sch += hr(X0, SY + HH, GW);
     variants.forEach(([name, v, label, use], r) => {
       const y = SY + HH + r * RH;
       sch += at(X0, y + 10, 84, 40, `<div class="lb i r" style="line-height:16px">${name}</div><div class="lb" style="white-space:normal;line-height:13px">${use}</div>`) + (r < 3 ? hr(X0, y + RH) : '');
-      keys.forEach((k, c) => { const cell = at(c0 + c * CW, y + 9, CW, 44, `<div style="display:flex;justify-content:center">${U(btn(v, label, k))}</div>`); sch += k === 'disabled' ? cell.replace('<div class="a ', '<div data-contrast="demo" class="a ') : cell; });
+      keys.forEach((k, c) => { const cell = at(c0 + c * CW, y + 9, CW, 44, `<div style="display:flex;justify-content:center">${U(btn(v, label, k).replace(/^<(button|a) /, '<$1 style="padding:0 10px;max-width:${CW - 4}px" '))}</div>`); sch += k === 'disabled' ? cell.replace('<div class="a ', '<div data-contrast="demo" class="a ') : cell; });
     });
     const fy = SY + HH + 4 * RH;
     sch += hr(X0, fy, GW, 'var(--ink)') + at(X0, fy + 10, 84, 16, '<span class="lb i">Primary fill</span>');
@@ -85,7 +85,7 @@ export const pages2 = {
     // sizes stand on one datum, each with its height
     const dy = 986, sizes = [['Small', 36, { size: 'sm' }, 'Add'], ['Default', 44, {}, 'Add'], ['Large', 52, { size: 'lg' }, 'Add'], ['Icon left', 44, { iconLeft: 'plus' }, 'Add'], ['Icon right', 44, { iconRight: 'arrow-right' }, 'Next'], ['Icon only', 44, { size: 'icon', iconLeft: 'plus', attrs: 'aria-label="Add"' }, '']];
     const row = sizes.map(([n, h, o, label]) => `<div style="display:flex;flex-direction:column;align-items:flex-start"><div style="display:flex;align-items:flex-end;gap:8px;height:52px">${U(mm(ui.btn(label, o), `h${h}`))}<svg width="9" height="${h}" aria-hidden="true"><g stroke="${dc}" stroke-width="1" fill="none"><path d="M4.5 0V${h}M0 .5H9M0 ${h - .5}H9"/></g></svg></div><span class="m i" style="margin-top:22px;white-space:nowrap">${n.replace('Icon ', 'icon ').toLowerCase()} ${h}</span></div>`).join('');
-    const sz = lab(X0, dy - 108, 'Sizes, standing on one datum', true) + at(X0 + 8, dy - 52, null, null, `<div style="display:flex;gap:24px;align-items:flex-start">${row}</div>`) + hr(X0, dy, GW, 'var(--ink)', 2);
+    const sz = lab(X0, dy - 108, 'Sizes, standing on one datum', true) + at(X0 + 8, dy - 52, null, null, `<div style="display:flex;gap:10px;align-items:flex-start;width:${GW - 8}px;justify-content:space-between">${row}</div>`) + hr(X0, dy, GW, 'var(--ink)', 2);
     return sheet(ctx, 'buttons', { ground, scale: '1:1', body: title('Buttons', 26, 68) + at(X0 + 340, 76, 332, 16, `<span class="lb" style="display:block;text-align:right">Door schedule: a mark per state, a row per variant.</span>`) + hero + heightDim + radius + sch + sz });
   },
 
