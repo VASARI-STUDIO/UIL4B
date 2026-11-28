@@ -44,7 +44,8 @@ const WORKSHOP = createTools().filter((t) => t.soon).map((t) => t.label)
 const joinNames = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`)
 
 const SCALE_STEPS = [2, 1, 0, -1]
-const SEED_START = BASES.findIndex((b) => b.label === 'Signal')
+// The page opens on the blue seed.
+const SEED_START = BASES.findIndex((b) => b.label === 'Cobalt')
 const HERO_STEPS = [1, 3, 4, 5, 7]
 
 function Seeds({ seed, onPick }) {
