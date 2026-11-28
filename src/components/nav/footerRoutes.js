@@ -1,11 +1,9 @@
-// WHERE THE SITE FOOTER RENDERS: everywhere. SpectrumFooter closes every page and every tool,
-// from the front door to the app shell and the Create tools; the only pages without it are the
-// full-screen ones (the login and onboarding screens, the maintenance page and a library's
-// `?view=full` window). So there is no route list to keep: a page that should have no footer is a
-// page that renders outside the shell, not an entry here.
+// WHERE THE SITE FOOTER RENDERS: SpectrumFooter is the one footer. It closes every page in the
+// app shell (projects, settings, checkout, community, the reading and legal pages, the 404).
+// The Create tools fill the screen and end without one, except the Icon and Emoji libraries,
+// which owe a licence notice for the sets on screen and carry it in the footer's `notice` row.
+// Full-screen views (login, onboarding, maintenance, a library's `?view=full` window) have none.
 //
-// What does vary is the small print. The Icon and Emoji libraries owe a licence notice for the sets
-// on screen, and SpectrumFooter carries it in its `notice` row.
 // Covers /create/icons, everything beneath it (the Groups tab and its detail views) and /create/emoji.
 export function toolCarriesCredits(pathname) {
   const path = (pathname || '/').toLowerCase().replace(/\/+$/, '') || '/'

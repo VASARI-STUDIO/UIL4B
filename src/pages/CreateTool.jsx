@@ -190,9 +190,10 @@ export default function CreateTool({ toast }) {
     try { trackToolAction(toolSlug) } catch { /* never break a tool */ }
   }, [toolSlug])
 
-  // Every tool ends with SpectrumFooter. The Icon and Emoji libraries add the
-  // licence notice for the sets on screen to it. The library reports those rows (and
-  // whether they are for the whole page or one group) up to here.
+  // Tools fill the screen and end without a footer. The Icon and Emoji libraries are the
+  // exception: they end with SpectrumFooter, which carries the licence notice for the sets on
+  // screen. The library reports those rows (and whether they are for the whole page or one
+  // group) up to here.
   const carriesCredits = toolCarriesCredits(location.pathname)
   const [credits, setCredits] = useState({ rows: [], scope: 'page' })
   const reportCredits = useCallback((rows, scope = 'page') => {
@@ -286,7 +287,7 @@ export default function CreateTool({ toast }) {
         </main>
       </div>
 
-      <SpectrumFooter notice={carriesCredits ? <IconCredits rows={credits.rows} scope={credits.scope} /> : null} />
+      {carriesCredits && <SpectrumFooter notice={<IconCredits rows={credits.rows} scope={credits.scope} />} />}
     </>
   )
 }
