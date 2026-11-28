@@ -33,7 +33,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow, canSkipAuthWait } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
-import { needsEmailVerification, reloadVerified, sendVerificationLink } from '../utils/emailVerification'
+import { CONTINUE_URI_ERRORS, needsEmailVerification, reloadVerified, sendVerificationLink } from '../utils/emailVerification'
 import { createAccountRetry } from '../utils/accountRetry'
 import { runSignOutHooks } from '../utils/signOutHooks'
 
@@ -385,11 +385,22 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     const A = await loadAuthSdk()
     await A.signOut(A.auth)
+    // Stops Google remembering the account for automatic sign-in on this browser.
+    try { window.google?.accounts?.id?.disableAutoSelect() } catch { /* GIS not loaded */ }
   }, [])
 
+  // The link ends on the log-in page, where the new password is used. A return
+  // address Firebase refuses falls back to the plain send, which ends on the
+  // auth server's own page.
   const resetPassword = useCallback(async (email) => {
     const A = await loadAuthSdk()
-    await A.sendPasswordResetEmail(A.auth, email)
+    const settings = { url: `${window.location.origin}/login` }
+    try {
+      await A.sendPasswordResetEmail(A.auth, email, settings)
+    } catch (error) {
+      if (!CONTINUE_URI_ERRORS.includes(error?.code)) throw error
+      await A.sendPasswordResetEmail(A.auth, email)
+    }
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
@@ -434,7 +445,7 @@ export function AuthProvider({ children }) {
     }
     try {
       const provider = new A.GoogleAuthProvider()
-      if (target.email) provider.setCustomParameters({ login_hint: target.email })
+      if (target.email) provider.setCustomParameters({ login_hint: target.email, prompt: 'select_account' })
       const credential = await A.signInWithPopup(A.auth, provider)
       try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
       return accountSelectionOutcome(credential, target.uid)
@@ -465,11 +476,14 @@ export function AuthProvider({ children }) {
     saveProfileToFirestore(firebaseUser.uid, fields).then((result) => {
       setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
     })
-    if (fields.displayName || fields.photoURL) {
-      const fbFields = {}
-      if (fields.displayName) fbFields.displayName = fields.displayName
-      if (fields.photoURL) fbFields.photoURL = fields.photoURL
-      loadAuthSdk().then((A) => A.updateProfile(firebaseUser, fbFields)).catch(() => {})
+    // A cleared name is sent as '' so the Auth record is cleared too.
+    const fbFields = {}
+    if (typeof fields.displayName === 'string') fbFields.displayName = fields.displayName
+    if (fields.photoURL) fbFields.photoURL = fields.photoURL
+    if (Object.keys(fbFields).length) {
+      loadAuthSdk()
+        .then((A) => A.updateProfile(firebaseUser, fbFields))
+        .catch((err) => setProfileSyncError(profileSaveMessage(err?.code)))
     }
   }, [firebaseUser])
 
@@ -492,7 +506,13 @@ export function AuthProvider({ children }) {
     if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
     await reauthenticate(password)
     const A = await loadAuthSdk()
-    await A.verifyBeforeUpdateEmail(firebaseUser, newEmail)
+    const settings = { url: `${window.location.origin}/settings` }
+    try {
+      await A.verifyBeforeUpdateEmail(firebaseUser, newEmail, settings)
+    } catch (error) {
+      if (!CONTINUE_URI_ERRORS.includes(error?.code)) throw error
+      await A.verifyBeforeUpdateEmail(firebaseUser, newEmail)
+    }
   }, [firebaseUser])
 
   const sendVerificationEmail = useCallback(async () => {
@@ -560,7 +580,9 @@ export function AuthProvider({ children }) {
 
     const A = await loadAuthSdk()
     if (isGoogleOnlyAccount()) {
-      await A.reauthenticateWithPopup(firebaseUser, new A.GoogleAuthProvider())
+      const provider = new A.GoogleAuthProvider()
+      if (firebaseUser.email) provider.setCustomParameters({ login_hint: firebaseUser.email })
+      await A.reauthenticateWithPopup(firebaseUser, provider)
     } else {
       await reauthenticate(password)
     }

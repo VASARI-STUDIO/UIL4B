@@ -31,6 +31,11 @@ const ERROR_KEYS = {
   'auth/network-request-failed': 'network',
   'auth/popup-blocked': 'popupBlocked',
   'auth/google-unavailable': 'googleUnavailable',
+  'auth/operation-not-supported-in-this-environment': 'unsupportedBrowser',
+  'auth/web-storage-unsupported': 'unsupportedBrowser',
+  'auth/account-exists-with-different-credential': 'accountExistsOtherMethod',
+  'auth/user-disabled': 'userDisabled',
+  'auth/unauthorized-domain': 'unauthorizedDomain',
 }
 // Never Firebase's own text: anything unmapped reads as `generic`.
 const errorKey = (err) => ERROR_KEYS[err?.code] || 'generic'

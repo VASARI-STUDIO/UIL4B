@@ -32,11 +32,11 @@ const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding', '/reset-pa
 export function stashResumeTarget(explicitFrom) {
   let target = explicitFrom
   if (!target && typeof window !== 'undefined') {
-    target = window.location.pathname + window.location.search
+    target = window.location.pathname + window.location.search + window.location.hash
   }
   // Anything that is not a local path is dropped, and clears the old stash too.
   if (!isLocalPath(target)) target = ''
-  const path = String(target || '').split('?')[0].replace(/\/+$/, '') || '/'
+  const path = String(target || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/'
   try {
     // Clearing on a non-resumable open matters as much as setting: a dismissed
     // prompt from an earlier page must not resurface as a later sign-up's

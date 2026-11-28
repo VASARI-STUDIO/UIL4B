@@ -472,6 +472,8 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
       if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') setError('Current password is incorrect')
       else if (e.code === 'auth/weak-password') setError('Choose a longer password')
       else if (e.code === 'auth/too-many-requests') setError('Too many attempts. Wait a few minutes and try again.')
+      else if (e.code === 'auth/requires-recent-login') setError('For your security, sign out and back in, then change your password.')
+      else if (e.code === 'auth/network-request-failed') setError('We couldn’t reach the server. Check your connection and try again.')
       else setError('Your password could not be changed. Nothing was changed. Please try again.')
       // The disabled submit held focus, which fell to <body>; the person's next
       // move is the first field, so that is where it goes.
@@ -1560,7 +1562,7 @@ export default function Settings({ toast }) {
             </div>
           </div>
         )}
-        {showOverview && !user && !authLoading && <Link className="stg-signin" to="/login">Sign in</Link>}
+        {showOverview && !user && !authLoading && <Link className="stg-signin" to="/login" state={{ from: '/settings' }}>Sign in</Link>}
         {!(isPhone && phoneView === 'section') && !(showOverview && !user) && (
           <p className="stg-status">
             {!user ? 'Signed out, everything UI L4B keeps is in this browser, and only here.' : (
@@ -1710,7 +1712,7 @@ export default function Settings({ toast }) {
               // free trial" button — under a small "Sign in to upgrade" note.
               // Plans owns pricing; this owns your account.
               <div className="sub-signin-note">
-                <p><NavLink to="/login">Sign in</NavLink> to see your plan and billing.</p>
+                <p><NavLink to="/login" state={{ from: '/settings' }}>Sign in</NavLink> to see your plan and billing.</p>
                 <p>Comparing plans first? <NavLink to="/plans">See Free and Pro</NavLink>.</p>
               </div>
             ) : (

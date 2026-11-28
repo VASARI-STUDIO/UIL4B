@@ -172,7 +172,7 @@ function RequireAuth({ children }) {
   // Carry the query with the path. RequireAuth wraps Checkout, so it redirects
   // before Checkout's own `state.from` (which does include ?plan=) can run —
   // pathname alone dropped the chosen plan on every gated checkout link.
-  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search + location.hash }} replace />
   return children
 }
 
