@@ -36,14 +36,14 @@ const ROWS = [
   { id: 't-2563eb', kind: 'tint', sourceId: '#2563EB', tool: 'tint', format: 'CSS' },
   { id: 'p-forest-floor', kind: 'palette', sourceId: 'forest-floor', tool: 'palette', format: 'PNG', asset: '/auth-wall/p-forest-floor.webp' },
   { id: 's-major-third', kind: 'scale', sourceId: 'base 16, major third', tool: 'type-scale', format: 'CSS', name: 'Major third from 16px' },
-  { id: 'f-space-grotesk-bitter', kind: 'pair', sourceId: 'Space Grotesk + Bitter', tool: 'font-pair', format: 'CSS', asset: '/auth-wall/f-space-grotesk-bitter' },
+  { id: 'f-space-grotesk-hepta-slab', kind: 'pair', sourceId: 'Space Grotesk + Hepta Slab', tool: 'font-pair', format: 'CSS', asset: '/auth-wall/f-space-grotesk-hepta-slab' },
   { id: 'i-media', kind: 'icons', sourceId: 'media', tool: 'icons', format: 'SVG' },
   // The style-guide sheet comes from the project export panel, which is not a
   // tool in the nav, so it names its export format instead of a tool.
   { id: 'g-ocean-deep-guide', kind: 'guide', sourceId: 'Ocean Deep kit', exportFormat: 'png', format: 'PNG', name: 'Ocean Deep kit', asset: '/auth-wall/g-ocean-deep-guide.webp' },
   { id: 'p-paper-ink', kind: 'palette', sourceId: 'paper-ink', tool: 'palette', format: 'PNG', asset: '/auth-wall/p-paper-ink.webp' },
   { id: 't-e76f51', kind: 'tint', sourceId: '#E76F51', tool: 'tint', format: 'CSS' },
-  { id: 'f-merriweather-open-sans', kind: 'pair', sourceId: 'Merriweather + Open Sans', tool: 'font-pair', format: 'CSS', asset: '/auth-wall/f-merriweather-open-sans' },
+  { id: 'f-merriweather-inter', kind: 'pair', sourceId: 'Merriweather + Inter', tool: 'font-pair', format: 'CSS', asset: '/auth-wall/f-merriweather-inter' },
   { id: 'i-settings', kind: 'icons', sourceId: 'settings', tool: 'icons', format: 'SVG' },
   { id: 's-perfect-fourth', kind: 'scale', sourceId: 'base 18, perfect fourth', tool: 'type-scale', format: 'CSS', name: 'Perfect fourth from 18px' },
   { id: 'p-terracotta-dusk', kind: 'palette', sourceId: 'terracotta-dusk', tool: 'palette', format: 'PNG', asset: '/auth-wall/p-terracotta-dusk.webp' },

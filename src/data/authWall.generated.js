@@ -6,41 +6,41 @@ export const AUTH_WALL_GENERATED = {
   "floor": 11,
   "narrowest": 217,
   "assets": {
-    "f-merriweather-open-sans-dark.webp": {
+    "f-merriweather-inter-dark.webp": {
       "width": 600,
-      "height": 400,
-      "bytes": 11908,
-      "sha256": "25b3c73ab1ed57aac766e0a22006f19df3c5add2cdacde1d92c50cdb9eeb00f1"
+      "height": 483,
+      "bytes": 17612,
+      "sha256": "af9c4874118e6649bfac54d148a59478dd5b5ed82d0c165fa61d1a517f7e05a3"
     },
-    "f-merriweather-open-sans-light.webp": {
+    "f-merriweather-inter-light.webp": {
       "width": 600,
-      "height": 400,
-      "bytes": 11776,
-      "sha256": "fae5e0280e41bd7c48c29f672a5612525e2f889e08c13ab44d17d0a452e924f4"
+      "height": 483,
+      "bytes": 17572,
+      "sha256": "02c1c8f90cc6ab0ab4a7c1656738ce9177cecc3bad18c0c36aa754c1b0de3b50"
     },
     "f-playfair-roboto-dark.webp": {
       "width": 600,
-      "height": 400,
-      "bytes": 11860,
-      "sha256": "79ea7cac070e1c13bc93601133d5944e2d33f2a62ab3cbe5dd39684c9cee8d83"
+      "height": 483,
+      "bytes": 17750,
+      "sha256": "31d6b7d636b414422849d9b91b40431d88653ecf5659062d47391f8128367b14"
     },
     "f-playfair-roboto-light.webp": {
       "width": 600,
-      "height": 400,
-      "bytes": 11588,
-      "sha256": "dfceb94a4c5f469fe606ea78121271bcb0074a883ae5dd30fb17902ada7c6ab5"
+      "height": 483,
+      "bytes": 18074,
+      "sha256": "0d6b460b26dd4ed6c852b8b3726aecce5552528601a6025f6c290f768f6dae41"
     },
-    "f-space-grotesk-bitter-dark.webp": {
+    "f-space-grotesk-hepta-slab-dark.webp": {
       "width": 600,
-      "height": 400,
-      "bytes": 11164,
-      "sha256": "9e630c25150f2d42e40bd517b46807b22c365241f45eba17abd2433f3ed0a7f4"
+      "height": 534,
+      "bytes": 21700,
+      "sha256": "ba1d763cec1854c78a23306bd7cd9ced30775bd5cb56be921cd5ba78de9b4f82"
     },
-    "f-space-grotesk-bitter-light.webp": {
+    "f-space-grotesk-hepta-slab-light.webp": {
       "width": 600,
-      "height": 400,
-      "bytes": 10878,
-      "sha256": "21833806307d3aecff00a5cb1bcbcf162560f8dce55151465f73553fe2bf4d0e"
+      "height": 534,
+      "bytes": 21736,
+      "sha256": "af490687e017fb09243c7c0fc6dca4d85ad86c3d361b3e0009c48d1c7cca6028"
     },
     "g-ocean-deep-guide.webp": {
       "width": 600,
@@ -82,8 +82,8 @@ export const AUTH_WALL_GENERATED = {
         "#A5D7E8"
       ],
       "colorsSha256": "c1e4a744247966ed247cb10bc5cbf30ac06da47ef4d71e19c52dba9c0d6ffc7a",
-      "rawSha256": "f4c8a4e678a7d3ead3303dccb2f1a3de8befff3a61a1dbacb06d2393f7e747a4",
-      "rawName": "uil4b-palette.png"
+      "rawSha256": "d7117d5f4d6ca6fdc8601c87e2085ee0e791b68e31c82320c573222144d5bea0",
+      "rawName": "untitled-palette.png"
     },
     "p-forest-floor": {
       "colors": [
@@ -93,8 +93,8 @@ export const AUTH_WALL_GENERATED = {
         "#F5EFE6"
       ],
       "colorsSha256": "388afdc053fc1330e4a02110fc25bb48481d73fbd29d47b36876a85f04cd40cf",
-      "rawSha256": "c5e15ea463d518759005b358b0546b4fc9ad99da7ab4cdcfcf337849a86a406d",
-      "rawName": "uil4b-palette.png"
+      "rawSha256": "9cc8bd17437bacd30da7ca6e60cfd92bc75befbace45a6b50df45b7b82999ca9",
+      "rawName": "untitled-palette.png"
     },
     "p-paper-ink": {
       "colors": [
@@ -104,8 +104,8 @@ export const AUTH_WALL_GENERATED = {
         "#112D4E"
       ],
       "colorsSha256": "2a5135d898a40c94e2c1f70f59986c84cb36889d14b7cb03687efbc3f9aacb16",
-      "rawSha256": "b0bff5998e5c5159c64e7bf45d47892228c85015939deb818b408bcd419e8d54",
-      "rawName": "uil4b-palette.png"
+      "rawSha256": "f1d3a8f269c9ae8d15fd11b3678483af9e828cd63fa52312ed2a817542cddc78",
+      "rawName": "untitled-palette.png"
     },
     "p-terracotta-dusk": {
       "colors": [
@@ -115,8 +115,8 @@ export const AUTH_WALL_GENERATED = {
         "#E76F51"
       ],
       "colorsSha256": "3cdecbc64e11a737bda441fc7c6fc174f7849173ebcf4646779a74299f02054e",
-      "rawSha256": "a386d5905e9991ccf3d159924e3716c268005d8ff8692fbc1bfd14b34da2807a",
-      "rawName": "uil4b-palette.png"
+      "rawSha256": "c4128a76a067cfd427db6cc0ae19f4940e6bdb03144c5035d72752d8435e146c",
+      "rawName": "untitled-palette.png"
     }
   },
   "pairs": {
@@ -132,59 +132,53 @@ export const AUTH_WALL_GENERATED = {
         "weight": 400
       },
       "suggestions": [
-        "Roboto",
-        "Source Code Pro",
-        "Open Sans",
-        "JetBrains Mono",
-        "Montserrat",
-        "IBM Plex Mono"
+        "Inter",
+        "Nunito Sans",
+        "Roboto"
       ],
-      "specimenLine": "Roboto 400 for body text.",
-      "cssSha256": "c89e248d3f64f1d6f3c21a888c0302263c3a237de64136f542b6939598da40ab"
+      "specimenLine": "Roboto for body text, Playfair Display for headings.",
+      "cssSha256": "26170d2073c9acbc28afc6aba1d9ef6682af7b7bae2b0631a0a1f349c127784d"
     },
-    "f-space-grotesk-bitter": {
+    "f-space-grotesk-hepta-slab": {
       "heading": {
         "family": "Space Grotesk",
         "stack": "'Space Grotesk', sans-serif",
         "weight": 700
       },
       "body": {
-        "family": "Bitter",
-        "stack": "'Bitter', serif",
+        "family": "Hepta Slab",
+        "stack": "'Hepta Slab', serif",
         "weight": 400
       },
       "suggestions": [
-        "Bitter",
-        "Roboto",
+        "Hepta Slab",
         "Fraunces",
-        "Open Sans",
-        "Source Serif 4",
-        "Montserrat"
+        "Roboto Slab",
+        "Inter",
+        "Nunito Sans",
+        "Roboto"
       ],
-      "specimenLine": "Bitter 400 for body text.",
-      "cssSha256": "56bd21cec630a5f01989aa57164cbe12c6036449bd7e4a150ec60554f1d8f0f5"
+      "specimenLine": "Hepta Slab for body text, Space Grotesk for headings.",
+      "cssSha256": "491913752d85449e0d4729675f942e8faf285a05ba80731540f76893f441b472"
     },
-    "f-merriweather-open-sans": {
+    "f-merriweather-inter": {
       "heading": {
         "family": "Merriweather",
         "stack": "'Merriweather', serif",
         "weight": 700
       },
       "body": {
-        "family": "Open Sans",
-        "stack": "'Open Sans', sans-serif",
+        "family": "Inter",
+        "stack": "'Inter', sans-serif",
         "weight": 400
       },
       "suggestions": [
-        "Roboto",
-        "Source Code Pro",
-        "Open Sans",
-        "JetBrains Mono",
-        "Montserrat",
-        "IBM Plex Mono"
+        "Inter",
+        "Nunito Sans",
+        "Roboto"
       ],
-      "specimenLine": "Open Sans 400 for body text.",
-      "cssSha256": "b88614a93830e85b17a1b3e520bcff479c9515e3ff07156fc48da52c0e99e472"
+      "specimenLine": "Inter for body text, Merriweather for headings.",
+      "cssSha256": "f3533954e5c2de62ac7ab055a2f24e94aeb2b40ef4d852c29a3aa73d43339155"
     }
   },
   "icons": {
@@ -358,46 +352,46 @@ export const AUTH_WALL_GENERATED = {
         },
         {
           "step": "100",
-          "hex": "#CADCFF"
+          "hex": "#C9DCFF"
         },
         {
           "step": "200",
-          "hex": "#A4C2FF"
+          "hex": "#A2C2FF"
         },
         {
           "step": "300",
-          "hex": "#7EA7FF"
+          "hex": "#7BA8FF"
         },
         {
           "step": "400",
-          "hex": "#588BFF"
+          "hex": "#538CFF"
         },
         {
           "step": "500",
-          "hex": "#346BFB"
+          "hex": "#2F6EF7"
         },
         {
           "step": "600",
-          "hex": "#2556D5"
+          "hex": "#2158D1"
         },
         {
           "step": "700",
-          "hex": "#1840B0"
+          "hex": "#1343AC"
         },
         {
           "step": "800",
-          "hex": "#0B2C8C"
+          "hex": "#062E89"
         },
         {
           "step": "900",
-          "hex": "#02186A"
+          "hex": "#001A67"
         },
         {
           "step": "950",
-          "hex": "#000349"
+          "hex": "#000647"
         }
       ],
-      "cssSha256": "56ea7cdfda415cb45009f6611872e43f8bb0cbcd671781ab9f297989a484f732"
+      "cssSha256": "3f37ed7dd43879cf6d92f01fcfc878f6e380ca24782f837f5902a699dab832cd"
     },
     "t-e76f51": {
       "source": "#E76F51",
@@ -408,74 +402,74 @@ export const AUTH_WALL_GENERATED = {
         },
         {
           "step": "100",
-          "hex": "#FFCFC0"
+          "hex": "#FFCFC2"
         },
         {
           "step": "200",
-          "hex": "#FFAA8F"
+          "hex": "#FFA993"
         },
         {
           "step": "300",
-          "hex": "#EE8B6C"
+          "hex": "#EE8A71"
         },
         {
           "step": "400",
-          "hex": "#DA6E4D"
+          "hex": "#DA6E53"
         },
         {
           "step": "500",
-          "hex": "#C5512B"
+          "hex": "#C55033"
         },
         {
           "step": "600",
-          "hex": "#A53E1C"
+          "hex": "#A53E24"
         },
         {
           "step": "700",
-          "hex": "#862D0D"
+          "hex": "#862C15"
         },
         {
           "step": "800",
-          "hex": "#681B00"
+          "hex": "#681A05"
         },
         {
           "step": "900",
-          "hex": "#480F00"
+          "hex": "#4A0A00"
         },
         {
           "step": "950",
-          "hex": "#2B0400"
+          "hex": "#2D0200"
         }
       ],
-      "cssSha256": "44650c615a4b50851b5f0ced4402a6199b172df0c43df1645c4d246eaba78f2a"
+      "cssSha256": "994ebfcbed0c41a7a0ad93d254fb9bb669679a85d34b8614c67e771e0962b0a7"
     }
   },
   "code": {
     "s-major-third": {
       "lines": [
         ":root {",
-        "  --text-5xl: clamp(2.8125rem, 2.4604rem + 0.0939vw, 3.8125rem); /* 45px → 61px */",
-        "  --text-4xl: clamp(2.3438rem, 2.0907rem + 0.0675vw, 3.0625rem); /* 37.5px → 49px */",
-        "  --text-3xl: clamp(1.9375rem, 1.7614rem + 0.0469vw, 2.4375rem); /* 31px → 39px */",
-        "  --text-2xl: clamp(1.625rem, 1.504rem + 0.0323vw, 1.9688rem); /* 26px → 31.5px */",
-        "  --text-xl: clamp(1.3438rem, 1.2667rem + 0.0205vw, 1.5625rem); /* 21.5px → 25px */",
-        "  --text-lg: clamp(1.125rem, 1.081rem + 0.0117vw, 1.25rem); /* 18px → 20px */"
+        "  --text-3xl: clamp(1.9438rem, 1.7686rem + 0.7474vw, 2.4413rem); /* 31.1px → 39.06px */",
+        "  --text-2xl: clamp(1.62rem, 1.5027rem + 0.5005vw, 1.9531rem); /* 25.92px → 31.25px */",
+        "  --text-xl: clamp(1.35rem, 1.2752rem + 0.3192vw, 1.5625rem); /* 21.6px → 25px */",
+        "  --text-lg: clamp(1.125rem, 1.081rem + 0.1878vw, 1.25rem); /* 18px → 20px */",
+        "  --text-base: clamp(0.9375rem, 0.9155rem + 0.0939vw, 1rem); /* 15px → 16px */",
+        "  --text-sm: clamp(0.7813rem, 0.7746rem + 0.0282vw, 0.8rem); /* 12.5px → 12.8px */"
       ],
-      "cssSha256": "11a0535809b31bf5aa92650028b9e7c5d0b22dd6882db784ab8df618ac395485",
+      "cssSha256": "4b329eea09e68fe8fe1ae5b88ddf6e96a5f525acb4afce11b654c4393ee941fb",
       "base": 16,
       "mobileBase": 15
     },
     "s-perfect-fourth": {
       "lines": [
         ":root {",
-        "  --text-5xl: clamp(3rem, 1.8336rem + 0.311vw, 6.3125rem); /* 48px → 101px */",
-        "  --text-4xl: clamp(2.5rem, 1.7077rem + 0.2113vw, 4.75rem); /* 40px → 76px */",
-        "  --text-3xl: clamp(2.0625rem, 1.5343rem + 0.1408vw, 3.5625rem); /* 33px → 57px */",
-        "  --text-2xl: clamp(1.7188rem, 1.3886rem + 0.088vw, 2.6563rem); /* 27.5px → 42.5px */",
-        "  --text-xl: clamp(1.4375rem, 1.2394rem + 0.0528vw, 2rem); /* 23px → 32px */",
-        "  --text-lg: clamp(1.1875rem, 1.0775rem + 0.0293vw, 1.5rem); /* 19px → 24px */"
+        "  --text-3xl: clamp(2.0737rem, 1.5533rem + 2.2207vw, 3.5519rem); /* 33.18px → 56.83px */",
+        "  --text-2xl: clamp(1.7281rem, 1.3985rem + 1.4066vw, 2.6644rem); /* 27.65px → 42.63px */",
+        "  --text-xl: clamp(1.44rem, 1.2433rem + 0.8394vw, 1.9988rem); /* 23.04px → 31.98px */",
+        "  --text-lg: clamp(1.2rem, 1.0946rem + 0.4498vw, 1.4994rem); /* 19.2px → 23.99px */",
+        "  --text-base: clamp(1rem, 0.956rem + 0.1878vw, 1.125rem); /* 16px → 18px */",
+        "  --text-sm: clamp(0.8331rem, 0.8294rem + 0.016vw, 0.8438rem); /* 13.33px → 13.5px */"
       ],
-      "cssSha256": "35cb82be84e5467732e2d24c484fde9979c8f94a4902964e1cb29afca6b96fe6",
+      "cssSha256": "fb2d4e44638ae297b6f6503c969d1403f369c9fc3ee1e9686fc4aca5ad666b05",
       "base": 18,
       "mobileBase": 16
     }
@@ -511,36 +505,32 @@ export const AUTH_WALL_GENERATED = {
     },
     "f-playfair-roboto": {
       "text": true,
-      "minTextCssPx": 16,
-      "artCssWidth": 300,
+      "minTextCssPx": 10.5,
+      "artCssWidth": 200,
       "fit": {
-        "w": 300,
-        "h": 200,
-        "top": 20,
-        "bottom": 20,
-        "scrollH": 200,
-        "lineH": 24,
-        "nameW": 260
+        "w": 200,
+        "h": 161,
+        "scrollH": 161,
+        "lineH": 34.78125,
+        "ellipsis": false
       },
-      "at217": 11.57
+      "at217": 11.39
     },
     "p-forest-floor": {
       "text": false
     },
-    "f-space-grotesk-bitter": {
+    "f-space-grotesk-hepta-slab": {
       "text": true,
-      "minTextCssPx": 16,
-      "artCssWidth": 300,
+      "minTextCssPx": 10.5,
+      "artCssWidth": 200,
       "fit": {
-        "w": 300,
-        "h": 200,
-        "top": 20,
-        "bottom": 20,
-        "scrollH": 200,
-        "lineH": 24,
-        "nameW": 260
+        "w": 200,
+        "h": 178,
+        "scrollH": 178,
+        "lineH": 52.171875,
+        "ellipsis": true
       },
-      "at217": 11.57
+      "at217": 11.39
     },
     "g-ocean-deep-guide": {
       "text": true,
@@ -552,20 +542,18 @@ export const AUTH_WALL_GENERATED = {
     "p-paper-ink": {
       "text": false
     },
-    "f-merriweather-open-sans": {
+    "f-merriweather-inter": {
       "text": true,
-      "minTextCssPx": 16,
-      "artCssWidth": 300,
+      "minTextCssPx": 10.5,
+      "artCssWidth": 200,
       "fit": {
-        "w": 300,
-        "h": 200,
-        "top": 20,
-        "bottom": 20,
-        "scrollH": 200,
-        "lineH": 24,
-        "nameW": 260
+        "w": 200,
+        "h": 161,
+        "scrollH": 161,
+        "lineH": 34.78125,
+        "ellipsis": false
       },
-      "at217": 11.57
+      "at217": 11.39
     },
     "p-terracotta-dusk": {
       "text": false

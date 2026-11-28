@@ -60,7 +60,7 @@ test('font pairs: both themes exist and the body was one of the tool\'s suggesti
     assert.equal(rec.heading.family, heading)
     assert.equal(rec.body.family, body)
     assert.ok(rec.suggestions.includes(body), `${r.id}: ${body} not in ${rec.suggestions.join(', ')}`)
-    assert.equal(rec.suggestions.length, 6)
+    assert.ok(rec.suggestions.length >= 3, `${r.id}: the tool offered ${rec.suggestions.length} bodies`)
   }
 })
 

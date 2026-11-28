@@ -62,7 +62,7 @@ const GUIDE_PAD_RIGHT = 24 // and the same to its right
 
 // Inputs the manifest does not carry.
 const SCALE_INPUTS = {
-  's-major-third': { base: 16, ratioLabel: null, mobileBase: null },
+  's-major-third': { base: 16, ratioLabel: 'Major third', mobileBase: null },
   's-perfect-fourth': { base: 18, ratioLabel: 'Perfect fourth', mobileBase: 16 },
 }
 const GUIDE_FONTS = { heading: { family: 'Space Grotesk', weight: 700, category: 'sans-serif' }, body: { family: 'Inter', weight: 400, category: 'sans-serif' } }
@@ -410,18 +410,14 @@ async function pair(row) {
     await page.locator('.fpr-specimen, #fpr-export').first().waitFor({ state: 'attached' })
     await page.locator('.fpr-suggest-grid .fpr-card').first().waitFor()
     const suggestions = (await page.locator('.fpr-card-name').allInnerTexts()).map((t) => t.split('\n')[0].trim())
-    if (suggestions.includes(body)) {
-      // The page's default pair is already in use, so its card may already be pressed.
-      const card = page.locator('.fpr-card', { has: page.locator('.fpr-card-name', { hasText: body }) }).first()
-      const apply = card.locator('.fpr-card-apply')
-      if ((await apply.getAttribute('aria-pressed')) !== 'true') await apply.click()
-      if ((await apply.getAttribute('aria-pressed')) !== 'true') fail(`${row.id}: choosing ${body} did not put the pair in use`)
-    } else {
-      // Not suggested for this heading: choose it from the body family browser instead.
-      await page.getByRole('button', { name: 'Browse body family' }).first().click()
-      await page.getByLabel('Search font families').fill(body)
-      await page.locator(`button.fbd-tile[aria-label^="Use ${body}: "]`).click()
+    if (!suggestions.includes(body)) {
+      fail(`${row.id}: ${body} is not among the tool's suggestions for ${heading}: ${suggestions.join(', ')}`)
     }
+    // The page's default pair is already in use, so its card may already be pressed.
+    const card = page.locator('.fpr-card', { has: page.locator('.fpr-card-name', { hasText: body }) }).first()
+    const apply = card.locator('.fpr-card-apply')
+    if ((await apply.getAttribute('aria-pressed')) !== 'true') await apply.click()
+    if ((await apply.getAttribute('aria-pressed')) !== 'true') fail(`${row.id}: choosing ${body} did not put the pair in use`)
     // Some headings open at another weight; the specimen is drawn at 700.
     const headingWeightBtn = page.getByRole('button', { name: /^Heading weight: / }).first()
     if (!/: 700$/.test((await headingWeightBtn.getAttribute('aria-label')) || '')) {
