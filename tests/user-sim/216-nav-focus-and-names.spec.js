@@ -292,50 +292,17 @@ for (const { url, current } of TAB_ROUTES.filter((r) => ['Create', 'Discover'].i
   })
 }
 
-// ── app footer headings ──────────────────────────────────────────────────────
+// ── footer headings ──────────────────────────────────────────────────────────
+// The one site footer (SpectrumFooter): a hidden h2 names the link block, and each column is an h3 under it.
 for (const size of SIZES) {
   for (const account of [SIGNED_OUT, FREE]) {
-    test(`app footer groups are h2 headings with the paragraph label's look, ${account.name} at ${size.name}`, async ({ browser }) => {
+    test(`footer link columns are h3 headings under one h2, ${account.name} at ${size.name}`, async ({ browser }) => {
       const { ctx, page } = await openPage(browser, size, account, '/privacy')
-      const groups = await page.locator('footer .app-footer-group').count()
-      expect(groups, 'precondition: the footer is rendered with its groups').toBe(3)
-      const heads = page.locator('footer h2.app-footer-group-h')
-      await expect(heads).toHaveCount(groups)
-      await expect(heads).toHaveText(['Create', 'Explore', 'Support'])
-      await expect(page.locator('footer .app-footer-group > p')).toHaveCount(0)
-      expect(await page.locator('footer').getByRole('heading', { level: 2 }).allTextContents()).toEqual(['Create', 'Explore', 'Support'])
-
-      const looks = await heads.evaluateAll((els) => {
-        // The colour and family come from the shell's ink (--v3-ink) and the UI sans.
-        const probe = document.createElement('p')
-        probe.style.cssText = 'font-family:var(--font);color:var(--v3-ink);position:absolute;visibility:hidden'
-        document.body.appendChild(probe)
-        const want = getComputedStyle(probe)
-        const wantFamily = want.fontFamily
-        const wantColor = want.color
-        probe.remove()
-        return els.map((el) => {
-          const cs = getComputedStyle(el)
-          return {
-            fontSize: cs.fontSize, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing,
-            textTransform: cs.textTransform, lineHeight: cs.lineHeight,
-            margin: [cs.marginTop, cs.marginRight, cs.marginBottom, cs.marginLeft].join(' '),
-            padding: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].join(' '),
-            display: cs.display,
-            familyOk: cs.fontFamily === wantFamily, colourOk: cs.color === wantColor,
-            height: el.getBoundingClientRect().height,
-          }
-        })
-      })
-      for (const look of looks) {
-        expect(look).toMatchObject({
-          fontSize: '14px', fontWeight: '500', letterSpacing: 'normal', textTransform: 'none',
-          lineHeight: '23.1px', margin: '0px 0px 3px 0px', padding: '0px 0px 0px 0px', display: 'block',
-          familyOk: true, colourOk: true,
-        })
-        // 14px / 500 on a 32px minimum height (the shell's footer group heading).
-        expect(look.height).toBeCloseTo(32, 1)
-      }
+      await expect(page.locator('footer.sp-footer'), 'precondition: the V3 footer is rendered').toHaveCount(1)
+      await expect(page.locator('footer.sp-footer .sp-footer-col')).toHaveCount(5)
+      await expect(page.locator('footer.sp-footer h3.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Support', 'Legal'])
+      await expect(page.locator('footer.sp-footer').getByRole('heading', { level: 2 })).toHaveText(['Site links'])
+      await expect(page.locator('footer.app-footer, footer .app-footer-group')).toHaveCount(0)
       await ctx.close()
     })
   }

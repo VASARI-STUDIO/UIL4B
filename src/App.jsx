@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
-import AppFooter from './components/AppFooter'
+import SpectrumFooter from './components/spectrum/SpectrumFooter'
+import { footerClosesSale, footerTheme } from './components/nav/footerRoutes'
 import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
@@ -231,7 +232,7 @@ function AppInner({ toast }) {
   // the page, on every branch — the shell, /create, /, and the surface pages.
   useLayoutEffect(() => { document.documentElement.dataset.route = location.pathname }, [location.pathname])
   // The full-screen view of a library (`?view=full`, utils/libraryView.js): the
-  // page in the shell's <main> with no PillNav and no AppFooter, so it can fill
+  // page in the shell's <main> with no PillNav and no footer, so it can fill
   // a window of its own. Only for the people the route admits: a visitor it
   // turns away gets the not-found page WITH the nav, not a dead end without
   // one. While auth resolves the route shows a loader, so that waits as full.
@@ -399,11 +400,11 @@ function AppInner({ toast }) {
   //
   // THE SALES PAGE IS SPECTRUM, AND IT RENDERS ITS OWN FOOTER.
   //
-  // No <AppFooter /> beside it, deliberately: <SpectrumFooter /> is part of the
-  // page. Mounting both would give the front door two `contentinfo` landmarks
+  // No second footer beside it, deliberately: <SpectrumFooter /> is part of the
+  // page. Mounting two would give the front door two `contentinfo` landmarks
   // and two copyright lines, which is a defect a landmark list shows
-  // immediately and a screenshot does not. The one thing AppFooter carried that
-  // had to survive is <FounderNote />, and SpectrumFooter mounts it.
+  // immediately and a screenshot does not. SpectrumFooter is the only footer
+  // on the site (the app shell below mounts it too) and it mounts <FounderNote />.
   //
   // The '/spectrum' preview route is GONE. It existed only so the page could be
   // built and reviewed while Home still owned '/'; keeping it would leave a
@@ -467,7 +468,7 @@ function AppInner({ toast }) {
     )
   }
   // /plans IS THE PRICING SCREEN: a marketing page with the Spectrum nav and footer, like `/`, so it returns
-  // before the app shell rather than rendering inside PillNav + AppFooter. Its
+  // before the app shell rather than rendering inside PillNav + the app shell footer. Its
   // own Suspense boundary for the same reason /discover has one: the shell's
   // <Suspense> is below this line. Matched on the normalised path so
   // `/plans/` cannot leak into the shell and render a second, different page.
@@ -486,7 +487,7 @@ function AppInner({ toast }) {
     return <Suspense fallback={<RouteLoading />}><Onboarding /></Suspense>
   }
   // /login is a full-screen page of its own: no PillNav, no app-shell, no
-  // AppFooter. It is not added to chromelessRoutes(), which feeds the CreateTool
+  // footer. It is not added to chromelessRoutes(), which feeds the CreateTool
   // branch and the feedback button. One Tap mounts here as it did in the shell.
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/login') {
     return (
@@ -569,7 +570,7 @@ function AppInner({ toast }) {
           ? (
             <Suspense fallback={<RouteLoading />}>
               <SurfaceIndex key={surface} surface={surface} />
-              <AppFooter />
+              <SpectrumFooter />
             </Suspense>
           )
           : <CreateTool toast={toast} />}
@@ -685,7 +686,7 @@ function AppInner({ toast }) {
         </RouteErrorBoundary>
       </main>
 
-      {!fullScreen && <AppFooter />}
+      {!fullScreen && <SpectrumFooter inApp={!footerClosesSale(location.pathname)} theme={footerTheme(location.pathname)} />}
       <GoogleOneTap />
     </div>
   )

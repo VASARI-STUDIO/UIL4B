@@ -16,7 +16,7 @@
 //   - Tab runs from the end block's last action into the footer.
 //
 // HOW TO SEE EACH FAIL (src/ unless named):
-//   CreateTool.jsx renders <AppFooter compact /> on the icon routes     -> "one contentinfo" and "licence row"
+//   CreateTool.jsx renders a second footer on the icon routes          -> "one contentinfo" and "licence row"
 //   IconEmojiLibrary.jsx renders a .ig-close block or a SpectrumRamp     -> "no close, no strip" and "nothing scrolls sideways"
 //   IconLibrary.jsx goes back to the bare sentinel (no .ig-more)         -> "Show 120 more icons"
 //   IconCredits.jsx drops the links, or IconGroups stops reporting        -> "licence row" and "group"
@@ -85,7 +85,8 @@ for (const [width, ctx] of [
       // The one thing between the grid and the footer is the gate, which is the page's single call to action.
       await expect(page.getByRole('main').locator('.geg'), 'the gate is page content, inside main').toHaveCount(1)
       await expect(footer(page).locator('.geg'), 'the gate is not inside the footer').toHaveCount(0)
-      await expect(footer(page).getByRole('link', { name: 'Open the toolkit' })).toBeVisible()
+      // Inside the app the footer is links and small print: no Open the toolkit call to action.
+      await expect(footer(page).getByRole('link', { name: 'Open the toolkit' })).toHaveCount(0)
     })
 
     test('/create/icons signed out: the gate is the only Log in before the footer', async ({ page }) => {

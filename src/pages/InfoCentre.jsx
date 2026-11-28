@@ -168,7 +168,7 @@ const SECTIONS = [
     body: (
       <>
         <p>Convert and compress images, pull frames out of video, and work out aspect ratios.</p>
-        <p>Everything is processed in your browser — no uploads, no waiting.</p>
+        <p>Everything is processed in your browser, with no uploads and no waiting.</p>
         <ToolLinks group={GROUP.imagery} />
       </>
     ),
@@ -237,7 +237,7 @@ const SECTIONS = [
     title: 'Saving and syncing your work',
     body: (
       <>
-        <p>Your active palette, fonts and type scale are kept in your browser automatically — close the tab and they&rsquo;ll be waiting. Sign in to save named projects and have them follow you to any device.</p>
+        <p>Your active palette, fonts and type scale are kept in your browser automatically. Close the tab and they&rsquo;ll be there when you return. Sign in to save named projects and have them follow you to any device.</p>
         <p>Find everything you&rsquo;ve saved under <Link to="/projects">Projects</Link> (also in the profile menu).</p>
       </>
     ),
@@ -260,7 +260,7 @@ const SECTIONS = [
             there: the Stripe portal the Cancel plan button opens has
             cancellation on, at the end of the paid period, so Pro stays
             until then. */}
-        <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
+        <p>Everything you reach for day-to-day is free: building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
         <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing or cancel in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>. Pro stays on until the end of the period you&rsquo;ve paid for.</p>
       </>
     ),
@@ -310,7 +310,7 @@ const SECTIONS = [
     title: 'Privacy and your data',
     body: (
       <>
-        <p>UI L4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
+        <p>UI L4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
       </>
     ),
   },
@@ -340,7 +340,7 @@ function ScreenStats() {
     <section id="screen-stats" className="ic-stats">
       <div className="ic-stats-head">
         <h2 className="ic-stats-h">Screen stats &amp; resize tool</h2>
-        <p>Resize your browser window and watch these update live — a quick way to see which breakpoint your design lands on.</p>
+        <p>Resize your browser window and watch these update live. It is a quick way to see which breakpoint your design lands on.</p>
       </div>
       <div className="ic-stats-grid">
         <div className="ic-stat"><div className="ic-stat-num">{stats.w}<span>px</span></div><div className="ic-stat-lbl">Viewport width</div></div>

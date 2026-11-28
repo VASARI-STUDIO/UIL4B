@@ -107,14 +107,28 @@
 /* ---- The wall ------------------------------------------------------------ */
 .pw{position:absolute;inset:0;overflow:hidden;background:var(--v3-raised);pointer-events:none}
 .pw-tilt{position:absolute;left:50%;top:50%;display:flex;align-items:flex-start;gap:16px;width:max-content;transform:translate(-50%,-50%) rotate(-20deg)}
-.pw-col{display:flex;flex-direction:column;gap:16px;width:200px;flex:none}
+.pw-col{display:flex;flex-direction:column;width:200px;flex:none}
 .pw-col:nth-child(even){margin-top:120px}
+.pw-set{display:flex;flex-direction:column;gap:16px;padding-bottom:16px}
 .pw-tile{position:relative;width:200px;border-radius:8px;overflow:hidden;background:var(--v3-l2)}
 .pw-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--v3-outl);pointer-events:none}
 .pw-tile .aw-img{display:block;width:100%;height:auto;outline:0}
-.pw-tile .aw-icons{padding:12px;color:var(--v3-ink)}
+.pw-tile .aw-icons{grid-template-columns:repeat(3,1fr);gap:22px;padding:22px 24px 8px;justify-items:center;color:var(--v3-ink)}
+.pw-tile .aw-ico{height:auto}
+.pw-tile .aw-ico svg{width:26px;height:26px}
+.pw-cap{display:block;padding:10px 14px 12px;font-size:11px;line-height:1.4;color:var(--v3-sec)}
 .pw-tile .aw-ramp{display:flex;flex-direction:column}
 .pw-label{position:absolute;z-index:1;right:24px;bottom:24px;padding:6px 12px;border-radius:999px;background:var(--v3-ground);color:var(--v3-sec);font-size:12px;line-height:1.5;box-shadow:0 0 0 1px var(--v3-hair)}
+/* The wall drifts: each column holds its tiles twice and slides one copy up, so the loop has no seam.
+   The tilt is centred on the first copy so the second fills what the first leaves. */
+.pw--wall{pointer-events:auto}
+.pw--wall .pw-tilt{transform:translate(-50%,-25%) rotate(-20deg);transform-origin:50% 25%}
+.pw--wall .pw-col{animation:pw-drift 170s linear infinite}
+.pw--wall .pw-col:nth-child(odd){animation-duration:140s}
+.pw:hover .pw-col{animation-play-state:paused}
+@keyframes pw-drift{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+html[data-reduced-motion="true"] .pw .pw-col{animation:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .pw .pw-col{animation:none}}
 .pw--strip{position:relative;inset:auto;height:88px;background:var(--v3-raised)}
 .pw--strip .pw-tilt{transform:translate(-50%,-50%) rotate(-20deg)}
 
@@ -174,15 +188,23 @@
 @media(max-width:767px){.pl-fig-n{font-size:40px}}
 .pl-lines{min-height:44px;margin:8px 0 0}
 .pl-lines p{margin:0;font-size:14px;line-height:22px;color:var(--v3-sec)}
+.pl-ledger{margin:24px 0 0;border-bottom:1px solid var(--v3-hair);font-variant-numeric:tabular-nums}
+.pl-row{display:grid;grid-template-columns:56px 1fr auto;column-gap:16px;padding:12px 0;border-top:1px solid var(--v3-hair);font-size:14px;line-height:1.45}
+.pl-when,.pl-amt{font-weight:500;color:var(--v3-ink)}
+.pl-what{color:var(--v3-sec)}
+.pl-amt{text-align:right}
+.pl-cancel{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
+@media(max-width:767px){.pl-row{grid-template-columns:52px 1fr auto}}
+.pl-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:8px}
+.pl-stripe{font-size:12px;line-height:1.5;color:var(--v3-sec);white-space:nowrap}
 .pl-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin-top:24px;padding:0 20px;border:0;border-radius:999px;background:var(--v3-ink);color:var(--v3-on-ink);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;transition:background-color 200ms var(--v3-ease),transform 140ms var(--v3-ease),opacity 150ms var(--v3-ease)}
 @media(hover:hover){.pl-go:hover:not(:disabled):not([aria-disabled="true"]){background:var(--v3-ink-hover)}}
 .pl-go:active:not(:disabled):not([aria-disabled="true"]){transform:scale(.97)}
 .pl-go:disabled,.pl-go[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
 .pl-go:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
-.pl-fine{margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
 .pl-err{margin:16px 0 0;font-size:14px;line-height:1.5;color:var(--danger)}
 .pl-err:focus-visible{outline:none}
-.pl-keep{display:flex;align-items:center;width:fit-content;min-height:44px;margin:16px 0 0;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-sec);cursor:pointer}
+.pl-keep{display:flex;align-items:center;width:fit-content;min-height:44px;margin:0;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-sec);cursor:pointer}
 .pl-keep:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
 @media(hover:hover){.pl-keep:hover{color:var(--v3-ink);text-decoration:underline;text-underline-offset:3px}}
 

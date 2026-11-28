@@ -295,7 +295,7 @@ test.describe('account menu rows', () => {
 })
 
 // ── 3d: the footers' name for /plans ─────────────────────────────────────────
-// The marketing footer says "Plans", as the marketing bar does; the app's reading-page footer says "Pricing".
+// One footer, so every page calls /plans "Plans", as the marketing bar does.
 for (const size of [PHONE, TABLET, DESKTOP]) {
   test.describe(`footers at ${size.name}`, () => {
     test('the marketing footer links /plans as Plans, and no link is called Pricing', async ({ browser }) => {
@@ -308,13 +308,13 @@ for (const size of [PHONE, TABLET, DESKTOP]) {
       await ctx.close()
     })
 
-    test('the reading-page footer links /plans as Pricing, and no link is called Plans', async ({ browser }) => {
+    test('the footer on a reading page links /plans as Plans too, and no link is called Pricing', async ({ browser }) => {
       const { ctx, page } = await open(browser, size, 'a visitor at the foot of a reading page')
       await go(page, '/privacy')
-      const footer = page.locator('footer.app-footer')
+      const footer = page.locator('footer.sp-footer')
       await footer.scrollIntoViewIfNeeded()
-      await expect(footer.locator('a[href="/plans"]')).toHaveText('Pricing')
-      await expect(footer.getByRole('link', { name: 'Plans', exact: true })).toHaveCount(0)
+      await expect(footer.locator('a[href="/plans"]')).toHaveText('Plans')
+      await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toHaveCount(0)
       await ctx.close()
     })
   })

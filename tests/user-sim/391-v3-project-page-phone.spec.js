@@ -27,10 +27,14 @@ for (const width of [390, 320]) {
 
       const bar = page.locator('.pjv-bar')
       await expect(bar.getByRole('link', { name: /^Continue:/ })).toBeVisible()
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      // Scrolled to the end of the content (the site footer starts just below the window).
+      await page.evaluate(() => window.scrollTo(0, document.querySelector('.sp-footer').getBoundingClientRect().top + window.scrollY - window.innerHeight))
       const box = await bar.boundingBox()
       expect(box.y + box.height, 'the bar is on screen after scrolling').toBeLessThanOrEqual(800 + 1)
       expect(box.y, 'the bar is on screen after scrolling').toBeGreaterThanOrEqual(0)
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      const gap = await page.evaluate(() => document.querySelector('.sp-footer').getBoundingClientRect().top - document.querySelector('.pjv-bar').getBoundingClientRect().bottom)
+      expect(gap, 'at the foot of the page the bar sits above the footer and covers none of it').toBeGreaterThanOrEqual(-1)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'sideways scroll').toBe(true)
     })
   })

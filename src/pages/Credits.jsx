@@ -172,7 +172,7 @@ const DEPENDENCY_NOTES = {
   '@ffmpeg/core': 'This MIT package only wraps the FFmpeg binary, which is GPL-2.0-or-later. See FFmpeg under Data & services.',
 }
 
-/* NO PER-LINK "(opens in a new tab)". AppFooter carries that span because it has
+/* NO PER-LINK "(opens in a new tab)". The site footer carries that span because it has
    ONE external link; this page has more than sixty, and MEASURED with them on,
    every heading in the accessibility tree read "Apache 2.0, opens in a new tab,
    attribution required" and every row's name carried it too. Sixty repetitions
