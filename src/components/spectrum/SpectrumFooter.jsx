@@ -178,7 +178,9 @@ function Sky() {
 // it), and the Legal column kept at every width. Every other page leaves it off.
 // `pageColumn={false}` drops the "This page" column (the homepage's section
 // anchors) for a page that has none to offer; it only applies with `home`.
-export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false, pageColumn = true }) {
+// `inApp` is the footer inside the app: no sales close, and links in ink rather than the link colour.
+// `theme` pins the footer to one theme's tokens, for a page drawn in that theme whatever the site theme is.
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false, pageColumn = true, inApp = false, theme }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
@@ -191,22 +193,25 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   return (
     <footer
       ref={footerRef}
-      className={home ? `sp-footer sp-footer--home${pageColumn ? '' : ' sp-footer--no-page'}` : 'sp-footer'}
+      className={home ? `sp-footer sp-footer--home${pageColumn ? '' : ' sp-footer--no-page'}` : `sp-footer${inApp ? ' sp-footer--app' : ''}`}
+      data-theme={theme}
       data-curtain={curtain || undefined}
       onFocus={curtain ? uncoverFooter : undefined}
     >
       {home && <Sky />}
       <div className="sp-footer-inner">
         <div className="sp-footer-grid">
-          <div className="sp-footer-brand">
-            <p className="sp-footer-say">Save time, and save your mind.</p>
-            {!home && (
-              <Link className="sp-footer-cta" to={toolkitTo}>
-                <span>Open the toolkit</span>
-                <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
-              </Link>
-            )}
-          </div>
+          {!inApp && (
+            <div className="sp-footer-brand">
+              <p className="sp-footer-say">Save time, and save your mind.</p>
+              {!home && (
+                <Link className="sp-footer-cta" to={toolkitTo}>
+                  <span>Open the toolkit</span>
+                  <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* `display:contents`, so the columns are cells of the one grid
               while still sitting inside a Footer navigation landmark. */}

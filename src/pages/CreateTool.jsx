@@ -287,7 +287,7 @@ export default function CreateTool({ toast }) {
         </main>
       </div>
 
-      {carriesCredits && <SpectrumFooter notice={<IconCredits rows={credits.rows} scope={credits.scope} />} />}
+      {carriesCredits && <SpectrumFooter inApp notice={<IconCredits rows={credits.rows} scope={credits.scope} />} />}
     </>
   )
 }

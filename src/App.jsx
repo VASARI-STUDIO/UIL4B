@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate, useNavigationType } 
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
 import SpectrumFooter from './components/spectrum/SpectrumFooter'
+import { footerClosesSale, footerTheme } from './components/nav/footerRoutes'
 import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
@@ -685,7 +686,7 @@ function AppInner({ toast }) {
         </RouteErrorBoundary>
       </main>
 
-      {!fullScreen && <SpectrumFooter />}
+      {!fullScreen && <SpectrumFooter inApp={!footerClosesSale(location.pathname)} theme={footerTheme(location.pathname)} />}
       <GoogleOneTap />
     </div>
   )

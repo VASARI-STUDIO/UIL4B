@@ -249,6 +249,11 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 /* The brand cell and five link columns (Tools, Project, Explore, Support,
    Legal) in one row. */
 .sp-footer .sp-footer-grid{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(0,1fr));gap:36px;align-items:start}
+/* Inside the app the footer has no sales close, so five link columns. Footer links are ink, not the
+   link colour, everywhere but the homepage's closing footer. */
+.sp-footer--app .sp-footer-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+.sp-footer:not(.sp-footer--home) .sp-footer-col a{color:var(--t1)}
+@media(hover:hover){.sp-footer:not(.sp-footer--home) .sp-footer-col a:hover{color:var(--t0)}}
 .sp-footer .sp-footer-links{display:contents}
 .sp-footer .sp-footer-say{margin:0;font-family:var(--display);font-weight:560;font-size:clamp(26px,3vw,38px);line-height:1.06;max-width:min(22ch,100%);text-wrap:balance}
 /* The ink pill (1600-1603): 8/9/8/22, 15px/540, a 28px well at 10% page. */
