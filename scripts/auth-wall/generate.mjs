@@ -342,29 +342,34 @@ async function specimen(page, id, heading, css) {
   const shots = {}
   const bodyFamily = cssVar(css, '--font-body').split(',')[0].replace(/['"]/g, '').trim()
   const line = specimenLine(bodyFamily, heading)
-  const info = `${heading} ${vars['--weight-heading']} · ${bodyFamily} ${vars['--weight-body']}`
+  const infoLeft = `${heading} ${vars['--weight-heading']}`
+  const infoRight = `${bodyFamily} ${vars['--weight-body']}`
+  const info = `${infoLeft} ${infoRight}`
   // The export's own @import brings the two faces in, as it would in a user's page.
   const importUrl = /@import url\('([^']+)'\)/.exec(css)?.[1] || fail(`${id}: the export has no @import`)
   await page.addStyleTag({ url: importUrl })
-  await page.evaluate(({ v, line, info, width }) => {
-    // The two tokens the card reads that the app page does not define, per theme.
+  await page.evaluate(({ v, line, infoLeft, infoRight, width }) => {
+    // The tokens the card reads that the app page does not define, per theme. The ground is the
+    // wall's tile colour, so a pair card sits on the same grey as the tiles around it.
     const tokens = document.createElement('style')
-    tokens.textContent = 'html[data-theme="light"] #auth-wall-specimen{--sec:rgba(18,20,24,.72);--outl:oklch(0 0 0 / .1)}'
-      + 'html[data-theme="dark"] #auth-wall-specimen{--sec:rgba(239,238,234,.68);--outl:oklch(1 0 0 / .1)}'
+    tokens.textContent = 'html[data-theme="light"] #auth-wall-specimen{--sec:rgba(18,20,24,.72);--outl:oklch(0 0 0 / .1);--aws-ground:#ECEBE7}'
+      + 'html[data-theme="dark"] #auth-wall-specimen{--sec:rgba(239,238,234,.68);--outl:oklch(1 0 0 / .1);--aws-ground:var(--card)}'
     document.head.appendChild(tokens)
     const el = document.createElement('div')
     el.id = 'auth-wall-specimen'
     for (const [k, val] of Object.entries(v)) el.style.setProperty(k, val)
-    el.style.cssText += `;position:fixed;left:0;top:0;width:${width}px;box-sizing:border-box;padding:16px 16px 14px;overflow:hidden;z-index:2147483000;display:flex;flex-direction:column;gap:8px;background:var(--card);color:var(--t0);`
+    el.style.cssText += `;position:fixed;left:0;top:0;width:${width}px;box-sizing:border-box;padding:16px 16px 14px;overflow:hidden;z-index:2147483000;display:flex;flex-direction:column;gap:8px;background:var(--aws-ground);color:var(--t0);`
     el.innerHTML = '<div id="aws-r1" style="display:flex;align-items:baseline;gap:10px">'
       + '<span id="aws-aa" style="font:var(--weight-heading) 56px/1 var(--font-heading)">Aa</span>'
       + '<span id="aws-ab" style="font:var(--weight-body) 22px/1 var(--font-body);color:var(--sec)">Aa</span></div>'
       + '<div id="aws-line" style="font:var(--weight-body) 12px/1.45 var(--font-body);color:var(--sec)"></div>'
-      + '<div id="aws-info" style="font:var(--weight-body) 10.5px/1.4 var(--font-body);color:var(--sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--outl);padding-top:8px"></div>'
+      + '<div id="aws-info" style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap;font:var(--weight-body) 10.5px/1.4 var(--font-body);color:var(--sec);border-top:1px solid var(--outl);padding-top:8px">'
+      + '<span id="aws-info-h"></span><span id="aws-info-b"></span></div>'
     el.querySelector('#aws-line').textContent = line
-    el.querySelector('#aws-info').textContent = info
+    el.querySelector('#aws-info-h').textContent = infoLeft
+    el.querySelector('#aws-info-b').textContent = infoRight
     document.body.appendChild(el)
-  }, { v: vars, line, info, width: SPECIMEN_W })
+  }, { v: vars, line, infoLeft, infoRight, width: SPECIMEN_W })
   const faces = [
     { family: heading, weight: Number(vars['--weight-heading']) },
     { family: bodyFamily, weight: Number(vars['--weight-body']) },
@@ -376,13 +381,22 @@ async function specimen(page, id, heading, css) {
     box.style.height = `${Math.ceil(box.getBoundingClientRect().height)}px`
     const r = box.getBoundingClientRect()
     const rect = (id) => document.getElementById(id).getBoundingClientRect()
+    // A font name is never cut: a row that does not fit drops to 10px, and fails if it still does not.
     const info = document.getElementById('aws-info')
+    let infoPx = 10.5
+    if (info.scrollWidth > info.clientWidth) { infoPx = 10; info.style.fontSize = '10px' }
+    // Still too wide (a wide body face): the body name moves to its own line, whole.
+    let infoWraps = false
+    if (info.scrollWidth > info.clientWidth) { infoWraps = true; info.style.flexWrap = 'wrap'; info.style.rowGap = '2px' }
+    box.style.height = 'auto'
+    box.style.height = `${Math.ceil(box.getBoundingClientRect().height)}px`
     return {
-      w: r.width, h: r.height, scrollH: box.scrollHeight,
-      lineH: rect('aws-line').height, ellipsis: info.scrollWidth > info.clientWidth,
+      w: box.getBoundingClientRect().width, h: box.getBoundingClientRect().height, scrollH: box.scrollHeight,
+      lineH: rect('aws-line').height, infoPx, infoWraps, infoOverflows: info.scrollWidth > info.clientWidth,
     }
   })
   if (fit.scrollH > fit.h) fail(`${id}: the specimen overflows its box (${JSON.stringify(fit)})`)
+  if (fit.infoOverflows) fail(`${id}: the font names do not fit on one line even at 10px (${JSON.stringify(fit)})`)
   const outW = SPECIMEN_W * SPECIMEN_DPR
   const outH = fit.h * SPECIMEN_DPR
   for (const theme of ['light', 'dark']) {

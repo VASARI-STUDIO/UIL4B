@@ -9,38 +9,38 @@ export const AUTH_WALL_GENERATED = {
     "f-merriweather-inter-dark.webp": {
       "width": 600,
       "height": 483,
-      "bytes": 17612,
-      "sha256": "af9c4874118e6649bfac54d148a59478dd5b5ed82d0c165fa61d1a517f7e05a3"
+      "bytes": 17582,
+      "sha256": "c1ad51b755b5adb6fdc7c4e4c96e3d8d5df59425f7f5eaa70eea7a94401a92bb"
     },
     "f-merriweather-inter-light.webp": {
       "width": 600,
       "height": 483,
-      "bytes": 17572,
-      "sha256": "02c1c8f90cc6ab0ab4a7c1656738ce9177cecc3bad18c0c36aa754c1b0de3b50"
+      "bytes": 17032,
+      "sha256": "290bdbee064fb97c0b9c8ea920bbe3bdc84362e0255ca147177cc419c44331c6"
     },
     "f-playfair-roboto-dark.webp": {
       "width": 600,
       "height": 483,
-      "bytes": 17750,
-      "sha256": "31d6b7d636b414422849d9b91b40431d88653ecf5659062d47391f8128367b14"
+      "bytes": 17974,
+      "sha256": "bdc825ca0e1a82335d153de7c844cbc310d3b1bb5b75984b80dbe28833519ff1"
     },
     "f-playfair-roboto-light.webp": {
       "width": 600,
       "height": 483,
-      "bytes": 18074,
-      "sha256": "0d6b460b26dd4ed6c852b8b3726aecce5552528601a6025f6c290f768f6dae41"
+      "bytes": 17626,
+      "sha256": "4713327394b5bf82d2a41624404bb88a5ca2fe980aa7aa08e521e52e56698f8d"
     },
     "f-space-grotesk-hepta-slab-dark.webp": {
       "width": 600,
-      "height": 534,
-      "bytes": 21700,
-      "sha256": "ba1d763cec1854c78a23306bd7cd9ced30775bd5cb56be921cd5ba78de9b4f82"
+      "height": 582,
+      "bytes": 22806,
+      "sha256": "b080606c4c26c33960edbe7bb4280fef473493d0b2befa25347a506d33e25ef1"
     },
     "f-space-grotesk-hepta-slab-light.webp": {
       "width": 600,
-      "height": 534,
-      "bytes": 21736,
-      "sha256": "af490687e017fb09243c7c0fc6dca4d85ad86c3d361b3e0009c48d1c7cca6028"
+      "height": 582,
+      "bytes": 22040,
+      "sha256": "ccd8292e0cf89afc4137bc60ee73bef57d3f3e7ac84d7d98be74f5048db01acd"
     },
     "g-ocean-deep-guide.webp": {
       "width": 600,
@@ -512,7 +512,9 @@ export const AUTH_WALL_GENERATED = {
         "h": 161,
         "scrollH": 161,
         "lineH": 34.78125,
-        "ellipsis": false
+        "infoPx": 10.5,
+        "infoWraps": false,
+        "infoOverflows": false
       },
       "at217": 11.39
     },
@@ -525,10 +527,12 @@ export const AUTH_WALL_GENERATED = {
       "artCssWidth": 200,
       "fit": {
         "w": 200,
-        "h": 178,
-        "scrollH": 178,
+        "h": 194,
+        "scrollH": 194,
         "lineH": 52.171875,
-        "ellipsis": true
+        "infoPx": 10,
+        "infoWraps": true,
+        "infoOverflows": false
       },
       "at217": 11.39
     },
@@ -551,7 +555,9 @@ export const AUTH_WALL_GENERATED = {
         "h": 161,
         "scrollH": 161,
         "lineH": 34.78125,
-        "ellipsis": false
+        "infoPx": 10.5,
+        "infoWraps": false,
+        "infoOverflows": false
       },
       "at217": 11.39
     },

@@ -35,9 +35,9 @@ test('every WebP is the one the generator recorded, at the recorded size', () =>
     assert.equal(buf.subarray(0, 4).toString(), 'RIFF', `${file} is a RIFF container`)
     assert.equal(buf.subarray(8, 12).toString(), 'WEBP', `${file} is WebP`)
     // Palette and guide crops are 600x270. A pair card is 200 CSS px wide and as tall as its
-    // content (140 to 180 CSS px), shot at 3x.
+    // content (140 to 200 CSS px, taller when the font names take two lines), shot at 3x.
     const pairCard = /-(light|dark)\.webp$/.test(file)
-    const heightOk = pairCard ? rec.height % 3 === 0 && rec.height >= 420 && rec.height <= 540 : rec.height === 270
+    const heightOk = pairCard ? rec.height % 3 === 0 && rec.height >= 420 && rec.height <= 600 : rec.height === 270
     assert.ok(rec.width === 600 && heightOk, `${file} is 600 wide at the stored aspect`)
   }
   const total = Object.values(G.assets).reduce((n, a) => n + a.bytes, 0)
