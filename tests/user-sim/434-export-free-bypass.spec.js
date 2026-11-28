@@ -39,6 +39,8 @@ const ROUTE = '/projects/harbour/export'
 const ACCOUNTS = {
   'test-free': {},
   'test-pro': { subscription: { status: 'active', interval: 'monthly', currentPeriodEnd: Date.now() + 10 * 86_400_000 } },
+  // a subscription that has ended: not Pro, so it is answered as Free
+  'test-lapsed': { subscription: { status: 'canceled', interval: 'monthly', currentPeriodEnd: Date.now() - 10 * 86_400_000 } },
 }
 // The documents the server builds. The offline-HTML ids (book-html, guidelines-html) are themed rows ({ row, format: 'html' }), so
 // they are walked in PRO_COMBOS; sent as a bare document format they are not a built document and are 400 with no file.
@@ -98,7 +100,7 @@ async function serveExport(page, { server = 'free' } = {}) {
     await serveExportDocument({ headers: sent, body }, res, {
       verifyIdToken: async (token) => {
         if (token === 'bad') { const e = new Error('bad token'); e.code = 'auth/argument-error'; throw e }
-        const uid = token === 'tok-pro' ? 'test-pro' : token === 'tok-free' ? 'test-free' : `test-${server}`
+        const uid = token === 'tok-pro' ? 'test-pro' : token === 'tok-free' ? 'test-free' : token === 'tok-lapsed' ? 'test-lapsed' : `test-${server}`
         return { uid, email_verified: true }
       },
       readUser: async (uid) => ACCOUNTS[uid],
@@ -161,6 +163,8 @@ async function documentsOf(entry) {
   const zip = await JSZip.loadAsync(entry.bytes)
   for (const f of Object.values(zip.files)) {
     if (f.dir) continue
+    // only pages, the markdown and fonts: no other file can carry a page the cut left out
+    expect(f.name, 'a file the free edition may hold').toMatch(/(\.html|\.md|\/fonts\/[^/]+\.(woff2?|ttf|otf))$/)
     if (/\.html$/.test(f.name)) out.html.push([f.name, await f.async('string')])
     else if (/\.md$/.test(f.name)) out.md.push([f.name, await f.async('string')])
   }
@@ -177,8 +181,19 @@ async function expectFreeEdition(entry, what) {
     expect(frames, what + ', ' + name + ': drawn as pages').toBeGreaterThan(0)
     expect(frames, what + ', ' + name + ': seven pages at most').toBeLessThanOrEqual(FREE_EDITION_PAGES)
     expect(countOf(doc, PAGE_CREDIT), what + ', ' + name + ': the credit on every page').toBe(frames)
+    // every page the engine names is a counted frame, so a page drawn without the frame class cannot slip past the cap and the credit
+    expect(countOf(doc, /<[a-z][a-z0-9]*\b[^>]*\sdata-page="/g), what + ', ' + name + ': every named page is a frame').toBe(frames)
+    // a style guide site shows its phone edition below the screen break, where the frames are hidden: it carries a credit of its own
+    if (doc.includes('class="sg-screen')) {
+      expect(countOf(doc, /<p class="uil4b-credit uil4b-credit--screen">Made with UIL4B<\/p>/g), what + ', ' + name + ': the phone edition credit').toBe(1)
+      expect(doc.indexOf('uil4b-credit--screen">'), what + ', ' + name + ': the phone credit before the pages').toBeLessThan(doc.indexOf('<div class="sg-pages">'))
+    }
   }
-  for (const [name, doc] of md) expect(doc.trimEnd().endsWith(CREDIT), what + ', ' + name + ': the credit').toBe(true)
+  for (const [name, doc] of md) {
+    expect(doc.trimEnd().endsWith(CREDIT), what + ', ' + name + ': the credit').toBe(true)
+    // the markdown describes only the pages drawn: a section per page at most
+    expect(countOf(doc, /^## \d+ · /gm), what + ', ' + name + ': sections').toBeLessThanOrEqual(FREE_EDITION_PAGES)
+  }
   // a style guide zip holds index.html, one file per page and style-guide.md: seven page files at most
   expect(html.filter(([n]) => !/(^|\/)index\.html$/.test(n)).length, what + ': page files').toBeLessThanOrEqual(FREE_EDITION_PAGES)
 }
@@ -271,6 +286,19 @@ test.describe('(a) direct calls', () => {
       longest.push(countOf(html, FRAME))
     }
     expect(Math.max(...longest), 'a Pro guidelines or style guide longer than the free edition').toBeGreaterThan(FREE_EDITION_PAGES)
+  })
+
+  test('an account whose subscription has ended is answered as Free: 403 for the UI kit and book, the free edition otherwise', async ({ page }) => {
+    watch(page, 'a lapsed account calling Pro exports')
+    const { log } = await serveExport(page)
+    await go(page, '/')
+    for (const c of [{ theme: '24-standards', row: 'ui-kit', format: 'zip' }, { theme: '24-standards', row: 'book', format: 'pdf' }]) {
+      expectRefusal(await post(page, { ...c, projectName: 'Harbour', design: DESIGN }, 'tok-lapsed'), 'lapsed ' + c.row)
+    }
+    for (const c of [{ theme: '24-standards', row: 'slides', format: 'html' }, { theme: '24-standards', row: 'guide', format: 'html' }]) {
+      await post(page, { ...c, projectName: 'Harbour', design: DESIGN }, 'tok-lapsed')
+      await expectFreeEdition(log.at(-1), 'lapsed ' + c.row)
+    }
   })
 
   test('a Free token gets 403 for every Pro document, and the same request from Pro is served', async ({ page }) => {
