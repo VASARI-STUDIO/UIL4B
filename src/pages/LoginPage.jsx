@@ -27,7 +27,7 @@ export default function LoginPage() {
   // signed-in visitor on this page. With nowhere to resume, a signed-in visitor
   // belongs in the workspace, or in onboarding while their account still owes it.
   const sent = location.state?.from
-  const sentFrom = isLocalPath(sent) && sent.split('?')[0].replace(/\/+$/, '') !== '/login' ? sent : null
+  const sentFrom = isLocalPath(sent) && sent.split(/[?#]/)[0].replace(/\/+$/, '') !== '/login' ? sent : null
   const from = sentFrom || onboardingDestination(knownProfile(userProfile, profileLoaded))
   // `/login?signup=1` (or `state.signup`) opens the sign-up form. The hero's
   // "Start building free" is a real link, so the intent has to survive a full
