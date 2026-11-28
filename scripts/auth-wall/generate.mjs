@@ -66,9 +66,12 @@ const SCALE_INPUTS = {
   's-perfect-fourth': { base: 18, ratioLabel: 'Perfect fourth', mobileBase: 16 },
 }
 const GUIDE_FONTS = { heading: { family: 'Space Grotesk', weight: 700, category: 'sans-serif' }, body: { family: 'Inter', weight: 400, category: 'sans-serif' } }
-// Each specimen's body line names its own body face and weight, set in that face,
-// so no two tiles print the same sentence and the line is true by construction.
-const specimenLine = (family, weight) => `${family} ${weight} for body text.`
+// Each specimen's sentence names its own two faces, set in the body face, so no
+// two tiles print the same sentence and the line is true by construction.
+const specimenLine = (body, heading) => `${body} for body text, ${heading} for headings.`
+const SPECIMEN_W = 200 // CSS px: the card's width in the tile
+const SPECIMEN_DPR = 3 // rendered at 600 px wide
+const SPECIMEN_MIN_PX = 10.5 // the smallest text on the card
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex')
 const fail = (msg) => { throw new Error(msg) }
@@ -173,8 +176,8 @@ let baseURL
 
 // A fresh context per tool run: Font Pair writes its choice into the project
 // kit, and a later tool would open on it.
-async function withPage(opts, fn) {
-  const ctx = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: DPR, locale: 'en-AU', timezoneId: 'UTC', acceptDownloads: true, baseURL })
+async function withPage(opts, fn, dpr = DPR) {
+  const ctx = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: dpr, locale: 'en-AU', timezoneId: 'UTC', acceptDownloads: true, baseURL })
   try {
     // One Tap's script is answered empty, as tests/user-sim/base.js does.
     await ctx.route(/accounts\.google\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '' }))
@@ -325,7 +328,10 @@ const cssVar = (css, name) => {
 }
 
 // The specimen div: the exported CSS's four values applied verbatim, painted
-// on the app's own card ground and ink, at 300 x 200 CSS px.
+// on the app's own card ground and ink, 200 CSS px wide (the card's width in the
+// tile) and as tall as its content, shot at 3x so the WebP is 600 px wide. Row 1
+// is the heading Aa and the body Aa on one baseline, row 2 the sentence, row 3
+// the two faces and weights on one line under a rule.
 async function specimen(page, id, heading, css) {
   const vars = {
     '--font-heading': cssVar(css, '--font-heading'),
@@ -335,42 +341,57 @@ async function specimen(page, id, heading, css) {
   }
   const shots = {}
   const bodyFamily = cssVar(css, '--font-body').split(',')[0].replace(/['"]/g, '').trim()
-  const line = specimenLine(bodyFamily, vars['--weight-body'])
+  const line = specimenLine(bodyFamily, heading)
+  const info = `${heading} ${vars['--weight-heading']} · ${bodyFamily} ${vars['--weight-body']}`
   // The export's own @import brings the two faces in, as it would in a user's page.
   const importUrl = /@import url\('([^']+)'\)/.exec(css)?.[1] || fail(`${id}: the export has no @import`)
   await page.addStyleTag({ url: importUrl })
-  await page.evaluate(({ v, name, line }) => {
+  await page.evaluate(({ v, line, info, width }) => {
+    // The two tokens the card reads that the app page does not define, per theme.
+    const tokens = document.createElement('style')
+    tokens.textContent = 'html[data-theme="light"] #auth-wall-specimen{--sec:rgba(18,20,24,.72);--outl:oklch(0 0 0 / .1)}'
+      + 'html[data-theme="dark"] #auth-wall-specimen{--sec:rgba(239,238,234,.68);--outl:oklch(1 0 0 / .1)}'
+    document.head.appendChild(tokens)
     const el = document.createElement('div')
     el.id = 'auth-wall-specimen'
     for (const [k, val] of Object.entries(v)) el.style.setProperty(k, val)
-    el.style.cssText += ';position:fixed;left:0;top:0;width:300px;height:200px;box-sizing:border-box;padding:20px;overflow:hidden;z-index:2147483000;display:flex;flex-direction:column;background:var(--card);color:var(--t0);'
-    el.innerHTML = '<div id="aws-aa" style="font:var(--weight-heading) 64px/1 var(--font-heading);margin:0">Aa</div>'
-      + '<div id="aws-name" style="font:var(--weight-heading) 18px/24px var(--font-heading);margin:4px 0 0"></div>'
-      + '<div id="aws-line" style="font:var(--weight-body) 16px/1.5 var(--font-body);margin:auto 0 0"></div>'
-    el.querySelector('#aws-name').textContent = name
+    el.style.cssText += `;position:fixed;left:0;top:0;width:${width}px;box-sizing:border-box;padding:16px 16px 14px;overflow:hidden;z-index:2147483000;display:flex;flex-direction:column;gap:8px;background:var(--card);color:var(--t0);`
+    el.innerHTML = '<div id="aws-r1" style="display:flex;align-items:baseline;gap:10px">'
+      + '<span id="aws-aa" style="font:var(--weight-heading) 56px/1 var(--font-heading)">Aa</span>'
+      + '<span id="aws-ab" style="font:var(--weight-body) 22px/1 var(--font-body);color:var(--sec)">Aa</span></div>'
+      + '<div id="aws-line" style="font:var(--weight-body) 12px/1.45 var(--font-body);color:var(--sec)"></div>'
+      + '<div id="aws-info" style="font:var(--weight-body) 10.5px/1.4 var(--font-body);color:var(--sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--outl);padding-top:8px"></div>'
     el.querySelector('#aws-line').textContent = line
+    el.querySelector('#aws-info').textContent = info
     document.body.appendChild(el)
-  }, { v: vars, name: heading, line })
+  }, { v: vars, line, info, width: SPECIMEN_W })
   const faces = [
     { family: heading, weight: Number(vars['--weight-heading']) },
     { family: bodyFamily, weight: Number(vars['--weight-body']) },
   ]
-  await fontsLoaded(page, faces, `Aa ${heading} ${line}`)
+  await fontsLoaded(page, faces, `Aa ${heading} ${line} ${info}`)
+  // The card is as tall as its content, rounded up to whole CSS px so the shot is a whole number of pixels.
   const fit = await page.evaluate(() => {
     const box = document.getElementById('auth-wall-specimen')
+    box.style.height = `${Math.ceil(box.getBoundingClientRect().height)}px`
     const r = box.getBoundingClientRect()
-    const kids = ['aws-aa', 'aws-name', 'aws-line'].map((i) => document.getElementById(i).getBoundingClientRect())
-    return { w: r.width, h: r.height, top: Math.min(...kids.map((k) => k.top)) - r.top, bottom: r.bottom - Math.max(...kids.map((k) => k.bottom)), scrollH: box.scrollHeight, lineH: kids[2].height, nameW: document.getElementById('aws-name').scrollWidth }
+    const rect = (id) => document.getElementById(id).getBoundingClientRect()
+    const info = document.getElementById('aws-info')
+    return {
+      w: r.width, h: r.height, scrollH: box.scrollHeight,
+      lineH: rect('aws-line').height, ellipsis: info.scrollWidth > info.clientWidth,
+    }
   })
-  if (fit.scrollH > 200 || fit.bottom < 0) fail(`${id}: the specimen overflows its 300x200 box (${JSON.stringify(fit)})`)
-  if (fit.nameW > 260) fail(`${id}: the family name is wider than the box (${fit.nameW}px)`)
+  if (fit.scrollH > fit.h) fail(`${id}: the specimen overflows its box (${JSON.stringify(fit)})`)
+  const outW = SPECIMEN_W * SPECIMEN_DPR
+  const outH = fit.h * SPECIMEN_DPR
   for (const theme of ['light', 'dark']) {
     await page.evaluate((t) => { document.documentElement.setAttribute('data-theme', t) }, theme)
     await page.evaluate(() => document.fonts.ready)
-    const png = await page.screenshot({ clip: { x: 0, y: 0, width: 300, height: 200 }, type: 'png', animations: 'disabled', caret: 'hide' })
+    const png = await page.screenshot({ clip: { x: 0, y: 0, width: SPECIMEN_W, height: fit.h }, type: 'png', animations: 'disabled', caret: 'hide' })
     const { w, h } = pngSize(png)
-    if (w !== 600 || h !== 400) fail(`${id}: ${theme} screenshot is ${w}x${h}, expected 600x400`)
-    shots[theme] = await toWebp(png, { sx: 0, sy: 0, sw: w, sh: h, outW: 600, outH: 400 })
+    if (w !== outW || h !== outH) fail(`${id}: ${theme} screenshot is ${w}x${h}, expected ${outW}x${outH}`)
+    shots[theme] = await toWebp(png, { sx: 0, sy: 0, sw: w, sh: h, outW, outH })
   }
   return { shots, fit, line }
 }
@@ -398,7 +419,7 @@ async function pair(row) {
     if (!cssVar(css, '--font-heading').startsWith(`'${heading}'`) || !cssVar(css, '--font-body').startsWith(`'${body}'`)) fail(`${row.id}: the export names other families:\n${css}`)
     const made = await specimen(page, row.id, heading, css)
     return { css, suggestions, ...made }
-  })
+  }, SPECIMEN_DPR)
   await saveWebp(`${row.id}-light.webp`, result.shots.light)
   await saveWebp(`${row.id}-dark.webp`, result.shots.dark)
   outputs.pairs[row.id] = {
@@ -408,7 +429,7 @@ async function pair(row) {
     specimenLine: result.line,
     cssSha256: sha256(result.css),
   }
-  outputs.floors[row.id] = { text: true, minTextCssPx: 16, artCssWidth: 300, fit: result.fit }
+  outputs.floors[row.id] = { text: true, minTextCssPx: SPECIMEN_MIN_PX, artCssWidth: SPECIMEN_W, fit: result.fit }
 }
 
 // ── Icons ───────────────────────────────────────────────────────────────────
