@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { EXPORT_THEMES_LIVE, themeById } from '../../config/exportFormats'
 import { proRows } from '../../config/planFacts'
 import { usePrices } from '../../hooks/usePrices'
+import { useProLayer } from '../../contexts/ProLayerContext'
 import { FreeList, ProList } from './PlanLists'
 import { freePrice, planPriceFacts } from './plansPrices'
 import '../../styles/pages/home-plans.css'
@@ -99,6 +100,16 @@ export default function HomePlans() {
   const { prices } = usePrices({ enabled: near })
   const facts = useMemo(() => planPriceFacts(prices), [prices])
   const proCount = proRows(live).length
+  const { openLayer } = useProLayer()
+
+  // With a trial on offer a plain click opens the sign-up layer on yearly; a
+  // modified click, or no trial, keeps the plain link to /plans.
+  const onGo = (event) => {
+    if (!(facts?.trialDays > 0)) return
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    openLayer({ billing: 'yearly' })
+  }
 
   return (
     <section id="plans" ref={sectionRef} className="hpl" aria-labelledby="plans-h">
@@ -160,7 +171,7 @@ export default function HomePlans() {
             </button>
 
             <div className="hpl-foot">
-              <Link className="hpl-btn hpl-go" to="/plans">
+              <Link className="hpl-btn hpl-go" to="/plans" onClick={onGo}>
                 <span>{facts?.cta || 'Start Pro'}</span>
                 <GoArrow />
               </Link>

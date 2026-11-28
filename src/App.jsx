@@ -28,6 +28,7 @@ import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/rout
 import { LoginPromptProvider } from './contexts/LoginPromptContext'
 import { TOOL_VOTES_ON } from './data/toolVotes'
 import { ProModalProvider } from './contexts/ProModalContext'
+import { ProLayerProvider } from './contexts/ProLayerContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
 import useOnboardingHold from './hooks/useOnboardingHold'
@@ -723,6 +724,7 @@ export default function App() {
   const { message, visible, type, action: toastAction, toast, dismiss, hold: holdToast, release: releaseToast } = useToast()
   return (
     <LoginPromptProvider>
+      <ProLayerProvider>
       <ProModalProvider>
         {/* Skip-to-content: first focusable element on every route, so a keyboard
             user's first Tab bypasses the repeated PillNav and jumps to #main
@@ -781,6 +783,7 @@ export default function App() {
             See tests/user-sim/74-right-click-feedback-reach.spec.js. */}
         <FeedbackButton />
       </ProModalProvider>
+      </ProLayerProvider>
     </LoginPromptProvider>
   )
 }
