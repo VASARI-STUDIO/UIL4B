@@ -29,7 +29,7 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', rows: Object.freeze(['slides', 'guide']), free: true }),
   Object.freeze({ id: '33-flyleaf', name: 'Flyleaf', rows: Object.freeze(['slides', 'guide']), free: true, pages: Object.freeze(['16x9', 'a4-portrait']) }),
   // Pro, with the Free skeleton (fewer pages and a credit line, chosen on the server). The guidelines only: no style guide.
-  Object.freeze({ id: '34-set-square', name: 'Set Square', rows: Object.freeze(['slides']), pages: Object.freeze(['16x9', 'a4-portrait']) }),
+  Object.freeze({ id: '34-set-square', name: 'Set Square', rows: Object.freeze(['slides', 'guide']), pages: Object.freeze(['16x9', 'a4-portrait']) }),
 ])
 
 // Each row and the file formats it can download in. The UI kit is one zip; the book and the slides come as a page to print or a zip.

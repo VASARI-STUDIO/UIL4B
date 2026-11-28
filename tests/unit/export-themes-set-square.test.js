@@ -91,10 +91,11 @@ for (const page of SIZES) {
   }
 }
 
-test('Set Square is registered as a Pro theme with the slides row and both page sizes, and no other row', () => {
+test('Set Square is registered as a Pro theme with the slides and guide rows and both page sizes, and no other row', () => {
   assert.ok(EXPORT_THEMES.some((t) => t.id === '34-set-square'))
   assert.ok(themeHasRow('34-set-square', 'slides'))
-  for (const row of ['guide', 'book', 'ui-kit']) assert.ok(!themeHasRow('34-set-square', row), row)
+  assert.ok(themeHasRow('34-set-square', 'guide'))
+  for (const row of ['book', 'ui-kit']) assert.ok(!themeHasRow('34-set-square', row), row)
   assert.ok(themeHasPage('34-set-square', '16x9') && themeHasPage('34-set-square', 'a4-portrait') && !themeHasPage('34-set-square', 'a4-landscape'))
   assert.deepEqual([...T.meta.pages], [...EXPORT_THEMES.find((t) => t.id === '34-set-square').pages])
 })
@@ -116,7 +117,7 @@ test('a Free account is refused, and the rows Set Square lacks are unknown', asy
   const base = { theme: '34-set-square', design, projectName: 'Kerbside' }
   const free = await ask('free-1', { ...base, row: 'slides', format: 'pdf' })
   assert.equal(free.code, 403); assert.equal(free.body.code, 'pro_required')
-  for (const [row, format] of [['guide', 'pdf'], ['book', 'pdf'], ['ui-kit', 'zip']]) {
+  for (const [row, format] of [['book', 'pdf'], ['ui-kit', 'zip']]) {
     const res = await ask('pro-1', { ...base, row, format })
     assert.equal(res.code, 400, row); assert.equal(res.body.code, 'unknown_row', row)
   }
@@ -196,5 +197,24 @@ test('a Set Square export never prints a pangram as the brand headline or sample
     for (const p of ['five dozen liquor jugs', 'quick brown fox', 'vexingly quick daft zebras', 'black quartz, judge my vow']) {
       assert.ok(!html.toLowerCase().includes(p), `${page} ${skeleton ? 'Free' : 'Pro'} prints "${p}"`)
     }
+  }
+})
+
+// THE UI STYLE GUIDE: 13 A4 pages on Pro and 7 on Free, in the theme's order, with no demo copy; the dialog's older guide ids preview a page.
+// Break: drop guidePreviewId from themes/34-set-square/index.js, or 'guide' from its rows in src/data/exportThemes.js.
+test('the Set Square style guide draws 13 pages on Pro, 7 on Free, no demo copy, and every older guide id previews a page', async () => {
+  const { renderThemeExport, renderThemePage } = await import('../../api/_lib/exportThemeRoute.js')
+  const { themeHasRow } = await import('../../src/data/exportThemes.js')
+  assert.ok(themeHasRow('34-set-square', 'guide'), 'the guide row is offered')
+  const E = await loadEngine()
+  const draw = async (skeleton) => (await renderThemeExport({ theme: '34-set-square', row: 'guide', format: 'pdf', design: {}, projectName: 'Kerbside', skeleton }, E)).html
+  const ids = (html) => [...html.matchAll(/<section[^>]*data-page="([^"]+)"/g)].map((m) => m[1])
+  const pro = await draw(false), free = await draw(true)
+  assert.deepEqual(ids(pro), ['cover', 'contents', 'screen', 'dark', 'roles', 'tints', 'type', 'buttons', 'fields', 'feedback', 'overlays', 'space', 'handoff'])
+  assert.deepEqual(ids(free), ['cover', 'screen', 'roles', 'type', 'buttons', 'fields', 'handoff'])
+  noDemo(pro, 'guide Pro'); noDemo(free, 'guide Free')
+  for (const page of ['cover', 'interface', 'colour', 'contrast', 'type', 'components', 'icons']) {
+    const { html } = await renderThemePage({ theme: '34-set-square', kind: 'guide', page, design: {}, projectName: 'Kerbside' }, E)
+    assert.match(html, /<section[^>]*data-page="/, `the guide preview for ${page} draws a page`)
   }
 })
