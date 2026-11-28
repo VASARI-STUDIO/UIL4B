@@ -10,7 +10,7 @@
 //
 // `choice` names the row under the template line when an item has more than one category (Layout for the brand, Document for the
 // UI kit). An item with one category shows no such row.
-import { EXPORT_TYPES } from './dialogExport'
+import { EXPORT_TYPES } from './dialogExport.js'
 
 export const RAIL = Object.freeze([
   Object.freeze({ id: 'brand', label: 'Brand guidelines', short: 'Brand', choice: 'Layout', categories: Object.freeze(['slides', 'book']) }),
