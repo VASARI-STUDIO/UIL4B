@@ -198,3 +198,14 @@ test('a Set Square export never prints a pangram as the brand headline or sample
     }
   }
 })
+
+// THE COVER NAMES THE CUSTOMER: with no logo the brand cover sets the project's own name in the wordmark slot, not a ghost "Your wordmark".
+// Break: set the cover's wordmark slot back to the ghost "Your wordmark" (themes/34-set-square pages-1.js / pages-a4.js).
+test('the Set Square cover sets the project name in the wordmark slot, at both sizes', async () => {
+  for (const page of SIZES) for (const skeleton of [false, true]) {
+    const { html } = await make({ format: 'pdf', page, skeleton })
+    const cover = markup(html.split(/<section\b/)[1] || '')
+    assert.ok(cover.includes('Kerbside'), `${page} ${skeleton ? 'Free' : 'Pro'}: the cover names the project`)
+    assert.ok(!/Your wordmark/.test(cover), `${page} ${skeleton ? 'Free' : 'Pro'}: the cover still shows the ghost wordmark`)
+  }
+})

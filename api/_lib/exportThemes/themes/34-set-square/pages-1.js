@@ -41,9 +41,9 @@ export const guidelines = {
       top = base - frac * h; bottom = top + h;
       mark = at(64, top, W, h, ctx.logo.html('colour', { width: W, colourway: 'colour' }));
     } else {
-      const size = M.fit('Your wordmark', W, 400);
+      const nm = (typeof ctx.real === 'function' ? ctx.real(ctx.brand.name) : String(ctx.brand.name || '')) || 'Your wordmark', size = M.fit(nm, W, 400);
       top = base - M.cap * size; bottom = base + 0.157 * W;
-      mark = word(M, 64, base, 'Your wordmark', size, { style: 'color:var(--quiet)' }) + at(64, base + 20, 500, 16, '<span class="m">Your logo, SVG.</span>');
+      mark = word(M, 64, base, E(nm), size) + at(64, base + 20, 500, 16, '<span class="m">Your logo, SVG, replaces the name.</span>');
     }
     const datum = Math.round(bottom), tp = Math.round(top), xh = Math.round(base - 0.68 * (base - top)), px = Math.round(64 + 0.163 * W), dy = tp - 44;
     const legend = [['Ink', G.ink], ['Dimension', G.primary], ['Datum', G.accent]].map(([l, hex], i) =>
