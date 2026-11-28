@@ -311,13 +311,13 @@ test('/plans, the homepage and Settings all name the export line “Made with UI
 // (PlansPageR3A, HomePlans, HomeExports boards).
 test('theme counts follow the board: numerals in labels, words in sentences', () => {
   // Labels and row titles: numerals.
-  assert.equal(PRO_ROWS[1].title, 'All 23 export themes')
+  assert.equal(PRO_ROWS[1].title, 'All 24 export themes')
   assert.equal(THEME_FACTS.freeTag, 'Free in 3 themes')
   assert.equal(freeLines(true)[2], 'Brand guidelines in 3 export themes: Label, Swiss Field and Flyleaf, plus the UI kit in Standards')
   // Running sentences: words.
-  assert.match(plansLead(true), /Pro is the full studio: all twenty-three export themes, the UI kit and brand book,/)
-  assert.match(PRO_ROWS[1].sub, /^Twenty more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint, In use, Keynote, Stub, Front Page, Standards Plate, Notebook, Print Shop, Drawing Sheet, Fluted, Contact and Dieline\./)
-  assert.match(PRO_ROWS[1].phoneSub, /^Twenty more than Free, each with all \w+ exports\.$/)
-  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in three of the twenty-three themes, Label, Swiss Field and Flyleaf, and the UI kit in Standards')
-  assert.equal(THEME_FACTS.countWord, 'twenty-three')
+  assert.match(plansLead(true), /Pro is the full studio: all twenty-four export themes, the UI kit and brand book,/)
+  assert.match(PRO_ROWS[1].sub, /^Twenty-one more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint, In use, Keynote, Stub, Front Page, Standards Plate, Notebook, Print Shop, Drawing Sheet, Fluted, Contact, Dieline and Set Square./)
+  assert.match(PRO_ROWS[1].phoneSub, /^Twenty-one more than Free, each with all \w+ exports\.$/)
+  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in three of the twenty-four themes, Label, Swiss Field and Flyleaf, and the UI kit in Standards')
+  assert.equal(THEME_FACTS.countWord, 'twenty-four')
 })
