@@ -122,7 +122,7 @@ export const guidelines = {
     const crop = (i, ok, x, y) => {
       const ink = slot ? tones(ctx, leafOf[i]).ink : G.ink, red = slot ? ink : t.dim, id = `ssh${i}${ok ? 'p' : 'f'}`;
       const pic = slot ? voidField(ctx, 0, 0, W, H, leafOf[i], 'Your photograph.', i === 0 && !ok ? { noteY: 36 } : {}) : photo(ctx, 'finished', { w: W, h: H, ...frames[i] });
-      let art = '', marks = '';
+      let art, marks;
       if (i === 0) {
         const hy = ok ? 22 : 100;
         art = (ok ? '' : hatch(id, 0, 144, W, 36, red)) + line(0, 144, W, 0, red, `border-top:1px dashed ${red}`) + text(24, hy, 34, 300, ink);

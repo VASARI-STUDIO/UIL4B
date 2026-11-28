@@ -406,7 +406,7 @@ export const a4 = {
     const crop = (i, ok, x, y) => {
       const ink = slot ? tones(ctx, leafOf[i]).ink : G.ink, red = slot ? ink : t.dim, id = `ssh${i}${ok ? 'p' : 'f'}`;
       const pic = slot ? voidField(ctx, 0, 0, W, H, leafOf[i], 'Your photograph.', i === 0 ? { noteY: ok ? 100 : 36 } : {}) : photo(ctx, 'finished', { w: W, h: H, ...frames[i] });
-      let art = '', marks = '';
+      let art, marks = '';
       if (i === 0) art = (ok ? '' : hatch(id, 0, 136, W, 34, red)) + line(0, 136, W, 0, `border-top:1px dashed ${red}`) + text(20, ok ? 18 : 84, 28, 260, ink);
       else if (i === 1) {
         const hy = ok ? 20 : 66, hx = ok ? 20 : 56;
