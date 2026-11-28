@@ -154,7 +154,7 @@ test.describe('desktop bar at 1440', () => {
     const more = page.locator('.pnav-more')
     await more.click()
     await expect(more).toHaveAttribute('aria-expanded', 'true')
-    await page.getByRole('link', { name: 'Help centre' }).click()
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Help centre' }).click()
     await expect(page).toHaveURL(/\/learn\/help/)
     await ctx.close()
   })
