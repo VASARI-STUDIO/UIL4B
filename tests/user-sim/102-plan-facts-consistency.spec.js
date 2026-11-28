@@ -145,9 +145,9 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
 
 // ── ONE NAME FOR THE LINE PRO REMOVES ───────────────────────────────────────────
 // Free's minus line and Pro's removal read the same on the homepage plans section,
-// /plans and Settings → Subscription: “Made with UI L4B”, never "small mark" or a
+// /plans and Settings → Subscription: “Made with UIL4B”, never "small mark" or a
 // bare "UI L4B line".
-test('the homepage, /plans and Settings all name the export line “Made with UI L4B”', async ({ page }) => {
+test('the homepage, /plans and Settings all name the export line “Made with UIL4B”', async ({ page }) => {
   watch(page, 'a visitor comparing the export line on the homepage, /plans and Settings')
   await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PRICES) }))
 

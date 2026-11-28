@@ -478,7 +478,7 @@ const MARKERS = [
   { file: 'src/utils/exportTemplates/guidelines/grid.js', text: '<span class="mh-name">' },
   { file: 'src/utils/exportTemplates/book/specification.js', text: '<span class="cv-mark">Design system</span>' },
   { file: 'src/utils/appBundle.js', text: '# Import into Procreate' },
-  { file: 'api/_lib/bookPages.js', text: 'Made with UI L4B · uil4b.com' },
+  { file: 'api/_lib/bookPages.js', text: 'Made with UIL4B · uil4b.com' },
 ]
 
 test('CONTROL: each bundle marker is really in its generator', () => {

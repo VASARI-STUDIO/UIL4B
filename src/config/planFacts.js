@@ -125,7 +125,7 @@ export const FREE_POINTS = Object.freeze([
  * The line Free carries and Pro removes. /plans, the homepage and Settings all
  * print this wording, so the line has one name wherever it appears.
  */
-export const MADE_WITH_LINE = '“Made with UI L4B” line'
+export const MADE_WITH_LINE = '“Made with UIL4B” line'
 
 /** The one minus line on the Free card. */
 export const FREE_EXCLUSION = `A small ${MADE_WITH_LINE} on exported files`
@@ -201,7 +201,7 @@ export const proValue = (live = EXPORT_THEMES_LIVE) => Object.freeze([
       : proOnlyFormats()
     ).map((f) => ({ label: f.name, free: null, pro: 'Included' })),
     {
-      label: '“Made with UI L4B” line on exports',
+      label: '“Made with UIL4B” line on exports',
       free: CREDIT_NONE_NAMES ? `Small line, except on ${CREDIT_NONE_NAMES}` : 'Small line',
       pro: 'Removed',
     },
