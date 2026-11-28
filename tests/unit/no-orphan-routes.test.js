@@ -140,7 +140,7 @@ test('every page in the sitemap is linked from somewhere in the app', () => {
     'these paths are published in sitemap.xml but nothing in src/ links to them, ' +
     'so a search engine is told to index a page a visitor cannot click to:\n  ' +
     orphans.join('\n  ') +
-    '\n\nEither link the page — src/components/AppFooter.jsx for a footer link, ' +
+    '\n\nEither link the page — src/components/spectrum/SpectrumFooter.jsx for a footer link, ' +
     'src/pages/SiteMap.jsx for the sitemap page — or take it out of ' +
     'public/sitemap.xml.')
 })

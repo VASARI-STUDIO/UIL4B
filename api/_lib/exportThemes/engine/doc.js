@@ -49,7 +49,7 @@ export function pageDoc(ctx, theme, { title, pages, size, stack = false, screen 
 <head><meta charset="utf-8"><meta name="viewport" content="${screen ? 'width=device-width, initial-scale=1' : `width=${size.w}`}"><title>${esc(title)}</title>
 <style>
 ${faces}
-${frameCss(size, ctx.roles.light.sunken, ctx.kind === 'guide' ? {} : pageSizeMap(theme.meta))}
+${frameCss(size, ctx.roles.light.sunken, ctx.kind === 'guide' ? {} : ctx.pageSizes || pageSizeMap(theme.meta))}
 ${theme.css(ctx)}${ctx.kind === 'guide' && theme.guideCss ? '\n' + theme.guideCss(ctx) : ''}${screen ? '\n' + screenCss(ctx) : ''}
 </style></head>
 <body${stack ? ' class="stack"' : ''}>

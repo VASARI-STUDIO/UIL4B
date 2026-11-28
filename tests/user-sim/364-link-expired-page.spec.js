@@ -17,8 +17,8 @@
 // signed-in visitor: the Settings test fails. Delete the /reset-password route
 // in App.jsx: every test lands on the 404 heading instead. Put '/reset-password'
 // back out of NON_RESUMABLE (LoginPromptContext.jsx) and drop `from: '/'` in
-// LinkExpired.jsx: the return-target test fails. Take '/reset-password' out of
-// FOOTER_ROUTES (footerRoutes.js): the footer test fails.
+// LinkExpired.jsx: the return-target test fails. Drop <SpectrumFooter /> from the app
+// shell in App.jsx: the footer test fails.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 

@@ -103,7 +103,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await expect(page.getByRole('img', { name: 'UI L4B' }), 'the logo is still there').toBeVisible()
       await expect(page.getByRole('contentinfo')).toHaveCount(0)
       await expect(page.getByRole('navigation')).toHaveCount(0)
-      await expect(page.locator('.pnav, .app-footer')).toHaveCount(0)
+      await expect(page.locator('.pnav, .sp-footer')).toHaveCount(0)
 
       // Nothing on the page promises a time or speaks for anyone's work.
       const text = await page.getByRole('main').innerText()

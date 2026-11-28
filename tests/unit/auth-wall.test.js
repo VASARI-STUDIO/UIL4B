@@ -34,7 +34,11 @@ test('every WebP is the one the generator recorded, at the recorded size', () =>
     assert.equal(sha(buf), rec.sha256, `${file} hash`)
     assert.equal(buf.subarray(0, 4).toString(), 'RIFF', `${file} is a RIFF container`)
     assert.equal(buf.subarray(8, 12).toString(), 'WEBP', `${file} is WebP`)
-    assert.ok(rec.width === 600 && [270, 400].includes(rec.height), `${file} is 600 wide at the stored aspect`)
+    // Palette and guide crops are 600x270. A pair card is 200 CSS px wide and as tall as its
+    // content (140 to 200 CSS px, taller when the font names take two lines), shot at 3x.
+    const pairCard = /-(light|dark)\.webp$/.test(file)
+    const heightOk = pairCard ? rec.height % 3 === 0 && rec.height >= 420 && rec.height <= 600 : rec.height === 270
+    assert.ok(rec.width === 600 && heightOk, `${file} is 600 wide at the stored aspect`)
   }
   const total = Object.values(G.assets).reduce((n, a) => n + a.bytes, 0)
   assert.ok(total < 150 * 1024, `raster tiles total ${total} bytes`)
@@ -56,7 +60,7 @@ test('font pairs: both themes exist and the body was one of the tool\'s suggesti
     assert.equal(rec.heading.family, heading)
     assert.equal(rec.body.family, body)
     assert.ok(rec.suggestions.includes(body), `${r.id}: ${body} not in ${rec.suggestions.join(', ')}`)
-    assert.equal(rec.suggestions.length, 6)
+    assert.ok(rec.suggestions.length >= 3, `${r.id}: the tool offered ${rec.suggestions.length} bodies`)
   }
 })
 

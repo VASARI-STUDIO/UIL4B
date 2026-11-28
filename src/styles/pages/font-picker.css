@@ -396,3 +396,8 @@ html[data-reduced-motion="true"] .fbd-overlay .fbd-info:active { transform: none
 @media (pointer: coarse) {
   .fbd-overlay .fdx-tab { min-height: 44px; }
 }
+
+/* The picker's toolbar sits in the dialog, not under the page nav, so the
+   shared sticky backing (global.css `.lbry-toolbar::before`) has no strip to fill. */
+.fbd-overlay .lbry-toolbar::before,
+.fbd-overlay .lbry-toolbar::after { content: none; }

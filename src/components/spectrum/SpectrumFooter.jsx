@@ -22,12 +22,12 @@ import '../../styles/pages/home-footer.css'
 //
 // WHERE IT DEPARTS FROM THE FILE, AND WHY:
 //
-//   · TWO EXTRA COLUMNS, EXPLORE AND SUPPORT. This footer replaces AppFooter
-//     on the marketing screens, and every destination AppFooter reaches has to
-//     stay reachable (tests/unit/spectrum-structure.test.js holds that). The
+//   · TWO EXTRA COLUMNS, EXPLORE AND SUPPORT. This is the one footer on every
+//     page, and the old app footer's destinations have to stay reachable
+//     (tests/unit/spectrum-structure.test.js holds that). The
 //     three drawn columns have no room for Discover, Learn, Community,
 //     Principles, Plans and Sitemap, so they share EXPLORE; Help, Info and
-//     Feedback get their own SUPPORT column, with AppFooter's heading and
+//     Feedback get their own SUPPORT column, with the old footer's heading and
 //     order, so a person looking for help finds it under that name. Both sit
 //     in the same style, before LEGAL.
 //   · CREDITS SITS IN LEGAL, where Cookies was. There is no cookies page, so
@@ -61,7 +61,7 @@ const PROJECT = [
   ['#plans', 'Plans'],
 ]
 
-// EXPLORE — the destinations AppFooter reaches that the drawn columns do not.
+// EXPLORE — the destinations the old app footer reached that the drawn columns do not.
 const EXPLORE = [
   ['/discover', 'Discover'],
   ['/learn', 'Learn'],
@@ -72,7 +72,7 @@ const EXPLORE = [
   ['/sitemap', 'Sitemap'],
 ]
 
-// SUPPORT — the same three links, heading and order as AppFooter's Support.
+// SUPPORT — the same three links, heading and order as the old app footer's Support.
 const SUPPORT = [
   ['/learn/help', 'Help centre'],
   ['/info', 'Info centre'],
@@ -178,7 +178,9 @@ function Sky() {
 // it), and the Legal column kept at every width. Every other page leaves it off.
 // `pageColumn={false}` drops the "This page" column (the homepage's section
 // anchors) for a page that has none to offer; it only applies with `home`.
-export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false, pageColumn = true }) {
+// `inApp` is the footer inside the app: no sales close, and links in ink rather than the link colour.
+// `theme` pins the footer to one theme's tokens, for a page drawn in that theme whatever the site theme is.
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false, pageColumn = true, inApp = false, theme }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
@@ -191,22 +193,25 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   return (
     <footer
       ref={footerRef}
-      className={home ? `sp-footer sp-footer--home${pageColumn ? '' : ' sp-footer--no-page'}` : 'sp-footer'}
+      className={home ? `sp-footer sp-footer--home${pageColumn ? '' : ' sp-footer--no-page'}` : `sp-footer${inApp ? ' sp-footer--app' : ''}`}
+      data-theme={theme}
       data-curtain={curtain || undefined}
       onFocus={curtain ? uncoverFooter : undefined}
     >
       {home && <Sky />}
       <div className="sp-footer-inner">
         <div className="sp-footer-grid">
-          <div className="sp-footer-brand">
-            <p className="sp-footer-say">Save time, and save your mind.</p>
-            {!home && (
-              <Link className="sp-footer-cta" to={toolkitTo}>
-                <span>Open the toolkit</span>
-                <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
-              </Link>
-            )}
-          </div>
+          {!inApp && (
+            <div className="sp-footer-brand">
+              <p className="sp-footer-say">Save time, and save your mind.</p>
+              {!home && (
+                <Link className="sp-footer-cta" to={toolkitTo}>
+                  <span>Open the toolkit</span>
+                  <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* `display:contents`, so the columns are cells of the one grid
               while still sitting inside a Footer navigation landmark. */}

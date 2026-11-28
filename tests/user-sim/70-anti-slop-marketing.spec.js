@@ -192,41 +192,30 @@ test.describe('the Plans page reassurance lines', () => {
   })
 })
 
-/* THE APP FOOTER'S OWN RULES, ON THE ROUTES THAT MOUNT IT.
+/* THE ONE SITE FOOTER'S RULES, ON A READING PAGE.
  *
- * '/' left this loop when it became Spectrum. The front door renders
- * `<SpectrumFooter />` instead of `<AppFooter />` — deliberately, so the page
- * has one contentinfo landmark rather than two — and that footer is a different
- * object with different rules: no wordmark block, and it DOES carry one
- * sentence ("Save time, and save your mind."), which SpectrumFooter.jsx argues
+ * Every page wears `<SpectrumFooter />` (the old AppFooter is retired), so the page has one
+ * contentinfo landmark. Off the front door it carries no wordmark block, and it
+ * DOES carry one sentence ("Save time, and save your mind."), which SpectrumFooter.jsx argues
  * is a handoff above a button rather than the tagline-under-a-wordmark pattern
- * that was retired. Asserting the AppFooter rules there would fail a page that
- * is behaving as designed.
- *
- * What still holds on every route, '/' included, is the attribution line —
- * and 07-public-shell-library-palette asserts it across both footers. The
- * Spectrum footer's link parity with AppFooter is pinned by
- * tests/unit/spectrum-footer-parity.test.js. */
+ * that was retired. The attribution line is asserted on every route by
+ * 07-public-shell-library-palette. */
 test.describe('the footer', () => {
-  // /plans renders the marketing footer and app pages draw no site footer, so
-  // the reading pages are where the site footer is checked.
   for (const route of ['/learn/help']) {
-    test(`${route} carries the wordmark and no tagline`, async ({ page }) => {
+    test(`${route} carries the handoff line and the toolkit button, no wordmark block and no tagline`, async ({ page }) => {
       // Was: "The operating workspace for building, validating and exporting
-      // interface foundations." under the wordmark on every page — a tagline,
+      // interface foundations." under the wordmark on every page, a tagline,
       // the kind of line since retired as AI slop, and a value claim typed outside positioning.js.
       watch(page, PERSONA)
       await go(page, route)
       await expectRendered(page, route)
 
-      const footer = page.locator('.app-footer')
+      const footer = page.locator('footer.sp-footer')
       await expect(footer).toHaveCount(1)
-      await expect(footer.locator('.app-footer-mark svg')).toHaveAttribute('aria-label', 'UI L4B')
+      await expect(footer.locator('.sp-footer-mark'), 'the wordmark block is for the front door only').toHaveCount(0)
       await expect(footer.locator('.app-footer-tagline'), 'the footer tagline is back').toHaveCount(0)
-      // '/create/color' until the colour landing was deleted. The link is built
-      // from categoryDestination('colour'), which now answers with the group's
-      // first tool because the category home only bounces.
-      await expect(footer.getByRole('link', { name: /Start with colour/ })).toHaveAttribute('href', '/create/palette')
+      await expect(footer.locator('.sp-footer-say')).toHaveText('Save time, and save your mind.')
+      await expect(footer.getByRole('link', { name: /Open the toolkit/ })).toHaveAttribute('href', '/projects')
     })
   }
 })
