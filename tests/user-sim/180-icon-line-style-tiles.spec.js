@@ -72,7 +72,10 @@ test('three tiles, Round selected, and each draws its own ends and corners at 40
 
   const drawn = async (id) => page.locator(`.ied-tile[data-style="${id}"] svg`).first().evaluate((svg) => {
     const box = svg.getBoundingClientRect()
-    return { cap: svg.getAttribute('stroke-linecap'), join: svg.getAttribute('stroke-linejoin'), w: Math.round(box.width), h: Math.round(box.height) }
+    // Ends and corners are written on the stroked shapes, so read what the first one draws.
+    const shape = svg.querySelector('path, line, polyline, polygon, circle, ellipse, rect')
+    const cs = getComputedStyle(shape)
+    return { cap: cs.strokeLinecap, join: cs.strokeLinejoin, w: Math.round(box.width), h: Math.round(box.height) }
   })
   expect(await drawn('round')).toEqual({ cap: 'round', join: 'round', w: 40, h: 40 })
   expect(await drawn('sharp')).toEqual({ cap: 'square', join: 'miter', w: 40, h: 40 })
