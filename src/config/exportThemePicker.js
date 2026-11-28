@@ -36,6 +36,7 @@ const SAMPLE = Object.freeze({
   '32-dieline': ['Kerbside', '1:1'],
   '33-flyleaf': ['Margin', '16:9'],
   '34-set-square': ['Plumbline', '16:9'],
+  '35-dispatch': ['Kerbside', '16:9'],
 })
 
 /**

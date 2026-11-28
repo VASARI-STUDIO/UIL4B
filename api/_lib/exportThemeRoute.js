@@ -55,6 +55,7 @@ const THEMES = Object.freeze({
   '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
   '33-flyleaf': () => import('./exportThemes/themes/33-flyleaf/index.js'),
   '34-set-square': () => import('./exportThemes/themes/34-set-square/index.js'),
+  '35-dispatch': () => import('./exportThemes/themes/35-dispatch/index.js'),
 })
 
 export async function loadEngine() {
