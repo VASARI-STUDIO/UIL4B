@@ -1,6 +1,6 @@
 // Multi-select in the Library filter tray, measured in a browser.
 //
-// Shift-click multi-select (selecting all three types resets to All types),
+// Shift-click multi-select (selecting every type resets to All types),
 // with keyboard equivalents required for the shift-click behaviour.
 //
 // The collapse rules themselves are asserted without a DOM in
@@ -63,11 +63,14 @@ test.describe('library filter multi-select', () => {
     expect(await cardCount(page)).toBeGreaterThan(linearOnly)
   })
 
-  test('selecting all three types resets to All types', async ({ page }) => {
+  test('selecting all four types resets to All types', async ({ page }) => {
     const all = await cardCount(page)
     await pill(page, 'Linear').click()
     await pill(page, 'Radial').click({ modifiers: ['Shift'] })
     await pill(page, 'Conic').click({ modifiers: ['Shift'] })
+    // Three of the four is still a narrowing, not the whole collection.
+    expect(await pressed(page)).toEqual(['Linear', 'Radial', 'Conic'])
+    await pill(page, 'Mesh').click({ modifiers: ['Shift'] })
 
     expect(await pressed(page)).toEqual(['All types'])
     expect(await cardCount(page)).toBe(all)

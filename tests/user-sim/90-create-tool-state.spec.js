@@ -304,18 +304,18 @@ test.describe('/create/gradient · the chosen gradient type reaches the tree', (
     expect(group, 'no gradient type group was found, so nothing below is being measured').toHaveLength(1)
     expect(`${group[0].role}("${group[0].name}")`).toBe('group("Gradient type")')
 
-    for (const want of ['Radial', 'Conic', 'Linear']) {
+    for (const want of ['Radial', 'Conic', 'Mesh', 'Linear']) {
       await page.locator('[aria-label="Gradient type"] .tl-pill', { hasText: want }).click()
 
       const painted = await page.locator('[aria-label="Gradient type"] .tl-pill.is-on').innerText()
       expect(painted.trim(), 'the click did not move the painted state').toBe(want)
 
       const rows = await axRows(page, '[aria-label="Gradient type"] .tl-pill')
-      // POSITIVE CONTROL: three buttons, or the loop below is asserting over
+      // POSITIVE CONTROL: four buttons, or the loop below is asserting over
       // an empty list and passing for it.
-      expect(rows, 'the gradient type group did not render three buttons').toHaveLength(3)
+      expect(rows, 'the gradient type group did not render four buttons').toHaveLength(4)
       expect(rows.map((r) => `${r.name} ${stateOf(r)}`)).toEqual(
-        ['Linear', 'Radial', 'Conic'].map((t) => `${t} ${t === want ? 'pressed=true' : 'none'}`),
+        ['Linear', 'Radial', 'Conic', 'Mesh'].map((t) => `${t} ${t === want ? 'pressed=true' : 'none'}`),
       )
     }
   })
