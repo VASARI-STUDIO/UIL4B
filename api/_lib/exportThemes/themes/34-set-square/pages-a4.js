@@ -88,9 +88,9 @@ export const a4 = {
       const g = ctx.logo.geo, h = W / g.aspect, frac = g.top ? g.top / (g.top + g.cap) : 0.55;
       top = base - frac * h; bottom = top + h; mark = at(X0, top, W, h, ctx.logo.html('colour', { width: W, colourway: 'colour' }));
     } else {
-      const size = M.fit('Your wordmark', W, 400);
+      const nm = (typeof ctx.real === 'function' ? ctx.real(ctx.brand.name) : String(ctx.brand.name || '')) || 'Your wordmark', size = M.fit(nm, W, 400);
       top = base - M.cap * size; bottom = base + 0.4 * M.cap * size;
-      mark = word(M, X0, base, 'Your wordmark', size, { style: 'color:var(--quiet)' }) + at(X0, base + 56, 500, 16, '<span class="m">Your logo, SVG.</span>');
+      mark = word(M, X0, base, E(nm), size) + at(X0, base + 56, 500, 16, '<span class="m">Your logo, SVG, replaces the name.</span>');
     }
     const key = [['Ink', G.ink], ['Dimension', G.primary], ['Datum', G.accent]].map(([l, hex], i) => {
       const x = X0 + i * 228;
@@ -406,8 +406,8 @@ export const a4 = {
     const crop = (i, ok, x, y) => {
       const ink = slot ? tones(ctx, leafOf[i]).ink : G.ink, red = slot ? ink : t.dim, id = `ssh${i}${ok ? 'p' : 'f'}`;
       const pic = slot ? voidField(ctx, 0, 0, W, H, leafOf[i], 'Your photograph.', i === 0 ? { noteY: ok ? 100 : 36 } : {}) : photo(ctx, 'finished', { w: W, h: H, ...frames[i] });
-      let art, marks = '';
-      if (i === 0) art = (ok ? '' : hatch(id, 0, 136, W, 34, red)) + line(0, 136, W, 0, `border-top:1px dashed ${red}`) + text(20, ok ? 18 : 84, 28, 260, ink);
+      let art, marks;
+      if (i === 0) { art = (ok ? '' : hatch(id, 0, 136, W, 34, red)) + line(0, 136, W, 0, `border-top:1px dashed ${red}`) + text(20, ok ? 18 : 84, 28, 260, ink); marks = ''; }
       else if (i === 1) {
         const hy = ok ? 20 : 66, hx = ok ? 20 : 56;
         art = (ok ? line(20, 0, 0, 20, `border-left:1px solid ${red}`) : '') + text(hx, hy, 28, 260, ink);
