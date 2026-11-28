@@ -50,11 +50,13 @@ for (const dir of DIRS) {
   test(`theme ${dir}: every guidelines and UI-kit page renders from a project brand, both editions`, () => {
     const T = mods[dir]
     const failures = []
-    // A guidelines-only theme (rows: ['slides']) writes a dozen guidelines pages and no UI kit.
-    const kinds = [['guidelines', GUIDE_PAGES], ...(themeHasRow(dir, 'ui-kit') ? [['uikit', UIKIT_PAGES]] : [])]
+    // A guidelines-only theme (rows: ['slides']) writes a dozen guidelines pages and no UI kit. A theme with its own page order (Flyleaf's ten) is checked
+    // against that order, every page of it, in place of the engine's thirty-three ids.
+    const own = typeof T.order === 'function'
+    const kinds = [['guidelines', own ? T.order('guidelines', { skeleton: false }).map((id) => ({ id })) : GUIDE_PAGES], ...(themeHasRow(dir, 'ui-kit') ? [['uikit', UIKIT_PAGES]] : [])]
     const written = (kind, list) => list.filter((p) => typeof T[kind]?.[p.id] === 'function')
     for (const [kind, list] of kinds) {
-      const min = themeHasRow(dir, 'ui-kit') ? list.length : 12
+      const min = own || themeHasRow(dir, 'ui-kit') ? list.length : 12
       assert.ok(written(kind, list).length >= min, `${dir} writes ${written(kind, list).length} ${kind} pages`)
     }
     for (const [label, brand] of Object.entries(brands)) {

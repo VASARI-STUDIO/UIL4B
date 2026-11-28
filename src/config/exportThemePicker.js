@@ -34,6 +34,7 @@ const SAMPLE = Object.freeze({
   '30-fluted': ['Northern Current', '4:5'],
   '31-contact': ['Plumbline', '3:2'],
   '32-dieline': ['Kerbside', '1:1'],
+  '33-flyleaf': ['Margin', '16:9'],
 })
 
 /**
@@ -69,13 +70,13 @@ export const pickerThemesFor = (fileId) => {
   return f ? PICKER_THEMES.filter((t) => themeHasRow(t.id, f.row)) : PICKER_THEMES
 }
 
-/** The themes a file is free in, by name: "Label and Swiss Field" for the guidelines, "Standards" for the UI kit, '' for none. */
+/** The themes a file is free in, by name: "Label, Swiss Field and Flyleaf" for the guidelines, "Standards" for the UI kit, '' for none. */
 export const freeThemeNames = (fileId) => {
   const names = pickerThemesFor(fileId).filter((t) => !themedFileIsPro(fileId, t.id)).map((t) => t.name)
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join('')
 }
 
-/** The themes whose guidelines are free, by name: "Label and Swiss Field". */
+/** The themes whose guidelines are free, by name: "Label, Swiss Field and Flyleaf". */
 export const freeGuidelinesThemeNames = () => freeThemeNames('guidelines')
 
 /** True when a theme can draw this file (a file that takes no theme is drawn by any). */

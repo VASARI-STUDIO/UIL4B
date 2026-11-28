@@ -68,7 +68,7 @@ for (const size of SIZES) {
       const panel = await openFromHeader(page)
       await expectFreeStart(panel, 'the dialog did not open on the free guidelines')
 
-      // Label and Swiss Field are the free guidelines themes: either one exports free, with the mark.
+      // Label and Swiss Field (and Flyleaf) are the free guidelines themes: either of these two exports free, with the mark.
       for (const name of ['Swiss Field', 'Label']) {
         await chooseTheme(page, panel, name)
         await expect(primaryButton(panel), name).toHaveText('Export PDF')
@@ -80,7 +80,7 @@ for (const size of SIZES) {
       await chooseTheme(page, panel, 'Presentation')
       await expect(panel.locator('.xd-box')).toHaveClass(/is-locked/)
       await expect(panel.locator('.xd-stage-pro')).toHaveText('Pro template')
-      await expect(dockStatus(panel)).toHaveText(/^Pro theme. The guidelines are free in Label and Swiss Field./)
+      await expect(dockStatus(panel)).toHaveText(/^Pro theme. The guidelines are free in Label, Swiss Field and Flyleaf./)
       await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
     })
 

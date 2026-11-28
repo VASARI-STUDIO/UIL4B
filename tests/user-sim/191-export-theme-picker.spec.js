@@ -40,12 +40,12 @@ const THEMES = [
 ]
 const NAMES = THEMES.map(([, name]) => name)
 const FREE_KIT = ['Standards']
-// The guidelines list: every template above, then the two guidelines-only templates, which are free.
-const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field']
-// The premium templates (21 up) in id order: first in every list that has them as Pro. Label and Swiss Field are free for the guidelines, so not premium.
+// The guidelines list: every template above, then the three guidelines-only templates, which are free.
+const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field', 'Flyleaf']
+// The premium templates (21 up) in id order: first in every list that has them as Pro. Label, Swiss Field and Flyleaf are free for the guidelines, so not premium.
 const PREMIUM = ['Keynote', 'Stub', 'Front Page', 'Standards Plate', 'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Contact', 'Dieline']
-const FREE_GUIDE = ['Label', 'Swiss Field']
-const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label and Swiss Field.'
+const FREE_GUIDE = ['Label', 'Swiss Field', 'Flyleaf']
+const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label, Swiss Field and Flyleaf.'
 const isGuide = (file) => file.startsWith('guidelines')
 const namesFor = (file) => (isGuide(file) ? GUIDE_NAMES : NAMES)
 const freeFor = (file) => (file === 'kit' ? FREE_KIT : isGuide(file) ? FREE_GUIDE : [])
@@ -148,7 +148,7 @@ test.describe('Free and Pro', () => {
       const panel = await open(page, { plan: 'free', file: 'kit' })
       await pick(panel, name)
       await expect(primaryButton(panel)).toHaveText('Upgrade to Pro')
-      await expect(dockStatus(panel)).toHaveText('Pro theme. The UI kit is free in Standards. The guidelines are free in Label and Swiss Field.')
+      await expect(dockStatus(panel)).toHaveText('Pro theme. The UI kit is free in Standards. The guidelines are free in Label, Swiss Field and Flyleaf.')
       await expect(panel.locator('.xd-wayout'), 'the free way back to the kit').toHaveText('Use the free UI kit (Standards)')
       await primaryButton(panel).click()
       await expect(page).toHaveURL(/\/(plans|checkout)(\?|$)/)
@@ -193,7 +193,7 @@ test.describe('Free and Pro', () => {
         const panel = await open(page, { plan: 'free', file, saved: false })
         const read = await readTemplates(panel)
         expect(read.chosen, 'a free account starts on the first template the guidelines are free in').toEqual([FREE_GUIDE[0]])
-        expect(read.pro, 'and Label and Swiss Field carry no Pro mark').toEqual(proFor(file, true))
+        expect(read.pro, 'and Label, Swiss Field and Flyleaf carry no Pro mark').toEqual(proFor(file, true))
         await pick(panel, name)
         await expect(primaryButton(panel)).toHaveText(FILES[file].label)
         await expect(dockStatus(panel)).toContainText('Free.')
@@ -202,7 +202,7 @@ test.describe('Free and Pro', () => {
     }
   }
 
-  test('Label and Swiss Field are not offered for the UI kit or the book', async ({ page }) => {
+  test('Label, Swiss Field and Flyleaf are not offered for the UI kit or the book', async ({ page }) => {
     watch(page, 'a Pro account reading the templates of each file')
     const panel = await open(page, { plan: 'pro', file: 'kit' })
     for (const file of Object.keys(FILES)) {
