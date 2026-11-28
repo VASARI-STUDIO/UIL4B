@@ -38,6 +38,12 @@ for (const width of [390, 820]) {
         if (route === '/create/type-scale' && width < 768) {
           await page.locator('.tl-dock .tsc-dock-ratio').click()
         }
+        // Gradient keeps the angle wheel's number field behind "Angle and
+        // interpolation" on a phone, so open it before counting what a person can reach.
+        if (route === '/create/gradient') {
+          const more = page.getByRole('button', { name: 'Angle and interpolation' })
+          if (await more.isVisible() && (await more.getAttribute('aria-expanded')) === 'false') await more.click()
+        }
         await expect.poll(() => page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((el) => el.getClientRects().length).length, TEXTLIKE), {
           message: `${route} never showed its ${expected} text field(s)`, timeout: 15000,
         }).toBeGreaterThanOrEqual(expected)

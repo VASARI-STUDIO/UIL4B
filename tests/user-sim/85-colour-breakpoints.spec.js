@@ -519,6 +519,12 @@ test.describe('the gradient stop row under a thumb', () => {
     const { ctx, page } = await at(browser, 390)
     await go(page, '/create/gradient')
     await expect(page.locator('.grd-stop')).toHaveCount(3)
+    // On a phone the wheel and its field sit behind "Angle and interpolation".
+    const disclosure = page.getByRole('button', { name: 'Angle and interpolation' })
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+    await disclosure.click()
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.locator('.grd-wheel')).toBeVisible()
     const read = await page.evaluate(() => ({
       coarse: matchMedia('(pointer: coarse)').matches,
       boxes: ['.grd-wheel', '.grd-angle-input', '.grd-tints-btn', '.grd-explore-cta'].map((sel) => {

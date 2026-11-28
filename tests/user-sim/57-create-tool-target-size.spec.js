@@ -197,6 +197,10 @@ test.describe('the small in-page controls that actually do something', () => {
       watch(page, 'someone copying a value out of a tool on a phone')
       await page.setViewportSize({ width: 390, height: 844 })
       await go(page, route)
+      // On a phone the angle wheel and its field sit behind "Angle and interpolation".
+      if (route === '/create/gradient' && selector.startsWith('.grd-') && selector !== '.grd-copy') {
+        await page.getByRole('button', { name: 'Angle and interpolation' }).click()
+      }
       const el = page.locator(selector).first()
       await expect(el).toBeVisible()
       await settle(page)
