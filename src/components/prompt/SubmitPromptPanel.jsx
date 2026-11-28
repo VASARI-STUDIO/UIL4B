@@ -87,7 +87,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
       }
       await publishPrompt(doc)
       toast('Prompt submitted for review')
-      if (mediaDropped) toast('Your image was too large to attach (after compression) — the prompt was submitted without it')
+      if (mediaDropped) toast('Your image was too large to attach (after compression). The prompt was submitted without it')
       setSubmitTitle('')
       setSubmitText('')
       setSubmitTags('')
@@ -98,7 +98,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
       onClose()
     } catch (err) {
       // The 30-second gap and the daily cap have wording of their own.
-      toast(isPostLimit(err) ? err.message : 'Failed to submit — try again')
+      toast(isPostLimit(err) ? err.message : 'Failed to submit. Try again')
     } finally {
       setSubmitting(false)
     }
@@ -144,7 +144,7 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
           <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" aria-label="Prompt title" className="pl-input-title" />
           <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." aria-label="Prompt" className="pl-textarea" />
           <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" aria-label="Tags" />
-          <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional — portfolio, X, Dribbble)" aria-label="Profile link" />
+          <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional: portfolio, X, Dribbble)" aria-label="Profile link" />
         </div>
         <div className="pl-add-actions">
           <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>

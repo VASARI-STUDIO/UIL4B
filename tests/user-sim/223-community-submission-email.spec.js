@@ -69,7 +69,7 @@ async function submitPalette(page) {
   const dialog = page.getByRole('dialog', { name: 'Submit palette to the community' })
   await dialog.getByLabel('Palette name for the community').fill('Notify test palette')
   await dialog.getByRole('button', { name: 'Submit palette' }).click()
-  return { done: page.getByText('Submitted to the community — thanks!'), collection: 'community-submissions', dialog }
+  return { done: page.getByText('Submitted to the community. Thanks!'), collection: 'community-submissions', dialog }
 }
 
 async function submitPrompt(page) {

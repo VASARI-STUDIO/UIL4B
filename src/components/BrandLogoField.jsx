@@ -117,7 +117,7 @@ async function shrinkRaster(dataUrl) {
     if (logoBytes(out) <= MAX_LOGO_BYTES) return { src: out, width: tw, height: th }
   }
   throw new Error(
-    `That image is too detailed to store under ${MAX_LOGO_LABEL}. Upload an SVG — vector artwork always fits, and it stays sharp at any size.`,
+    `That image is too detailed to store under ${MAX_LOGO_LABEL}. Upload an SVG. Vector artwork always fits, and it stays sharp at any size.`,
   )
 }
 

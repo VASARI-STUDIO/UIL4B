@@ -16,6 +16,7 @@ const SNAPSHOT = {
   '28-riso': [...ALL, 'guide'], '29-blueprint': [...ALL, 'guide'], '30-fluted': ALL, '31-contact': ALL, '32-dieline': ALL,
   '25-label': ['slides', 'guide'],
   '27-swissfield': ['slides', 'guide'],
+  '33-flyleaf': ['slides', 'guide'],
 }
 
 test('no theme loses or gains a row against the snapshot of today', () => {

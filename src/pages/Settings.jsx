@@ -520,7 +520,7 @@ function PasswordChange({ onSave, googleOnly, onReset }) {
         </div>
       </form>
       {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
-      {success && <div className="settings-field-ok" role="status">Password updated successfully</div>}
+      {success && <div className="settings-field-ok" role="status">Password updated</div>}
       <div className="settings-reset">
         <button type="button" className="settings-linkbtn" onClick={sendReset} disabled={resetState === 'sending'}>
           {resetState === 'sending' ? 'Sending…' : 'Email me a password reset link'}
@@ -1289,7 +1289,7 @@ export default function Settings({ toast }) {
         // projects were missing from the file that said it was their data.
         const read = (snap) => (snap.status === 'fulfilled'
           ? (snap.value.exists() ? snap.value.data() : null)
-          : { error: 'Could not be read — please try again or contact support.' })
+          : { error: 'Could not be read. Try again or contact support.' })
         const [profileSnap, syncSnap, librarySnap, projectsSnap] = await Promise.allSettled([
           getDoc(doc(db, 'users', user.uid)),
           getDoc(doc(db, 'users', user.uid, 'sync', 'data')),

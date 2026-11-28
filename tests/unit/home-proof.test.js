@@ -1,18 +1,15 @@
 // THE PROOF BAR: WHERE ITS FOUR FIGURES COME FROM.
 //
-// Every figure is a fact about the product, counted, never typed. Three are the
-// sizes of the Discover palettes, the Discover gradients and the Icon Library's
-// sets (PROOF_STATS). The fourth is the tool count beside the total of the
-// bookmarks section's four folders. The product measures no usage, so no figure
-// may claim anything about other people.
+// Three of the figures are placeholders that ship on purpose, so they live in
+// one array (STATS) and nowhere else, and real counts replace them in one edit.
+// The fourth is a fact about the product: the tool count, and the total of the
+// bookmarks section's four folders. Neither of those may be typed.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 import { TOOL_COUNT } from '../../src/components/spectrum/spectrumFacts.js'
 import { BOOKMARK_COUNT, BOOKMARK_FOLDERS } from '../../src/components/home/bookmarkFolders.js'
 import { PROOF_ROWS, STATS } from '../../src/components/home/proofStats.js'
-import { PROOF_STATS } from '../../src/components/spectrum/spectrumFacts.js'
-import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
 
 const SRC = {
   stats: stripComments(read('src/components/home/proofStats.js')),
@@ -25,28 +22,27 @@ test('the stripper still works, so every source read below can be trusted', () =
   assertStripperWorks(assert)
 })
 
-const FREE_PACKS = Object.values(ICON_PACK_TIERS).filter((p) => p.tier !== 'paid').length
-
-test('the three library counts are the ones PROOF_STATS counts, with no usage claim', () => {
-  assert.deepEqual(STATS, PROOF_STATS.slice(1).map(({ value, label }) => ({ n: value, label })))
+test('the three placeholder counts are exactly the ones that ship, in one array', () => {
+  assert.deepEqual(STATS.map((s) => s.n), [186, 540, 72])
   assert.deepEqual(STATS.map((s) => s.label), [
-    'palettes in the Discover library',
-    'gradients in the Discover library',
-    `icon sets in the Icon Library, ${FREE_PACKS} on the free plan`,
+    'people have opened a tool since launch',
+    'palettes, type scales and icon sets exported',
+    'projects saved to come back to',
   ])
-  assert.ok(FREE_PACKS < Object.keys(ICON_PACK_TIERS).length, 'some icon sets are Pro, so the label must say how many are free')
-  for (const s of STATS) assert.ok(Number.isInteger(s.n) && s.n > 0, `${s.label} has no count`)
-  for (const s of PROOF_ROWS) {
-    assert.doesNotMatch(s.label, /people|since launch|exported|saved|users|visitors/i, `"${s.label}" claims usage the product does not measure`)
-  }
 })
 
-test('no count is typed in proofStats.js or HomeProof.jsx', () => {
-  // Mutation: type a number back into STATS, e.g. `{ n: 186, label: ... }`.
-  assert.doesNotMatch(SRC.stats, /\bn:\s*\d/, 'proofStats.js types a figure')
-  assert.match(SRC.stats, /PROOF_STATS\.slice\(1\)/)
+test('the three counts live only in STATS', () => {
+  // proofStats.js types each count once, inside the STATS array.
+  const word = (n, flags) => new RegExp(`\\b${n}\\b`, flags)
   for (const n of STATS.map((s) => s.n)) {
-    assert.ok(!new RegExp(`\b${n}\b`).test(SRC.proof), `HomeProof.jsx types ${n}`)
+    const typed = [...SRC.stats.matchAll(word(n, 'g'))]
+    assert.equal(typed.length, 1, `${n} is typed ${typed.length} times in proofStats.js; it should appear once, in STATS`)
+    const statsBlock = /export const STATS = \[[\s\S]*?\n\]/.exec(SRC.stats)
+    assert.ok(statsBlock && word(n).test(statsBlock[0]), `${n} is typed outside the STATS array`)
+  }
+  // The component and the stylesheet hold no copy of them.
+  for (const n of STATS.map((s) => s.n)) {
+    assert.ok(!word(n).test(SRC.proof), `HomeProof.jsx types ${n}`)
   }
   assert.ok(SRC.proof.includes('PROOF_ROWS.map'), 'HomeProof.jsx no longer renders the rows from proofStats.js')
 })

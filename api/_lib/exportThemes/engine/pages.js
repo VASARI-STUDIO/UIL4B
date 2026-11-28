@@ -42,10 +42,10 @@ export const UIKIT_PAGES = [
 ];
 
 // The style guide: a short A4 portrait booklet (the `guide` row). A theme implements guide[id]; there are no sections. A theme may set the whole
-// order (guide.order(edition) gives every id) or add pages after the seven (guide.extra(edition)).
+// order (guide.order(edition, ctx) gives every id; ctx.skeleton is for a theme with a shorter edition) or add pages after the seven (guide.extra(edition)).
 export const STYLE_PAGES = [g('cover', 'Cover'), g('logo', 'Logo'), g('colour', 'Colour'), g('type', 'Type'), g('contrast', 'Contrast'), g('tokens', 'Tokens'), g('usage', 'Usage')];
 export const STYLE_PAGE_SIZE = { w: 794, h: 1123 };   // A4 portrait at 96 dpi
-export const guideOrder = (T, edition) => (typeof T.guide?.order === 'function' ? T.guide.order(edition) : [...STYLE_PAGES.map((p) => p.id), ...(typeof T.guide?.extra === 'function' ? T.guide.extra(edition) : [])]);
+export const guideOrder = (T, edition, ctx) => (typeof T.guide?.order === 'function' ? T.guide.order(edition, ctx) : [...STYLE_PAGES.map((p) => p.id), ...(typeof T.guide?.extra === 'function' ? T.guide.extra(edition) : [])]);
 
 // Pages whose output differs between the slot and showcase editions (get a `-slot` canvas board).
 export const LOGO_DEPENDENT = ['cover', 'logo', 'logo-versions', 'clear-space', 'min-size', 'logo-grounds', 'logo-misuse', 'social', 'signage', 'email-signature', 'digital', 'summary'];
@@ -58,7 +58,7 @@ export function numberPages(list, extra = {}) {
 }
 
 // Themes whose pages read brand copy only through esc(), so slot-edition placeholders can reach them; the rest keep the sample copy until they are moved over.
-const PH_THEMES = new Set(['02', '04', '05', '07', '08', '21', '24', '29', '30', '32']);
+const PH_THEMES = new Set(['02', '04', '05', '07', '08', '21', '24', '29', '30', '32', '33']);
 
 // A theme names the shots of the sample brand it was written for. A brand without one of those ids gets the shot at the same
 // position in the sample's list (wrapping when the brand has fewer), so a brand with any shots fills every frame.
@@ -77,7 +77,8 @@ function fallbackShots(ctx, T) {
 // The context a theme renders from: the brand loaded and measured, its logo and components, the page list with numbers
 // and section references. T is the theme module, kind 'guidelines' or 'uikit', loaders the reads the engine may make
 // (fontFile, icon, logoPlugin). data is the brand's data; it defaults to the sample brand the theme is written for.
-export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].data) {
+// opts.skeleton (a plan that is not Pro, set by the route and never read from a request) sets ctx.skeleton: a theme with a shorter edition for it draws that one.
+export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].data, opts = {}) {
   // a theme may re-tone a status of the slot edition's generated brand (meta.statusTones { id: tone }): the brand's own action colour can be a
   // green beside the house success green, and two chips of one hue family read as one status. A tone named there that has a house default
   // (info) is the house one: the generated brand's information colour takes the primary's hue, which for a green brand is another green.
@@ -89,7 +90,7 @@ export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].d
     data = { ...data, ui: { ...data.ui, light: strip(data.ui.light), dark: strip(data.ui.dark), status: data.ui.status.map((s) => (tones[s.id] && !s.fg ? { ...s, tone: tones[s.id] } : s)) } };
   }
   const ctx = loadBrand(data, loaders);
-  ctx.edition = edition; ctx.theme = T.meta; ctx.kind = kind;
+  ctx.edition = edition; ctx.theme = T.meta; ctx.kind = kind; ctx.skeleton = opts.skeleton === true;
   ctx.logo = makeLogo(ctx); ctx.ui = makeUi(ctx);
   addMockups(ctx, T);
   const list = kind === 'uikit' ? UIKIT_PAGES : kind === 'guide' ? STYLE_PAGES : GUIDE_PAGES;
@@ -99,7 +100,7 @@ export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].d
   const own = kind === 'guide' ? {} : pageSizeMap(T.meta);
   ctx.pageSizes = own; ctx.sizeOf = (id) => own[id] || ctx.size; ctx.maxSize = largestSize(ctx.size, own);
   // a guide theme's own order numbers the pages by reading order; its extras follow the seven
-  if (kind === 'guide') { if (typeof T.guide?.order === 'function') guideOrder(T, edition).forEach((id, i) => { nos[id] = i + 1; }); else guideOrder(T, edition).slice(list.length).forEach((id, i) => { nos[id] = list.length + 1 + i; }); }
+  if (kind === 'guide') { if (typeof T.guide?.order === 'function') guideOrder(T, edition, ctx).forEach((id, i) => { nos[id] = i + 1; }); else guideOrder(T, edition, ctx).slice(list.length).forEach((id, i) => { nos[id] = list.length + 1 + i; }); }
   ctx.pageNo = (id) => nos[id];
   fallbackShots(ctx, T);
   ctx.pages = list.map((p) => ({ ...p, no: nos[p.id] }));

@@ -111,6 +111,53 @@ export function summariseLockedMatches({
 }
 
 /**
+ * May a signed-out visitor be shown (and fetch the drawing of) a match from
+ * this pack in the free row? Only packs in the table's 'free' tier: never a
+ * blocked set, never an animated one (its drawings come only through the
+ * server's Pro check), never a Pro or brand pack.
+ */
+export function isFreeRowPack(pack) {
+  return tierOf(pack) === 'free' && !isBlockedPack(pack) && !isAnimatedPack(pack)
+}
+
+/**
+ * The matches for the signed-out free row: `{ id, pack, name }` for icons in
+ * free-tier packs from the locked-pack probe, spread round-robin across packs
+ * so one big set does not fill the row. At most `max`. Names only; the drawing
+ * of each is asked for later, and only for the ones the row shows.
+ *
+ *   probeIds  the ids the probe returned ('pack:name').
+ *   probed    the packs that probe asked about; an id from any other pack is dropped.
+ *   accept    (pack, name) => boolean, the grid's weight filter.
+ */
+export function freeRowCandidates({ probeIds = [], probed = [], accept = () => true, max = 24 } = {}) {
+  const asked = new Set(probed)
+  const seen = new Set()
+  const queues = new Map()
+  for (const id of Array.isArray(probeIds) ? probeIds : []) {
+    if (typeof id !== 'string' || seen.has(id)) continue
+    const at = id.indexOf(':')
+    const pack = id.slice(0, at)
+    const name = id.slice(at + 1)
+    if (at < 1 || !name || !asked.has(pack) || !isFreeRowPack(pack) || isProOnlyIcon(pack, name) || !accept(pack, name)) continue
+    seen.add(id)
+    if (!queues.has(pack)) queues.set(pack, [])
+    queues.get(pack).push({ id, pack, name })
+  }
+  const lists = [...queues.values()]
+  const out = []
+  for (let round = 0; out.length < max; round++) {
+    let progressed = false
+    for (const list of lists) {
+      if (out.length >= max) break
+      if (list[round]) { out.push(list[round]); progressed = true }
+    }
+    if (!progressed) break
+  }
+  return out
+}
+
+/**
  * The tier the one way in has to reach. Any match that needs Pro makes it Pro,
  * because an account alone would not open them all; only when every match is
  * account-tier does a login do.

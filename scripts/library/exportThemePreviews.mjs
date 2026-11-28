@@ -203,7 +203,9 @@ export async function writePreviews(themeIds, { tmp, quality = 0.8 } = {}) {
         try {
           await pg.goto(href(path.join(dir, folder, htmlName)))
           await pg.evaluate(() => document.fonts.ready)
-          for (const [key, pageId] of Object.entries(shots)) {
+          for (const [key, shot] of Object.entries(shots)) {
+            // A theme that names a page differently says so in its previewId map.
+            const pageId = T.previewId?.[shot] ?? shot
             const el = pg.locator(`.pg[data-page="${pageId}"]`)
             if (await el.count() !== 1) { problems.push(`${id} ${key}: page "${pageId}" is not in the ${kind} document (the theme left it out)`); continue }
             const box = await el.boundingBox()
@@ -224,7 +226,8 @@ export async function writePreviews(themeIds, { tmp, quality = 0.8 } = {}) {
         await shootPages(kit, 'ui-kit.html', 'uikit', KIT_PAGE, 'UI kit')
       }
 
-      // The brand book: its first screen at 1424 x 606, light.
+      // The brand book: its first screen at 1424 x 606, light. A theme without a book row has none.
+      if (!entryHasRow(entry, 'book')) continue
       const book = await filesOf(renderThemeExport, engine, state, id, 'book', 'html')
       writeFolder(path.join(dir, 'book'), book)
       scan('book', String(book['index.html']))

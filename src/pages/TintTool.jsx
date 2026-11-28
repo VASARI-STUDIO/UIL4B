@@ -584,7 +584,7 @@ export default function TintTool({ onCopy, toast }) {
       .map(normaliseHex)
       .filter((c) => c && !seen.has(c) && seen.add(c))
       .slice(0, MAX_SOURCES)
-    if (!cols.length) { toast?.('No palette to import yet — build one in the Palette tool first.'); return }
+    if (!cols.length) { toast?.('No palette to import yet. Build one in the Palette tool first.'); return }
     const next = cols.map(mkSource)
     setSources(next)
     setSelectedId(next[0].id)

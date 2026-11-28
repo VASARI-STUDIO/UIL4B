@@ -34,14 +34,14 @@ export default function AddPromptPanel({ open, onClose, onAdd, toast, t }) {
     const picked = fileInput?.files?.[0]
     // Guard localStorage: a large file becomes a ~33%-bigger base64 string.
     if (picked && picked.size > 4 * 1024 * 1024) {
-      toast('That file is too large to attach — saving the prompt text only.')
+      toast('That file is too large to attach. Saving the prompt text only.')
       return finish(prompt)
     }
     // If a FileReader can't read the file, still save the text rather than hang.
     const readFallback = (file) => {
       const reader = new FileReader()
       reader.onload = (e) => { prompt.img = e.target.result; finish(prompt) }
-      reader.onerror = () => { toast('Could not read the file — saving the prompt text only.'); finish(prompt) }
+      reader.onerror = () => { toast('Could not read the file. Saving the prompt text only.'); finish(prompt) }
       reader.readAsDataURL(file)
     }
     if (picked && picked.type.startsWith('image/')) {

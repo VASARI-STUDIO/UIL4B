@@ -268,7 +268,7 @@ export default function AltTextGenerator({ toast }) {
     // check said they were fine — and the server's refusal then read as a
     // generic error. quota.blocked covers both, and quota.message names which.
     if (quota.blocked || !canUseFeature(ALT_TEXT_TOOL_ID, dailyLimit)) {
-      const why = quota.message || 'Daily limit reached — resets at 00:00 UTC'
+      const why = quota.message || 'Daily limit reached. Resets at 00:00 UTC'
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: why } : p))
       toast?.(why)
       return false

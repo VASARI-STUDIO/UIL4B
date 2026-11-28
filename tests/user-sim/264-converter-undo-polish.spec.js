@@ -221,7 +221,7 @@ test.describe('Image tab polish at 1440', () => {
     await expect(page.locator('.fc-outsize-cap')).toHaveText('held to the size limit')
     const cut = await size.evaluate((el) => [...el.querySelectorAll('*'), el].filter((n) => n.scrollWidth > n.clientWidth + 1).map((n) => n.className))
     expect(cut, 'nothing inside the Size limit button is cut off').toEqual([])
-    expect(await size.textContent()).toContain('Full HD — 1920 px')
+    expect(await size.textContent()).toContain('Full HD (1920 px)')
 
     await chooseMenuOption(page, size, 0)
     await expect(page.locator('.fc-outsize-cap')).toHaveText('')

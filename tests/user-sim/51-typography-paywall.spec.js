@@ -171,7 +171,7 @@ test.describe('Typography: browsing stays free under every view', () => {
 
     expect(missed, 'categories the gallery did not offer').toEqual([])
 
-    for (const sort of ['Popular', 'A–Z', 'Most weights']) {
+    for (const sort of ['Popular', 'A to Z', 'Most weights']) {
       if (!(await chooseFilter(page, 'Sort', sort))) continue
       drove += 1
       await page.waitForTimeout(300)
