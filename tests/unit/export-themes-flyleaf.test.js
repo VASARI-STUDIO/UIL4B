@@ -211,3 +211,20 @@ test('a Flyleaf export never prints a pangram as the brand headline or sample', 
     }
   }
 })
+
+// THE UI STYLE GUIDE: 13 A4 pages on Pro and 7 on Free, in the theme's order; the dialog's older guide ids preview a real page.
+// Break: drop guidePreviewId from themes/33-flyleaf/index.js, or the guide map in exportThemeRoute.js pagesDoc.
+test('the Flyleaf style guide draws 13 pages on Pro, 7 on Free, and every older guide id previews a page', async () => {
+  const { renderThemeExport, renderThemePage } = await import('../../api/_lib/exportThemeRoute.js')
+  const E = await loadEngine()
+  const ids = async (skeleton) => {
+    const { html } = await renderThemeExport({ theme: '33-flyleaf', row: 'guide', format: 'pdf', design: {}, projectName: 'Kerbside', skeleton }, E)
+    return [...html.matchAll(/<section[^>]*data-page="([^"]+)"/g)].map((m) => m[1])
+  }
+  assert.deepEqual(await ids(false), ['cover', 'contents', 'screen', 'dark', 'roles', 'tints', 'type', 'buttons', 'fields', 'feedback', 'overlays', 'space', 'handoff'])
+  assert.deepEqual(await ids(true), ['cover', 'screen', 'roles', 'type', 'buttons', 'fields', 'handoff'])
+  for (const page of ['cover', 'interface', 'colour', 'contrast', 'type', 'components', 'icons']) {
+    const { html } = await renderThemePage({ theme: '33-flyleaf', kind: 'guide', page, design: {}, projectName: 'Kerbside' }, E)
+    assert.match(html, /<section[^>]*data-page="/, `the guide preview for ${page} draws a page`)
+  }
+})

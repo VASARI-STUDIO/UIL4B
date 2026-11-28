@@ -98,8 +98,10 @@ function pagesDoc(E, T, ctx, kind, standalone, only) {
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
   // `only` is one page id: the preview draws a single page and not the whole document. A theme with a page list of its own
   // (T.order(kind, ctx), which reads ctx.skeleton for the Free edition) names its ids, and T.previewId maps an engine id to one of them.
+  // The style guide has page ids of its own, so a theme may give it its own map (T.guidePreviewId); the brand map never applies there.
   const own = typeof T.order === 'function' ? T.order(kind, ctx) : null
-  const want = only === undefined ? undefined : (T.previewId && T.previewId[only]) || only
+  const map = kind === 'guide' && T.guidePreviewId ? T.guidePreviewId : T.previewId
+  const want = only === undefined ? undefined : (map && map[only]) || only
   const list = (own ? own.map((id) => ({ id })) : kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES).filter((p) => want === undefined || p.id === want)
   // A theme draws only the pages it has written (a guidelines-only theme has twelve); the engine's list keeps their order.
   // A page whose layout cannot hold this brand's words (a theme checks every fit and throws) is left out rather than failing the
