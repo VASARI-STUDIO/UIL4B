@@ -3409,7 +3409,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   setToolsIdx(cur => (cur === i ? null : i))
                 }}
                 onContextMenu={(e) => {
-                  if (isOnLink(e.target)) return
+                  // The browser's menu stays on links, fields (paste, spellcheck),
+                  // the panels opened from the swatch, selected text, and on
+                  // Shift+right-click.
+                  if (isOnLink(e.target) || e.shiftKey) return
+                  if (e.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), .plb-pop')) return
+                  if (String(window.getSelection?.() || '').trim()) return
                   e.preventDefault()
                   ctxTriggerRef.current = e.currentTarget.querySelector('.plb-tool--more')
                   setTintsIdx(null); setPickerIdx(null)
