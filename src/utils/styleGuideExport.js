@@ -227,7 +227,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
     <dt>Scale</dt><dd>${d.baseSize}px · ${d.ratio}</dd>
     <dt>Generated</dt><dd>${date.toISOString().slice(0, 10)}</dd>
   </dl>
-  <div class="foot"><span>${esc(projectName)} | Style Guide</span><span>${watermark ? 'Made with UI L4B' : ''}</span></div>
+  <div class="foot"><span>${esc(projectName)} | Style Guide</span><span>${watermark ? 'Made with UIL4B' : ''}</span></div>
 </section>
 
 <section class="page">
@@ -236,7 +236,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
   <p class="lede">Each colour with the text colour that reads on it and its contrast ratio.</p>
   ${d.palette.length ? `<div class="sw-grid">${d.palette.map(swatch).join('')}</div>` : '<p class="note">No colours saved yet. Build a palette and export again.</p>'}
   <div class="note"><strong>How to read this.</strong> Ratios follow WCAG 2.2 1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. A swatch marked Fail is a fill, not a text colour.</div>
-  <div class="foot"><span>Colour</span><span>${watermark ? 'Made with UI L4B' : '2'}</span></div>
+  <div class="foot"><span>Colour</span><span>${watermark ? 'Made with UIL4B' : '2'}</span></div>
 </section>
 
 <section class="page">
@@ -248,7 +248,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
     <tbody>${ladder.map(typeRow).join('')}</tbody>
   </table>
   <div class="note"><strong>Line height</strong> ${d.lineHeight} on body copy. Headings 1.1.</div>
-  <div class="foot"><span>Typography</span><span>${watermark ? 'Made with UI L4B' : '3'}</span></div>
+  <div class="foot"><span>Typography</span><span>${watermark ? 'Made with UIL4B' : '3'}</span></div>
 </section>
 
 <section class="page">
@@ -260,7 +260,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
     <tbody>${pairs || '<tr><td colspan="3">No colours saved yet.</td></tr>'}</tbody>
   </table>
   <div class="note">Ratios use the WCAG 2.2 relative-luminance formula.</div>
-  <div class="foot"><span>Evidence</span><span>${watermark ? 'Made with UI L4B | uil4b.com' : '4'}</span></div>
+  <div class="foot"><span>Evidence</span><span>${watermark ? 'Made with UIL4B | uil4b.com' : '4'}</span></div>
 </section>
 
 </body>

@@ -56,14 +56,14 @@ test('a free kit carries the attribution, the watermark and the publisher links,
   const { html } = render(NAMED, { tier: 'free', logo: { src: 'data:image/png;base64,AAAA' } })
   assert.match(html, /<span class="section-watermark">Made with <a class="publisher-link" href="https:\/\/uil4b\.com\/"/)
   assert.ok((html.match(/class="section-watermark"/g) || []).length >= 7, 'every section ends with the mark')
-  assert.match(html, /@bottom-left \{ content:"Made with UI L4B \/ Free UI kit"/, 'print margin credit')
+  assert.match(html, /@bottom-left \{ content:"Made with UIL4B \/ Free UI kit"/, 'print margin credit')
   assert.match(html, /<div class="free-notice">/)
   assert.match(html, /<aside class="site-links">[\s\S]*href="https:\/\/uil4b\.com\/create\/palette"/)
   assert.match(html, /<span class="edition">Free edition<\/span>/)
   const data = dataOf(html)
   assert.equal(data.brand.tier, 'free')
-  assert.match(data.json, /Made with UI L4B/, 'the JSON tokens carry the credit')
-  assert.match(data.cssCredit, /Made with UI L4B · Free UI kit/, 'the CSS download carries the credit')
+  assert.match(data.json, /Made with UIL4B/, 'the JSON tokens carry the credit')
+  assert.match(data.cssCredit, /Made with UIL4B · Free UI kit/, 'the CSS download carries the credit')
   // Nothing personal: no identity section, no name, no logo, not even in the data.
   assert.ok(!html.includes('class="chapter personal-identity"'))
   assert.ok(!html.includes('Harbour'), 'the project name reached a free kit')
@@ -75,7 +75,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
   const logo = { src: 'data:image/png;base64,iVBORw0KGgo=' }
   const { html, filename } = render(NAMED, { tier: 'pro', logo })
   // Markup, not class names: the stylesheet still defines every class.
-  for (const marker of ['class="section-watermark"', 'class="free-notice"', 'class="site-links"', 'class="publisher-link"', 'Made with UI L4B', 'uil4b.com']) {
+  for (const marker of ['class="section-watermark"', 'class="free-notice"', 'class="site-links"', 'class="publisher-link"', 'Made with UIL4B', 'uil4b.com']) {
     assert.ok(!html.includes(marker), `a Pro kit still carries ${marker}`)
   }
   assert.match(html, /@page \{ @bottom-right/, 'Pro keeps page numbers only')
@@ -85,7 +85,7 @@ test('a pro kit has none of the attribution, and shows the identity it was given
   assert.ok(html.includes(`<img src="${logo.src}" alt="Harbour logo">`))
   assert.match(html, /<span class="pro-title">Harbour<\/span>/)
   assert.equal(filename, 'harbour-ui-kit.html')
-  assert.ok(!/Made with UI L4B/.test(dataOf(html).json))
+  assert.ok(!/Made with UIL4B/.test(dataOf(html).json))
   assert.equal(dataOf(html).cssCredit, '')
 
   // A name with no description keeps the template's own line.
@@ -230,7 +230,7 @@ test('the export panel offers the kit as a free format, and the plan lines say s
   assert.ok(freeFormats().includes(kit))
   assert.ok(!styleGuideFormats().includes(kit))
   assert.ok(FREE_POINTS.some((l) => l.includes('UI kit')), 'the Free card no longer names the UI kit')
-  assert.ok(PRO_POINTS.some((l) => /no “Made with UI L4B” line on anything/.test(l)), 'Pro no longer says the “Made with UI L4B” line comes off')
+  assert.ok(PRO_POINTS.some((l) => /no “Made with UIL4B” line on anything/.test(l)), 'Pro no longer says the “Made with UIL4B” line comes off')
   // The dialog gives the kit its own free sub-category under the UI rail, with one file.
   const ui = EXPORT_TYPES.find((t) => t.id === 'ui')
   assert.deepEqual(ui?.categories.filter((c) => c.id === 'kit').map((c) => [c.id, c.pro, c.files]), [['kit', false, ['kit']]], 'the kit is not a free sub-category of its own')
@@ -359,7 +359,7 @@ test('a free kit is titled with the project name and saved under it, and keeps t
   const data = dataOf(html)
   assert.match(data.css, /Lumen: design tokens/)
   assert.ok(data.css.indexOf('Lumen') < 200 && !data.css.startsWith('/* Made'), 'the CSS download opens with the project, not the credit')
-  assert.match(data.cssCredit, /Made with UI L4B/, 'the credit is kept')
+  assert.match(data.cssCredit, /Made with UIL4B/, 'the credit is kept')
   assert.ok(!/Download selected font styles separately/.test(html), 'the stray instruction opens no download')
   // The description and logo are still Pro: a free kit reads neither.
   const named = render({ ...DESIGN, identity: IDENTITY }, { tier: 'free', ...LUMEN, logo: { src: 'data:image/png;base64,AAAA' } })

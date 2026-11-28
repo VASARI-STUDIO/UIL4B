@@ -214,7 +214,7 @@ export const PRO_POINTS = [
   `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
   EXPORTS.proNames,
   'Unlimited saved projects and custom icons',
-  'Style guides with no “Made with UI L4B” line',
+  'Style guides with no “Made with UIL4B” line',
 ]
 
 export const COMPARE = [
@@ -225,7 +225,7 @@ export const COMPARE = [
   { group: 'YOUR WORK', label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
   { label: 'Icons per project', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
   { label: 'Style guide exports', free: EXPORTS.freeNames, pro: `${EXPORTS.freeNames}, plus ${EXPORTS.proNames}` },
-  { label: 'Export mark', free: '“Made with UI L4B” line', pro: 'Removed' },
+  { label: 'Export mark', free: '“Made with UIL4B” line', pro: 'Removed' },
 ]
 
 /* ── The reassurance row ──────────────────────────────────────────────────── */
@@ -327,6 +327,6 @@ export const FAQS = [
   },
   {
     q: 'Which export formats can I actually get?',
-    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UI L4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length === 1 ? `One more format (${EXPORTS.unbuiltNames}) is` : `${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are`} listed in the export panel as Soon: not built, so nobody has it and Pro does not sell it.`,
+    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length === 1 ? `One more format (${EXPORTS.unbuiltNames}) is` : `${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are`} listed in the export panel as Soon: not built, so nobody has it and Pro does not sell it.`,
   },
 ]
