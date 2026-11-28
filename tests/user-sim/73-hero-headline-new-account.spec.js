@@ -267,6 +267,9 @@ test.describe('a new account starts empty', () => {
     await signIn(page, { plan: 'free', projects: 0 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
+    // The sheet replaces the page's loading state once the account's (empty) project list
+    // arrives, so the outline is read only once its heading is there.
+    await expect(page.locator('.db-sheet h2'), 'the empty-state sheet never replaced the loading state').toBeVisible({ timeout: 15000 })
 
     const outline = await page.evaluate(() =>
       [...document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6')]
