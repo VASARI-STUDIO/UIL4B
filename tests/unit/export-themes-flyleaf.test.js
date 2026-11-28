@@ -198,3 +198,16 @@ test('every Flyleaf zip that carries DM Mono carries its licence beside it', asy
     assert.ok(names.some((n) => n.endsWith('assets/fonts/DMMono-OFL.txt')), `${row}: DM Mono ships without its licence`)
   }
 })
+
+// NO PANGRAM AS BRAND COPY: the type samples are the user's to write, so a slot render shows the designed placeholder, never a pangram.
+// Break: return a pangram for type.sample.* in themes/33-flyleaf/real-copy.js.
+test('a Flyleaf export never prints a pangram as the brand headline or sample', async () => {
+  const { renderThemeExport } = await import('../../api/_lib/exportThemeRoute.js')
+  const E = await loadEngine()
+  for (const page of ['16x9', 'a4-portrait']) for (const skeleton of [false, true]) {
+    const { html } = await renderThemeExport({ theme: '33-flyleaf', row: 'slides', format: 'pdf', design: {}, projectName: 'Kerbside', page, skeleton }, E)
+    for (const p of ['five dozen liquor jugs', 'quick brown fox', 'vexingly quick daft zebras', 'black quartz, judge my vow']) {
+      assert.ok(!html.toLowerCase().includes(p), `${page} ${skeleton ? 'Free' : 'Pro'} prints "${p}"`)
+    }
+  }
+})

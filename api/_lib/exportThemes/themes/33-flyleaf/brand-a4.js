@@ -257,7 +257,7 @@ export const a4 = {
     const rows = cs.map((c, i) => {
       const y = e.y + 26 + i * rh, v = [own(ctx, c.name), own(ctx, c.roleText), c.hex.toUpperCase(), hexToRgb(c.hex).join(' '), hslOf(c.hex).join(' '), hasCmyk && Array.isArray(c.cmyk) ? c.cmyk.join(' ') : ''];
       return at(e.x, y + rh / 2 - 11, 24, 22, '', { style: `background:${c.hex};border:.5px solid ${hair}` })
-        + v.slice(0, widths.length).map((s, j) => at(xs[j] + (j === 0 ? 36 : 0), y + rh / 2 - 8, cw[j] - (j === 0 ? 38 : 4), 18, j === 0 ? `<span class="b" style="font-size:14.5px;white-space:nowrap">${s}</span>` : `<span class="m${j === 2 ? ' i' : ''}" style="${j === 1 ? 'white-space:nowrap' : ''}">${s}</span>`)).join('') + hr(e.x, y + rh, e.w);
+        + v.slice(0, widths.length).map((s, j) => at(xs[j] + (j === 0 ? 36 : 0), y + rh / 2 - (j === 0 ? 17 : 8), cw[j] - (j === 0 ? 38 : 4), j === 0 ? 34 : 18, j === 0 ? `<span class="b" style="font-size:14.5px;line-height:1.15;display:flex;align-items:center;height:34px">${s}</span>` : `<span class="m${j === 2 ? ' i' : ''}" style="${j === 1 ? 'white-space:nowrap' : ''}">${s}</span>`)).join('') + hr(e.x, y + rh, e.w);
     }).join('');
     const by = e.y + 26 + cs.length * rh + 40, bh = K.H - by - (ctx.skeleton ? 76 : 0);
     const tot = cs.reduce((a, c) => a + (c.share || 1), 0), fl = cs.map((c) => Math.max((c.share || 1) / tot, 0.1)), ft = fl.reduce((a, b) => a + b, 0);

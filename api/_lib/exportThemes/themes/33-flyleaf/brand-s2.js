@@ -53,7 +53,7 @@ const SX = 427; // the specimen area starts here (640 on the 1920 spec)
 export const guidelines = {
   cover: wide('cover', (ctx) => {
     const K = geo(ctx), G = groundsOf(ctx), M = measure(ctx), name = realOf(ctx, ctx.brand.name), stand = standIn(ctx);
-    const px = 768, room = px - K.L, size = Math.max(64, M.fit(name, room * 1.12, 330)), base = K.H - 68;
+    const px = 768, room = px - K.L, size = Math.max(64, M.fit(name, room * 1.03, 330)), base = K.H - 68;
     const ph = (ctx.placeholders && ctx.placeholders.entries.find((e) => e.path === 'name')) || null;
     const note = stand && ph ? `<span class="m">${ctx.esc(ph.label)}, ${ctx.esc(ph.length)}</span>` : '';
     // the name is drawn first and the photograph (or the leaf) over it, so the name runs on under the edge

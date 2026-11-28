@@ -20,7 +20,7 @@ export const guidelines = {
     const rows = cs.map((c, i) => {
       const y = e.y + 26 + i * rh, v = [own(ctx, c.name), own(ctx, c.roleText), c.hex.toUpperCase(), hexToRgb(c.hex).join(' '), hslOf(c.hex).join(' '), hasCmyk && Array.isArray(c.cmyk) ? c.cmyk.join(' ') : ''];
       return at(e.x, y + rh / 2 - 12, 28, 24, '', { style: `background:${c.hex};border:.5px solid ${hair}` })
-        + v.slice(0, widths.length).map((s, j) => at(xs[j] + (j === 0 ? 40 : 0), y + rh / 2 - 9, cw[j] - (j === 0 ? 44 : 8), 18, j === 0 ? `<span class="b" style="font-size:${K.body + 1}px;white-space:nowrap">${s}</span>` : `<span class="m${j === 2 ? ' i' : ''}">${s}</span>`)).join('')
+        + v.slice(0, widths.length).map((s, j) => at(xs[j] + (j === 0 ? 40 : 0), y + rh / 2 - (j === 0 ? 18 : 9), cw[j] - (j === 0 ? 44 : 8), j === 0 ? 36 : 18, j === 0 ? `<span class="b" style="font-size:${K.body + 1}px;line-height:1.15;display:flex;align-items:center;height:36px">${s}</span>` : `<span class="m${j === 2 ? ' i' : ''}">${s}</span>`)).join('')
         + hr(e.x, y + rh, e.w);
     }).join('');
     const bx = e.x + e.w + 40, bwid = K.W - K.R - bx, top = K.y0 + 4, bh = K.y1 - top;
