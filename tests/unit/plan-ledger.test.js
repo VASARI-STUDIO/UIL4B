@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { addMonth, buildLedger, shortDate } from '../../src/utils/planLedger.js'
 
 const money = (n) => `US$${n}`
-const base = { locale: 'en-AU', money }
+const base = { locale: 'en-GB', money }
 
 test('yearly: trial starts today, reminder 3 days before the first charge, first charge on day 7', () => {
   const l = buildLedger({ ...base, months: 12, trialDays: 7, total: 48, now: new Date(2026, 11, 2) })
@@ -35,14 +35,14 @@ test('monthly: Pro starts today and the next charge is one calendar month on', (
 })
 
 test('a month-end date lands on the last day of the next month', () => {
-  assert.equal(shortDate(addMonth(new Date(2026, 0, 31)), 'en-AU'), '28 Feb')
-  assert.equal(shortDate(addMonth(new Date(2028, 0, 31)), 'en-AU'), '29 Feb')
-  assert.equal(shortDate(addMonth(new Date(2026, 7, 31)), 'en-AU'), '30 Sep')
-  assert.equal(shortDate(addMonth(new Date(2026, 11, 31)), 'en-AU'), '31 Jan')
+  assert.equal(shortDate(addMonth(new Date(2026, 0, 31)), 'en-GB'), '28 Feb')
+  assert.equal(shortDate(addMonth(new Date(2028, 0, 31)), 'en-GB'), '29 Feb')
+  assert.equal(shortDate(addMonth(new Date(2026, 7, 31)), 'en-GB'), '30 Sep')
+  assert.equal(shortDate(addMonth(new Date(2026, 11, 31)), 'en-GB'), '31 Jan')
 })
 
 test('amounts go through the money function, never a fixed figure', () => {
   const yen = (n) => `¥${n * 100}`
-  const l = buildLedger({ locale: 'en-AU', money: yen, months: 12, trialDays: 7, total: 3, now: new Date(2026, 0, 1) })
+  const l = buildLedger({ locale: 'en-GB', money: yen, months: 12, trialDays: 7, total: 3, now: new Date(2026, 0, 1) })
   assert.deepEqual(l.rows.map((r) => r.amount), ['¥0', '', '¥300'])
 })
