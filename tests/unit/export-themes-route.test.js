@@ -58,7 +58,7 @@ const body = (over = {}) => ({ theme: '04-standards', row: 'ui-kit', format: 'zi
 // A free theme (guidelines-only, rows: ['slides']) is free in every row it has.
 const FREE_THEMES = EXPORT_THEMES.filter((t) => t.free).map((t) => t.id)
 
-test('Free: the UI kit in the free UI kit themes and every row of a free theme are served, everything else is pro_required', async () => {
+test('Free: the UI kit in the free UI kit themes, every row of a free theme and the free edition of the guidelines and style guide of a Pro theme are served, everything else is pro_required', async () => {
   for (const theme of EXPORT_THEMES.map((t) => t.id)) {
     for (const [row, formats] of Object.entries(THEME_ROW_FORMATS)) {
       if (!themeHasRow(theme, row)) continue
@@ -67,8 +67,9 @@ test('Free: the UI kit in the free UI kit themes and every row of a free theme a
         const res = await ask('tok-free', body({ theme, row, format }), { engine: stub })
         const free = FREE_THEMES.includes(theme) || (row === 'ui-kit' && FREE_UI_KIT_THEMES.includes(theme))
         assert.equal(isThemeExportPro(row, theme), !free)
-        assert.equal(res.code, free ? 500 : 403, `${theme} ${row} ${format}`)
-        if (!free) assert.equal(res.body.code, 'pro_required')
+        const served = free || row === 'slides' || row === 'guide'
+        assert.equal(res.code, served ? 500 : 403, `${theme} ${row} ${format}`)
+        if (!served) assert.equal(res.body.code, 'pro_required')
       }
     }
   }

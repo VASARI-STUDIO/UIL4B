@@ -20,7 +20,7 @@
 // Every file name comes from brand.slug (limited to [a-z0-9-] by the engine) and the theme id, never from the project name.
 
 import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeRowFormat, themeHasRow, themeHasPage } from '../../src/data/exportThemes.js'
-import { assertThemeAccess } from './themeAccess.js'
+import { assertThemeAccess, FREE_EDITION_PAGES } from './themeAccess.js'
 
 export const MAX_THEME_BODY_CHARS = 256 * 1024
 // First in the head of every print document. Inline styles and data: fonts and images are all a print document holds. base-uri and
@@ -91,6 +91,26 @@ function leaveOut(err, what) {
   console.warn(`[export] ${what} left out (${err?.name || 'Error'})`)
 }
 
+// THE FREE EDITION (themeAccess.js): at most FREE_EDITION_PAGES pages, each carrying the credit line. The credit is placed inside every
+// page frame (.pg, which the engine sizes and positions), on a plate of its own so it reads on any page colour. Pro never gets it.
+export const FREE_CREDIT = 'Made with UIL4B'
+const CREDIT_CSS = '<style>.uil4b-credit{position:absolute;right:16px;bottom:12px;z-index:2147483647;margin:0;padding:3px 8px;border-radius:4px;'
+  + 'background:rgba(255,255,255,.92);color:#16181d;font:500 12px/1.4 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:0;pointer-events:none}</style>'
+const PAGE_FRAME = /<([a-z][a-z0-9]*)\b([^>]*\bclass="(?:[^"]*\s)?pg(?:\s[^"]*)?"[^>]*)>/g
+// A style guide site also carries the phone edition (.sg-screen), shown instead of the page frames below the guide's screen break
+// (SCREEN_BREAK in exportThemes/engine/guide-layout.js; a unit test holds the two together). It gets one credit line of its own,
+// placed after the phone edition and shown only where the frames are hidden.
+export const FREE_CREDIT_SCREEN_MAX = 841
+const SCREEN_CREDIT_CSS = `<style>.uil4b-credit--screen{position:static;display:none;margin:0 20px 32px;width:max-content}`
+  + `@media screen and (max-width:${FREE_CREDIT_SCREEN_MAX}px){.uil4b-credit--screen{display:block}}</style>`
+const SG_PAGES = '<div class="sg-pages">'
+export function withFreeCredit(html) {
+  const screen = html.includes(SG_PAGES)
+  let out = html.replace('</head>', `${CREDIT_CSS}${screen ? SCREEN_CREDIT_CSS : ''}</head>`)
+  if (screen) out = out.replace(SG_PAGES, `<p class="uil4b-credit uil4b-credit--screen">${FREE_CREDIT}</p>\n${SG_PAGES}`)
+  return out.replace(PAGE_FRAME, (tag) => `${tag}<p class="uil4b-credit">${FREE_CREDIT}</p>`)
+}
+
 // One document of every page, for printing (fonts embedded) or for a zip (fonts beside it).
 function pagesDoc(E, T, ctx, kind, standalone, only) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
@@ -105,12 +125,14 @@ function pagesDoc(E, T, ctx, kind, standalone, only) {
   // whole file; only a document with no page at all is a failed build.
   const pages = []
   for (const p of list) {
+    if (ctx.freeEdition && pages.length >= FREE_EDITION_PAGES) break
     if (typeof T[kind]?.[p.id] !== 'function') continue
     try { pages.push(T[kind][p.id](ctx)) } catch (err) { leaveOut(err, `${kind} page ${p.id}`) }
   }
   if (!pages.length) throw new Error(`no ${kind} page could be drawn`)
   const title = `${ctx.brand.name} ${kind === 'uikit' ? 'UI kit' : 'brand guidelines'}`
-  return E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  const html = E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  return ctx.freeEdition ? withFreeCredit(html) : html
 }
 
 // The themed style guide: one A4 page per id in the theme's own order, then style-guide.md (built last, because the pages set the
@@ -120,6 +142,7 @@ function styleGuide(E, T, ctx, standalone) {
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
   const pages = []
   for (const id of E.guideOrder(T, ctx.edition, ctx)) {
+    if (ctx.freeEdition && pages.length >= FREE_EDITION_PAGES) break
     if (typeof T.guide[id] !== 'function') continue
     // a page that throws may have written its markdown hooks already: put them back so the md never describes a page left out
     const hooks = ctx.mdHooks
@@ -131,10 +154,12 @@ function styleGuide(E, T, ctx, standalone) {
   if (!pages.length) throw new Error('no guide page could be drawn')
   // the markdown describes only the pages that were drawn
   ctx.pagesDrawn = pages.map((p) => p.id)
-  const doc = (title, list, stack) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
+  const credit = ctx.freeEdition ? withFreeCredit : (html) => html
+  const doc = (title, list, stack) => credit(E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack, ...(standalone ? { fontUrl: dataUrl(E) } : {}) }))
   // the site documents also carry the phone edition (the print document does not): the whole guide in index.html, a page's own section in its html
-  const site = (title, list, ids) => E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack: !ids, screen: E.screenGuide(ctx, ids), ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
-  return { pages, doc, site, ctx, md: E.styleGuideMarkdown(ctx) }
+  const site = (title, list, ids) => credit(E.pageDoc(ctx, T, { title, pages: list, size: ctx.size, stack: !ids, screen: E.screenGuide(ctx, ids), ...(standalone ? { fontUrl: dataUrl(E) } : {}) }))
+  const md = E.styleGuideMarkdown(ctx)
+  return { pages, doc, site, ctx, md: ctx.freeEdition ? `${md.trimEnd()}\n\n${FREE_CREDIT}\n` : md }
 }
 
 // The theme's own multi-page site (index.html, a page each, assets/), for a theme that has one. Literal paths, so Vercel traces them.
@@ -186,10 +211,13 @@ export function siteBrand(brand) {
 }
 
 /** Builds one export. Returns { zip: Buffer, name } or { html } (a print document, with its CSP meta). */
-export async function renderThemeExport({ theme, row, format, design, projectName, page, skeleton = false }, engine) {
+export async function renderThemeExport({ theme, row, format, design, projectName, page, skeleton = false, freeEdition = false }, engine) {
   const opts = { skeleton: skeleton === true, ...(page === undefined ? {} : { page }) }
+  const free = freeEdition === true
   const tag = page === undefined ? '' : `-${page}`
   const E = engine || await loadEngine()
+  // The free edition is always drawn page by page (a theme's own multi-page site has no cut-down form), so the page cap and credit hold.
+  const makeCtx = (...a) => Object.assign(E.makeCtx(...a), { freeEdition: free })
   // Only these two values leave the request. The date defaults, and no brand object from the client reaches the engine.
   const brand = E.projectToBrand({ design, projectName })
   const slug = brand.slug
@@ -202,16 +230,17 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
     return { name: `${dirs.kit}.zip`, zip: await zipOf(E, files, dirs.kit) }
   }
   if (row === 'slides') {
-    if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, E.makeCtx(T, 'slot', 'guidelines', E.loaders, brand, opts), 'guidelines', true)) }
-    const ctx = E.makeCtx(T, 'slot', 'guidelines', E.loaders, T.guideSite ? siteBrand(brand) : brand, opts)
-    const site = T.guideSite ? await premiumSite('guide', ctx, T) : null
+    if (format === 'pdf') return { html: withCsp(pagesDoc(E, T, makeCtx(T, 'slot', 'guidelines', E.loaders, brand, opts), 'guidelines', true)) }
+    const ownSite = T.guideSite && !free
+    const ctx = makeCtx(T, 'slot', 'guidelines', E.loaders, ownSite ? siteBrand(brand) : brand, opts)
+    const site = ownSite ? await premiumSite('guide', ctx, T) : null
     const files = site || { ...E.fontFiles(ctx, T), 'brand-guidelines.html': pagesDoc(E, T, ctx, 'guidelines', false) }
     return { name: `${dirs.guide}.zip`, zip: await zipOf(E, files, dirs.guide) }
   }
   if (row === 'guide') {
     // Free where the guidelines are free (a theme's rows list names it, src/data/exportThemes.js); the access check is unchanged.
     const name = `${slug}-style-guide-${theme}${tag}`
-    const g = styleGuide(E, T, E.makeCtx(T, 'slot', 'guide', E.loaders, brand, opts), format === 'pdf')
+    const g = styleGuide(E, T, makeCtx(T, 'slot', 'guide', E.loaders, brand, opts), format === 'pdf')
     const title = `${brand.name} style guide`
     if (format === 'pdf') return { html: withCsp(g.doc(title, g.pages.map((x) => x.html), true)) }
     if (format === 'md') return { md: g.md, name: `${name}.md` }
@@ -284,7 +313,7 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
   const { theme, row, format } = body
   const problem = themeRequestProblem(body)
   if (problem) return res.status(400).json(problem)
-  const access = assertThemeAccess(plan, { theme, row, format })
+  const access = assertThemeAccess(plan, { theme, row, format }, { freeEdition: true })
   if (!access.ok) {
     return res.status(access.status).json(access.code === 'pro_required'
       ? { error: 'Pro plan required', code: 'pro_required', row, theme }
@@ -320,7 +349,8 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
   try {
     E = engine || await loadEngine()
     // Free (any plan but Pro) gets a theme's skeleton edition. It is decided here from the plan the caller read from the account, never from the request.
-    const out = await renderThemeExport({ theme, row, format, design: body.design, projectName: body.projectName, page: body.page, skeleton: plan?.id !== 'pro' }, E)
+    // The free edition (a Pro theme's guidelines or style guide for a plan that is not Pro) comes from the access verdict, never the request.
+    const out = await renderThemeExport({ theme, row, format, design: body.design, projectName: body.projectName, page: body.page, skeleton: plan?.id !== 'pro', freeEdition: access.edition === 'free' }, E)
     if (out.zip) {
       res.setHeader('Content-Type', 'application/zip')
       res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)

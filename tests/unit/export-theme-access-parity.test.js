@@ -58,6 +58,13 @@ function expectedFor(plan, theme, row) {
   return 'pro_required'
 }
 
+// A download of a Pro theme's guidelines (slides) or style guide (guide) by Free is the free edition: allowed, drawn short with the credit.
+// The preview keeps the plain verdict, so these two rows are the one place where the two routes answer differently, on purpose.
+function expectedExportFor(plan, theme, row) {
+  const plain = expectedFor(plan, theme, row)
+  return plain === 'pro_required' && (row === 'slides' || row === 'guide') ? 'allow' : plain
+}
+
 function fakeRes() {
   const res = {
     headers: {},
@@ -113,8 +120,8 @@ for (const plan of ['free', 'pro']) {
       for (const [page, { row, format }] of Object.entries(PREVIEW_PAGES)) {
         const preview = await previewVerdict(plan, theme, page)
         const exported = await exportVerdict(plan, theme, row, format)
-        assert.equal(preview, exported, `${plan} ${theme} ${page} (${row}/${format}): preview ${preview}, export ${exported}`)
-        assert.equal(preview, expectedFor(plan, theme, row), `${plan} ${theme} ${page}`)
+        assert.equal(preview, expectedFor(plan, theme, row), `${plan} ${theme} ${page}: preview ${preview}`)
+        assert.equal(exported, expectedExportFor(plan, theme, row), `${plan} ${theme} ${page} (${row}/${format}): export ${exported}`)
       }
     }
   })
@@ -124,10 +131,16 @@ for (const plan of ['free', 'pro']) {
       for (const [row, formats] of Object.entries(THEME_ROW_FORMATS)) {
         for (const format of formats) {
           const exported = await exportVerdict(plan, theme, row, format)
-          const gate = assertThemeAccess(PLANS[plan], { theme, row, format })
+          const gate = assertThemeAccess(PLANS[plan], { theme, row, format }, { freeEdition: true })
           const gateVerdict = gate.ok ? 'allow' : gate.code
           assert.equal(gateVerdict, exported, `${plan} ${theme} ${row}/${format}: assertThemeAccess ${gateVerdict}, export ${exported}`)
-          assert.equal(exported, expectedFor(plan, theme, row), `${plan} ${theme} ${row}/${format}`)
+          assert.equal(exported, expectedExportFor(plan, theme, row), `${plan} ${theme} ${row}/${format}`)
+          // the edition is named only where the free edition is what is served
+          const freeEdition = exported === 'allow' && expectedFor(plan, theme, row) === 'pro_required'
+          assert.equal(gate.edition, freeEdition ? 'free' : undefined, `${plan} ${theme} ${row}/${format}: edition`)
+          // without the download's flag (the previews) the plain verdict stands
+          const plainGate = assertThemeAccess(PLANS[plan], { theme, row, format })
+          assert.equal(plainGate.ok ? 'allow' : plainGate.code, expectedFor(plan, theme, row), `${plan} ${theme} ${row}/${format}: plain gate`)
         }
       }
     }
