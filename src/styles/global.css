@@ -228,7 +228,13 @@
    warm-neutral steps between ink and mute, not new roles. Borders are opaque
    now (the spec ships a line COLOUR, not an ink alpha), which also stops them
    compounding unpredictably when surfaces stack. */
-[data-theme="dark"]{--bg-0:#060607;--bg-1:#0B0C0E;--bg-2:#111215;--bg-3:#17181B;--bg-4:#202125;--border:#202125;--bh:#303136;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#0B0C0E;--hvr:rgba(242,241,236,.065);--card:#111215;--card-grad:#111215;--inp:#111215;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--icon-inv:invert(1);--link:#8FAEFF;--link-hover:#B6CCFF;--scrim:rgba(3,3,4,.68);
+/* Control edges (--edge): a text field, select or colour well is found by its
+   edge alone, so 1.4.11 wants 3:1 against the ground beside it. --border is
+   1.26:1 on the page, which suits a hairline but not a field. #606166 is 3.28:1
+   on --bg-0, 3.17 on --bg-1 and 3.03 on a card; --edge-h #76777C (4.53 on the
+   page) is the hover step above it. Light --border is 1.31:1 on its page, so
+   light edges are #8C897E (3.21 on --bg-0, 3.50 on white) and #6F6D65 (4.75). */
+[data-theme="dark"]{--bg-0:#060607;--bg-1:#0B0C0E;--bg-2:#111215;--bg-3:#17181B;--bg-4:#202125;--border:#202125;--bh:#303136;--edge:#606166;--edge-h:#76777C;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#0B0C0E;--hvr:rgba(242,241,236,.065);--card:#111215;--card-grad:#111215;--inp:#111215;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--icon-inv:invert(1);--link:#8FAEFF;--link-hover:#B6CCFF;--scrim:rgba(3,3,4,.68);
   /* --hi is DELIBERATELY the same value in both themes — the highlight does not
      lighten in dark the way the accent does. Spec: design-language-v2.md#the-highlight-is-a-new-scarce-role
      Budget: at most one --hi element per viewport. It reads as a marker pen. */
@@ -236,7 +242,7 @@
 /* ── LIGHT — V2 reseed. NOTE: the authoritative light values are the second
    [data-theme="light"] block further down (same specificity, later wins). Both
    are kept in agreement so reading either one tells the truth. ── */
-[data-theme="light"]{--bg-0:#F5F5F2;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#66665F;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--icon-inv:none;--brand-mark:#2A60E8;--brand-mark-ground:#EFEEE9;--link:#1F4FD8;--link-hover:#123AAE;--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
+[data-theme="light"]{--bg-0:#F5F5F2;--bg-1:#FFFFFF;--bg-2:#F6F5F1;--bg-3:#E4E2DA;--bg-4:#D6D3C8;--border:#DAD8CF;--bh:#C0BDB0;--edge:#8C897E;--edge-h:#6F6D65;--ring:inset 0 1px 0 rgba(255,255,255,.7);--t0:#0F0F10;--t1:#50504A;--t2:#5F5F59;--t3:#66665F;--cbg:#F6F5F1;--hvr:rgba(15,15,16,.04);--card:#FFFFFF;--card-grad:#FFFFFF;--inp:#FFFFFF;--shadow-xs:0 1px 2px rgba(0,0,0,.04);--shadow-s:0 1px 3px rgba(16,24,40,.06);--shadow-m:0 4px 12px -2px rgba(16,24,40,.08);--shadow-l:0 12px 32px -8px rgba(16,24,40,.12);--shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow:0 1px 3px rgba(16,24,40,.06);--warm-shadow-lg:0 12px 32px -8px rgba(16,24,40,.12);--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--icon-inv:none;--brand-mark:#2A60E8;--brand-mark-ground:#EFEEE9;--link:#1F4FD8;--link-hover:#123AAE;--scrim:rgba(15,15,16,.32);--hi:#E9FF64;--hi-fg:#0F0F10;--glass-bg:color-mix(in srgb,#fff 72%,transparent);--glass-border:var(--border);--glass-shadow:0 8px 28px -14px rgba(16,24,40,.18)}
 /* ── THE ACCENT FAMILY — `UIL4B App.dc.html` lines 1397-1403 ─────────────────
    the accent is #2A60E8 with #F4F7FF ink in
    BOTH themes, and the hover mixes 24% toward paper. So `--accent` is one value
@@ -577,14 +583,14 @@ html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):activ
    It is a default, and every component class outranks it. Do not unwrap it, and
    do not add a bare `input[type=...]` rule beside it — put new element defaults
    inside the :where() list. Pinned by tests/unit/input-specificity.test.js. */
-:where(input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:border-color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard);max-width:100%}
+:where(input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--edge,var(--border));background:var(--inp);color:var(--t0);outline:none;transition:border-color var(--dur-2) var(--ease-standard),background-color var(--dur-2) var(--ease-standard);max-width:100%}
 :where(input[type="number"])::-webkit-inner-spin-button,:where(input[type="number"])::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 :where(input[type="number"]){-moz-appearance:textfield}
 /* Text fields, selects and textareas wear only the global ink ring on focus:
    no border change and no halo, so there is one indicator, not two. */
 :where(input[type="checkbox"],input[type="radio"],progress){accent-color:var(--control-accent)}
-:where(input[type="color"]){width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
-:where(input[type="color"]):hover{border-color:var(--bh)}
+:where(input[type="color"]){width:48px;height:40px;padding:3px;border-radius:var(--radius-s);border:1px solid var(--edge,var(--border));background:var(--bg-1);cursor:pointer;transition:border-color var(--t),box-shadow var(--t)}
+:where(input[type="color"]):hover{border-color:var(--edge-h,var(--bh))}
 /* Strip the native swatch chrome so the colour well reads as one clean, rounded
    chip on every picker in the app (Colour Studio, Box-Shadow, UI Builder, …), not
    just the icon editor — a single, consistent colour control everywhere. */
@@ -2619,12 +2625,12 @@ main[tabindex="-1"]:focus-visible{outline:none}
 @media (prefers-contrast: more){
   [data-theme="light"]{
     --t1:#3F3F3B;--t2:#474743;--t3:#4F4F4B;
-    --border:#8F896F;--bh:#716C5A;
+    --border:#8F896F;--bh:#716C5A;--edge:var(--border);--edge-h:var(--bh);
     --accent:#224AAF;--accent-strong:#1F4198;--info:#1F4198;--link:#123AAE
   }
   [data-theme="dark"]{
     --t1:#C5C4BD;--t2:#BABAB5;--t3:#AEAEA9;
-    --border:#696C76;--bh:#878992;
+    --border:#696C76;--bh:#878992;--edge:var(--border);--edge-h:var(--bh);
     --accent:#224AAF;--accent-k-mid:40%;--accent-k-text:34%;--accent-k-bright:28%;--accent-strong:#9DACD2;--info:#9DACD2
   }
 }
