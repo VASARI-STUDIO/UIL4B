@@ -1179,6 +1179,22 @@ export default function Settings({ toast }) {
     if (section) setActive(section)
   }, [location.state])
 
+  // /settings?section=<id> opens that section (links in emails use it). The
+  // parameter is replaced by the same state the profile quick-menu sets, so the
+  // section opens on phone and desktop alike; an unknown id is just dropped.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const id = params.get('section')
+    if (id === null || params.get('verified') === '1' || authLoading) return
+    params.delete('section')
+    const search = params.toString()
+    const known = ['account', 'support', 'accessibility', 'language', 'data', 'privacy'].includes(id) && (id !== 'account' || user)
+    navigate(
+      { pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash },
+      { replace: true, state: known ? { section: id, ...(location.state?.fromList ? { fromList: true } : null) } : location.state },
+    )
+  }, [location.search, location.pathname, location.hash, location.state, authLoading, user, navigate])
+
   // Back from the verification link. Both link sends point it at
   // /settings?verified=1 (see verifyLinkSettings), so the person lands where the
   // address is shown. The account is re-read rather than assumed: the flag is
