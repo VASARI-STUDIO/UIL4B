@@ -304,6 +304,11 @@ test.describe('the nav does not animate layout', () => {
     expect(rest.name, 'the name is shifted at rest').toBe('none')
     // The glyph's colour is a short transition: it leaves the quiet tone for the row's ink, or for its own hue on a tool with a hover moment.
     await expect.poll(async () => (await read()).glyph, { message: 'the glyph does not come up from the quiet tone on hover' }).not.toBe(rest.glyph)
+    // Every colour on the row is a short transition; read the hovered state only once none is still running, or the name's colour is caught part-way to its end value.
+    await expect.poll(
+      () => row.evaluate((el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length),
+      { message: 'the hover colour transitions never finished' },
+    ).toBe(0)
     const hot = await read()
     expect(hot.name, 'the name slides on hover').toBe('none')
     expect(hot.tile, 'a tile appears behind the glyph on hover').toBe('rgba(0, 0, 0, 0)')
