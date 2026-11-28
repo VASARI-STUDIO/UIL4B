@@ -147,7 +147,7 @@ lin(191/255)  = 0.5210      <- the inverted channel
           plain wrong, because they carry meaning and not hierarchy. A red of{' '}
           <code>#DC2626</code> inverts to <code>#23D9D9</code>, a cyan. A green of{' '}
           <code>#16A34A</code> inverts to <code>#E95CB5</code>, a pink. The result
-          is not just a dark theme with a bad palette. It is a dark theme where
+          is a dark theme where
           the error state is the colour the light theme used for information.
         </p>
         <p>
