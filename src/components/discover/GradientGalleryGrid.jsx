@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import VerticalPanelTile, { VptGrid } from '../library/VerticalPanelTile'
 import GalleryPreviewDialog from '../library/GalleryPreviewDialog'
-import { gradientCss } from '../../data/gradientGallery'
+import { gradientItemCss } from '../../data/gradientGallery'
 import { gradientMeta } from '../../utils/galleryMeta'
 import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 
@@ -36,7 +36,7 @@ export default function GradientGalleryGrid({ toast, gradients = [], labelledBy 
   }, [requireLogin])
 
   const copyCss = useCallback((g) => {
-    const css = `background: ${gradientCss(g.type, g.angle, g.stops)};`
+    const css = `background: ${gradientItemCss(g)};`
     navigator.clipboard.writeText(css).then(() => {
       toast?.(`Copied ${g.name} CSS`)
     }).catch(() => {
@@ -62,7 +62,7 @@ export default function GradientGalleryGrid({ toast, gradients = [], labelledBy 
             key={g.id}
             name={g.name}
             meta={gradientMeta(g)}
-            mediaStyle={{ background: gradientCss(g.type, g.angle, g.stops) }}
+            mediaStyle={{ background: gradientItemCss(g) }}
             onOpen={() => setPreviewAt(i)}
             liked={likes.has(g.id)}
             onLike={() => toggleLike(g.id)}

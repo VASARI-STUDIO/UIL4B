@@ -19,7 +19,7 @@
 //   - delete the `@media (min-width: 768px) and (max-width: 900px)` block in
 //     tint.css: "Tint at 768 is two columns" fails;
 //   - set `inline: true` on the `back` item in GradientGenerator.jsx: "Gradient's
-//     toolbar keeps only the name, Random and More" fails;
+//     toolbar keeps only the name, Random, Random settings and More" fails;
 //   - set `.stc-cell-tone` or `.tsc-row-name` back to 11px: the 12px floor fails;
 //   - delete the `.stc-ramps-head { flex-wrap: wrap }` rule: "Semantic Colour's
 //     base step fits" fails;
@@ -123,16 +123,19 @@ for (const theme of ['light', 'dark']) {
       }
     })
 
-    test("Gradient's toolbar keeps only the name, Random and More; the Pick… chip shows its label", async ({ page }) => {
+    test("Gradient's toolbar keeps only the name, Random, Random settings and More; the Pick… chip shows its label", async ({ page }) => {
       await go(page, '/create/gradient')
       const row = await page.evaluate(() => [...document.querySelector('[data-tool-toolbar]').children].filter((c) => c.offsetWidth > 0).map((c) => c.textContent.trim() || c.getAttribute('aria-label') || c.querySelector('a,button')?.getAttribute('aria-label') || c.className))
       expect(row.join('|')).not.toMatch(/stops|Reset|previous gradient/)
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Random' })).toBeVisible()
+      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Random', exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'More', exact: true }).click()
       const sheet = page.getByRole('dialog', { name: 'More' })
       await expect(sheet.getByRole('button', { name: 'Back', exact: true })).toBeVisible()
       await expect(sheet.getByRole('button', { name: 'Reset', exact: true })).toBeVisible()
       await page.keyboard.press('Escape')
+      // The Random filters live in a tray that the toolbar's "Random settings" opens.
+      await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Random settings', exact: true }).click()
+      await expect(page.getByRole('region', { name: 'Random settings' })).toBeVisible()
       const pick = page.getByRole('radio', { name: 'Pick…', exact: true })
       await expect(pick).toBeVisible()
       expect(await pick.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true)

@@ -6,7 +6,7 @@
 // Plain data, no React, so tests read the roles, the text recipe and the figures without
 // a DOM. Every figure on the page comes from the one ELEV array and the pace rule below,
 // so the page cannot print a total that disagrees with its own chart.
-import { fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
+import { brandAsText, fieldEdge, inkOnField } from '../../../utils/palettePreviewRoles.js'
 import { mixHex, contrastRatio } from '../../../utils/colors.js'
 import { ELEV, LENGTH, STEP, STRETCHES } from './Ridgeline.route.js'
 
@@ -241,6 +241,13 @@ export function ridgelineVars(r) {
   const secondaryInk = own(r.secondary, r.onSecondary)
   const primary = pressFills(r.primary, primaryInk, r)
   const secondary = pressFills(r.secondary, secondaryInk, r)
+  // The chart's ground: the subtle field as is in light, sunk into the canvas in dark so a
+  // pale subtle does not paint a light block on a dark page.
+  const ground = r.mode === 'dark' ? mixHex(r.subtle, r.canvas, 0.85) : r.subtle
+  // The elevation line is the chart's data mark, so it clears 3:1 on the ground: the
+  // secondary as is when it does, else walked the smallest step that does. A checker pair
+  // is under test and keeps its own colour.
+  const line = keep ? r.secondary : brandAsText(r.secondary, [ground], { large: true }).hex
   return {
     '--rl-primary-ink': primaryInk,
     '--rl-primary-edge': fieldEdge(r.primary, r.canvas, r.borderStrong),
@@ -254,5 +261,7 @@ export function ridgelineVars(r) {
     '--rl-accent-ink': own(r.accent, r.onAccent),
     '--rl-accent-edge': fieldEdge(r.accent, r.canvas, r.borderStrong),
     '--rl-subtle-edge': fieldEdge(r.subtle, r.canvas, r.borderStrong),
+    '--rl-ground': ground,
+    '--rl-line': line,
   }
 }

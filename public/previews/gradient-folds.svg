@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" preserveAspectRatio="none">
+  <!-- Neutral lighting on the six facets of a folded sheet. The CSS base supplies the ink. -->
+  <defs>
+    <linearGradient id="ridge" x2="1" y2=".16" gradientUnits="objectBoundingBox">
+      <stop stop-color="#737373"/><stop offset=".94" stop-color="#a5a5a5"/><stop offset="1" stop-color="#b1b1b1"/>
+    </linearGradient>
+    <linearGradient id="valley" x2="1" y2=".14">
+      <stop stop-color="#535353"/><stop offset=".16" stop-color="#656565"/><stop offset="1" stop-color="#909090"/>
+    </linearGradient>
+    <linearGradient id="turned" x2=".2" y2="1">
+      <stop stop-color="#a3a3a3"/><stop offset="1" stop-color="#797979"/>
+    </linearGradient>
+    <linearGradient id="shadow" x2=".8" y2=".6">
+      <stop stop-color="#454545"/><stop offset="1" stop-color="#787878"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="360" fill="url(#ridge)"/>
+  <path d="M115 0h180l-61 194-137 43Z" fill="url(#valley)"/>
+  <path d="M295 0h204l-80 252-185-58Z" fill="url(#ridge)"/>
+  <path d="M499 0h101v196l-181 56Z" fill="url(#valley)"/>
+  <path d="m0 204 97 33 14 123H0Z" fill="url(#turned)"/>
+  <path d="m97 237 137-43 61 166H111Z" fill="url(#shadow)"/>
+  <path d="m234 194 185 58 80 108H295Z" fill="url(#turned)"/>
+  <path d="m419 252 181-56v164H499Z" fill="url(#shadow)"/>
+</svg>

@@ -183,3 +183,6 @@
 }
 html[data-reduced-motion="true"] :is(.or-strip,.or-scrim,.or-sheet){animation:none}
 html[data-reduced-motion="true"] .or :is(button,.or-chev,.or-size,.rc-tint){transition:none}
+.or-dye { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.or-dye code { font: 12px/1.3 ui-monospace, monospace; color: var(--pv-muted); }
+.or-cloth { padding-top: 8px; color: var(--pv-muted); font-size: 14px; }

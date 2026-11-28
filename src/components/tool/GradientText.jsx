@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import useMeasured from './useMeasured'
+import ShallowEndMark from '../ShallowEndMark'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import { boxWithin, inkFor, sceneInks, sceneBadge } from '../../utils/gradientText'
 import {
-  POSTER_COPY, PHONE_COPY, ICON_GLYPH, ICON_INK_BOX, phoneButton,
+  POSTER_COPY, PHONE_COPY, ICON_INK_BOX, phoneButton,
   specStrip, specHexes, fitHexes, specTypeLine, specSampledNote,
 } from '../../utils/gradientPreviewStyles'
 
@@ -41,9 +42,9 @@ function Badge({ badge }) {
   return <span className={`grd-ctx-ratio${badge.low ? ' is-low' : ''}`} role="status">{badge.text}</span>
 }
 
-function PosterText({ stops, type, angle }) {
+function PosterText({ stops, type, angle, mesh }) {
   const [ref, spots] = useMeasured(measurePoster)
-  const inks = useMemo(() => sceneInks(stops, type, angle, spots, POSTER_BOXES), [stops, type, angle, spots])
+  const inks = useMemo(() => sceneInks(stops, type, angle, spots, POSTER_BOXES, mesh), [stops, type, angle, spots, mesh])
   const badge = sceneBadge(Object.values(inks))
   return (
     <div className="grd-txt" ref={ref}>
@@ -51,9 +52,15 @@ function PosterText({ stops, type, angle }) {
         <div className="grd-poster-frame">
           <div className="grd-poster-in">
             <div className="grd-poster-top" data-box="top" style={{ color: inks.top.css }}>
-              <p className="grd-poster-brand">{POSTER_COPY.brand}</p>
+              <p className="grd-poster-brand"><ShallowEndMark />{POSTER_COPY.brand}</p>
               <p className="grd-poster-h">{POSTER_COPY.display}</p>
             </div>
+            <svg className="grd-poster-lanes" viewBox="0 0 200 80" preserveAspectRatio="xMaxYMid meet" aria-hidden="true" fill="none" stroke={inks.foot.css} strokeWidth="2">
+              {[0, 1, 2, 3, 4].map((lane) => {
+                const offset = lane * 7
+                return <path key={lane} d={`M0 ${6 + offset}h95c28 0 34 38 65 38h40`} />
+              })}
+            </svg>
             <p className="grd-poster-foot" data-box="foot" style={{ color: inks.foot.css }}>{POSTER_COPY.footer}</p>
           </div>
         </div>
@@ -71,7 +78,7 @@ function SpecText({ paint, stops, type, angle, oklch, name }) {
     <div className="grd-txt" ref={ref}>
       <div className="grd-txt-box grd-spec-box" aria-hidden="true">
         <div className="grd-spec">
-          <div className="grd-spec-head" style={{ background: paint }} />
+          <div className="grd-spec-head" style={{ background: paint }}><i className="grd-proof-corner" /></div>
           <div className="grd-spec-body">
             <p className="grd-spec-name">{name}</p>
             <p className="grd-spec-hexes">{hexes.map((h, i) => <span key={`${h}-${i}`}>{h}</span>)}</p>
@@ -92,47 +99,33 @@ function SpecText({ paint, stops, type, angle, oklch, name }) {
   )
 }
 
-// One icon: the canvas's gradient on a square, with the "T" in `ink`. A blank is a neutral
-// home-screen neighbour and has no glyph.
-function AppIcon({ size, paint, ink, blank }) {
-  if (blank) return <span className={`grd-ic grd-ic--${size} grd-ic--blank`} />
+function AppIcon({ paint, ink, small = false }) {
   return (
-    <span className={`grd-ic grd-ic--${size}`} style={{ background: paint, color: ink }}>
-      <span className="grd-ic-t">{ICON_GLYPH}</span>
+    <span className={`grd-ic ${small ? 'grd-ic--small' : 'grd-ic--big'}`} style={{ background: paint, color: ink }}>
+      <span className="grd-radio-mark"><i /><i /><i /><i /><i /></span>
     </span>
   )
 }
 
-// Every icon is square, so the one ink for the glyph is chosen against the middle of a square
-// of the gradient and used at every size.
-function IconText({ paint, stops, type, angle }) {
-  const ink = useMemo(() => inkFor(stops, type, angle, { aspect: 1, box: ICON_INK_BOX }), [stops, type, angle])
-  const badge = sceneBadge([ink])
-  const icon = (size, key) => <AppIcon key={key ?? size} size={size} paint={paint} ink={ink.css} />
+function IconText({ paint, stops, type, angle, mesh }) {
+  const ink = useMemo(() => inkFor(stops, type, angle, { aspect: 1, box: ICON_INK_BOX }, mesh), [stops, type, angle, mesh])
   return (
     <div className="grd-txt">
       <div className="grd-txt-box grd-icon-box" aria-hidden="true">
-        <div className="grd-icon-area">
-          <div className="grd-icon-group">
-            {icon('big')}
-            <div className="grd-icon-col">
-              <div className="grd-icon-sizes">{icon('120')}{icon('60')}{icon('40')}</div>
-              <div className="grd-icon-home">
-                <AppIcon size="60" blank />
-                {icon('60', 'home')}
-                <AppIcon size="60" blank />
-                <AppIcon size="60" blank />
-              </div>
-            </div>
+        <div className="grd-radio-sheet">
+          <div className="grd-radio-art"><AppIcon paint={paint} ink={ink.css} /></div>
+          <div className="grd-radio-listing">
+            <small>Music &amp; Audio</small><strong>Frequency FM</strong><p>Independent radio, live from Melbourne.</p>
+            <div className="grd-radio-playing"><AppIcon small paint={paint} ink={ink.css} /><div><small>On air</small><b>Listening Room</b></div></div>
           </div>
         </div>
       </div>
-      <Badge badge={badge} />
+      <Badge badge={sceneBadge([ink])} />
     </div>
   )
 }
 
-// The sign-in band against its own box, to pick the ink for the line set over it.
+// Measure the boarding pass header to choose ink for the route lettering.
 const measurePhone = (view) => {
   const band = view.querySelector('.grd-phone-band').getBoundingClientRect()
   return { line: boxWithin(band, view.querySelector('[data-box="line"]').getBoundingClientRect()) }
@@ -141,23 +134,24 @@ const measurePhone = (view) => {
 // A flat stop as a two-stop ramp, to pick the ink for the label set on it.
 const flat = (color) => [{ color, position: 0 }, { color, position: 100 }]
 
-function PhoneScene({ framed, paint, stops, type, angle }) {
+function PhoneScene({ framed, paint, stops, type, angle, mesh }) {
   const [ref, spots] = useMeasured(measurePhone)
   const fill = phoneButton(stops)
-  const lineInk = useMemo(() => inkFor(stops, type, angle, spots?.line), [stops, type, angle, spots])
+  const lineInk = useMemo(() => inkFor(stops, type, angle, spots?.line, mesh), [stops, type, angle, spots, mesh])
   const buttonInk = useMemo(() => inkFor(flat(fill), type, angle), [fill, type, angle])
   const badge = sceneBadge([lineInk, buttonInk])
   const screen = (
     <div className="grd-phone">
       <div className="grd-phone-band" style={{ background: paint }}>
+        <span className="grd-phone-ticket-tag">Channel Ferry Co.</span>
         <p className="grd-phone-line" data-box="line" style={{ color: lineInk.css }}>{PHONE_COPY.line}</p>
       </div>
       <div className="grd-phone-form">
         <p className="grd-phone-h">{PHONE_COPY.heading}</p>
         <p className="grd-phone-label">{PHONE_COPY.label}</p>
-        <div className="grd-phone-field" />
+        <div className="grd-phone-field">{PHONE_COPY.departure}</div>
         <div className="grd-phone-btn" style={{ background: fill, color: buttonInk.css }}>{PHONE_COPY.button}</div>
-        <p className="grd-phone-link">{PHONE_COPY.link}</p>
+
       </div>
     </div>
   )
@@ -182,10 +176,10 @@ function PhoneText(props) {
  * The words and objects of one preview style over the canvas. `paint` is the canvas's own
  * gradient and `oklch` whether it blends in OKLCH; `name` is the Spec card's heading.
  */
-export default function GradientText({ id, paint, stops, type, angle, oklch, name }) {
-  if (id === 'poster') return <PosterText stops={stops} type={type} angle={angle} />
+export default function GradientText({ id, paint, stops, type, angle, oklch, name, mesh }) {
+  if (id === 'poster') return <PosterText mesh={mesh} stops={stops} type={type} angle={angle} />
   if (id === 'spec') return <SpecText paint={paint} stops={stops} type={type} angle={angle} oklch={oklch} name={name} />
-  if (id === 'icon') return <IconText paint={paint} stops={stops} type={type} angle={angle} />
-  if (id === 'phone') return <PhoneText paint={paint} stops={stops} type={type} angle={angle} />
+  if (id === 'icon') return <IconText mesh={mesh} paint={paint} stops={stops} type={type} angle={angle} />
+  if (id === 'phone') return <PhoneText mesh={mesh} paint={paint} stops={stops} type={type} angle={angle} />
   return null
 }

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import KerbsideRoute from './KerbsideRoute.jsx'
 import { pickSteps, screenCopy } from './kerbsideSteps'
 
 // The page half of the Type Scale tool: one product screen set on the scale
@@ -88,9 +89,7 @@ export default function KerbsidePage({ steps, up, mine, text, lit, headingName, 
       ) : (
         <div className="tsk-body tsk-track">
           <Line step={stat}>{hf || <p className="tsk-pt tsk-h" style={lineStyle(stat, 48, true)}>On the way</p>}</Line>
-          <div className="tsk-route" role="img" aria-label="The route from 88 Brunswick Street to 240 Adelaide Street. The rider is past halfway.">
-            <span className="tsk-rt" /><span className="tsk-rd" /><span className="tsk-rs tsk-ra" /><span className="tsk-rs tsk-rb" /><span className="tsk-rr" />
-          </div>
+          <div className="tsk-route"><KerbsideRoute /></div>
           <Line step={caption} style={{ marginTop: 8 }}>
             <div className="tsk-rl tsk-b" style={lineStyle(caption, 18, false)}><span>88 Brunswick Street</span><span>240 Adelaide Street</span></div>
           </Line>

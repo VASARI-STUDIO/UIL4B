@@ -3,7 +3,7 @@ import { styleVars, specHexes, waveBands, wavePath, CAPTION_NARROW_HEXES } from 
 // The Gradient Generator's preview styles, drawn over the canvas slot. Everything is CSS
 // (gradients, masks, blur and an SVG noise tile) so it is vector-crisp at any pixel
 // density and is painted once per gradient change, never per frame. The rules live in
-// gradient.css under "PREVIEW STYLES".
+// gradient-fill.css, which the PNG export also uses.
 //
 // Fluted glass and Glow ring are seen through reeded glass: the scene is drawn several
 // times, each copy shifted a little sideways and masked to one narrow slice of every
@@ -25,15 +25,27 @@ function Flutes({ children }) {
 // Slit-scan columns: three layers of the same colours, each cut into thin columns of its
 // own pitch and faded at its own top and bottom, so the streaks differ in length and weight.
 const STREAKS = [
-  { pitch: '7px', bar: '3px', from: '6%', to: '94%', alpha: 0.95 },
-  { pitch: '11px', bar: '2px', from: '22%', to: '100%', alpha: 0.75 },
-  { pitch: '17px', bar: '4px', from: '0%', to: '70%', alpha: 0.6 },
+  { pitch: 'clamp(3px, .9cqw, 7px)', bar: 'clamp(1px, .4cqw, 3px)', from: '6%', to: '94%', alpha: 0.95 },
+  { pitch: 'clamp(5px, 1.4cqw, 11px)', bar: 'clamp(1px, .26cqw, 2px)', from: '22%', to: '100%', alpha: 0.75 },
+  { pitch: 'clamp(8px, 2.2cqw, 17px)', bar: 'clamp(2px, .52cqw, 4px)', from: '0%', to: '70%', alpha: 0.6 },
 ]
 
 function Scene({ id, stops, oklch, name }) {
   switch (id) {
+    case 'fresnel':
+      return (<><div className="grd-lens-ground" />{Array.from({ length: 10 }, (_, ring) => (
+        <div key={ring} className="grd-lens-band" style={{ '--ring': ring, '--scale': `${135 + ring * 13}%`, '--radius': `${98 - ring * 9}%`, '--offset': `${ring * 14}%` }} />
+      ))}</>)
+    case 'riso':
+      return (<><div className="grd-press-sheet" /><div className="grd-press-ink" /><div className="grd-fx-grain" /></>)
+    case 'aperture':
+      return <><div className="grd-fx-aperture"><div className="grd-fx-lamp" /><Flutes><div className="grd-fx-lamp" /></Flutes></div><div className="grd-fx-grain" /></>
+    case 'satin':
+    case 'folds':
+    case 'halftone':
+      return <div className="grd-fx-material" />
     case 'grain':
-      return (<><div className="grd-fx-blob" /><div className="grd-fx-grain" /></>)
+      return (<><div className="grd-fx-fill" /><div className="grd-fx-grain" /></>)
     case 'fluted':
       return (<><div className="grd-fx-fill" /><Flutes><div className="grd-fx-fill" /></Flutes></>)
     case 'ring':
@@ -61,8 +73,6 @@ function Scene({ id, stops, oklch, name }) {
     case 'spec':
       // The ground only: the card, its strip and its words are the text layer's (GradientText.jsx).
       return null
-    case 'mesh':
-      return (<><div className="grd-fx-mesh" /><div className="grd-fx-grain" /><Caption name={name} stops={stops} /></>)
     case 'waves':
       return (<><Waves stops={stops} oklch={oklch} /><Caption name={name} stops={stops} /></>)
     default:
@@ -101,12 +111,13 @@ function Caption({ name, stops }) {
 /**
  * One preview style drawn from the stops. `paint` is the canvas's own gradient CSS and
  * `oklch` says whether it blends in OKLCH, so a style reads colour as the canvas does;
- * `name` is the caption's name on Mesh and Waves.
+ * `name` is the caption's name on Waves.
  */
-export default function GradientFx({ id, stops, paint, oklch, name }) {
+export default function GradientFx({ id, stops, paint, oklch, name, strength = 100 }) {
   return (
     <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch })}>
       <Scene id={id} stops={stops} oklch={oklch} name={name} />
+      {strength < 100 && <div className="grd-finish-mix" style={{ background: paint, opacity: 1 - strength / 100 }} />}
     </div>
   )
 }

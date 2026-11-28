@@ -1,3 +1,4 @@
+import { openGeometry } from './gradient-controls.js'
 // /create/gradient: three editor corrections, at 1440 and 390.
 //
 //   1. The stop's hex field takes `2f6bff` (no #), pasted text with spaces round it and a
@@ -38,6 +39,7 @@ const seed = (page, gradient) => page.addInitScript((g) => {
 
 async function open(page) {
   await go(page, ROUTE)
+  await openGeometry(page)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Gradient controls' })).toBeVisible()
   await page.evaluate(() => document.fonts.ready)

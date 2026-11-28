@@ -19,7 +19,10 @@
 .rp-wk{font-size:16px;font-weight:600}
 .rp-co{font-size:13px;color:var(--pv-muted)}
 .rp-in{display:flex;flex-direction:column;gap:var(--s-5);padding:var(--s-5) var(--s-7) var(--s-6)}
-.rp-hero{display:flex;flex-direction:column;gap:var(--s-1)}
+.rp-hero{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--pv-border)}
+.rp-measure,.rp-peak{font-size:13px;color:var(--pv-muted)}
+.rp-peak{padding-left:12px;border-left:2px solid var(--pv-primary)}
+.rp-peak strong{display:block;color:var(--pv-text);font-size:18px;font-weight:600}
 .rp-fig{font-size:56px;font-weight:600;line-height:1.05;letter-spacing:-.025em;font-variant-numeric:proportional-nums}
 .rp-up{font-size:16px;color:var(--pv-success-ink)}
 
@@ -32,7 +35,8 @@
 .rp-day{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
 .rp-tot{height:16px;margin-bottom:var(--s-1);font-size:12px;line-height:16px;color:var(--pv-muted)}
 .rp-stack{display:flex;flex-direction:column-reverse;gap:2px;width:56px}
-.rp-seg{display:block;flex:none;width:100%}
+.rp-seg{display:block;flex:none;width:100%;height:var(--segment-height)}
+.rp-day-name{display:none}
 .rp-c0{background:var(--pv-primary)}
 .rp-c1{background:var(--pv-secondary)}
 .rp-c2{background:var(--pv-accent)}
@@ -63,4 +67,21 @@
   .rp-lab{display:none}
   .rp-trr{display:inline}
   .rp-r{grid-template-columns:minmax(0,1fr) 72px 48px 72px;column-gap:var(--s-2)}
+}
+
+/* At phone widths the same stacks run across the page, so neighbouring dollar
+   amounts never collide and the full five-colour mix is still visible. */
+@container pvs (max-width:439px){
+  .rp-top{height:auto;min-height:56px;flex-wrap:wrap;gap:2px 12px;padding-block:10px}
+  .rp-chart,.rp-cols{display:grid;grid-template-columns:minmax(0,1fr);height:auto}
+  .rp-axis,.rp-lines,.rp-dn{display:none}
+  .rp-cols{row-gap:12px}
+  .rp-day{display:grid;grid-template-columns:32px minmax(0,1fr) 52px;align-items:center;gap:8px}
+  .rp-day-name{display:block;font-size:13px}
+  .rp-stack{grid-column:2;grid-row:1;flex-direction:row;gap:1px;width:var(--day-width);height:18px}
+  .rp-seg{width:auto;height:100%;flex:var(--segment-weight) 1 0}
+  .rp-tot{grid-column:3;grid-row:1;height:auto;margin:0;text-align:right}
+  .rp-r{grid-template-columns:minmax(0,1fr) 62px 42px 56px;min-height:38px}
+  .rp-nm{flex-wrap:wrap;gap:2px 5px}
+  .rp-trr{white-space:nowrap}
 }

@@ -41,6 +41,13 @@ const heightFor = (w) => (w < 700 ? 844 : 900)
 const UNSELECTED = ':is([aria-pressed="false"],[aria-checked="false"],[aria-selected="false"]):not([disabled]):not([aria-disabled="true"])'
 
 // Where the pill is drawn: the group's ::before transform, as an offset.
+// Gradient's Random filters sit in a tray the toolbar's "Random settings"
+// opens, and the extra rows (the type pills among them) behind "More options".
+async function openRandomFilters(page) {
+  await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Random settings', exact: true }).click()
+  await page.getByRole('region', { name: 'Random settings' }).getByRole('button', { name: 'More options' }).click()
+}
+
 async function pillAt(group) {
   return group.evaluate((g) => {
     const m = new DOMMatrix(getComputedStyle(g, '::before').transform)
@@ -192,7 +199,7 @@ const CASES = [
     id: 'gradient-filters', name: 'Gradient: random filters', widths: WIDTHS,
     open: async (page) => {
       await go(page, '/create/gradient')
-      await page.getByRole('button', { name: 'More options' }).click()
+      await openRandomFilters(page)
       return page.locator('.grd-shuf-row .tl-pills').first()
     },
   },
@@ -266,7 +273,7 @@ test.describe('a multi-select group draws one pill only while exactly one option
     watch(page, 'designer picking more than one gradient type')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
-    await page.getByRole('button', { name: 'More options' }).click()
+    await openRandomFilters(page)
     const type = page.locator('.grd-shuf-row .tl-pills').first()
     await expect(type).toHaveAttribute('data-slide', 'ready')
     const options = type.locator('button')

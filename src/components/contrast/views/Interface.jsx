@@ -61,7 +61,7 @@ export default function Interface({ job = null }) {
         </div>
 
         <div className="ro-week">
-          <p className="ro-weeklab" {...part('text', job)}>{WEEK.label}</p>
+          <p className="ro-weeklab" {...part('text', job)}>{WEEK.label} · {WEEK.days.reduce((count, day) => count + day.shifts.length, 0)} shifts</p>
           <div className="ro-days">
             {WEEK.days.map((d) => (
               <div key={d.name} className="ro-day">

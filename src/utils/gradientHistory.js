@@ -22,14 +22,15 @@ export const BURST_MS = 500
  * carry), type, angle and interpolation. The stops are copied, so a later edit to the
  * page's stops cannot reach back into the history.
  */
-export function snapshotLook({ stops, type, angle, space }) {
-  return { stops: stops.map((s) => ({ ...s })), type, angle, space }
+export function snapshotLook({ stops, type, angle, space, layouts }) {
+  return { stops: stops.map((s) => ({ ...s })), type, angle, space, ...(layouts && { layouts: structuredClone(layouts) }) }
 }
 
 /** Whether two looks are the same gradient, lock flags included. */
 export function sameLook(a, b) {
   if (!a || !b) return false
   if (a.type !== b.type || a.angle !== b.angle || a.space !== b.space) return false
+  if (JSON.stringify(a.layouts) !== JSON.stringify(b.layouts)) return false
   if (a.stops.length !== b.stops.length) return false
   return a.stops.every((s, i) => JSON.stringify(s) === JSON.stringify(b.stops[i]))
 }

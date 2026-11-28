@@ -9,6 +9,7 @@
 // Pure: no state, no effects. Colours arrive as --pv-* custom properties from
 // the dialog; the inks this scene works out are set on its root.
 import { useMemo } from 'react'
+import ShallowEndMark from '../../ShallowEndMark'
 import { COPY } from './Stationery.data.js'
 import { fieldInks } from './fieldInks.js'
 import './Stationery.css'
@@ -19,9 +20,11 @@ export default function Stationery({ roles }) {
   return (
     <div className="st" style={vars} role="img" aria-label={COPY.imageLabel}>
       <div className="st-lg" data-role="primary">
+        <ShallowEndMark className="st-mark" />
         <span className="st-lgn">{COPY.logo}</span>
       </div>
       <div className="st-card" data-role="deep">
+        <ShallowEndMark className="st-mark" />
         <span className="st-nm">{COPY.cardName}</span>
         <i className="st-rule" data-role="accent" />
         <span className="st-ti">{COPY.cardTitle}</span>
@@ -30,10 +33,17 @@ export default function Stationery({ roles }) {
         <i className="st-band" data-role="secondary" />
         <div className="st-hd">
           <span className="st-sc" data-role="deep" data-adjusted={deepAdjusted ? 'true' : undefined}>{COPY.school}</span>
-          <span className="st-ad" data-role="neutral">{COPY.address}</span>
-          <span className="st-ad" data-role="neutral">{COPY.phone}</span>
         </div>
         <p className="st-lt" data-role="neutral">{COPY.letter}</p>
+        <div className="st-slip" data-role="neutral">
+          <span>Pool deck pass · Term 1</span>
+          <strong>{COPY.group}</strong>
+          <span>{COPY.lesson}</span>
+        </div>
+        <div className="st-contact" data-role="neutral">
+          <span>{COPY.address}</span>
+          <span>{COPY.phone}</span>
+        </div>
       </div>
     </div>
   )

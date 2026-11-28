@@ -296,12 +296,12 @@ test('a broken session service is a server fault, not a verdict on the caller', 
 test('the function ships the server folder and the manifest without new includeFiles entries', () => {
   // Vercel's file tracer follows a `new URL(`./literal/${x}...`, import.meta.url)` to every file under the literal folder, so the clean
   // pictures ride along as long as the endpoint builds their path that way. The pages module is reached through
-  // src/config/exportPreviews.js, which the `config/export*s` glob names (function-include-files.test.js checks the glob).
+  // src/config/exportPreviews.js, which the config `e*s` alternative names (function-include-files.test.js checks the glob).
   const endpoint = fs.readFileSync(path.join(ROOT, 'api/_lib/exportPreview.js'), 'utf8')
   assert.match(endpoint, /new URL\(`\.\/pro\/export-previews\/\$\{theme\}\/\$\{row\}\/\$\{n\}\.webp`, import\.meta\.url\)/)
   assert.match(endpoint, /from '\.\.\/\.\.\/src\/config\/exportPreviews\.js'/)
   const vercel = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'))
-  assert.match(vercel.functions['api/ai.js'].includeFiles, /config\/export\*s/, 'the config/export*s glob carries the pages module')
+  assert.match(vercel.functions['api/ai.js'].includeFiles, /c\*\/\{[^}]*,e\*s\}|config\/export\*s/, 'the config glob carries the pages module')
   const ai = fs.readFileSync(path.join(ROOT, 'api/ai.js'), 'utf8')
   assert.match(ai, /export === 'preview'[\s\S]{0,200}import\('\.\/_lib\/exportPreview\.js'\)/)
 })

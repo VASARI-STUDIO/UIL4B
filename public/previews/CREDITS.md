@@ -103,3 +103,13 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
   - `ridgeline/water.svg`
   - `ridgeline/roads.svg`
   - `ridgeline/paths.svg`
+## Packaging and hardware shop
+
+The unprinted coffee pouch and hardware window display are AI-generated illustration assets. The previews apply the selected palette to the packaging and frontage at render time.
+
+- `coffee-pouch.webp`
+- `hardware-window.webp`
+
+## Gradient fills
+
+`gradient-satin.webp` is an AI-generated greyscale textile lighting texture. The generator supplies the colour from the current gradient. The paper folds and halftone screen are original vector drawings.

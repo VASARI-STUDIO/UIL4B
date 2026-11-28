@@ -36,10 +36,11 @@
 .sd-day{margin-left:auto;font-weight:600}
 .sd-sample{font-size:12px;color:var(--pv-muted)}
 
-.sd-seg{display:inline-flex;padding:2px;border:1px solid var(--pv-border);border-radius:8px;background:var(--pv-canvas)}
-.sd-seg>span{padding:2px var(--s-3);border-radius:6px;font-size:13px;color:var(--pv-muted)}
-.sd-seg>span.is-on{background:var(--pv-raised);color:var(--pv-text);font-weight:600}
-.sd-seg--lead{display:none}
+.sd-meter { margin-top: 20px; padding-block: 12px; border-block: 1px solid var(--pv-border); }
+.sd-meter p, .sd-meter dt { font-size: 12px; color: var(--pv-muted); }
+.sd-meter dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0; }
+.sd-meter dd { margin: 2px 0 0; font: 500 clamp(16px, 3cqi, 24px)/1.2 'Geist Mono', monospace; }
+.sd-meter small { font-size: 12px; }
 
 /* ── Grid ── */
 .sd-grid{
@@ -178,8 +179,7 @@
 /* ── Narrow: wordmark and day, the switch under the figure, one column ── */
 @container sd (max-width:599px){
   .sd-top{padding:var(--s-2) var(--s-4);gap:var(--s-3)}
-  .sd-site,.sd-sample,.sd-seg--top{display:none}
-  .sd-seg--lead{display:inline-flex;margin-top:var(--s-4)}
+  .sd-site{display:none}
   .sd-grid{gap:var(--s-4);padding:var(--s-4)}
   .sd-side{grid-template-columns:1fr}
   .sd-chart{grid-template-columns:24px minmax(0,1fr);grid-template-rows:200px auto auto}

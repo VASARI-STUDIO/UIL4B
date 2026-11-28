@@ -14,7 +14,8 @@ const num = (n, digits = 2) => String(Number(n.toFixed(digits)))
 // CSS gradient value in the chosen space. `in oklch` is a CSS Color 4
 // interpolation method and goes after the angle or position part of the function;
 // sRGB is the function's default, so it writes nothing.
-export function gradientCssIn(type, angle, stops, space) {
+export function gradientCssIn(type, angle, stops, space, layout) {
+  if (type === 'Mesh') return gradientCss(type, angle, stops, layout, space)
   const css = gradientCss(type, angle, stops)
   if (space !== 'oklch') return css
   const open = css.indexOf('(') + 1
@@ -26,9 +27,9 @@ export function gradientCssIn(type, angle, stops, space) {
 // The CSS a person copies. An OKLCH gradient gets its sRGB twin on the line
 // before it: a browser that cannot read `in oklch` drops the second declaration
 // and keeps the first. An sRGB gradient is one clean line.
-export function gradientCssText(type, angle, stops, space) {
-  const line = `background: ${gradientCssIn(type, angle, stops, space)};`
-  if (space !== 'oklch') return line
+export function gradientCssText(type, angle, stops, space, layout) {
+  const line = `background: ${gradientCssIn(type, angle, stops, space, layout)};`
+  if (type === 'Mesh' || space !== 'oklch') return line
   return `background: ${gradientCss(type, angle, stops)};\n${line}`
 }
 

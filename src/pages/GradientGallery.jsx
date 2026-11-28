@@ -11,7 +11,7 @@ import { reportUpgradeGate } from '../contexts/ProModalContext'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { useProLibrary } from '../hooks/useProLibrary'
-import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
+import { GRADIENT_TAGS, gradientItemCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { matchesGradientFacets } from '../utils/gradientMoods'
@@ -50,7 +50,7 @@ import '../styles/pages/library-v3.css'
 // components, so this page and the Palette Library stay in lockstep by
 // construction rather than by copy-paste.
 
-const TYPES = ['Linear', 'Radial', 'Conic']
+const TYPES = ['Linear', 'Radial', 'Conic', 'Mesh']
 
 // What the queue's status says on a submission row. 'approved' and 'rejected'
 // are a reviewer's words; anything unknown reads as pending.
@@ -150,7 +150,7 @@ export default function GradientGallery({ toast }) {
               author: s.authorName,
               type: s.payload?.type,
               angle: s.payload?.angle,
-              stops: s.payload?.stops,
+              url: s.payload?.url, stops: s.payload?.stops,
             })
             return g && { ...g, docId: s.id, localId: s.localId, status: s.status, createdAt: s.createdAt }
           })
@@ -307,7 +307,7 @@ export default function GradientGallery({ toast }) {
           <ul className="grg-queue-list">
             {submissions.map(s => (
               <li key={s.docId} className="grg-queue-item">
-                <span className="grg-queue-swatch" style={{ background: gradientCss(s.type, s.angle, s.stops) }} aria-hidden="true" />
+                <span className="grg-queue-swatch" style={{ background: gradientItemCss(s) }} aria-hidden="true" />
                 <span className="grg-queue-id">
                   <strong>{s.name}</strong>
                   <span className="meta">{s.type} · {s.stops.length} stops · by {s.author}</span>

@@ -159,7 +159,7 @@ export default function useCommunityHub(toast) {
       .then((server) => {
         if (cancelled) return
         setGradientServer(server.filter((s) => s.status === 'approved').map((s) => {
-          const g = sanitizeGradientSubmission({ id: s.id, name: s.name, type: s.payload?.type, angle: s.payload?.angle, stops: s.payload?.stops })
+          const g = sanitizeGradientSubmission({ id: s.id, name: s.name, type: s.payload?.type, angle: s.payload?.angle, url: s.payload?.url, stops: s.payload?.stops })
           return g && { ...g, id: s.id, docId: s.id, status: s.status, createdAt: s.createdAt, kind: 'gradient' }
         }).filter(Boolean))
       })

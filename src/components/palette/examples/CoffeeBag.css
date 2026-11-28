@@ -1,7 +1,7 @@
 /* Coffee bag (CoffeeBag.jsx): a roaster's product page painted with the user's palette.
  *
  * Colour comes only from --pv-* (set by the dialog) and the --fi-* inks and edges the scene
- * works out per palette. The bag is flat shapes, no photograph. Layout is a container query
+ * works out per palette. A neutral paper texture carries the live bag colour. Layout is a container query
  * on .pvs: text beside the bag from 720px, the bag above the text under it.
  * Type: 13 / 14 / 16 / 18 / 40px. Literata carries the name and the bag's wordmark; Geist the rest. */
 @font-face{font-family:'PV Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
@@ -20,17 +20,28 @@
 
 .cf-tx{display:flex;flex-direction:column;justify-content:center;gap:var(--s-3);padding:var(--s-7)}
 .cf-brand{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--pv-muted)}
-.cf-n{font-family:var(--cf-serif);font-size:40px;font-weight:600;line-height:1.1;letter-spacing:-.015em}
-.cf-p{max-width:36ch;font-size:16px;line-height:1.55}
+.cf-n{font-family:var(--cf-serif);font-size:clamp(40px,7cqi,84px);font-weight:550;line-height:1.02;letter-spacing:-.015em}
+.cf-lot { margin: var(--s-4) 0; border-block: 1px solid var(--pv-border-strong); padding-block: var(--s-3); }
+.cf-lot div + div { margin-top: var(--s-3); }
+.cf-lot dt { font-size: 12px; color: var(--pv-muted); }
+.cf-lot dd { margin: 0; font-size: 16px; line-height: 1.45; }
 .cf-pr{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
 .cf-add{display:inline-flex;align-self:flex-start;align-items:center;justify-content:center;height:48px;margin-top:var(--s-3);padding:0 var(--s-6);border-radius:6px;border:1px solid var(--fi-edge);background:var(--pv-primary);color:var(--fi-ink);font-size:16px;font-weight:600}
 
 .cf-ph{display:grid;place-items:center;min-height:360px;padding:var(--s-6);background:var(--pv-primary);box-shadow:inset 0 0 0 1px var(--fi-edge)}
-.cf-bag{position:relative;display:flex;flex-direction:column;justify-content:flex-end;width:min(60%,260px);aspect-ratio:4 / 5.4;padding:var(--s-4);border-radius:14px 14px 8px 8px;background:var(--pv-subtle);box-shadow:0 0 0 1px var(--fi-sub-edge),0 0 0 1px var(--pv-border-strong)}
-.cf-seal{position:absolute;left:0;right:0;top:var(--s-5);height:0;border-top:2px dotted var(--pv-border-strong)}
-.cf-label{display:flex;flex-direction:column;gap:var(--s-3);margin-bottom:var(--s-5);padding:var(--s-4);border-radius:6px;background:var(--pv-deep);color:var(--fi-deep-ink);box-shadow:0 0 0 1px var(--fi-deep-edge)}
-.cf-wm{font-family:var(--cf-serif);font-size:20px;font-weight:600;line-height:1.15}
-.cf-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);font-size:12px}
+.cf-bag {
+  position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end;
+  width: min(90%, 310px); aspect-ratio: 870 / 1500;
+  padding: 0 clamp(14px, 3.4cqi, 36px) clamp(30px, 5cqi, 56px);
+  background: var(--pv-subtle) url('/previews/coffee-pouch.webp') center / 100% 100% no-repeat;
+  background-blend-mode: multiply; color: var(--fi-sub-ink);
+  clip-path: polygon(3.6% 0,96.6% 0,96.4% 13%,98.5% 20%,100% 92%,96.5% 99.8%,4% 99.8%,0 93%,1.2% 21%,3.6% 13%);
+}
+.cf-label { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); background: var(--pv-deep); color: var(--fi-deep-ink); }
+.cf-horizon { width: 100%; height: 44px; }
+.cf-imprint { font-size: 12px; font-weight: 600; letter-spacing: .025em; }
+.cf-wm { font-family: var(--cf-serif); font-size: clamp(24px, 4cqi, 34px); font-weight: 600; letter-spacing: -.035em; line-height: 1.04; }
+.cf-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); border-top: 1px solid currentColor; padding-top: var(--s-2); font-size: 12px; }
 .cf-dots{display:flex;gap:var(--s-1)}
 .cf-dots i{width:8px;height:8px;border-radius:50%;background:var(--pv-accent);box-shadow:0 0 0 1px var(--fi-acc-edge)}
 .cf-dots i.is-off{background:transparent;box-shadow:inset 0 0 0 1px var(--fi-deep-ink)}
@@ -39,5 +50,9 @@
   .cf{grid-template-columns:minmax(0,1fr)}
   .cf-ph{order:-1;min-height:280px}
   .cf-tx{padding:var(--s-5)}
-  .cf-n{font-size:32px}
+  .cf-bag{width:min(64%,190px)}
+  .cf-label{gap:4px;padding:10px}
+  .cf-horizon{height:20px}
+  .cf-wm{font-size:24px}
+  .cf-n{font-size:40px}
 }

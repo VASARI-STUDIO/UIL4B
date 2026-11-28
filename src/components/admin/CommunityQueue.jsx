@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listQueue, decideSubmission, deleteSubmission, reopenSubmission } from '../../utils/communityQueueApi'
 import { safeHttpUrl } from '../../utils/urlSafety'
-import { gradientCss } from '../../data/gradientGallery'
+import { gradientItemCss } from '../../data/gradientGallery'
 import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
 import IconSubmissionPreview from '../discover/IconSubmissionPreview'
 
@@ -45,14 +45,14 @@ function Preview({ item }) {
     // drawn only after the same clean-up the library applies: hex-only colours,
     // a numeric angle, a known type, a bounded stop list. One that does not
     // describe a real gradient gets no preview.
-    const g = sanitizeGradientSubmission({ type: p.type, angle: p.angle ?? 90, stops: p.stops })
+    const g = sanitizeGradientSubmission({ type: p.type, angle: p.angle ?? 90, url: p.url, stops: p.stops })
     if (g) {
       // Rendered with the same gradientCss the library uses, so a reviewer sees
       // exactly what would be published rather than an approximation.
       return (
         <span
           className="cq-preview cq-preview--gradient"
-          ref={(el) => el && el.style.setProperty('--cq-grad', gradientCss(g.type, g.angle, g.stops))}
+          ref={(el) => el && el.style.setProperty('--cq-grad', gradientItemCss(g))}
           aria-label={`${g.type} gradient, ${g.stops.length} stops`}
         />
       )

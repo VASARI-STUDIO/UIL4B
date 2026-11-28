@@ -872,7 +872,8 @@ export default function ColorStudio({ onCopy, toast }) {
               </div>
               <div className="stc-sc stc-sc--info">
                 <ToolIcon name="circle-notch" size={16} className="stc-sc-ico" />
-                <span className="stc-sc-lead"><strong>Publishing design system</strong><small>3 of 5 token files written</small></span>
+                <span className="stc-sc-lead"><strong>Publishing design system</strong><small>3 of 5 token files written</small>
+                  <progress className="stc-file-progress" value={3} max={5} aria-label="Token files written" /></span>
                 <span className="stc-sc-badge">In progress</span>
               </div>
             </div>

@@ -1,0 +1,261 @@
+/* ── PREVIEW STYLES (on the canvas) ──────────────────────────────────────────
+   Grain, Fluted glass, Glow ring, Streak, Soft glow and Fade: each draws the person's
+   stops in one look (GradientFx.jsx). It is all CSS, painted once per change and
+   vector-crisp at any pixel density, and nothing here moves. The grounds are neutral
+   and flat; every colour that is not a neutral comes from the stops. The fx box is a
+   size container so blur and shapes scale with the canvas. */
+.grd .grd-fx {
+  --fx-ground: #0d0e11;
+  --fx-paint: transparent;
+  --fx-row: none;
+  --fx-wash: none;
+  --fx-heart: transparent;
+  --fx-low: transparent;
+  --fx-high: transparent;
+  --fx-pitch: 24px;
+  --fx-slice: 4px;
+  --fx-step: 2.2%;
+  --fx-bar: 3px;
+  --fx-alpha: 1;
+  --fx-from: 0%;
+  --fx-to: 100%;
+  --k: 0;
+  /* Film grain: a monochrome noise tile, pushed to high contrast. */
+  --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27120%27 height=%27120%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter='url(%23n)'/%3E%3C/svg%3E");
+  position: absolute; inset: 0;
+  container-type: size;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--tl-line);
+  border-radius: 18px;
+  background: var(--fx-ground);
+  pointer-events: none;
+}
+/* The grain tile is rasterised at its own unit size, so on a dense screen a 120-unit tile is
+   stretched over 240 or 360 device pixels and goes soft. These tiles carry one unit per
+   device pixel at the same 120px size, so the grain stays as sharp as it is at 1x. */
+@media (min-resolution: 1.5dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27180%27 height=%27180%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27180%27 height=%27180%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
+@media (min-resolution: 2dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27240%27 height=%27240%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27240%27 height=%27240%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
+@media (min-resolution: 3dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27360%27 height=%27360%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27360%27 height=%27360%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
+.grd .grd-fx > *, .grd .grd-fx-flutes, .grd .grd-fx-slice, .grd .grd-fx-slice-in { position: absolute; inset: 0; }
+.grd .grd-fx-grain {
+  background-image: var(--fx-grain);
+  background-size: 120px 120px;
+  mix-blend-mode: overlay;
+  opacity: .3;
+}
+
+/* Full-bleed grain preserves the same field and stop positions as Plain. */
+.grd .grd-fx[data-fx="grain"] .grd-fx-grain { opacity: .42; }
+
+/* Fluted glass and Glow ring: the scene is repeated in thin slices of every flute, each
+   copy shifted a little further across, so a flute shows a reversed sweep of the scene
+   around it. The last slice is held to the flute's pitch so the rhythm does not drift. */
+.grd .grd-fx-fill { position: absolute; inset: 0; background: var(--fx-paint); }
+
+/* Lighting and ink coverage sit over the same paint used by Plain. */
+.grd .grd-fx-material { background-image: var(--fx-paint); }
+.grd .grd-fx[data-fx="satin"] .grd-fx-material {
+  background-image: url('/previews/gradient-satin.webp'), var(--fx-paint);
+  background-position: center;
+  background-size: cover;
+  background-blend-mode: hard-light;
+}
+.grd .grd-fx[data-fx="folds"] .grd-fx-material {
+  background-image: url('/previews/gradient-folds.svg'), var(--fx-paint);
+  background-size: 100% 100%;
+  background-blend-mode: hard-light;
+}
+.grd .grd-fx[data-fx="halftone"] { --fx-ground: #f3f1eb; }
+.grd .grd-fx[data-fx="halftone"] .grd-fx-material {
+  mask: url('/previews/gradient-halftone.svg') center / cover no-repeat;
+}
+.grd .grd-fill-thumb .grd-fx[data-fx="halftone"] .grd-fx-material {
+  mask-image: url('/previews/gradient-halftone.svg#swatch');
+}
+.grd .grd-fx-slice {
+  mask-image: repeating-linear-gradient(90deg,
+    transparent 0 calc(var(--k) * var(--fx-slice)),
+    #000 0 min(calc((var(--k) + 1) * var(--fx-slice) + 1px), var(--fx-pitch)),
+    transparent 0 var(--fx-pitch));
+  -webkit-mask-image: repeating-linear-gradient(90deg,
+    transparent 0 calc(var(--k) * var(--fx-slice)),
+    #000 0 min(calc((var(--k) + 1) * var(--fx-slice) + 1px), var(--fx-pitch)),
+    transparent 0 var(--fx-pitch));
+}
+.grd .grd-fx-slice-in { transform: translateX(calc((2.5 - var(--k)) * var(--fx-step))); }
+/* The lens shading of each flute: a bright edge, a clear middle, a dark edge. */
+.grd .grd-fx-flutes::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg,
+    rgb(255 255 255 / .4) 0,
+    rgb(255 255 255 / .12) 1px,
+    rgb(255 255 255 / .16) calc(var(--fx-pitch) * .25),
+    transparent calc(var(--fx-pitch) * .6),
+    rgb(0 0 0 / .1) calc(var(--fx-pitch) * .8),
+    rgb(0 0 0 / .26) var(--fx-pitch));
+}
+.grd .grd-fx[data-fx="ring"] { --fx-step: .9%; }
+/* Fluted glass bends colour harder at each flute and shades every reed as a curved
+   surface: a dark edge, a broad highlight on the bulge, a darker falling side. */
+.grd .grd-fx[data-fx="fluted"] { --fx-step: 3.6%; }
+.grd .grd-fx[data-fx="fluted"] .grd-fx-fill {
+  background-image:
+    radial-gradient(ellipse 75% 105% at 1% 76%, rgb(0 0 0 / .85) 10%, transparent 66%),
+    radial-gradient(ellipse 62% 100% at 101% 8%, rgb(0 0 0 / .78), transparent 78%),
+    var(--fx-paint);
+}
+.grd .grd-fx[data-fx="fluted"] .grd-fx-fill::after {
+  content: ''; position: absolute; inset: -16% -6%;
+  transform: rotate(-12deg);
+  background: linear-gradient(164deg, rgb(255 255 255 / .35), transparent 42%), var(--fx-paint);
+  mask-image: radial-gradient(ellipse 70% 56% at 26% 12%,
+    transparent 70%, rgb(0 0 0 / .4) 86%, black 98%, transparent 136%);
+}
+.grd .grd-fx[data-fx="fluted"] .grd-fx-flutes::after {
+  background: repeating-linear-gradient(90deg,
+    rgb(0 0 0 / .3) 0,
+    rgb(255 255 255 / .03) calc(var(--fx-pitch) * .2),
+    rgb(255 255 255 / .3) calc(var(--fx-pitch) * .42),
+    rgb(255 255 255 / .04) calc(var(--fx-pitch) * .64),
+    rgb(0 0 0 / .18) calc(var(--fx-pitch) * .88),
+    rgb(0 0 0 / .34) var(--fx-pitch));
+}
+.grd .grd-fx[data-fx="ring"] .grd-fx-flutes::after { opacity: .6; }
+
+/* Glow ring: a luminous ring with a wide halo, both soft-edged by their masks. */
+.grd .grd-fx-ring, .grd .grd-fx-halo {
+  position: absolute;
+  inset: auto;
+  left: 50%; top: 50%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--fx-paint);
+}
+.grd .grd-fx-ring {
+  width: min(66cqh, 60cqw);
+  filter: saturate(1.3) brightness(1.1);
+  mask-image: radial-gradient(closest-side, transparent 56%, #000 60%, #000 70%, transparent 78%);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 56%, #000 60%, #000 70%, transparent 78%);
+}
+.grd .grd-fx-halo {
+  width: min(96cqh, 84cqw);
+  opacity: .55;
+  filter: blur(clamp(6px, 2cqmin, 16px));
+  mask-image: radial-gradient(closest-side, transparent 40%, #000 62%, transparent 100%);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 40%, #000 62%, transparent 100%);
+}
+
+/* Streak: the stops stretched into thin vertical columns, three weights of them, added
+   together on black. */
+.grd .grd-fx-cols {
+  opacity: var(--fx-alpha);
+  mix-blend-mode: screen;
+  mask-image: repeating-linear-gradient(90deg, #000 0 var(--fx-bar), transparent 0 var(--fx-pitch));
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 var(--fx-bar), transparent 0 var(--fx-pitch));
+}
+.grd .grd-fx-col-fill {
+  position: absolute; inset: 0;
+  background: var(--fx-row);
+  mask-image: linear-gradient(180deg, transparent var(--fx-from), #000 calc(var(--fx-from) + 22%), #000 calc(var(--fx-to) - 22%), transparent var(--fx-to));
+  -webkit-mask-image: linear-gradient(180deg, transparent var(--fx-from), #000 calc(var(--fx-from) + 22%), #000 calc(var(--fx-to) - 22%), transparent var(--fx-to));
+}
+
+/* Soft glow: three blurred colour pools from the stops, closed in by a dark edge. */
+.grd .grd-fx-orb {
+  inset: auto;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  filter: blur(clamp(2px, 2cqmin, 18px));
+}
+.grd .grd-fx-orb--heart {
+  left: 33%; top: 49%; width: 90cqw;
+  background: radial-gradient(closest-side, var(--fx-heart) 0, color-mix(in srgb, var(--fx-heart) 70%, transparent) 45%, transparent 100%);
+}
+.grd .grd-fx-orb--low {
+  left: 58%; top: 64%; width: 85cqw;
+  background: radial-gradient(closest-side, var(--fx-low) 0, color-mix(in srgb, var(--fx-low) 60%, transparent) 45%, transparent 100%);
+}
+.grd .grd-fx-orb--high {
+  left: 82%; top: 31%; width: 70cqw;
+  background: radial-gradient(closest-side, var(--fx-high) 0, color-mix(in srgb, var(--fx-high) 60%, transparent) 45%, transparent 100%);
+}
+.grd .grd-fx-vignette { background: radial-gradient(ellipse farthest-corner at 46% 50%, transparent 45%, rgb(0 0 0 / .38)); }
+.grd .grd-fx[data-fx="glow"] .grd-fx-grain { opacity: .2; }
+
+/* Fade: a wash from the light ground down through the stops. */
+.grd .grd-fx[data-fx="fade"] { --fx-ground: #f2f1ee; }
+.grd .grd-fx-wash {
+  background: var(--fx-wash);
+  mask-image: linear-gradient(180deg, transparent 0, #000 45%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 45%);
+}
+.grd .grd-fx[data-fx="fade"] .grd-fx-grain { opacity: .28; }
+
+@media (max-width: 600px) {
+  .grd .grd-fx { --fx-pitch: 18px; --fx-slice: 3px; }
+}
+.grd .grd-fx-waves { display: block; width: 100%; height: 100%; }
+
+/* A finite lens clips the reeded field. The clear point and its grooves stay
+   in proportion on a thumbnail, the canvas and the downloaded image. */
+.grd .grd-fx[data-fx="aperture"] {
+  --fx-ground: #0b0b0e;
+  --fx-space: in srgb;
+  --fx-spectrum: #eee, #202025;
+  --fx-pitch: 6.6cqmin;
+  --fx-slice: 1.1cqmin;
+  --fx-step: 4%;
+}
+.grd .grd-fx > .grd-fx-aperture {
+  inset: 50% auto auto 50%;
+  width: 83cqmin; aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / .18);
+}
+.grd .grd-fx-lamp {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 58% 66% at 52% 56% var(--fx-space), var(--fx-spectrum));
+  mask-image: radial-gradient(ellipse 65% 76% at 51% 57%, black 32%, transparent 81%);
+}
+.grd .grd-fx-aperture::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 52% 56%, white 0 .65%, transparent 1%),
+    linear-gradient(90deg, transparent calc(52% - .5px), rgb(255 255 255 / .24) 52%, transparent calc(52% + .5px));
+}
+.grd .grd-fx[data-fx="aperture"] .grd-fx-grain { opacity: .12; }
+
+/* Each concentric facet sees a different crop of the same field. */
+.grd .grd-lens-ground { background: var(--fx-paint); filter: brightness(.57); }
+.grd .grd-lens-band {
+  clip-path: ellipse(var(--radius) calc(var(--radius) * .92) at 69% 68%);
+  background-image: linear-gradient(116deg, rgb(255 255 255 / .35), transparent 36%, rgb(0 0 0 / .22)), var(--fx-paint);
+  background-size: cover, var(--scale) 160%;
+  background-position: center, var(--offset) calc(70% - var(--ring) * 6%);
+  filter: brightness(calc(.68 + var(--ring) * .055));
+}
+.grd .grd-fx[data-fx="riso"] { --fx-ground: #f3ebdc; }
+.grd .grd-press-sheet, .grd .grd-press-ink {
+  background: var(--fx-paint); mix-blend-mode: multiply;
+  border-radius: 42% 58% 24% 66% / 57% 42% 58% 43%;
+}
+.grd .grd-fx > .grd-press-sheet { inset: -27% 16% 8% -19%; transform: rotate(-23deg); }
+.grd .grd-fx > .grd-press-ink {
+  inset: 2% -15% -33% 15%; transform: rotate(19deg); background-size: 155% 155%; background-position: 80% 74%;
+  mask-image: radial-gradient(circle, black 48%, transparent 74%); mask-size: clamp(2px,.63cqmin,4px) clamp(2px,.63cqmin,4px);
+}
+.grd .grd-fx[data-fx="riso"] .grd-fx-grain { opacity: .37; mix-blend-mode: multiply; }
+.grd .grd-fx[data-fx="streak"] .grd-fx-cols:nth-child(2) { transform: skewY(-16deg) translateY(8%); }
+.grd .grd-fx[data-fx="streak"] .grd-fx-cols:last-child { transform: skewY(18deg) translateY(-14%); }
+.grd .grd-fx[data-fx="ring"] .grd-fx-ring { left: 63%; top: 57%; width: min(95cqh,83cqw); }
+.grd .grd-fx[data-fx="ring"] .grd-fx-halo { left: 63%; top: 57%; }
+.grd .grd-fx[data-fx="fade"] .grd-fx-wash { transform: scale(1.25) rotate(-18deg); }
+.grd .grd-fx[data-fx="grain"] .grd-fx-fill::before {
+  content: ''; position: absolute; inset: -14%;
+  background: var(--fx-paint); background-size: 147% 132%; background-position: 84% 78%;
+  mask-image: radial-gradient(ellipse 56% 83% at 79% 15%, black 27%, transparent 84%);
+}

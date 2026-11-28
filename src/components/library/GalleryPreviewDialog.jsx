@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import useModalDialog from '../../hooks/useModalDialog'
 import { hexToOklch } from '../../utils/colors'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../../utils/paletteMood'
-import { gradientCss, gradientToolUrl } from '../../data/gradientGallery'
+import { gradientItemCss, gradientToolUrl } from '../../data/gradientGallery'
 import { paletteBuilderUrl } from '../../data/paletteGallery'
 import {
   readablePairs, gradientTextContrast, floorRatio, verdictFor,
@@ -131,12 +131,12 @@ function GradientBody({ item, copied, onCopy }) {
         <h3 className="gpd-sec-h" id="gpd-pairs">Text over it</h3>
         <ul className="gpd-pairs">
           <li className="gpd-pair">
-            <span className="gpd-pair-chip" style={{ background: gradientCss(item.type, item.angle, item.stops), color: '#FFFFFF' }} aria-hidden="true">Aa</span>
+            <span className="gpd-pair-chip" style={{ background: gradientItemCss(item), color: '#FFFFFF' }} aria-hidden="true">Aa</span>
             <span className="gpd-pair-text">White text, lowest {floorRatio(white)}:1</span>
             <span className="gpd-pair-ratio">{verdictFor(white)}</span>
           </li>
           <li className="gpd-pair">
-            <span className="gpd-pair-chip" style={{ background: gradientCss(item.type, item.angle, item.stops), color: '#000000' }} aria-hidden="true">Aa</span>
+            <span className="gpd-pair-chip" style={{ background: gradientItemCss(item), color: '#000000' }} aria-hidden="true">Aa</span>
             <span className="gpd-pair-text">Black text, lowest {floorRatio(black)}:1</span>
             <span className="gpd-pair-ratio">{verdictFor(black)}</span>
           </li>
@@ -211,7 +211,7 @@ export default function GalleryPreviewDialog({ kind, items, index, onIndex, onCl
   const to = isPalette ? (item.pro ? '/create/palette' : paletteBuilderUrl(item.colors)) : gradientToolUrl(item)
   const editor = isPalette ? 'Open in Palette Builder' : 'Open in Gradient Generator'
   const actions = actionsOf ? actionsOf(item) : []
-  const previewStyle = isPalette ? undefined : { background: gradientCss(item.type, item.angle, item.stops) }
+  const previewStyle = isPalette ? undefined : { background: gradientItemCss(item) }
 
   return createPortal(
     <div className="lib-surface lib-v3 lbry-sheet-layer gpd-layer">

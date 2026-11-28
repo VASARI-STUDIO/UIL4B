@@ -12,10 +12,10 @@ export const ROLES = ['primary', 'secondary', 'accent', 'subtle', 'deep', 'error
 
 // What each text sets its colour from, for the contrast sweep.
 export const TEXT_RECIPE = [
-  { el: 'wordmark, nav, headline, dek, body, panel titles', ink: 'text', large: false },
-  { el: 'issue line, rubric, byline, caption, map labels, readout, panel notes', ink: 'muted', large: false },
-  { el: 'Subscribe, Continue', ink: 'inkOnField:primary', large: false },
-  { el: 'current issue row', ink: 'inkOnField:subtle', large: false },
+  { el: 'wordmark, nav, body, panel titles', ink: 'text', large: false },
+  { el: 'issue line, map labels, readout, panel notes', ink: 'muted', large: false },
+  { el: 'Subscribe, Continue, photo caption', ink: 'inkOnField:primary', large: false },
+  { el: 'headline, dek, rubric, byline, bookmark and current issue row', ink: 'inkOnField:subtle', large: false },
   { el: 'email error', ink: 'error-ink', large: false },
 ]
 

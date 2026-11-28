@@ -1,5 +1,5 @@
 // /create/gradient: the places (Fill, Hero, Card, Button, Poster, Spec card, App icon, Phone)
-// on the preview switch, and the fill styles (Plain, Grain, Fluted glass, Glow ring, Streak,
+// on the preview switch, and the fill styles (Plain, Satin, Folded paper, Halftone, Grain, Fluted glass, Glow ring, Streak,
 // Soft glow, Fade, Mesh, Waves) in the Fill style picker at the end of the switch on Fill.
 //
 // What a designer relies on:
@@ -27,9 +27,14 @@ import { go, watch } from './helpers.js'
 
 const KEY = 'vs-gradient-preview'
 const FILL_KEY = 'vs-gradient-fill'
-const STYLES = [['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'], ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade']]
-const PLACES = ['Fill', 'Hero', 'Card', 'Button', 'Poster', 'Spec card', 'App icon', 'Phone']
-const FILL_NAMES = ['Plain', ...STYLES.map(([, n]) => n), 'Mesh', 'Waves']
+const MATERIALS = [['satin', 'Satin'], ['folds', 'Folded paper'], ['halftone', 'Halftone']]
+const STYLES = [
+  ['aperture', 'Aperture'], ...MATERIALS,
+  ['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'],
+  ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade'],
+]
+const PLACES = ['Fill', 'Webpage', 'Hero', 'Card', 'Button', 'Poster', 'Spec card', 'App icon', 'Phone']
+const FILL_NAMES = ['Plain', ...STYLES.map(([, n]) => n), 'Waves']
 
 const switchOf = (page) => page.getByRole('group', { name: 'Preview as' })
 const stageOf = (page) => page.locator('.grd-stage')
@@ -96,6 +101,29 @@ test.describe('the preview styles', () => {
     })
   }
 
+  test('material finishes follow geometry edits on the stage and in the picker', async ({ page }) => {
+    await startOn(page, 'satin')
+    await withStops(page, '#163951', '#E7A777')
+    await open(page)
+    const type = page.getByRole('group', { name: 'Gradient type' })
+    for (const [id, name] of MATERIALS) {
+      await triggerOf(page).click()
+      const tile = pickerOf(page).getByRole('button', { name, exact: true })
+      await tile.click()
+      await page.keyboard.press('Escape')
+      const material = fxOf(page, `[data-fx="${id}"]`).locator('.grd-fx-material')
+      await page.getByRole('spinbutton', { name: 'Gradient angle in degrees' }).fill('35')
+      await page.getByRole('spinbutton', { name: 'Gradient angle in degrees' }).press('Enter')
+      await expect(material).toHaveCSS('background-image', /linear-gradient\(35deg/)
+      await type.getByRole('button', { name: 'Radial', exact: true }).click()
+      await expect(material).toHaveCSS('background-image', /radial-gradient/)
+      await triggerOf(page).click()
+      await expect(tile.locator('.grd-fx-material')).toHaveCSS('background-image', /radial-gradient/)
+      await page.keyboard.press('Escape')
+      await type.getByRole('button', { name: 'Linear', exact: true }).click()
+    }
+  })
+
   test('the switch lists the places and the Fill style picker lists the styles, by keyboard', async ({ page }) => {
     await startOn(page, 'grain')
     await open(page)
@@ -116,16 +144,16 @@ test.describe('the preview styles', () => {
       await expect(picker.getByRole('button', { name, exact: true }), `${name} is a named tile`).toHaveAttribute('aria-pressed', /true|false/)
     }
     await expect(picker.getByRole('button', { name: 'Grain', exact: true })).toBeFocused()
-    await page.keyboard.press('ArrowRight')
-    await expect(picker.getByRole('button', { name: 'Fluted glass', exact: true })).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(picker.getByRole('button', { name: 'Folded paper', exact: true })).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(picker.getByRole('button', { name: 'Fluted glass', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(picker.getByRole('button', { name: 'Folded paper', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(picker.getByRole('button', { name: 'Grain', exact: true })).toHaveAttribute('aria-pressed', 'false')
-    await expect(fxOf(page)).toHaveAttribute('data-fx', 'fluted')
+    await expect(fxOf(page)).toHaveAttribute('data-fx', 'folds')
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
     await expect(triggerOf(page)).toBeFocused()
-    await expect(triggerOf(page)).toHaveAccessibleName('Fill style: Fluted glass')
+    await expect(triggerOf(page)).toHaveAccessibleName('Fill style: Folded paper')
   })
 
   test('the style picker is only offered on Fill', async ({ page }) => {

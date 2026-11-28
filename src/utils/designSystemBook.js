@@ -1,3 +1,4 @@
+import { gradientItemCss } from '../data/gradientGallery.js'
 // The design system book — the Pro export.
 //
 // WHAT THIS IS, AND WHY IT IS NOT THE STYLE GUIDE.
@@ -483,7 +484,7 @@ function matrixPages(d) {
 
 function gradientPage(d) {
   const g = d.gradient
-  const css = `linear-gradient(${g.angle}deg, ${g.stops.map(s => `${s.color} ${s.position}%`).join(', ')})`
+  const css = gradientItemCss(g)
   const rows = g.stops.map((s, i) => `<tr>
     <th scope="row"><span class="dot" style="background:${s.color}"></span>Stop ${i + 1}</th>
     <td class="num">${esc(s.color)}</td>
@@ -492,7 +493,7 @@ function gradientPage(d) {
   return `<div class="pg-body">
     <header class="pg-head">
       <h3>The gradient</h3>
-      <p class="lede">${esc(g.type)} gradient at ${g.angle}°, ${plural(g.stops.length, 'stop')}.</p>
+      <p class="lede">${esc(g.type)} gradient${['Radial', 'Mesh'].includes(g.type) ? '' : ` at ${g.angle}°`}, ${plural(g.stops.length, 'stop')}.</p>
     </header>
     <div class="gr-spec" style="background:${css}"></div>
     <table class="tb">

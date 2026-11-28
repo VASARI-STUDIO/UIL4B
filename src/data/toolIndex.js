@@ -214,7 +214,7 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['tint', 'tints', 'shade', 'shades', 'ramp', 'steps', 'lighten', 'darken', 'scale', 'colour', 'color'],
   },
   gradient: {
-    description: 'Design linear, radial and conic gradients and copy the CSS.',
+    description: 'Design linear, radial, conic and mesh gradients and copy the CSS.',
     keywords: ['gradient', 'gradients', 'linear', 'radial', 'conic', 'mesh', 'css', 'background', 'fade', 'blend'],
   },
   contrast: {

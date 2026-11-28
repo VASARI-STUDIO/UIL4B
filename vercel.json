@@ -9,7 +9,7 @@
   "installCommand": "npm ci",
   "functions": {
     "api/ai.js": {
-      "includeFiles": "{src/{config/export*s,data/{*tG*,u*,*ee,s*,*p,l*x,*mes,*fa*},utils/{*eE*,s*es,r*a,*int*s,*teR*,p*mes,*ust,*hF*,e*me,*ok,c*ors,*go,*ens,*del*,appB*,exp*/{*,*/*}}}.js,src/data/f*.json,public/fonts/{b,h,i,l,mar,s}*-latin.woff2,api/_lib/exportThemes/fonts/*}"
+      "includeFiles": "{src/{c*/{t*/o*,e*s},d*/{*tG*,u*,*ee,s*,*p,l*x,*mes,*fa*},u*/{t*s,s*es,r*a,*eRo*,*teN*,*l*u*t,n*h,*hF*,*di*re*,ex*e,*ok,c*ors,*go,*T*n*s,*del*,*pB*,e*/{*,*/*}}}.js,src/data/f*.json,public/fonts/{b,h,i,l,mar,s}*-latin.woff2,api/_lib/exportThemes/fonts/*}"
     }
   },
   "git": {

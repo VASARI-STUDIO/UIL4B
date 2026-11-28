@@ -1,3 +1,5 @@
+import { cleanMeshLayout, meshPaint } from '../utils/gradientPreviewStyles.js'
+
 // Gradient gallery helpers — the filter tags, the CSS composer and the Gradient
 // Generator hand-off. The gradients themselves are NOT in this file any more.
 //
@@ -15,7 +17,8 @@ const GRAD_FN = { Linear: 'linear-gradient', Radial: 'radial-gradient', Conic: '
 // Compose the production CSS value for a gradient. Stops are sorted so a
 // dragged-past handle still reads left→right. Shared with the Gradient
 // Generator so the gallery, the tool and every copied snippet agree.
-export function gradientCss(type, angle, stops) {
+export function gradientCss(type, angle, stops, layout, space = 'srgb') {
+  if (type === 'Mesh') return meshPaint(stops, space === 'oklch', layout)
   const fn = GRAD_FN[type] || 'linear-gradient'
   const prefix = type === 'Linear' ? `${angle}deg, ` : type === 'Conic' ? `from ${angle}deg at 50% 50%, ` : ''
   const parts = [...stops]
@@ -24,6 +27,8 @@ export function gradientCss(type, angle, stops) {
     .join(', ')
   return `${fn}(${prefix}${parts})`
 }
+
+export const gradientItemCss = g => gradientCss(g.type, g.angle, g.stops, g.mesh, g.space)
 
 // Build the Gradient Generator hand-off URL — ?gs=RRGGBB-pos_RRGGBB-pos with the
 // type and angle alongside, decoded by decodeGradientParams below.
@@ -35,14 +40,20 @@ export function gradientCss(type, angle, stops) {
 //   sd  seed              fx  finishes
 //   src 'link' on a link someone copied from the tool, so it opens as their own
 //       editable gradient; a library hand-off leaves it off
-// Callers do not pass st, sp, sd or fx yet; the decoder reads none of them yet either.
+// The generator validates the mesh geometry after the base stops decode.
 export function gradientToolUrl(g) {
   const gs = g.stops.map(s => `${s.color.replace('#', '')}-${Math.round(s.position)}`).join('_')
-  const optional = [['gn', g.name], ['gi', g.gi], ['st', g.st], ['sp', g.sp], ['sd', g.sd], ['fx', g.fx], ['src', g.src]]
+  const optional = [['gn', g.name], ['gi', g.gi ?? g.space], ['st', g.st], ['sp', g.sp ?? (g.type === 'Mesh' && g.mesh?.length ? JSON.stringify(g.mesh) : undefined)], ['sd', g.sd], ['fx', g.fx], ['src', g.src]]
     .filter(([, v]) => v != null && v !== '')
     .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
     .join('')
   return `/create/gradient?gs=${gs}&gt=${g.type.toLowerCase()}&ga=${Math.round(g.angle)}${optional}`
+}
+
+export function meshLayoutFromParams(params) {
+  const value = params.get('sp')
+  if (!value || value.length > 1024) return []
+  try { return cleanMeshLayout(JSON.parse(value)) } catch { return [] }
 }
 
 // Most stops a link may carry; the generator's own limit.
@@ -59,7 +70,9 @@ export function decodeGradientParams(params) {
     return m ? { color: `#${m[1].toUpperCase()}`, position: Math.min(100, +m[2]) } : null
   })
   if (stops.length < 2 || stops.some(s => !s)) return null
-  const type = { linear: 'Linear', radial: 'Radial', conic: 'Conic' }[(params.get('gt') || 'linear').toLowerCase()] || 'Linear'
+  // Earlier links selected Mesh as a fill style over a conventional gradient.
+  const kind = params.get('st') === 'mesh' ? 'mesh' : params.get('gt')?.toLowerCase()
+  const type = ['Linear', 'Radial', 'Conic', 'Mesh'].find(label => label.toLowerCase() === kind) || 'Linear'
   const angle = Math.min(360, Math.max(0, parseInt(params.get('ga'), 10) || 0))
   const name = (params.get('gn') || '').slice(0, 60) || null
   const gi = (params.get('gi') || '').toLowerCase()

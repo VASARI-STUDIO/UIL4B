@@ -296,3 +296,7 @@
   .stc .stc-cell { forced-color-adjust: none; }
   .stc .stc-cell.is-base { outline: 2px solid Highlight; }
 }
+.stc-file-progress { display: block; width: min(100%, 128px); height: 4px; margin-top: 6px; appearance: none; border: 0; background: var(--sc-paper, transparent); color: inherit; }
+.stc-file-progress::-webkit-progress-bar { background: color-mix(in srgb, currentColor 15%, transparent); }
+.stc-file-progress::-webkit-progress-value { background: currentColor; }
+.stc-file-progress::-moz-progress-bar { background: currentColor; }

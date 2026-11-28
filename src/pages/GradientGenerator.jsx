@@ -13,7 +13,7 @@ import {
 } from '../components/tool/ToolLayout'
 import { gradientCssIn, gradientCssText, gradientSvg } from '../utils/gradientExport'
 import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
-import { GRAD_TYPE_WEIGHTS, rollGradient, parseMoodFilters, moodFor, moodWords, poolMatching } from '../utils/gradientRandom'
+import { GRAD_TYPES, rollGradient, parseMoodFilters, moodFor, moodWords, poolMatching } from '../utils/gradientRandom'
 import { pushRecent } from '../utils/gradientScore'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
@@ -27,7 +27,7 @@ import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget } from '../utils/gradientPaint'
 import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, hasStopLock, setStopLock, parseGeometryLocks, lockedRollOptions } from '../utils/gradientLocks'
 import MenuSelect from '../components/tool/MenuSelect'
-import { gradientCss, gradientToolUrl, decodeGradientParams } from '../data/gradientGallery'
+import { gradientCss, gradientToolUrl, decodeGradientParams, meshLayoutFromParams } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
@@ -41,7 +41,8 @@ import GradientFx from '../components/tool/GradientFx'
 import GradientText from '../components/tool/GradientText'
 import useMeasured from '../components/tool/useMeasured'
 import PreviewSwitch from '../components/tool/PreviewSwitch'
-import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
+import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, meshLayoutPoints, meshGround, cleanMeshLayout, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
+import GradientArtworkEditor from '../components/tool/GradientArtworkEditor'
 import FillStylePicker from '../components/tool/FillStylePicker'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
@@ -56,6 +57,7 @@ import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pe
 // nothing depends on import order.
 // tool-shell.css is the shared tool shell the other tool pages load too.
 import '../styles/deferred/tool-shell.css'
+import '../styles/pages/gradient-fill.css'
 import '../styles/pages/gradient.css'
 
 // ── Gradient ──
@@ -67,8 +69,6 @@ import '../styles/pages/gradient.css'
 // kept and placed in that layout — see the notes at each block. It reads + writes
 // the shared design.gradient (ProjectContext) so a gradient authored here survives
 // a jump to any other colour tool. (Class prefix `grd-`.)
-
-const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
 // How long a community submission waits for the queue before it says so. Offline,
 // Firestore holds the write and never rejects.
@@ -670,31 +670,35 @@ const measureButtons = (view) => [...view.querySelectorAll('.grd-ctx-btn')].map(
   return boxWithin(btn.getBoundingClientRect(), words.getBoundingClientRect())
 })
 
-function PreviewHero({ stops, type, angle }) {
+function PreviewHero({ stops, type, angle, mesh }) {
   const [ref, spot] = useMeasured(measureHero)
-  const ink = useMemo(() => inkFor(stops, type, angle, spot), [stops, type, angle, spot])
+  const ink = useMemo(() => inkFor(stops, type, angle, spot, mesh), [stops, type, angle, spot, mesh])
   const flip = ink.css === INK_DARK.css ? INK_LIGHT.css : INK_DARK.css
   return (
     <div className="grd-ctx-view grd-ctx-hero" ref={ref}>
+      <div className="grd-hero-photo"><img src="/previews/ferry/ferry-morning-640.webp" alt="" /></div>
       <div className="grd-ctx-sample" data-box aria-hidden="true" style={{ color: ink.css }}>
-        <p className="grd-ctx-h">Lessons that fit after school.</p>
-        <p className="grd-ctx-p">Week by week, length by length.</p>
-        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Book lessons</span>
+        <span className="grd-hero-name">Channel Ferry Co.</span>
+        <p className="grd-ctx-h">The harbour<br /><em>by water.</em></p>
+        <p className="grd-ctx-p">Crossings from Brooke Street Pier.</p>
+        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Find a sailing ↗</span>
       </div>
       <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{badgeText(ink)}</span>
     </div>
   )
 }
 
-function PreviewButtons({ paint, stops, type, angle }) {
+function PreviewButtons({ paint, stops, type, angle, mesh }) {
   const [ref, spots] = useMeasured(measureButtons)
-  const sizes = [32, 40, 48]
+  const ink = inkFor(stops, type, angle, spots?.[0], mesh)
   return (
     <div className="grd-ctx-view grd-ctx-ground grd-ctx-btns" aria-hidden="true" ref={ref}>
-      {sizes.map((h, i) => {
-        const ink = inkFor(stops, type, angle, spots?.[i])
-        return <span key={h} data-box className="grd-ctx-btn" title={badgeText(ink)} style={{ background: paint, color: ink.css, height: h }}>Save limits</span>
-      })}
+      <div className="grd-booking">
+        <header><span>Channel Ferry Co.</span><span>Booking</span></header>
+        <div className="grd-booking-trip"><small>One way · Passenger</small><strong>Brooke St <i>→</i> Bellerive</strong></div>
+        <div className="grd-booking-total"><span>1 adult · 08:40 sailing</span><b>$6.80</b></div>
+        <span data-box className="grd-ctx-btn" title={badgeText(ink)} style={{ background: paint, color: ink.css }}>Book crossing <i>↗</i></span>
+      </div>
     </div>
   )
 }
@@ -702,16 +706,37 @@ function PreviewButtons({ paint, stops, type, angle }) {
 // The sample UI drawn over the canvas. The ink comes from the part of the gradient the
 // text sits over (pickInk), so the text reads whatever colours Random makes; the badge
 // says by how much. The Card's gradient header carries no text, so it needs no ink.
-function PreviewSample({ id, paint, stops, type, angle }) {
-  if (id === 'hero') return <PreviewHero stops={stops} type={type} angle={angle} />
-  if (id === 'button') return <PreviewButtons paint={paint} stops={stops} type={type} angle={angle} />
+function PreviewSample({ id, paint, stops, type, angle, mesh }) {
+  if (id === 'web') return (
+    <div className="grd-ctx-view grd-web" aria-hidden="true">
+      <div className="grd-web-page">
+        <div className="grd-web-mast"><b>Frequency FM</b><span>Programme</span><span>Archive</span></div>
+        <div className="grd-web-feature">
+          <div className="grd-web-story">
+            <small>Friday transmission</small>
+            <strong>Listening<br /><em>Room.</em></strong>
+            <span>Independent radio from Melbourne.</span>
+            <b className="grd-web-listen">▶ Listen live</b>
+          </div>
+          <div className="grd-web-cover" style={{ background: paint }}>
+            <i className="grd-web-record" /><span>FM—08</span>
+          </div>
+        </div>
+        <div className="grd-web-schedule"><b>Up next</b><time>20:00</time><span>After Hours</span></div>
+      </div>
+    </div>
+  )
+  if (id === 'hero') return <PreviewHero mesh={mesh} stops={stops} type={type} angle={angle} />
+  if (id === 'button') return <PreviewButtons mesh={mesh} paint={paint} stops={stops} type={type} angle={angle} />
   if (id !== 'card') return null
   return (
     <div className="grd-ctx-view grd-ctx-ground" aria-hidden="true">
-      <div className="grd-ctx-card">
-        <div className="grd-ctx-card-head" style={{ background: paint }} />
-        <p className="grd-ctx-card-t">Quote on site. Paid by Friday.</p>
-        <p className="grd-ctx-card-p">Write a quote on site, turn it into an invoice with one tap, and see who has paid.</p>
+      <div className="grd-pass" style={{ '--pass-paint': paint }}>
+        <div className="grd-pass-face">
+          <div className="grd-pass-print" />
+          <div className="grd-pass-type"><small>Channel Ferry Co.</small><strong>Harbour<br /><em>Pass</em></strong></div>
+        </div>
+        <div className="grd-pass-stub"><span>Passenger / 01</span><i /><b>CF—0840</b></div>
       </div>
     </div>
   )
@@ -766,7 +791,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // first-time visitor lands on a finished look. Once any stop has a colour, the
   // saved stops are used and a stop still null falls back to the matching colour
   // of the live palette.
-  const [type, setType] = useState(() => design?.gradient?.type || PRESETS[0].type)
+  const [type, setType] = useState(() => {
+    if (!carriedPalette && design?.gradient?.artwork?.active === 'mesh') return 'Mesh'
+    return design?.gradient?.type || PRESETS[0].type
+  })
   // The design's untouched default carries a placeholder 135deg with no colours,
   // so it does not count as a saved angle. A gradient with real stops keeps its
   // saved angle, and so does a palette carried over from the Palette Builder
@@ -853,7 +881,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return () => { mountedRef.current = false }
   }, [])
   useEffect(() => { saveOpenRef.current = saveOpen }, [saveOpen])
-  const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
+  const [fmt, setFmt] = useState('css')
   // The code well's Copy button swaps to "Copied" for a beat after a press.
   const [copied, setCopied] = useState(false)
   const copiedTimer = useRef(0)
@@ -904,15 +932,33 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const focusStopRef = useRef(null)
   const focusRemovedRowRef = useRef(false)
 
-  const css = gradientCssIn(type, angle, stops, space)
-  // What the canvas paints: the chosen space where the browser can, else sRGB.
-  const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
-  // Whether the canvas blends in OKLCH, which the preview styles read colour in.
-  const fxOklch = paintCss === css && space === 'oklch'
   // The name of the project this gradient was saved as, for the Spec card.
   const savedName = (projects || []).find((p) => p.id === design?.source?.projectId)?.name
   // Where the gradient is previewed and, on Fill, how the fill is drawn.
-  const [{ place: previewPlace, fill: fillStyle }, setPreview] = useState(() => splitPreview(readSession(PREVIEW_KEY), readSession(FILL_KEY)))
+  const savedArt = !carriedPalette && design?.gradient?.artwork
+  const [layouts, setLayouts] = useState(() => ({
+    mesh: cleanMeshLayout(savedArt?.mesh),
+  }))
+  const isMesh = type === 'Mesh'
+  const svgAvailable = type !== 'Conic' && !isMesh
+  const fxOklch = supportsOklchGradients && space === 'oklch'
+  const mesh = useMemo(() => isMesh ? {
+    points: meshLayoutPoints(stops, fxOklch, layouts.mesh), ground: meshGround(stops),
+  } : null, [isMesh, stops, fxOklch, layouts.mesh])
+  const css = gradientCssIn(type, angle, stops, space, layouts.mesh)
+  const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops, layouts.mesh)
+  const cssCode = gradientCssText(type, angle, stops, space, layouts.mesh)
+  const [{ place: previewPlace, fill: fillStyle }, setPreview] = useState(() =>
+    splitPreview(readSession(PREVIEW_KEY), readSession(FILL_KEY)))
+  const [strength, setStrength] = useState(() => {
+    const saved = readSession('vs-gradient-finish-strength')
+    const value = Number(saved)
+    return saved && Number.isInteger(value) && value >= 0 && value <= 100 ? value : 100
+  })
+  function changeStrength(value) {
+    setStrength(value)
+    writeSession('vs-gradient-finish-strength', String(value))
+  }
   const choosePlace = (place) => {
     setPreview((p) => ({ ...p, place }))
     writeSession(PREVIEW_KEY, place)
@@ -921,30 +967,37 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setPreview((p) => ({ ...p, fill }))
     writeSession(FILL_KEY, fill)
   }
+  const stageRef = useRef(null)
+  const [drawingFill, setDrawingFill] = useState(false)
   // The one scene the stage draws: the place, or on Fill the fill style.
   const previewAs = previewId(previewPlace, fillStyle)
+  const styledFill = previewPlace === 'fill' && fillStyle !== 'plain'
   const previewAsLabel = (previewPlace === 'fill' ? FILL_STYLES : PREVIEW_PLACES).find((c) => c.id === (previewPlace === 'fill' ? fillStyle : previewPlace))
   // A fill style that draws its own shape ignores Type and Angle; Shape says so.
   const shapeMoot = previewPlace === 'fill' && FIXED_SHAPE_STYLES.includes(fillStyle) ? previewAsLabel?.label : null
 
   // Export code for the copy panel. SVG only applies to linear/radial, so a
   // conic gradient falls back to CSS even if SVG was the last-picked format.
-  const effFmt = fmt === 'svg' && type === 'Conic' ? 'css' : fmt
+  const effFmt = fmt === 'svg' && !svgAvailable ? 'css' : fmt
   const exportCode = useMemo(() => {
     if (effFmt === 'tailwind') return tailwindValue(css)
     if (effFmt === 'svg') return gradientSvg(type, angle, stops, space)
-    return gradientCssText(type, angle, stops, space)
-  }, [effFmt, css, type, angle, stops, space])
+    return cssCode
+  }, [effFmt, cssCode, css, type, angle, stops, space])
 
   // Persist to the shared design so the gradient follows the user across tools.
   // `source` travels with it so the Pro gate on gallery gradients survives a
   // remount/refresh and stays consistent with ColorStudio's gradient editor.
-  useEffect(() => {
+  useLayoutEffect(() => {
     // The stop locks travel with the design so they survive a trip to another tool;
     // the export and share paths drop them again (documentDesign, the gallery sanitiser).
-    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position, lockColour: !!s.lockColour, lockPosition: !!s.lockPosition })), angle, type, space, source: fromLibrary ? 'gallery' : 'own' })
+    const artwork = layouts.mesh.length ? { mesh: layouts.mesh } : null
+    setGradient({
+      stops: stops.map(s => ({ color: s.color, position: s.position, lockColour: !!s.lockColour, lockPosition: !!s.lockPosition })),
+      angle, type, space, artwork, source: fromLibrary ? 'gallery' : 'own',
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stops, angle, type, space, fromLibrary])
+  }, [stops, angle, type, space, fromLibrary, layouts])
 
   // Commit the Palette Builder hand-off. Effects only run for a committed tree,
   // so this empties the slot exactly once — a remount, a Back/Forward navigation
@@ -981,7 +1034,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // Back and Redo: the looks a roll, a preset, Reset or an edit replaced (utils/gradientHistory).
   // `lookRef` holds the look on screen, so the push needs no stale closure.
   const lookRef = useRef(null)
-  useLayoutEffect(() => { lookRef.current = { stops, type, angle, space } })
+  useLayoutEffect(() => { lookRef.current = { stops, type, angle, space, layouts } })
   const historyRef = useRef(emptyHistory())
   const [canBack, setCanBack] = useState(false)
   const [canForward, setCanForward] = useState(false)
@@ -1020,6 +1073,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     burst.at = now
   }, [pushHistory])
 
+  function editArtwork(index, patch, gesture) {
+    if (!isMesh || !guardEdit()) return
+    beginEdit(`mesh-${index}-${gesture}`)
+    setLayouts(previous => {
+      const points = [...previous.mesh]
+      const defaults = meshLayoutPoints(stops, fxOklch, points)
+      const { x, y, size } = defaults[index]
+      while (points.length <= index) points.push(null)
+      points[index] = { x, y, size, ...patch }
+      return { ...previous, mesh: points }
+    })
+  }
+
   const applyPreset = useCallback((p) => {
     // A preset replaces the stops, so stop locks clear; the geometry locks are the
     // person's settings and stay on (a locked angle keeps the one the preset set).
@@ -1049,6 +1115,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       // A link copied from the tool is someone's own gradient; only a library
       // hand-off (no src marker) opens locked.
       setFromLibrary(!incoming.link)
+      const legacyStyle = searchParams.get('st')
+      const fresh = { mesh: incoming.type === 'Mesh' ? meshLayoutFromParams(searchParams) : [] }
+      if (incoming.type === 'Mesh' || legacyStyle === 'orb') {
+        setPreview({ place: 'fill', fill: 'plain' })
+        writeSession(PREVIEW_KEY, 'fill')
+        writeSession(FILL_KEY, 'plain')
+      }
+      setLayouts(fresh)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
       const preset = presetSlug ? PRESETS.find(p => slugify(p.n) === presetSlug) : null
@@ -1056,7 +1130,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       toast?.(preset ? `Loaded ${preset.n}` : 'Opened in Gradient Generator')
     }
     const next = new URLSearchParams(searchParams)
-    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi', 'src'].forEach(k => next.delete(k))
+    ;['preset', 'tab', 'gs', 'gt', 'ga', 'gn', 'gi', 'src', 'st', 'sp'].forEach(k => next.delete(k))
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1066,6 +1140,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setType(look.type)
     setAngle(look.angle)
     setSpace(look.space)
+    setLayouts(look.layouts || { mesh: [] })
     selectOnly(0)
     setFromLibrary(false)
     burstRef.current.key = null
@@ -1179,7 +1254,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       const gap = sorted[i + 1].position - sorted[i].position
       if (gap > widest) { widest = gap; gapMid = (sorted[i].position + sorted[i + 1].position) / 2 }
     }
-    addStopAt(gapMid)
+    if (addStopAt(gapMid) == null) return null
+    return sorted.filter(s => s.position <= Math.round(gapMid)).length
   }, [stops, addStopAt])
 
   // The selection follows the rows: removing a row above the active one moves
@@ -1381,7 +1457,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
 
   // Reset clears every lock: the stops are replaced and the geometry locks go too.
-  const reset = useCallback(() => { applyPreset(PRESETS[0]); setLocks(NO_GEOMETRY_LOCKS) }, [applyPreset])
+  const reset = useCallback(() => { applyPreset(PRESETS[0]); setLayouts({ mesh: [] }); setLocks(NO_GEOMETRY_LOCKS) }, [applyPreset])
 
   // ── Import colours: the live Palette Builder palette + saved projects ──
   // A source needs 2+ real hex colours to make a gradient; capped at 5 stops so
@@ -1502,7 +1578,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // No name yet (it comes with the generated name), so `gn` is left off. A
     // gradient of the person's own carries src=link so it opens editable; one still
     // sourced from the library stays a library hand-off and opens locked.
-    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space, src: fromLibrary ? undefined : 'link' })}`
+    const url = `${window.location.origin}${gradientToolUrl({ type, angle, stops, gi: space, sp: isMesh && layouts.mesh.length ? JSON.stringify(layouts.mesh) : undefined, src: fromLibrary ? undefined : 'link' })}`
     try {
       await navigator.clipboard.writeText(url)
       toast?.('Link copied')
@@ -1513,7 +1589,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   // A file, so it needs a free account (useExportGate). Conic has no SVG form.
   const downloadSvg = async () => {
-    if (type === 'Conic') return
+    if (!svgAvailable) return
     if (!(await requireExportAccount('download this gradient as an SVG'))) return
     closeSave('item')
     const blob = new Blob([gradientSvg(type, angle, stops, space)], { type: 'image/svg+xml' })
@@ -1523,6 +1599,32 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     a.download = fileName(design?.name, 'gradient', 'svg')
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 4000)
+  }
+
+  const downloadFill = async () => {
+    if (drawingFill || previewPlace !== 'fill') return
+    if (!isPro) {
+      openProModal({
+        gate: 'gradient-fill-image',
+        title: 'Export your fill as an image',
+        subtitle: 'Download the selected finish as a PNG for layouts, slides or print.',
+      })
+      return
+    }
+    const artwork = stageRef.current?.querySelector('.grd-fx') ||
+      stageRef.current?.querySelector('.grd-canvas')
+    if (!artwork) return
+    setDrawingFill(true)
+    try {
+      const { saveFillPng } = await import('../utils/gradientFillImage')
+      const exportStyle = isMesh && fillStyle === 'plain' ? 'mesh' : fillStyle
+      await saveFillPng(artwork, exportStyle, fileName(savedName || design?.name, `gradient-${exportStyle}`, 'png'))
+      closeSave('item')
+    } catch {
+      toast?.('Couldn’t create the fill image. Try the download again.', 'error')
+    } finally {
+      setDrawingFill(false)
+    }
   }
 
   // The account is asked for BEFORE the name, as on the palette: a signed-out
@@ -1608,7 +1710,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // Defence in depth: the form is only mounted for a signed-in person, but a
     // sign-out mid-flow must not slip a submission through.
     if (!user?.uid) { setSubmitOpen(false); return }
-    const payload = buildGradientPayload({ type, angle, stops, author })
+    const payload = buildGradientPayload({ type, angle, stops, author, mesh: layouts.mesh, space })
     const queued = payload && buildQueueRecord({ kind: 'gradient', name, user, authorName: author, payload })
     if (!queued) { setSubmitErr('This gradient can’t be submitted. Check that every stop has a colour.'); return }
     setSubmitErr('')
@@ -1802,7 +1904,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
 
   // The angle applies to linear and conic; a radial gradient has none, and the
   // design hides the row for it (gradAngleDisplay, D:1831).
-  const angleActive = type !== 'Radial'
+  const angleActive = type !== 'Radial' && !isMesh
 
   // Focus a freshly added handle once it exists in the DOM. Keyed on the stop
   // count so it fires exactly on the render that added one.
@@ -1915,6 +2017,23 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       'Button gradients that keep text readable',
     ],
   })
+  const [geometryOpen, setGeometryOpen] = useState(false)
+  const [tuneOpen, setTuneOpen] = useState(() => readSession('vs-gradient-tune-open') === '1')
+  function toggleTune() {
+    writeSession('vs-gradient-tune-open', tuneOpen ? '0' : '1')
+    setTuneOpen(!tuneOpen)
+  }
+  const tuneRef = useRef(null)
+  const tuneTrigger = useRef(null)
+  useEffect(() => {
+    if (tuneOpen) tuneRef.current?.focus()
+  }, [tuneOpen])
+  const closeTune = () => {
+    writeSession('vs-gradient-tune-open', '0')
+    setTuneOpen(false)
+    const trigger = tuneTrigger.current || document.querySelector('.grd [data-tl-more] button')
+    trigger?.focus()
+  }
   const [moreOpen, setMoreOpen] = useState(() => { try { return sessionStorage.getItem('vs-gradient-gen-more') === '1' } catch { return false } })
   const toggleMore = () => setMoreOpen((o) => { try { sessionStorage.setItem('vs-gradient-gen-more', o ? '0' : '1') } catch { /* private mode */ } return !o })
   // The rail reads the stops left to right, so it is always a 90deg ramp in the
@@ -2006,6 +2125,17 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Random', icon: 'shuffle', onSelect: pressRandom, title: randomTitle },
         },
         {
+          id: 'tune', priority: 3,
+          render: () => <ToolButton ref={tuneTrigger} icon="sliders-horizontal" collapse aria-label="Random settings" aria-expanded={tuneOpen}
+            aria-controls={tuneOpen ? 'grd-random-settings' : undefined} onClick={toggleTune}>Random settings</ToolButton>,
+          menu: { label: 'Random settings', icon: 'sliders-horizontal', pressed: tuneOpen, onSelect: toggleTune },
+        },
+        {
+          id: 'reverse', priority: 2,
+          render: () => <ToolButton icon="arrows-left-right" collapse onClick={flip} aria-label="Flip the stops">Reverse</ToolButton>,
+          menu: { label: 'Flip the stops', icon: 'arrows-left-right', onSelect: flip },
+        },
+        {
           id: 'back', priority: 2, inline: !phoneBar,
           render: () => (
             <ToolButton
@@ -2083,19 +2213,21 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           )}
           exports={(
             <>
-              {/* Seams, no rows yet: "Copy CSS with finishes" (a finish is on),
-                  Curtains and Beams (their own CSS and the SVG refusal), and
-                  "Download image" (Pro). */}
-              <SaveShareItem onClick={() => copyExport(gradientCssText(type, angle, stops, space))}>Copy CSS</SaveShareItem>
-              <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>Copy Tailwind class</SaveShareItem>
+              {previewPlace === 'fill' && (
+                <SaveShareItem icon="download" onClick={downloadFill} disabled={drawingFill} busy={drawingFill} hint={isPro ? '2048 px' : 'Pro'}>
+                  {drawingFill ? 'Rendering fill…' : `Download ${isMesh && fillStyle === 'plain' ? 'Mesh' : previewAsLabel.label} PNG`}
+                </SaveShareItem>
+              )}
+              <SaveShareItem onClick={() => copyExport(cssCode)}>{styledFill ? 'Copy base gradient CSS' : 'Copy CSS'}</SaveShareItem>
+              <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>{styledFill ? 'Copy base Tailwind class' : 'Copy Tailwind class'}</SaveShareItem>
               <SaveShareItem
                 icon="download"
                 onClick={downloadSvg}
-                disabled={type === 'Conic'}
-                reason="SVG can't draw a conic gradient"
+                disabled={!svgAvailable}
+                reason={isMesh ? 'Use PNG or CSS for this mesh' : "SVG can't draw a conic gradient"}
                 hint={user ? undefined : 'Needs a free account'}
               >
-                Download SVG
+                {styledFill ? 'Download base gradient SVG' : 'Download SVG'}
               </SaveShareItem>
             </>
           )}
@@ -2134,6 +2266,85 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <span className="plb-submit-sw" style={{ background: paintCss }} />
         </CommunitySubmitDialog>
       )}
+      <div className={`grd-geometry-bar${geometryOpen ? ' is-expanded' : ''}`}>
+          <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
+            {/* Always drawn so a screen reader hears the line when it appears. */}
+            <div className="grd-geo-live" aria-live="polite">
+              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. The CSS export uses the underlying gradient.</p>}
+            </div>
+            <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
+              <ToolPills
+                label="Gradient type"
+                describedBy={shapeMoot ? 'grd-geo-why' : undefined}
+                options={GRAD_TYPES}
+                value={type}
+                onChange={(t) => { if (t !== type && guardEdit()) { beginEdit(false); setType(t) } }}
+              />
+              <LockBtn on={locks.type} onClick={() => toggleGeometryLock('type')} className="grd-geo-lock" label={keepLabel(locks.type, 'the type')} />
+            </div>
+            <button type="button" className="grd-geom-more" aria-expanded={geometryOpen}
+              aria-label="Angle and interpolation" onClick={() => setGeometryOpen(open => !open)}>
+              <ToolIcon name="sliders-horizontal" size={16} />
+            </button>
+            {/* The row is always drawn, at the wheel's height; a radial gradient
+                says it has no angle in the same space instead of removing it. */}
+            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`} role={shapeMoot ? 'group' : undefined} aria-label={shapeMoot ? 'Angle' : undefined} aria-describedby={shapeMoot ? 'grd-geo-why' : undefined}>
+              {angleActive ? (
+                <AngleWheel
+                  label="Angle"
+                  ariaLabel="Gradient angle"
+                  numberLabel="Gradient angle in degrees"
+                  value={angle}
+                  onChange={(v) => { if (v !== angle && guardEdit()) { beginEdit('angle'); setAngle(v) } }}
+                  locked={editLocked}
+                  onLockedPress={guardEdit}
+                />
+              ) : (
+                <p className="grd-angle-none" id="grd-angle-none">{type} gradients have no angle</p>
+              )}
+              <LockBtn on={locks.angle} onClick={() => toggleGeometryLock('angle')} className="grd-geo-lock grd-angle-lock" label={keepLabel(locks.angle, `the angle (${Math.round(angle)}°)`)} />
+            </div>
+            <div className="grd-interp">
+              <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
+              <div className="grd-interp-ctl">
+                <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={(v) => { if (v !== space) { beginEdit(false); setSpace(v) } }} />
+                {RANDOM_DRAWS_SPACE && <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />}
+              </div>
+              {/* Both hints sit in one grid cell, the idle one hidden, so the
+                  cell is as tall as the longer hint whichever is showing. */}
+              <div className="grd-interp-hints">
+                {SPACES.map((o) => (
+                  o.value === space
+                    ? <p key={o.value} className="grd-interp-hint" id="grd-interp-hint">{o.hint}</p>
+                    : <p key={o.value} className="grd-interp-hint is-idle" aria-hidden="true">{o.hint}</p>
+                ))}
+              </div>
+            </div>
+          </ToolSection>
+      </div>
+      {tuneOpen && (
+        <section className="grd-tune-tray" id="grd-random-settings" aria-label="Random settings"
+          ref={tuneRef} tabIndex={-1} onKeyDown={event => {
+            if (event.key === 'Escape' && !event.defaultPrevented && !event.target.closest('[role="dialog"]')) closeTune()
+          }}>
+          <GenSection
+            filters={filters}
+            setFilters={setFilters}
+            isPro={isPro}
+            onPro={gateGuided}
+            moreOpen={moreOpen}
+            onMore={toggleMore}
+            coarse={coarse}
+            chips={chips}
+            poolColours={poolColours}
+            toast={toast}
+            summary={randomSummary}
+            lockedType={lockedType}
+            lockedStops={lockedStops}
+          />
+          <button type="button" className="grd-tune-close" onClick={closeTune}>Done</button>
+        </section>
+      )}
       <ToolGrid>
         <ToolMain>
           {editLocked && (
@@ -2142,20 +2353,22 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               <span>Gallery gradient: free to preview and copy. Editing it is Pro. Press Reset or Random to start one of your own.</span>
             </p>
           )}
-          {/* The stage is the canvas's fixed slot. */}
-          <div className="grd-stage" data-ctx={previewAs}>
-            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
-            <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
-            {isTextStyle(previewAs) && <GradientText id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
+          <div className="grd-preview-bar">
             <PreviewSwitch
               options={PREVIEW_OPTIONS}
               value={previewPlace}
               onChange={choosePlace}
               label="Preview as"
               moreLabel="More previews"
-              after={previewPlace === 'fill' ? <FillStylePicker styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
+              after={previewPlace === 'fill' ? <FillStylePicker strength={strength} onStrength={changeStrength} styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
             />
+          </div>
+          {/* The stage is the canvas's fixed slot. */}
+          <div ref={stageRef} className="grd-stage" data-ctx={previewAs}>
+            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
+            <PreviewSample mesh={mesh} id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
+            {isPreviewStyle(previewAs) && <GradientFx strength={styledFill ? strength : 100} id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
+            {isTextStyle(previewAs) && <GradientText mesh={mesh} id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
@@ -2223,7 +2436,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-code" onKeyDown={onCodeKeyDown}>
             <div className="grd-fmt">
               <div className="grd-fmt-tabs" role="tablist" aria-label="Export format">
-                {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                {EXPORT_FORMATS.filter(f => f.id !== 'svg' || svgAvailable).map(f => (
                   <button
                     key={f.id}
                     type="button"
@@ -2258,24 +2471,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
         </ToolMain>
 
         <ToolPanel label="Gradient controls" className="grd-panel" onKeyDown={onPanelKey}>
-          {/* Two columns at tablet width (Random and Stops, then Stop N and Shape);
+          {/* Two columns at tablet width;
               everywhere else the wrappers dissolve and the sections stack. */}
           <div className="grd-col">
-          <GenSection
-            filters={filters}
-            setFilters={setFilters}
-            isPro={isPro}
-            onPro={gateGuided}
-            moreOpen={moreOpen}
-            onMore={toggleMore}
-            coarse={coarse}
-            chips={chips}
-            poolColours={poolColours}
-            toast={toast}
-            summary={randomSummary}
-            lockedType={lockedType}
-            lockedStops={lockedStops}
-          />
+
+
+
 
           <ToolSection
             label="Stops"
@@ -2296,9 +2497,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     {coarse && <button type="button" className="grd-sel-clear" onClick={startSelecting} aria-label="Select stops">Select</button>}
                   </>
                 )}
-                <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
-                  <ToolIcon name="arrows-left-right" size={13} />
-                </button>
                 <button
                   type="button"
                   className="grd-iconbtn grd-add"
@@ -2444,7 +2642,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </div>
 
           <div className="grd-col">
-          <ToolSection label={multi ? `${targets.length} stops` : `Stop ${activeStop + 1}`} aside={LOCK_CAPTION}>
+          <ToolSection className="grd-selected-stop" label={multi ? `${targets.length} stops` : `Stop ${activeStop + 1}`} aside={<span className="grd-selected-chip" style={{ background: selected?.color }} aria-hidden="true" />}>
             {selected && (
               <div className="grd-pick">
                 <StopHexInput
@@ -2496,56 +2694,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
           </ToolSection>
 
-          <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
-            {/* Always drawn so a screen reader hears the line when it appears. */}
-            <div className="grd-geo-live" aria-live="polite">
-              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. They still apply to the export.</p>}
-            </div>
-            <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
-              <ToolPills
-                label="Gradient type"
-                describedBy={shapeMoot ? 'grd-geo-why' : undefined}
-                options={GRAD_TYPES}
-                value={type}
-                onChange={(t) => { if (t !== type && guardEdit()) { beginEdit(false); setType(t) } }}
-              />
-              <LockBtn on={locks.type} onClick={() => toggleGeometryLock('type')} className="grd-geo-lock" label={keepLabel(locks.type, 'the type')} />
-            </div>
-            {/* The row is always drawn, at the wheel's height; a radial gradient
-                says it has no angle in the same space instead of removing it. */}
-            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`} role={shapeMoot ? 'group' : undefined} aria-label={shapeMoot ? 'Angle' : undefined} aria-describedby={shapeMoot ? 'grd-geo-why' : undefined}>
-              {angleActive ? (
-                <AngleWheel
-                  label="Angle"
-                  ariaLabel="Gradient angle"
-                  numberLabel="Gradient angle in degrees"
-                  value={angle}
-                  onChange={(v) => { if (v !== angle && guardEdit()) { beginEdit('angle'); setAngle(v) } }}
-                  locked={editLocked}
-                  onLockedPress={guardEdit}
-                />
-              ) : (
-                <p className="grd-angle-none" id="grd-angle-none">Radial gradients have no angle</p>
-              )}
-              <LockBtn on={locks.angle} onClick={() => toggleGeometryLock('angle')} className="grd-geo-lock grd-angle-lock" label={keepLabel(locks.angle, `the angle (${Math.round(angle)}°)`)} />
-            </div>
-            <div className="grd-interp">
-              <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
-              <div className="grd-interp-ctl">
-                <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={(v) => { if (v !== space) { beginEdit(false); setSpace(v) } }} />
-                {RANDOM_DRAWS_SPACE && <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />}
-              </div>
-              {/* Both hints sit in one grid cell, the idle one hidden, so the
-                  cell is as tall as the longer hint whichever is showing. */}
-              <div className="grd-interp-hints">
-                {SPACES.map((o) => (
-                  o.value === space
-                    ? <p key={o.value} className="grd-interp-hint" id="grd-interp-hint">{o.hint}</p>
-                    : <p key={o.value} className="grd-interp-hint is-idle" aria-hidden="true">{o.hint}</p>
-                ))}
-              </div>
-            </div>
-          </ToolSection>
+          {isMesh && <GradientArtworkEditor paint={paintCss} layout={layouts.mesh}
+            stops={stops} oklch={fxOklch} onEdit={editArtwork} onAddPoint={addStop} onColour={updateStop} locked={editLocked} />}
           </div>
         </ToolPanel>
       </ToolGrid>

@@ -11,14 +11,21 @@ test.describe('Gradient Generator workbench resilience', () => {
     await go(page, '/create/gradient')
 
     // The tool opens on its toolbar label, and its controls are one
-    // named side panel (the drawn RANDOM / STOPS / STOP N / SHAPE card).
+    // named side panel (the drawn STOPS / STOP N card). The shape controls sit
+    // in the bar above it, and the Random filters open from "Random settings".
     await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
     const panel = page.getByRole('complementary', { name: 'Gradient controls' })
     await expect(panel).toBeVisible()
-    // The selected stop's section is named for it ("Stop 1"); Geometry is now Shape.
-    for (const name of ['Random', 'Stops', 'Stop 1', 'Shape']) {
+    // The selected stop's section is named for it ("Stop 1").
+    for (const name of ['Stops', 'Stop 1']) {
       await expect(panel.getByRole('group', { name, exact: true })).toBeVisible()
     }
+    await expect(page.getByRole('group', { name: 'Shape', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Random settings' }).click()
+    const tray = page.getByRole('region', { name: 'Random settings' })
+    await expect(tray.getByRole('group', { name: 'Random', exact: true })).toBeVisible()
+    await tray.getByRole('button', { name: 'Done' }).click()
+    await expect(tray).toHaveCount(0)
 
     // The first-visit gradient is the first curated preset, Indigo Night.
     const FIRST_STOP = '#0A0F2C'

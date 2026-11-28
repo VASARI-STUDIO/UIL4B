@@ -1,3 +1,4 @@
+import { openRandomSettings, openGeometry } from './gradient-controls.js'
 // /create/gradient: what Random is told to make (Type and Stops under More options, the
 // Colours row and its Pick… checklist), selecting several stops, and chip presses on a
 // selection.
@@ -92,6 +93,7 @@ async function open(page) {
   await go(page, ROUTE)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(panelOf(page)).toBeVisible()
+  await openRandomSettings(page)
   await page.evaluate(() => document.fonts.ready)
   await settle(page)
 }
@@ -107,7 +109,7 @@ const said = (page) => page.evaluate(() => [...document.querySelectorAll('[role=
 
 // ── the Random section ───────────────────────────────────────────────────────
 
-const genOf = (page) => panelOf(page).locator('.grd-gen')
+const genOf = (page) => page.locator('.grd-gen')
 
 const moreButton = (page) => page.locator('[data-tl-more] button').first()
 const menuOpen = (page) => page.locator('.tl-menu-row').first().isVisible().catch(() => false)
@@ -343,20 +345,20 @@ test.describe('Type and Stops groups in More options', () => {
     const scope = await openSettings(page)
     const type = group(scope, 'Type')
     const stops = (g) => g.evaluate((el) => [...el.querySelectorAll('button')].map((b) => b.tabIndex))
-    expect(await stops(type), 'only the pressed option (Any) is a Tab stop').toEqual([0, -1, -1, -1])
+    expect(await stops(type), 'only the pressed option (Any) is a Tab stop').toEqual([0, -1, -1, -1, -1])
     expect(await stops(group(scope, 'Stops'))).toEqual([0, -1, -1, -1, -1])
 
     await option(scope, 'Type', 'Any').focus()
     await page.keyboard.press('ArrowRight')
     await expect(option(scope, 'Type', 'Linear')).toBeFocused()
-    expect(await stops(type), 'the Tab stop followed focus').toEqual([-1, 0, -1, -1])
+    expect(await stops(type), 'the Tab stop followed focus').toEqual([-1, 0, -1, -1, -1])
     await off(option(scope, 'Type', 'Linear')) // arrows move focus; they do not press
     await page.keyboard.press('End')
-    await expect(option(scope, 'Type', 'Conic')).toBeFocused()
+    await expect(option(scope, 'Type', 'Mesh')).toBeFocused()
     await page.keyboard.press('ArrowRight')
     await expect(option(scope, 'Type', 'Any'), 'the arrows wrap').toBeFocused()
     await page.keyboard.press('ArrowLeft')
-    await expect(option(scope, 'Type', 'Conic')).toBeFocused()
+    await expect(option(scope, 'Type', 'Mesh')).toBeFocused()
     await page.keyboard.press('Home')
     await expect(option(scope, 'Type', 'Any')).toBeFocused()
     await page.keyboard.press('ArrowDown')
@@ -501,6 +503,7 @@ for (const w of [390, 360]) {
 
     test('the angle lock in Shape is a 44px touch target', async ({ page }) => {
       await open(page)
+      await openGeometry(page)
       const box = await page.getByRole('button', { name: /^Keep the angle \(\d+°\) when you press Random$/ }).boundingBox()
       expect(box.height, 'the angle lock is 44px tall').toBeGreaterThanOrEqual(44)
       expect(box.width, 'the angle lock is 44px wide').toBeGreaterThanOrEqual(44)
@@ -510,7 +513,7 @@ for (const w of [390, 360]) {
       await open(page)
       await openSettings(page)
       const pills = await genOf(page).locator('.tl-pill').all()
-      expect(pills.length, 'Hue 4 + Tone 5 + Colours 3 + Use 5 + Type 4 + Stops 5').toBe(26)
+      expect(pills.length, 'Hue 4 + Tone 5 + Colours 3 + Use 5 + Type 5 + Stops 5').toBe(27)
       for (const b of pills) {
         // rounded: a transform leaves sub-pixel heights such as 43.99997
         expect(Math.round((await b.boundingBox()).height), await b.textContent()).toBeGreaterThanOrEqual(44)

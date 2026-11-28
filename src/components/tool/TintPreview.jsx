@@ -78,8 +78,18 @@ export default function TintPreview({ ramp, count, source, sourceCount, sourceHe
         </div>
         <div className="tt-pv-foot">
           <Tag className="tt-pv-tag--corner">{steps.dark} dark{same ? ', also headings' : ''}</Tag>
-          <p className="tt-pv-foot-h">Studio hours</p>
-          <p className="tt-pv-foot-m">Tuesday to Saturday, 10 am to 9 pm</p>
+          <div>
+            <p className="tt-pv-foot-h">Studio hours</p>
+            <p className="tt-pv-foot-m">Tuesday to Saturday, 10 am to 9 pm</p>
+          </div>
+          <svg className="tt-pv-pots" viewBox="0 0 96 42" fill="none" aria-hidden="true">
+            <g stroke="currentColor" strokeWidth="1.5">
+              <ellipse cx="26" cy="18" rx="22" ry="4" />
+              <path d="M4 18q2 13 17 17v3h10v-3q15-4 17-17M12 28q14 6 28 0" />
+              <ellipse cx="70" cy="5" rx="9" ry="2" />
+              <path d="M61 5c2 6 2 9-3 14-7 9-4 15 4 19h16c8-4 11-10 4-19-5-5-5-8-3-14M57 23q13 4 26 0m-28 5q15 4 30 0" />
+            </g>
+          </svg>
         </div>
       </div>
       <ul id="tt-pv-legend" className="sr-only">

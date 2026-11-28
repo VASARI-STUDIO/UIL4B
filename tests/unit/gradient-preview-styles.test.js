@@ -19,7 +19,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  PREVIEW_STYLES, isPreviewStyle, stopList, linearThrough, glowColours, styleVars,
+  PREVIEW_STYLES, isPreviewStyle, cleanMeshLayout, meshLayoutPoints, meshPaint, stopList, linearThrough, glowColours, styleVars,
   FILL_STYLES, PREVIEW_PLACES, FIXED_SHAPE_STYLES, previewId, splitPreview,
   MESH_TABLE, meshPoints, meshGround, meshBackground, waveBands, wavePath, WAVE_COUNT, phoneButton,
 } from '../../src/utils/gradientPreviewStyles.js'
@@ -31,10 +31,10 @@ const STOPS = [{ color: '#2b59ff', position: 100 }, { color: '#ff7a1a', position
 test('the styles are named plainly and in order', () => {
   assert.deepEqual(
     PREVIEW_STYLES.map((s) => s.label),
-    ['Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'],
+    ['Fresnel lens', 'Risograph', 'Aperture', 'Satin', 'Folded paper', 'Halftone', 'Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card', 'Waves', 'App icon', 'Phone'],
   )
-  assert.equal(new Set(PREVIEW_STYLES.map((s) => s.id)).size, 12)
-  assert.ok(isPreviewStyle('mesh') && isPreviewStyle('waves') && isPreviewStyle('icon') && isPreviewStyle('phone'))
+  assert.equal(new Set(PREVIEW_STYLES.map((s) => s.id)).size, PREVIEW_STYLES.length)
+  assert.ok(!isPreviewStyle('mesh') && isPreviewStyle('waves') && isPreviewStyle('icon') && isPreviewStyle('phone'))
   assert.ok(isPreviewStyle('fluted'))
   assert.ok(!isPreviewStyle('hero'))
 })
@@ -60,7 +60,7 @@ test("every style's variables carry the stops' colours", () => {
     for (const hex of ['#FF7A1A', '#FFFFFF', '#2B59FF']) assert.ok(text(id).includes(hex), `${id} carries ${hex}`)
   }
   for (const hex of ['#FF7A1A', '#FFFFFF', '#2B59FF']) assert.ok(text('glow').includes(hex), `glow carries ${hex}`)
-  for (const id of ['grain', 'fluted', 'ring']) assert.ok(text(id).includes(ctx.paint), `${id} carries the canvas paint`)
+  for (const id of ['satin', 'folds', 'halftone', 'grain', 'fluted', 'ring']) assert.ok(text(id).includes(ctx.paint), `${id} carries the canvas paint`)
   assert.match(text('streak'), /90deg/)
   assert.match(text('fade'), /180deg/)
 })
@@ -73,7 +73,7 @@ const SEVEN = ['#FFD84D', '#F0436A', '#6C2BD9', '#101830', '#2BD9A1', '#FF7A1A',
 const hexOf = (s) => s.color.toUpperCase()
 
 test('the Mesh puts one point per stop on the fixed table', () => {
-  assert.deepEqual(MESH_TABLE, [[20, 24], [80, 20], [52, 56], [18, 84], [84, 80]])
+  assert.deepEqual(MESH_TABLE, [[-6, 14], [88, 96], [66, 8], [12, 92], [49, 65]])
   for (const n of [2, 3, 4]) {
     const points = meshPoints(FOUR.slice(0, n), true)
     assert.equal(points.length, n, `${n} stops give ${n} points`)
@@ -106,20 +106,25 @@ test("changing one stop moves only that point's colour", () => {
   })
 })
 
-test("the Mesh's ground is the darkest stop by OKLCH lightness, and the points are soft circles of the stops", () => {
+test("the Mesh's ground is the darkest stop by OKLCH lightness, and the points are soft elliptical pools of the stops", () => {
   assert.equal(meshGround(FOUR), '#101830')
   assert.equal(meshGround([...FOUR].reverse()), '#101830')
   assert.equal(meshGround(SEVEN), '#101830')
   const light = Math.min(...FOUR.map((s) => hexToOklchRaw(s.color)[0]))
   assert.equal(hexToOklchRaw(meshGround(FOUR))[0], light)
-  const vars = styleVars('mesh', { stops: FOUR, paint: 'x', oklch: true })
-  assert.equal(vars['--fx-ground'], '#101830')
-  assert.equal(vars['--fx-mesh'].match(/radial-gradient\(/g).length, 4)
-  for (const s of FOUR) assert.ok(vars['--fx-mesh'].includes(`${hexOf(s)} 0`), `the mesh carries ${hexOf(s)}`)
+  const paint = meshPaint(FOUR, true)
+  assert.equal(paint.match(/radial-gradient\(/g).length, 4)
+  for (const s of FOUR) assert.ok(paint.includes(`${hexOf(s)} 0`))
   assert.equal(
     meshBackground([{ x: 20, y: 24, color: '#AAAAAA' }]),
-    'radial-gradient(circle at 20% 24%, #AAAAAA 0, transparent 58cqmax)',
+    'radial-gradient(ellipse 95% 104% at 20% 24%, #AAAAAA 0 25%, transparent 100%)',
   )
+})
+
+test('mesh background CSS is standalone and uses the same paint as the preview', () => {
+  const css = meshPaint(FOUR, true)
+  assert.ok(css.endsWith('linear-gradient(#101830, #101830)'))
+  assert.doesNotMatch(css, /var\(|cqmax|cqw|cqh/)
 })
 
 test("the Waves' seven bands are the ramp at k/6, as the canvas blends", () => {
@@ -156,8 +161,8 @@ test("the Phone's button is the most chromatic stop, whatever the list order", (
 })
 
 test('the places and fill styles split the old list with nothing lost or doubled', () => {
-  assert.deepEqual(PREVIEW_PLACES.map((p) => p.id), ['fill', 'hero', 'card', 'button', 'poster', 'spec', 'icon', 'phone'])
-  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'])
+  assert.deepEqual(PREVIEW_PLACES.map((p) => p.id), ['fill', 'web', 'hero', 'card', 'button', 'poster', 'spec', 'icon', 'phone'])
+  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'fresnel', 'riso', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'waves'])
   const styleIds = new Set([...PREVIEW_PLACES, ...FILL_STYLES].map((x) => x.id))
   for (const s of PREVIEW_STYLES) assert.ok(styleIds.has(s.id), s.id)
   for (const id of FIXED_SHAPE_STYLES) assert.ok(FILL_STYLES.some((s) => s.id === id), id)
@@ -178,4 +183,15 @@ test('an old stored style id comes back as Fill with that style', () => {
   assert.deepEqual(splitPreview('spec'), { place: 'spec', fill: 'plain' })
   assert.deepEqual(splitPreview(null, null), { place: 'fill', fill: 'plain' })
   assert.deepEqual(splitPreview('gone', 'gone'), { place: 'fill', fill: 'plain' })
+})
+
+test('authored layouts keep only bounded geometry and retain missing point slots', () => {
+  const raw = [null, { x: 29.6, y: -280, size: 999, color: 'ignored' }, { x: '20', y: 10, size: 90 }]
+  const points = meshLayoutPoints(FOUR, true, raw)
+  assert.equal(points[0].x, MESH_TABLE[0][0])
+  assert.deepEqual([points[1].x, points[1].y, points[1].size], [30, -10, 160])
+  assert.equal(points[1].color, meshPoints(FOUR)[1].color)
+  assert.equal(points[2].size, 100)
+  assert.deepEqual(cleanMeshLayout({}), [])
+  assert.match(meshPaint(FOUR, true, raw), /at 30% -10%/)
 })

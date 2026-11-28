@@ -26,7 +26,12 @@ export default function OrderEmail({ roles }) {
     <div className="em" style={vars}>
       <p className="em-pre" data-role="neutral">{COPY.preheader}</p>
       <div className="em-col">
-        <div className="em-mast" data-role="deep">{COPY.brand}</div>
+        <div className="em-mast" data-role="deep">
+          <svg viewBox="0 0 42 40" width="38" height="36" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+            <path d="m3 18 22-13 14 8-22 13zM3 18v7l14 8 22-13v-7M17 26v7M8 18l17-10m-12 12 17-10" />
+          </svg>
+          {COPY.brand}
+        </div>
         <i className="em-rule" data-role="secondary" />
         <div className="em-in">
           <h3 className="em-h" data-role="neutral">{COPY.heading}</h3>
@@ -34,6 +39,10 @@ export default function OrderEmail({ roles }) {
             <span className="em-lnk" data-role="secondary" data-adjusted={adjusted}>{COPY.order}</span>
             <span data-role="neutral">{COPY.count}</span>
           </p>
+          <div className="em-consignment" data-role="neutral">
+            <span>Delivery to <strong>Marrickville</strong></span>
+            <span>Longest load <strong>{LINES[0].length}</strong></span>
+          </div>
           <div className="em-tb" role="table" aria-label={COPY.tableLabel}>
             <div className="em-tr em-th" role="row" data-role="subtle">
               {COPY.columns.map((c) => <span key={c} role="columnheader">{c}</span>)}

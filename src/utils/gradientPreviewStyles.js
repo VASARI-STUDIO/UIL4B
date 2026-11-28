@@ -1,5 +1,5 @@
-// The Gradient Generator's preview styles: Grain, Fluted glass, Glow ring, Streak,
-// Soft glow, Fade, Poster, Spec card, Mesh, Waves, App icon and Phone. Each is a real-time CSS render of the person's
+import { mixHex } from './colors.js'
+// The Gradient Generator’s fill styles and object scenes render the person’s
 // own stops (see GradientFx.jsx); this module is the part that is plain data and string
 // building, so the colours a style draws can be checked without a browser.
 //
@@ -11,6 +11,12 @@ import { hexToOklchRaw } from '../components/tool/oklch.js'
 
 /** The styles, in switcher order. `as` completes the canvas's spoken name. */
 export const PREVIEW_STYLES = [
+  { id: 'fresnel', label: 'Fresnel lens', as: ', refracted through a Fresnel lens' },
+  { id: 'riso', label: 'Risograph', as: ', printed with overlapping ink screens' },
+  { id: 'aperture', label: 'Aperture', as: ', shown through an optical aperture' },
+  { id: 'satin', label: 'Satin', as: ', shown on satin' },
+  { id: 'folds', label: 'Folded paper', as: ', shown on folded paper' },
+  { id: 'halftone', label: 'Halftone', as: ', shown as halftone ink' },
   { id: 'grain', label: 'Grain', as: ', shown as grain' },
   { id: 'fluted', label: 'Fluted glass', as: ', shown as fluted glass' },
   { id: 'ring', label: 'Glow ring', as: ', shown as a glow ring' },
@@ -19,7 +25,6 @@ export const PREVIEW_STYLES = [
   { id: 'fade', label: 'Fade', as: ', shown as a fade' },
   { id: 'poster', label: 'Poster', as: ', shown as a poster' },
   { id: 'spec', label: 'Spec card', as: ', shown as a spec card' },
-  { id: 'mesh', label: 'Mesh', as: ', shown as a mesh' },
   { id: 'waves', label: 'Waves', as: ', shown as waves' },
   { id: 'icon', label: 'App icon', as: ', shown as an app icon' },
   { id: 'phone', label: 'Phone', as: ', shown as a phone screen' },
@@ -35,13 +40,14 @@ export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
 /** The fill styles, in picker order. Plain is the canvas as it is. */
 export const FILL_STYLES = [
   { id: 'plain', label: 'Plain', as: '' },
-  ...['grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+  ...['fresnel', 'riso', 'aperture', 'satin', 'folds', 'halftone', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
 ]
 export const isFillStyle = (id) => FILL_STYLES.some((s) => s.id === id)
 
 /** The places, in switcher order. Fill first; the four object scenes last. */
 export const PREVIEW_PLACES = [
   { id: 'fill', label: 'Fill', as: '' },
+  { id: 'web', label: 'Webpage', as: ', shown on a festival website' },
   { id: 'hero', label: 'Hero', as: ', shown as a hero' },
   { id: 'card', label: 'Card', as: ', shown as a card' },
   { id: 'button', label: 'Button', as: ', shown as a button' },
@@ -50,7 +56,7 @@ export const PREVIEW_PLACES = [
 export const isPreviewPlace = (id) => PREVIEW_PLACES.some((p) => p.id === id)
 
 /** Fill styles that draw their own shape, so the gradient's Type and Angle don't change them. */
-export const FIXED_SHAPE_STYLES = ['streak', 'glow', 'fade', 'mesh', 'waves']
+export const FIXED_SHAPE_STYLES = ['aperture', 'streak', 'glow', 'fade', 'waves']
 
 /** The one id the stage renders: the place, or under Fill the fill style ('fill' when Plain). */
 export function previewId(place, fill) {
@@ -77,8 +83,8 @@ export const isTextStyle = (id) => TEXT_STYLES.includes(id)
 /** The Poster's words: the Shallow End brand's own name, primary line and sample caption. */
 export const POSTER_COPY = {
   brand: 'Shallow End',
-  display: 'Lessons that fit after school.',
-  footer: 'Pool 2, Sandy Bay. Tuesdays at 4:15.',
+  display: 'Night swim.',
+  footer: 'Friday 19:30  /  Pool 2, Sandy Bay',
 }
 
 const byPosition = (stops) => [...stops].sort((a, b) => a.position - b.position)
@@ -114,13 +120,13 @@ export function glowColours(stops) {
  */
 export function styleVars(id, { stops, paint, oklch }) {
   switch (id) {
+    case 'aperture': return { '--fx-spectrum': stopList(stops), '--fx-space': oklch ? 'in oklch' : 'in srgb' }
     case 'streak': return { '--fx-row': linearThrough(90, stops, oklch) }
     case 'fade': return { '--fx-wash': linearThrough(180, stops, oklch) }
     case 'glow': {
       const c = glowColours(stops)
       return { '--fx-heart': c.heart, '--fx-low': c.low, '--fx-high': c.high }
     }
-    case 'mesh': return { '--fx-ground': meshGround(stops), '--fx-mesh': meshBackground(meshPoints(stops, oklch)) }
     default: return { '--fx-paint': paint }
   }
 }
@@ -154,7 +160,7 @@ export function fitHexes(hexes, room = SPEC_HEX_ROOM) {
 
 /** "Linear 135° · OKLCH", "Radial · sRGB", "Conic 90° · OKLCH". */
 export function specTypeLine(type, angle, oklch) {
-  const turn = type === 'Radial' ? '' : ` ${Math.round(angle)}°`
+  const turn = type === 'Radial' || type === 'Mesh' ? '' : ` ${Math.round(angle)}°`
   return `${type}${turn} · ${oklch ? 'OKLCH' : 'sRGB'}`
 }
 
@@ -165,9 +171,9 @@ export const specSampledNote = (stops) => (stops.length < SPEC_FULL_STOPS ? 'Sam
 export const specName = (savedName, type) => String(savedName ?? '').trim() || `${type} gradient`
 
 /** Where the Mesh's soft points sit, as [x, y] percent of the stage. A fixed table, never noise. */
-export const MESH_TABLE = [[20, 24], [80, 20], [52, 56], [18, 84], [84, 80]]
-/** How far each Mesh point's colour reaches before it is clear. */
-export const MESH_REACH = '58cqmax'
+export const MESH_TABLE = [[-6, 14], [88, 96], [66, 8], [12, 92], [49, 65]]
+// Elliptical pools can cross the crop. Each holds a solid centre and feathers at its own rate.
+const MESH_POOLS = [[95, 104, 25], [80, 70, 22], [68, 83, 16], [68, 61, 26], [70, 50, 14]]
 /** The ramp positions the Mesh samples when there are more stops than points, in percent. */
 export const MESH_POSITIONS = [0, 25, 50, 75, 100]
 
@@ -188,8 +194,55 @@ export function meshGround(stops) {
   return byPosition(stops).reduce((low, s) => (hexToOklchRaw(s.color)[0] < hexToOklchRaw(low.color)[0] ? s : low)).color.toUpperCase()
 }
 
-/** The Mesh's points as one `background` value: a soft circle of colour at each point, the first on top. */
-export const meshBackground = (points) => points.map((p) => `radial-gradient(circle at ${p.x}% ${p.y}%, ${p.color} 0, transparent ${MESH_REACH})`).join(', ')
+// Store only geometry. Colours continue to come from the current gradient.
+export function cleanMeshLayout(raw) {
+  if (!Array.isArray(raw)) return []
+  const limit = MESH_TABLE.length
+  const bounded = (value, low, high) => Math.max(low, Math.min(high, Math.round(value)))
+  return raw.slice(0, limit).map(point => {
+    if (!point || ![point.x, point.y, point.size].every(Number.isFinite)) return null
+    return { x: bounded(point.x, -10, 110), y: bounded(point.y, -10, 110), size: bounded(point.size, 20, 160) }
+  })
+}
+
+export function meshLayoutPoints(stops, oklch, layout) {
+  const base = meshPoints(stops, oklch).map(p => ({ ...p, size: 100 }))
+  const clean = cleanMeshLayout(layout)
+  return base.map((point, i) => ({ ...point, ...clean[i] }))
+}
+
+export const meshBackground = (points) => points.map((p, index) => {
+  const [width, height, core] = MESH_POOLS[index]
+  const scale = (p.size ?? 100) / 100
+  return `radial-gradient(ellipse ${Math.round(width * scale)}% ${Math.round(height * scale)}% at ${p.x}% ${p.y}%, ${p.color} 0 ${core}%, transparent 100%)`
+}).join(', ')
+
+// A solid image layer keeps the mesh opaque wherever it is used as a background-image.
+export function meshPaint(stops, oklch, layout) {
+  const ground = meshGround(stops)
+  return meshBackground(meshLayoutPoints(stops, oklch, layout)) + `, linear-gradient(${ground}, ${ground})`
+}
+
+// Sample the mesh under a label, using the same ellipse extents and layer order as CSS.
+export function meshInkSamples({ points, ground }, box = { x: 0, y: 0, w: 1, h: 1 }) {
+  const samples = []
+  for (let row = 0; row <= 6; row++) {
+    for (let col = 0; col <= 6; col++) {
+      const x = 100 * (box.x + box.w * col / 6)
+      const y = 100 * (box.y + box.h * row / 6)
+      let colour = ground
+      for (let i = points.length - 1; i >= 0; i--) {
+        const point = points[i]
+        const [w, h, core] = MESH_POOLS[i]
+        const radius = Math.hypot((x - point.x) / Math.round(w * point.size / 100), (y - point.y) / Math.round(h * point.size / 100))
+        const opacity = Math.max(0, Math.min(1, (1 - radius) / (1 - core / 100)))
+        colour = mixHex(colour, point.color, opacity)
+      }
+      samples.push(colour)
+    }
+  }
+  return samples
+}
 
 /** How many bands the Waves draw, how tall a crest is (percent of the height) and how far each band's phase steps (degrees). */
 export const WAVE_COUNT = 7
@@ -228,15 +281,13 @@ export function phoneButton(stops) {
   return byPosition(stops).reduce((top, s) => (hexToOklchRaw(s.color)[1] > hexToOklchRaw(top.color)[1] ? s : top)).color.toUpperCase()
 }
 
-/** The Phone's words: Offcut's own primary line, then the sign-in form. */
+/** Copy for the Channel Ferry boarding pass. */
 export const PHONE_COPY = {
-  line: 'Quote on site. Paid by Friday.',
-  heading: 'Sign in to Offcut',
-  label: 'Email',
-  button: 'Continue',
-  link: 'Create an account',
+  line: 'Boarding pass',
+  heading: 'Brooke St → Bellerive',
+  label: 'Departure',
+  departure: '08:40  /  Pier 1',
+  button: 'Show ticket',
 }
 
-/** The App icon: Tenner's "T", and the part of the icon (fractions of its side) the glyph's ink is chosen over. */
-export const ICON_GLYPH = 'T'
 export const ICON_INK_BOX = { x: 0.25, y: 0.25, w: 0.5, h: 0.5 }

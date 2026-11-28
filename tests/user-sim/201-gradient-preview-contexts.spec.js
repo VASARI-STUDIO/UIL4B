@@ -1,3 +1,4 @@
+import { openRandomSettings } from './gradient-controls.js'
 // /create/gradient: the canvas can be previewed as a Fill, a Hero, a Card or a Button.
 //
 // What a designer relies on:
@@ -177,7 +178,7 @@ test.describe('at 390 the switch stays off the samples', () => {
       const found = await page.evaluate(() => {
         const rect = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height } }
         const sw = rect(document.querySelector('.grd-ctx'))
-        const samples = [...document.querySelectorAll('.grd-ctx-view :is(.grd-ctx-sample, .grd-ctx-card, .grd-ctx-btn, .grd-ctx-cta, .grd-ctx-h, .grd-ctx-p)')]
+        const samples = [...document.querySelectorAll('.grd-ctx-view :is(.grd-ctx-sample, .grd-pass, .grd-ctx-btn, .grd-ctx-cta, .grd-ctx-h, .grd-ctx-p)')]
         const hits = samples.filter((el) => {
           const s = rect(el)
           return s.w > 0 && s.h > 0 && s.l < sw.r - 0.5 && s.r > sw.l + 0.5 && s.t < sw.b - 0.5 && s.b > sw.t + 0.5
@@ -198,7 +199,8 @@ test.describe("Random's rows fit on one line on a laptop", () => {
       test(`Random's Hue, Tone and Colours rows are one line at ${w}x${h}, with More options open`, async ({ page }) => {
         watch(page, 'a designer on a laptop reading Random\'s options')
         await open(page)
-        const gen = panelOf(page).locator('.grd-gen')
+        await openRandomSettings(page)
+        const gen = page.locator('.grd-gen')
         await gen.getByRole('button', { name: 'More options' }).click()
         await expect(gen.getByRole('button', { name: 'Fewer options' })).toBeVisible()
         for (const row of ['Hue', 'Tone', 'Colours']) {

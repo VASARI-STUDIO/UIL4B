@@ -1,3 +1,4 @@
+import { openRandomSettings } from './gradient-controls.js'
 // /create/gradient as a signed-in Pro account, and with saved projects.
 //
 // What this file pins:
@@ -33,7 +34,7 @@ const saveButton = (page) => page.getByRole('button', { name: 'Save or share' })
 const menuOf = (page) => page.getByRole('dialog', { name: MENU_NAME })
 const toastOf = (page) => page.locator('.toast.show')
 const panelOf = (page) => page.getByRole('complementary', { name: 'Gradient controls' })
-const genOf = (page) => panelOf(page).locator('.grd-gen')
+const genOf = (page) => page.locator('.grd-gen')
 const specName = (page) => page.locator('.grd-spec-name')
 const sourceMenu = (page) => page.getByRole('button', { name: 'Colour source' })
 const storedProjects = (page) => page.evaluate(
@@ -58,6 +59,7 @@ async function open(page, url = HANDOFF) {
   await go(page, url)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(panelOf(page)).toBeVisible()
+  await openRandomSettings(page)
   await page.evaluate(() => document.fonts.ready)
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 }

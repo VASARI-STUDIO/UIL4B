@@ -282,12 +282,13 @@ export default function OrraWorkroom({ roles, state, onState }) {
             <div className="or-grid">
               <Gallery ways={ways} way={way} pic={pic} />
               <section className="or-buy">
-                <p className="or-new" data-role="accent">New</p>
+                <p className="or-new" data-role="accent">Workroom / Linen shirting</p>
                 <h3 className="or-title" data-role="neutral">{PRODUCT.name}</h3>
+                <p className="or-cloth" data-role="neutral">{PRODUCT.details[0]}</p>
                 <p className="or-price" data-role="neutral">{price(1)}<span>{PRODUCT.terms}</span></p>
 
                 <div className="or-opt">
-                  <p className="or-opt-l" data-role="neutral">Colour <b>{ways[way].name}</b></p>
+                  <p className="or-opt-l or-dye" data-role="neutral"><span>Colour <b>{ways[way].name}</b></span><code>{ways[way].color.toUpperCase()}</code></p>
                   <Swatches ways={ways} way={way} />
                 </div>
 
@@ -309,7 +310,7 @@ export default function OrraWorkroom({ roles, state, onState }) {
                 </div>
 
                 <ul className="or-details" data-role="neutral">
-                  {PRODUCT.details.map((d) => <li key={d}>{d}</li>)}
+                  {PRODUCT.details.slice(1).map((d) => <li key={d}>{d}</li>)}
                 </ul>
                 <Disclosures />
               </section>

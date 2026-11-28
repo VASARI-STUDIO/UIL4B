@@ -446,3 +446,15 @@ test('a refusal by the limits and a real failure in one run still reports the fa
   assert.equal(out.limited, true)
   assert.equal(s.has(), true)
 })
+
+
+test('the community review URL round-trips a custom mesh', () => {
+  const recipe = {
+    type: 'Mesh', angle: 90, space: 'oklch', mesh: [{ x: 12, y: 84, size: 46 }],
+    stops: [{ color: '#AB5F70', position: 0 }, { color: '#181641', position: 100 }],
+  }
+  const payload = mod.buildGradientPayload(recipe)
+  assert.match(payload.url, /^\/create\/gradient\?/)
+  const restored = sanitizeGradientSubmission(payload)
+  for (const key of Object.keys(recipe)) assert.deepEqual(restored[key], recipe[key])
+})

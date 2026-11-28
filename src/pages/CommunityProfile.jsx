@@ -67,7 +67,7 @@ function Thumb({ row }) {
     const stops = (row.stops || []).filter((st) => HEX.test(st?.color) && Number.isFinite(Number(st?.position)))
       .map((st) => ({ color: st.color, position: Number(st.position) }))
     if (stops.length >= 2) {
-      return <span className="cm-thumb cm-thumb-grad" aria-hidden="true" style={{ background: gradientCss(row.type, Number(row.angle) || 0, stops) }} />
+      return <span className="cm-thumb cm-thumb-grad" aria-hidden="true" style={{ background: gradientCss(row.type, Number(row.angle) || 0, stops, row.mesh, row.space) }} />
     }
   }
   if (row.kind === 'palette' && Array.isArray(row.colors)) {

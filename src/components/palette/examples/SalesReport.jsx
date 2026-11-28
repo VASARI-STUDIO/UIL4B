@@ -25,8 +25,10 @@ export default function SalesReport({ roles }) {
       </header>
       <div className="rp-in">
         <div className="rp-hero">
+          <div><p className="rp-measure" data-role="neutral">Weekly sales</p>
           <p className="rp-fig" data-role="neutral">{rep.headline}</p>
-          <p className="rp-up" data-role="success">{rep.up}</p>
+          <p className="rp-up" data-role="success">{rep.up}</p></div>
+          <p className="rp-peak" data-role="neutral">Best trading day<strong>{rep.peakDay}</strong>{dollars(rep.peakSales)}</p>
         </div>
         <div className="rp-chart" role="img" aria-label={rep.chartLabel}>
           <div className="rp-axis" aria-hidden="true">
@@ -36,9 +38,10 @@ export default function SalesReport({ roles }) {
             <div className="rp-lines">{GRID.map((y) => <i key={y} style={{ bottom: `${y}px` }} />)}</div>
             {rep.days.map((d) => (
               <div key={d.name} className="rp-day">
+                <span className="rp-day-name" data-role="neutral">{d.name}</span>
                 <span className="rp-tot" data-role="neutral">{dollars(d.total)}</span>
-                <div className="rp-stack">
-                  {d.segs.map((s) => <i key={s.i} className={`rp-seg ${swatch(s)}`} style={{ height: `${s.h.toFixed(1)}px` }} data-role={s.role} />)}
+                <div className="rp-stack" style={{ '--day-width': `${100 * d.total / rep.peakSales}%` }}>
+                  {d.segs.map((s) => <i key={s.i} className={`rp-seg ${swatch(s)}`} style={{ '--segment-height': `${s.h.toFixed(1)}px`, '--segment-weight': s.h }} data-role={s.role} />)}
                 </div>
               </div>
             ))}

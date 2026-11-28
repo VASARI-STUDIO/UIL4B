@@ -1,6 +1,6 @@
 // Shopfront: a hardware shop's frontage, painted with the user's palette.
 //
-// The shop is drawn here from the palette's own colours, not a photograph: a
+// The framing uses the palette's colours around a single window display: a
 // primary fascia carrying the name, a striped secondary awning, a deep door
 // with its number on an accent plate. It is a still picture. Copy comes from
 // Shopfront.data.js.
@@ -11,6 +11,11 @@ import { useMemo } from 'react'
 import { COPY, STRIPES } from './Shopfront.data.js'
 import { fieldInks } from './fieldInks.js'
 import './Shopfront.css'
+
+// Two crops of one photographed display preserve the view through the shop.
+function DisplayWindow({ paint = false }) {
+  return <div className={`sf-win ${paint ? 'sf-win--paint' : 'sf-win--tools'}`} aria-hidden="true" />
+}
 
 /** @param {{roles: object}} props roles: derivePaletteRoles() output */
 export default function Shopfront({ roles }) {
@@ -25,11 +30,11 @@ export default function Shopfront({ roles }) {
           {STRIPES.map((on, i) => (on ? <i key={i} data-role="secondary" /> : <i key={i} className="is-alt" data-role="neutral" />))}
         </div>
         <div className="sf-wall">
-          <div className="sf-win" />
+          <DisplayWindow paint />
           <div className="sf-door" data-role="deep">
             <span className="sf-no" data-role="accent">{COPY.number}</span>
           </div>
-          <div className="sf-win" />
+          <DisplayWindow />
         </div>
       </div>
       <p className="sf-cap" data-role="neutral">{COPY.caption}</p>

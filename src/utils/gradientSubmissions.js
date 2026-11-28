@@ -1,3 +1,5 @@
+import { gradientToolUrl, meshLayoutFromParams } from '../data/gradientGallery.js'
+import { cleanMeshLayout } from './gradientPreviewStyles.js'
 // Explicit .js extensions: this module is exercised directly by node --test,
 // which (unlike Vite) will not guess them.
 import { getOwnerHandle, getPublicOwner, PUBLIC_OWNER_ID } from './constants.js'
@@ -27,7 +29,7 @@ export const GRADIENT_SUBMISSIONS_MAX = 30
 
 export const GRADIENT_SUBMISSION_STATUSES = ['pending', 'withdrawn']
 
-const TYPES = ['Linear', 'Radial', 'Conic']
+const TYPES = ['Linear', 'Radial', 'Conic', 'Mesh']
 const MAX_STOPS = 12
 
 function resolveStorage(storage) {
@@ -62,6 +64,15 @@ function stableGradientId(name, type, angle, stops) {
   return `gh${h.toString(36)}`
 }
 
+// Mesh submissions use the same editable generator URL a designer can share.
+function meshRecipe(item) {
+  if (typeof item.url === 'string' && item.url.startsWith('/create/gradient?') && item.url.length <= 2048) {
+    const params = new URLSearchParams(item.url.slice(item.url.indexOf('?') + 1))
+    return { mesh: meshLayoutFromParams(params), space: params.get('gi') === 'oklch' ? 'oklch' : 'srgb' }
+  }
+  return { mesh: cleanMeshLayout(item.mesh), space: item.space === 'oklch' ? 'oklch' : 'srgb' }
+}
+
 // Anything that fails to describe a real gradient is dropped rather than kept
 // half-formed — a corrupt entry must never reach the gallery renderer or the queue.
 export function sanitizeGradientSubmission(item) {
@@ -84,6 +95,7 @@ export function sanitizeGradientSubmission(item) {
     type,
     angle,
     stops,
+    ...(type === 'Mesh' ? meshRecipe(rest) : {}),
     status,
     submittedAt: Number.isFinite(submittedAt) && submittedAt > 0 ? submittedAt : Date.now(),
   }
@@ -93,21 +105,22 @@ export function sanitizeGradientSubmission(item) {
  * The `payload` of a gradient submission to the review queue, or null when the
  * gradient cannot be described faithfully. Only keys firestore.rules allows:
  * type, angle, stops, c1 and c2 (the end colours, for a card that draws two),
- * and author when there is a public handle.
+ * an editable generator URL for a mesh, and author when there is a public handle.
  *
  * Refuses rather than repairs: a stop that is not a six-digit hex colour, or
  * more stops than a submission may carry, would otherwise be dropped silently
  * and the reviewer would see a different gradient from the one the person made.
  */
-export function buildGradientPayload({ type, angle, stops, author } = {}) {
+export function buildGradientPayload({ type, angle, stops, author, mesh, space } = {}) {
   if (!Array.isArray(stops)) return null
-  const g = sanitizeGradientSubmission({ type, angle, stops })
+  const g = sanitizeGradientSubmission({ type, angle, stops, mesh, space })
   if (!g || g.stops.length !== stops.length) return null
   const ordered = [...g.stops].sort((a, b) => a.position - b.position)
   const payload = {
     type: g.type,
     angle: g.angle,
     stops: g.stops,
+    ...(g.type === 'Mesh' ? { url: gradientToolUrl(g) } : {}),
     c1: ordered[0].color,
     c2: ordered[ordered.length - 1].color,
   }

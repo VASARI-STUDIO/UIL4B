@@ -124,7 +124,9 @@ const KEEP = {
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
   // a segment inside a tray of segments: the tray carries the outer shape, each segment its own inner radius
-  segment: ['hx-seg'],
+  segment: ['hx-seg',
+    // the Gradient Generator's Preview place and Fill style trays: each option is a 7px segment inside the tray's 10px outer corner
+    'grd-ctx-opt'],
   // the two halves of one split button: together they draw a single pill, so each keeps its
   // outer corners round and squares the edge where they meet (.ied-ft .dl-main / .dl-more)
   split: ['dl-main', 'dl-more'],

@@ -22,6 +22,8 @@ export const COPY = {
   school: 'Shallow End Swim School',
   address: '14 Pool Lane, Lantern Bay NSW 2999',
   phone: '(02) 5550 0142',
-  letter: 'Term 1 lessons start Monday 2 February. Your child’s group is Turtles, Tuesdays at 4:15 pm.',
+  letter: 'Term 1 lessons start Monday 2 February. Bring a towel and show this slip to the coach on the pool deck.',
+  group: 'Turtles',
+  lesson: 'Tuesdays at 4:15 pm',
   imageLabel: 'Stationery drawn from your palette: a primary logo tile, a deep business card with an accent rule and a letterhead with a secondary band.',
 }

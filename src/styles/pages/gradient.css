@@ -1070,12 +1070,8 @@
   :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-chip, .grd-paint-src, .grd-gen-lockbtn) { transition: none !important; }
 }
 
-/* ── PREVIEW CONTEXTS (on the canvas) ────────────────────────────────────────
-   Fill is the gradient alone. Hero, Card and Button draw sample UI over (or on)
-   it; the ink is chosen from the stops in JS (gradientInk.js). The switch and the
-   ratio badge sit on a near-black scrim, so their white text holds its contrast
-   whatever colours are under them. Everything here is flat; the only gradients are
-   the person's own. */
+/* Preview scenes use the current stops. The ratio badge has its own backing
+   so it stays legible over a light or dark gradient. */
 .grd .grd-ctx-view { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; pointer-events: none; }
 .grd .grd-ctx-ground { display: grid; place-items: center; background: color-mix(in srgb, var(--tl-ink) 6%, var(--tl-card)); border: 1px solid var(--tl-line); }
 .grd .grd-ctx-hero { display: flex; align-items: center; padding: clamp(16px, 5cqi, 48px); }
@@ -1092,48 +1088,29 @@
   letter-spacing: 0;
 }
 .grd .grd-ctx-ratio.is-low { color: var(--warn, #F5B942); }
-/* The ground is the one bordered surface; the card on it is told apart by its colour alone. */
-.grd .grd-ctx-card { width: min(280px, 80%); overflow: hidden; border-radius: 14px; background: var(--tl-card); }
-.grd .grd-ctx-card-head { height: 120px; max-height: 40cqh; }
-.grd .grd-ctx-card-t { margin: 12px 14px 4px; font-size: 14px; font-weight: 600; color: var(--tl-ink); }
-.grd .grd-ctx-card-p { margin: 0 14px 14px; font-size: 13px; line-height: 1.45; color: var(--tl-dim); }
-@media (max-width: 600px) {
-  .grd .grd-ctx-card-head { height: 56px; }
-  .grd .grd-ctx-card-p { display: none; }
-}
 .grd .grd-ctx-btns { grid-auto-flow: column; justify-content: center; align-content: center; gap: 12px; }
 .grd .grd-ctx-btn { display: inline-flex; align-items: center; padding: 0 18px; border-radius: 999px; font-size: 14px; font-weight: 560; white-space: nowrap; }
+.grd .grd-preview-bar { min-width: 0; }
 .grd .grd-ctx {
-  position: absolute; top: 12px; left: 12px; z-index: 1;
-  display: flex; gap: 2px; padding: 2px;
-  border-radius: 999px; background: rgba(10, 11, 13, .72);
+  position: relative;
+  display: flex; width: fit-content; max-width: 100%; box-sizing: border-box; gap: 2px; padding: 3px;
+  border: 1px solid var(--tl-line); border-radius: 10px; background: var(--tl-card);
 }
 .grd .grd-ctx-opt {
-  height: 28px; padding: 0 10px; border: 0; border-radius: 999px;
-  background: transparent; color: #fff;
+  height: 28px; padding: 0 10px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--tl-dim);
   font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: background-color var(--dur-1) var(--ease-standard);
 }
-/* The chosen place is a solid light chip with dark text, so it reads at a glance on any
-   gradient behind the bar. */
-.grd .grd-ctx-opt.is-on { background: #f4f4f2; color: #0a0b0d; }
-.grd .grd-ctx-opt.is-on:focus-visible { outline-color: #f4f4f2; outline-offset: 2px; }
+.grd .grd-ctx-opt.is-on { background: var(--v3-ink); color: var(--v3-on-ink); }
+.grd .grd-ctx-opt.is-on:focus-visible { outline-color: var(--tl-focus); outline-offset: 2px; }
 .grd .grd-ctx-opt:focus-visible { outline: 2px solid var(--focus-ink); box-shadow: var(--focus-ring-media); outline-offset: 1px; }
 @media (hover: hover) and (pointer: fine) {
-  .grd .grd-ctx-opt:hover:not(.is-on) { background: rgba(255, 255, 255, .12); }
+  .grd .grd-ctx-opt:hover:not(.is-on) { background: var(--tl-card2); color: var(--tl-ink); }
 }
 @media (pointer: coarse) {
-  .grd .grd-ctx { top: 8px; left: 8px; }
   .grd .grd-ctx-opt { height: 44px; min-width: 44px; }
-}
-/* Where the stage is short (stacked layouts) the switch gets its own row: the samples
-   start below it, 4px clear of its bottom edge, so it never covers one. */
-@media (max-width: 900px) {
-  .grd .grd-ctx-view { padding-top: 48px; }
-}
-@media (max-width: 900px) and (pointer: coarse) {
-  .grd .grd-ctx-view { padding-top: 60px; }
 }
 @media (max-width: 600px) {
   /* A sample under the switch needs more room than 16:9 gives it, and Fill takes the
@@ -1151,185 +1128,7 @@
   :where(html:not([data-reduced-motion="false"])) .grd .grd-ctx-opt { transition: none !important; }
 }
 
-/* ── PREVIEW STYLES (on the canvas) ──────────────────────────────────────────
-   Grain, Fluted glass, Glow ring, Streak, Soft glow and Fade: each draws the person's
-   stops in one look (GradientFx.jsx). It is all CSS, painted once per change and
-   vector-crisp at any pixel density, and nothing here moves. The grounds are neutral
-   and flat; every colour that is not a neutral comes from the stops. The fx box is a
-   size container so blur and shapes scale with the canvas. */
-.grd .grd-fx {
-  --fx-ground: #0d0e11;
-  --fx-paint: transparent;
-  --fx-row: none;
-  --fx-wash: none;
-  --fx-heart: transparent;
-  --fx-low: transparent;
-  --fx-high: transparent;
-  --fx-pitch: 24px;
-  --fx-slice: 4px;
-  --fx-step: 2.2%;
-  --fx-bar: 3px;
-  --fx-alpha: 1;
-  --fx-from: 0%;
-  --fx-to: 100%;
-  --k: 0;
-  /* Film grain: a monochrome noise tile, pushed to high contrast. */
-  --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27120%27 height=%27120%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter='url(%23n)'/%3E%3C/svg%3E");
-  position: absolute; inset: 0;
-  container-type: size;
-  isolation: isolate;
-  overflow: hidden;
-  border: 1px solid var(--tl-line);
-  border-radius: 18px;
-  background: var(--fx-ground);
-  pointer-events: none;
-}
-/* The grain tile is rasterised at its own unit size, so on a dense screen a 120-unit tile is
-   stretched over 240 or 360 device pixels and goes soft. These tiles carry one unit per
-   device pixel at the same 120px size, so the grain stays as sharp as it is at 1x. */
-@media (min-resolution: 1.5dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27180%27 height=%27180%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27180%27 height=%27180%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
-@media (min-resolution: 2dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27240%27 height=%27240%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27240%27 height=%27240%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
-@media (min-resolution: 3dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27360%27 height=%27360%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27360%27 height=%27360%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
-.grd .grd-fx > *, .grd .grd-fx-flutes, .grd .grd-fx-slice, .grd .grd-fx-slice-in { position: absolute; inset: 0; }
-.grd .grd-fx-grain {
-  background-image: var(--fx-grain);
-  background-size: 120px 120px;
-  mix-blend-mode: overlay;
-  opacity: .3;
-}
 
-/* Grain: the gradient seen through three overlapping, uneven ellipses whose edges dissolve
-   into the ground, under a fine, soft film grain. */
-.grd .grd-fx-blob {
-  background: var(--fx-paint);
-  filter: blur(clamp(2px, .6cqmin, 6px));
-  mask-image:
-    radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 30% 38% at 78% 60%, #000 25%, transparent 100%);
-  -webkit-mask-image:
-    radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
-    radial-gradient(ellipse 30% 38% at 78% 60%, #000 25%, transparent 100%);
-}
-.grd .grd-fx[data-fx="grain"] .grd-fx-grain { opacity: .34; }
-
-/* Fluted glass and Glow ring: the scene is repeated in thin slices of every flute, each
-   copy shifted a little further across, so a flute shows a reversed sweep of the scene
-   around it. The last slice is held to the flute's pitch so the rhythm does not drift. */
-.grd .grd-fx-fill { position: absolute; inset: 0; background: var(--fx-paint); }
-.grd .grd-fx-slice {
-  mask-image: repeating-linear-gradient(90deg,
-    transparent 0 calc(var(--k) * var(--fx-slice)),
-    #000 0 min(calc((var(--k) + 1) * var(--fx-slice) + 1px), var(--fx-pitch)),
-    transparent 0 var(--fx-pitch));
-  -webkit-mask-image: repeating-linear-gradient(90deg,
-    transparent 0 calc(var(--k) * var(--fx-slice)),
-    #000 0 min(calc((var(--k) + 1) * var(--fx-slice) + 1px), var(--fx-pitch)),
-    transparent 0 var(--fx-pitch));
-}
-.grd .grd-fx-slice-in { transform: translateX(calc((2.5 - var(--k)) * var(--fx-step))); }
-/* The lens shading of each flute: a bright edge, a clear middle, a dark edge. */
-.grd .grd-fx-flutes::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: repeating-linear-gradient(90deg,
-    rgb(255 255 255 / .4) 0,
-    rgb(255 255 255 / .12) 1px,
-    rgb(255 255 255 / .16) calc(var(--fx-pitch) * .25),
-    transparent calc(var(--fx-pitch) * .6),
-    rgb(0 0 0 / .1) calc(var(--fx-pitch) * .8),
-    rgb(0 0 0 / .26) var(--fx-pitch));
-}
-.grd .grd-fx[data-fx="ring"] { --fx-step: .9%; }
-/* Fluted glass bends colour harder at each flute and shades every reed as a curved
-   surface: a dark edge, a broad highlight on the bulge, a darker falling side. */
-.grd .grd-fx[data-fx="fluted"] { --fx-step: 3.6%; }
-.grd .grd-fx[data-fx="fluted"] .grd-fx-flutes::after {
-  background: repeating-linear-gradient(90deg,
-    rgb(0 0 0 / .3) 0,
-    rgb(255 255 255 / .03) calc(var(--fx-pitch) * .2),
-    rgb(255 255 255 / .3) calc(var(--fx-pitch) * .42),
-    rgb(255 255 255 / .04) calc(var(--fx-pitch) * .64),
-    rgb(0 0 0 / .18) calc(var(--fx-pitch) * .88),
-    rgb(0 0 0 / .34) var(--fx-pitch));
-}
-.grd .grd-fx[data-fx="ring"] .grd-fx-flutes::after { opacity: .6; }
-
-/* Glow ring: a luminous ring with a wide halo, both soft-edged by their masks. */
-.grd .grd-fx-ring, .grd .grd-fx-halo {
-  position: absolute;
-  inset: auto;
-  left: 50%; top: 50%;
-  aspect-ratio: 1;
-  translate: -50% -50%;
-  border-radius: 50%;
-  background: var(--fx-paint);
-}
-.grd .grd-fx-ring {
-  width: min(66cqh, 60cqw);
-  filter: saturate(1.3) brightness(1.1);
-  mask-image: radial-gradient(closest-side, transparent 56%, #000 60%, #000 70%, transparent 78%);
-  -webkit-mask-image: radial-gradient(closest-side, transparent 56%, #000 60%, #000 70%, transparent 78%);
-}
-.grd .grd-fx-halo {
-  width: min(96cqh, 84cqw);
-  opacity: .55;
-  filter: blur(clamp(6px, 2cqmin, 16px));
-  mask-image: radial-gradient(closest-side, transparent 40%, #000 62%, transparent 100%);
-  -webkit-mask-image: radial-gradient(closest-side, transparent 40%, #000 62%, transparent 100%);
-}
-
-/* Streak: the stops stretched into thin vertical columns, three weights of them, added
-   together on black. */
-.grd .grd-fx-cols {
-  opacity: var(--fx-alpha);
-  mix-blend-mode: screen;
-  mask-image: repeating-linear-gradient(90deg, #000 0 var(--fx-bar), transparent 0 var(--fx-pitch));
-  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 var(--fx-bar), transparent 0 var(--fx-pitch));
-}
-.grd .grd-fx-col-fill {
-  position: absolute; inset: 0;
-  background: var(--fx-row);
-  mask-image: linear-gradient(180deg, transparent var(--fx-from), #000 calc(var(--fx-from) + 22%), #000 calc(var(--fx-to) - 22%), transparent var(--fx-to));
-  -webkit-mask-image: linear-gradient(180deg, transparent var(--fx-from), #000 calc(var(--fx-from) + 22%), #000 calc(var(--fx-to) - 22%), transparent var(--fx-to));
-}
-
-/* Soft glow: three blurred colour pools from the stops, closed in by a dark edge. */
-.grd .grd-fx-orb {
-  inset: auto;
-  aspect-ratio: 1;
-  translate: -50% -50%;
-  border-radius: 50%;
-  filter: blur(clamp(16px, 6cqmin, 40px));
-}
-.grd .grd-fx-orb--heart {
-  left: 50%; top: 52%; width: 78cqmin;
-  background: radial-gradient(closest-side, var(--fx-heart) 0, color-mix(in srgb, var(--fx-heart) 70%, transparent) 45%, transparent 100%);
-}
-.grd .grd-fx-orb--low {
-  left: 38%; top: 62%; width: 96cqmin;
-  background: radial-gradient(closest-side, var(--fx-low) 0, color-mix(in srgb, var(--fx-low) 60%, transparent) 45%, transparent 100%);
-}
-.grd .grd-fx-orb--high {
-  left: 63%; top: 42%; width: 92cqmin;
-  background: radial-gradient(closest-side, var(--fx-high) 0, color-mix(in srgb, var(--fx-high) 60%, transparent) 45%, transparent 100%);
-}
-.grd .grd-fx-vignette { background: radial-gradient(ellipse closest-side at 50% 50%, transparent 52%, var(--fx-ground) 100%); }
-.grd .grd-fx[data-fx="glow"] .grd-fx-grain { opacity: .2; }
-
-/* Fade: a wash from the light ground down through the stops. */
-.grd .grd-fx[data-fx="fade"] { --fx-ground: #f2f1ee; }
-.grd .grd-fx-wash {
-  background: var(--fx-wash);
-  mask-image: linear-gradient(180deg, transparent 0, #000 45%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 45%);
-}
-.grd .grd-fx[data-fx="fade"] .grd-fx-grain { opacity: .28; }
-
-@media (max-width: 600px) {
-  .grd .grd-fx { --fx-pitch: 18px; --fx-slice: 3px; }
-}
 
 /* The switch with its second group and its More menu. The gauge is a hidden copy of the row
    that the switch measures to decide where the cut falls; it takes no room and cannot
@@ -1341,7 +1140,7 @@
   position: absolute; left: -6px; top: 50%;
   width: 1px; height: 14px;
   translate: 0 -50%;
-  background: rgb(255 255 255 / .35);
+  background: var(--tl-line);
 }
 .grd .grd-ctx-more { display: inline-flex; align-items: center; gap: 4px; }
 .grd .grd-ctx-more .menu-select-caret { margin-left: 0; }
@@ -1356,10 +1155,10 @@
   position: absolute; left: -6px; top: 50%;
   width: 1px; height: 14px;
   translate: 0 -50%;
-  background: rgb(255 255 255 / .35);
+  background: var(--tl-line);
 }
 .grd .grd-fill-trigger { display: inline-flex; align-items: center; gap: 4px; padding-right: 8px; }
-.grd .grd-fill-trigger[aria-expanded="true"] { background: rgba(255, 255, 255, .16); }
+.grd .grd-fill-trigger[aria-expanded="true"] { background: var(--tl-card2); }
 .grd .grd-fill-trigger svg { flex: none; opacity: .8; transition: rotate var(--dur-2) var(--ease-standard); }
 .grd .grd-fill-trigger[aria-expanded="true"] svg { rotate: 180deg; }
 
@@ -1372,7 +1171,7 @@
   left: var(--select-left, 8px); top: var(--select-top, 0px); right: auto; bottom: auto;
   z-index: var(--select-layer, 130);
   box-sizing: border-box;
-  width: 344px; min-width: 0; max-width: calc(100vw - 16px);
+  width: 468px; min-width: 0; max-width: calc(100vw - 16px);
   max-height: var(--pop-max-h, 100dvh);
   padding: 10px 12px 12px;
   isolation: isolate;
@@ -1389,7 +1188,7 @@
   touch-action: manipulation;
 }
 .grd .grd-fill-done:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
-.grd .grd-fill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+.grd .grd-fill-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 8px; }
 .grd .grd-fill-tile {
   display: grid; gap: 6px; min-width: 0; padding: 0;
   border: 0; background: none; color: var(--tl-dim);
@@ -1407,7 +1206,7 @@
 .grd .grd-fill-thumb .grd-canvas,
 .grd .grd-fill-thumb .grd-fx { position: absolute; inset: 0; border: 0; border-radius: 0; }
 .grd .grd-fill-tile.is-on .grd-fill-thumb { box-shadow: 0 0 0 2px var(--tl-card), 0 0 0 4px var(--tl-ink); }
-/* A tile is too small for the Mesh and Waves caption; the full preview shows it. */
+/* A tile is too small for the Waves caption; the full preview shows it. */
 .grd .grd-fill-thumb .grd-fx > .grd-fx-cap { display: none; }
 .grd .grd-fill-check {
   position: absolute; right: 5px; bottom: 5px; z-index: 1;
@@ -1438,7 +1237,7 @@
   .grd .grd-fill-pop::before { content: ''; display: block; width: 36px; height: 4px; margin: 0 auto 12px; border-radius: 999px; background: var(--tl-line); }
   .grd .grd-fill-title { font-size: 15px; }
   .grd .grd-fill-done { min-height: 44px; padding: 0 16px; font-size: 13px; }
-  .grd .grd-fill-grid { gap: 14px 10px; }
+  .grd .grd-fill-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
   .grd .grd-fill-tile { font-size: 13px; }
   /* Above the tab bar, which already carries the home-indicator inset. */
   html.has-tabbar .grd .grd-fill-pop { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding-bottom: 16px; max-height: min(85dvh, calc(100dvh - var(--chrome-h) - var(--tabbar-h) - env(safe-area-inset-bottom) - 16px)); }
@@ -1488,7 +1287,9 @@
 .grd .grd-txt .grd-poster-frame { container-type: inline-size; }
 .grd .grd-poster-in { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 28px; }
 .grd .grd-poster-top { display: grid; justify-items: start; gap: 8px; width: fit-content; max-width: 100%; }
-.grd .grd-poster-brand { font-size: 14px; line-height: 20px; font-weight: 600; }
+.grd .grd-poster-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.grd .grd-poster-brand svg { width: 26px; height: 16px; }
+.grd .grd-poster-lanes { display: block; align-self: end; flex: 1 1 0; min-height: 0; max-height: 40%; width: 76%; opacity: .65; }
 .grd .grd-poster-h { max-width: 14em; font-size: clamp(28px, 9cqi, 44px); line-height: 1.05; font-weight: 600; letter-spacing: -.02em; text-wrap: balance; }
 .grd .grd-poster-foot { width: fit-content; font-size: 14px; line-height: 20px; font-weight: 400; }
 
@@ -1552,11 +1353,7 @@
   .grd .grd-spec-note { margin-top: 2px; }
 }
 
-/* Mesh and Waves. The effects layer draws the whole scene: Mesh is soft points of colour on a
-   ground (the grain is the shared one, at its base .3), Waves is seven flat bands in one
-   SVG with no blur and no grain. Both carry one caption chip on the ratio badge's scrim. */
-.grd .grd-fx-mesh { background: var(--fx-mesh, none); }
-.grd .grd-fx-waves { display: block; width: 100%; height: 100%; }
+/* The Waves caption names the gradient and lists its stops. */
 .grd .grd-fx > .grd-fx-cap {
   inset: auto auto 24px 24px;
   display: flex; align-items: baseline; gap: 6px; width: fit-content; max-width: calc(100% - 48px);
@@ -1585,40 +1382,12 @@
    text layer, set below the switch row. */
 .grd .grd-fx:is([data-fx="icon"], [data-fx="phone"]) { --fx-ground: color-mix(in srgb, var(--tl-ink) 6%, var(--tl-card)); }
 
-/* The icon: one large icon, the sizes row and the home-screen row, centred under the switch.
-   The box is a size container so the large icon is a share of the stage's height. */
 .grd .grd-icon-box { container-type: size; }
-.grd .grd-icon-area { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 56px; }
-.grd .grd-icon-group { display: flex; align-items: center; gap: 48px; }
-.grd .grd-icon-col { display: grid; justify-items: start; gap: 32px; }
-.grd .grd-icon-sizes { display: flex; align-items: flex-end; gap: 24px; }
-.grd .grd-icon-home { display: flex; gap: 20px; }
 .grd .grd-ic {
   display: grid; flex: none; place-items: center; aspect-ratio: 1;
   border-radius: 22.37%; overflow: hidden; container-type: inline-size;
 }
-.grd .grd-ic--big { width: min(280px, 44cqh); }
-.grd .grd-ic--120 { width: 120px; }
-.grd .grd-ic--60 { width: 60px; }
-.grd .grd-ic--40 { width: 40px; }
-.grd .grd-ic--blank { background: var(--tl-card); box-shadow: inset 0 0 0 1px var(--tl-line); }
-.grd .grd-ic-t { font-family: var(--font); font-size: 56cqi; font-weight: 700; line-height: 1; text-box: trim-both cap alphabetic; }
-@media (max-width: 900px) {
-  .grd .grd-icon-area { padding-top: 48px; }
-  .grd .grd-ic--big { width: 200px; }
-}
-@media (max-width: 900px) and (pointer: coarse) {
-  .grd .grd-icon-area { padding-top: 60px; }
-}
-@media (max-width: 767px) {
-  .grd .grd-icon-home { display: none; }
-}
-@media (max-width: 600px) {
-  .grd .grd-icon-group { gap: 24px; }
-  .grd .grd-icon-sizes { gap: 16px; }
-  .grd .grd-ic--big { width: 128px; }
-  .grd .grd-ic--120 { display: none; }
-}
+
 
 /* The phone: a sign-in screen, a band of the gradient over the form. From 901px it stands in a
    frame that rises from the bottom of the stage; under that the screen is the whole stage and
@@ -1635,7 +1404,7 @@
 .grd .grd-phone-form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 20px; overflow: hidden; }
 .grd .grd-phone-h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; color: var(--tl-ink); }
 .grd .grd-phone-label { margin: 16px 0 0; font-size: 13px; line-height: 16px; font-weight: 500; color: var(--tl-ink); }
-.grd .grd-phone-field { height: 40px; margin-top: 4px; border: 1px solid var(--tl-line); border-radius: 999px; background: var(--tl-card); }
+.grd .grd-phone-field { display: flex; align-items: center; padding-inline: 12px; color: var(--tl-ink); font-size: 13px; height: 40px; margin-top: 4px; border: 1px solid var(--tl-line); border-radius: 999px; background: var(--tl-card); }
 .grd .grd-phone-btn {
   display: flex; align-items: center; justify-content: center; height: 40px; margin-top: 12px;
   border-radius: 999px; font-size: 14px; line-height: 16px; font-weight: 600;
@@ -1654,4 +1423,207 @@
   .grd .grd-phone-form > * { max-width: none; }
   .grd .grd-phone-h, .grd .grd-phone-link { display: none; }
   .grd .grd-phone-label { margin-top: 0; }
+}
+
+/* The picker uses the same neutral swatch surface and selected outline as Palette Builder. */
+.grd .grd-fill-pop { overflow-y: auto; }
+.grd .grd-art-map {
+  position: relative; isolation: isolate; container-type: size; height: 128px; border-radius: 10px;
+  overflow: hidden; touch-action: none; cursor: crosshair; border: 1px solid var(--tl-line);
+}
+.grd .grd-art-map button {
+  position: absolute; transform: translate(-50%, -50%); width: 32px; height: 32px;
+  display: grid; place-items: center; padding: 0; border: 2px solid #f9f8f4; border-radius: 50%;
+  font: 600 12px var(--font); background: #262629; color: #faf9f5; cursor: grab;
+}
+.grd .grd-art-map button[aria-pressed="true"] { background: #faf9f5; color: #242427; border-color: #242427; }
+.grd .grd-art-map button:active { cursor: grabbing; }
+.grd .grd-art-map button:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+.grd .grd-art-point { display: flex; align-items: baseline; justify-content: space-between; font-size: 13px; color: var(--tl-ink); }
+.grd .grd-art-point span:last-child { font: 12px var(--font); color: var(--tl-dim); }
+@media (pointer: coarse) { .grd .grd-art-map button { width: 44px; height: 44px; } }
+
+.grd .grd-art-ink {
+  display: inline-flex; gap: 6px; align-items: center; min-height: 28px; padding: 0 8px;
+  border-radius: 7px; border: 1px solid var(--tl-line); background: var(--tl-card); color: var(--tl-ink);
+  font: 12px var(--font); cursor: pointer;
+}
+.grd .grd-art-ink i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--tl-line); }
+.grd .grd-art-ink:hover { background: var(--tl-card2); }
+.grd .grd-art-ink:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
+@media (pointer: coarse) { .grd .grd-art-ink { min-height: 44px; } }
+
+/* A radio programme page. Its feature sleeve carries the current generator paint. */
+.grd .grd-web {
+  container-type: size; display: grid; place-items: center; padding: 3%;
+  background: var(--tl-card2); border: 1px solid var(--tl-line);
+}
+.grd .grd-web-page {
+  width: min(93%, 146cqh); padding: 2% 3%; box-sizing: border-box;
+  background: #f7f4ec; color: #221f1c; border: 1px solid #c9c6bd;
+  box-shadow: 0 5px 18px rgb(30 29 23 / .08); container-type: inline-size;
+}
+.grd .grd-web-mast, .grd .grd-web-schedule { display: flex; gap: 4cqi; align-items: baseline; border-bottom: 1px solid currentColor; padding-bottom: 1.8cqi; }
+.grd .grd-web-mast b { flex: 1; font-size: 2.65cqi; letter-spacing: -.06em; }
+.grd .grd-web-mast span, .grd .grd-web-schedule { font-size: 1.75cqi; }
+.grd .grd-web-feature { display: grid; grid-template-columns: 1fr 1fr; gap: 5cqi; margin: 3cqi 0; align-items: center; }
+.grd .grd-web-story { display: grid; justify-items: start; gap: 2cqi; }
+.grd .grd-web-story small, .grd .grd-web-cover span { font: 600 1.6cqi/1.2 var(--font); text-transform: uppercase; letter-spacing: .06em; }
+.grd .grd-web-story strong { font: 500 9.2cqi/.85 Georgia, serif; letter-spacing: -.065em; }
+.grd .grd-web-story > span { font-size: 1.9cqi; }
+.grd .grd-web-listen { padding: 1cqi 1.7cqi; border-radius: 2px; background: #221f1c; color: #f7f4ec; font-size: 1.7cqi; }
+.grd .grd-web-cover { position: relative; overflow: hidden; aspect-ratio: 1.08; }
+.grd .grd-web-record {
+  position: absolute; inset: -12% -33% -18% 18%; border-radius: 50%;
+  --groove: clamp(4px, 1.4cqi, 10px);
+  background: repeating-radial-gradient(circle, transparent 0 calc(var(--groove) - 1.6px), rgb(20 17 14 / .34) calc(var(--groove) - .8px), transparent var(--groove));
+  border: 1px solid rgb(20 17 14 / .32);
+}
+.grd .grd-web-cover span { position: absolute; bottom: 6%; left: 6%; padding: .8cqi 1cqi; background: #f7f4ec; }
+.grd .grd-web-schedule { border-bottom: 0; border-top: 1px solid; padding: 1.5cqi 0 0; }
+.grd .grd-web-schedule b { margin-right: auto; }
+@container (max-width: 480px) {
+  .grd .grd-web-page { width: 100%; }
+  .grd .grd-web-story > span { font-size: 2.6cqi; }
+  .grd .grd-web-listen, .grd .grd-web-mast span, .grd .grd-web-schedule { font-size: 2.5cqi; }
+}
+
+/* Geometry is the toolbar's second row. Random settings opens only on request. */
+.grd .grd-geometry-bar { border-block-end: 1px solid var(--tl-line); margin-bottom: 12px; }
+.grd .grd-geometry-bar .grd-geo { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; padding: 0 2px 10px; }
+.grd .grd-geometry-bar .tl-sec-head { display: none; }
+.grd .grd-geometry-bar .grd-geo-live:empty { display: none; }
+.grd .grd-geometry-bar .grd-geo-live:has(p) { order: 4; width: 100%; }
+.grd .grd-geometry-bar .grd-row, .grd .grd-geometry-bar .grd-interp { flex: 0 1 auto; min-width: 0; width: auto; height: auto; }
+.grd .grd-geometry-bar .grd-row { gap: 8px; }
+.grd .grd-geometry-bar .grd-angle { flex: none; }
+.grd .grd-geometry-bar .grd-angle-lock { align-self: center; }
+.grd .grd-geometry-bar .grd-interp { margin-left: auto; flex-wrap: nowrap; align-items: center; gap: 8px; }
+.grd .grd-geometry-bar .grd-interp-hints { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.grd .grd-geometry-bar .grd-angle-none { margin: 0; }
+.grd .grd-tune-tray {
+  position: relative; padding: 16px 20px; margin: 0 0 16px; background: var(--tl-card);
+  border: 1px solid var(--tl-line); border-radius: 12px; scroll-margin-top: calc(var(--chrome-h) + var(--tl-bar-h) + 8px);
+}
+.grd .grd-tune-tray .grd-gen { border: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 260px),1fr)); gap: 12px 20px; }
+.grd .grd-tune-tray .tl-sec-head { grid-column: 1/-1; justify-content: start; gap: 16px; padding-right: 60px; }
+.grd .grd-tune-tray .grd-gen-extra { grid-column: 1/-1; }
+.grd .grd-tune-close { position: absolute; right: 16px; top: 10px; padding: 5px 12px; font: inherit; font-size: 13px; color: var(--tl-ink); background: var(--tl-card2); border: 1px solid var(--tl-line); border-radius: var(--btn-radius); cursor: pointer; }
+.grd .grd-panel { align-self: start; border-radius: 12px; }
+.grd .grd-panel .tl-sec { padding: 16px; gap: 12px; }
+.grd .grd-panel .tl-sec-label { color: var(--tl-ink); font: 600 14px/1.25 var(--font); letter-spacing: -.02em; text-transform: none; }
+.grd .grd-panel .grd-stop { border-radius: 5px; }
+.grd .grd-panel .grd-stop.is-on { background: var(--tl-card2); box-shadow: inset 2px 0 var(--tl-ink); }
+.grd .grd-panel .grd-stop-swatch { border-radius: 5px; border-width: 1px; }
+.grd .grd-selected-chip { display: block; width: 42px; height: 16px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--tl-line); }
+.grd .grd-panel .grd-selected-stop { background: var(--tl-card2); }
+.grd .grd-panel .grd-selected-stop .tl-sec-head { justify-content: space-between; }
+@media (min-width:901px) {
+  .grd .grd-panel { height: auto; max-height: 100%; scrollbar-gutter: stable; }
+  .grd .tl-grid { height: calc(var(--grd-frame) - 70px); min-height: min(520px, calc(var(--grd-frame) - 70px)); }
+}
+@media (max-width:767px) {
+  .grd .grd-geometry-bar .grd-geo { gap: 4px 12px; }
+  .grd .grd-geometry-bar .grd-row:first-of-type { flex: 1; }
+  .grd .grd-geometry-bar:not(.is-expanded) .grd-wheel { display: none; }
+  .grd .grd-geometry-bar .grd-interp { margin-left: 0; }
+  .grd .grd-geometry-bar .grd-interp-k { font-size: 12px; }
+  .grd .grd-tune-close { min-height: 44px; top: 4px; }
+}
+.grd .grd-material-family h3 { margin: 14px 0 8px; color: var(--tl-dim); font: 550 12px/1.3 var(--font); }
+.grd .grd-fill-pop { max-height: min(76dvh,720px); }
+.grd .grd-fill-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.grd .grd-fill-thumb { aspect-ratio: 1.7; border-radius: 4px; }
+.grd .grd-strength { display: flex; gap: 10px; align-items: center; padding-block: 8px; font-size: 12px; border-bottom: 1px solid var(--tl-line); }
+.grd .grd-strength input { flex: 1; min-width: 0; accent-color: var(--tl-ink); }
+.grd .grd-strength output { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The ferry campaign pairs a photographic waterfront with the authored colour field. */
+.grd .grd-ctx-hero { container-type: size; padding: 5%; }
+.grd .grd-hero-photo { position: absolute; inset: 9% 5% 9% 54%; overflow: hidden; border-radius: 48% 48% 2px 2px; }
+.grd .grd-hero-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 54% center; }
+.grd .grd-ctx-sample { position: relative; max-width: 47%; gap: 2.3cqmin; }
+.grd .grd-hero-name { font: 650 clamp(10px,2.65cqmin,16px)/1.2 var(--font); letter-spacing: -.04em; }
+.grd .grd-ctx-h { font: 500 clamp(28px,12cqmin,76px)/.87 Georgia,serif; letter-spacing: -.07em; }
+.grd .grd-ctx-p { font-size: clamp(10px,2.55cqmin,15px); line-height: 1.3; }
+.grd .grd-ctx-cta { margin: 0; border-radius: 2px; padding: 0 12px; height: clamp(24px,6cqmin,34px); font-size: clamp(10px,2.4cqmin,14px); }
+.grd .grd-ctx-ground:has(.grd-pass), .grd .grd-ctx-btns { container-type: size; background: #e7e5dd; }
+.grd .grd-pass { width: min(86cqw,115cqh,595px); aspect-ratio: 2.08; display: grid; grid-template-columns: 79% 21%; transform: rotate(-5deg); color: #242420; background: #faf6e9; box-shadow: 0 8px 10px -8px #28281e66; }
+.grd .grd-pass-face { position: relative; overflow: hidden; background: var(--pass-paint); }
+.grd .grd-pass-print { position: absolute; inset: -55% -40% -62% 4%; border-radius: 50%; background: repeating-radial-gradient(ellipse, transparent 0 3.5%, #22221c70 3.65% 3.85%, transparent 4.1%); }
+.grd .grd-pass-type { position: absolute; inset: 8% auto 8% 5%; padding: 3% 5%; display: grid; align-content: space-between; background: #faf6e9; }
+.grd .grd-pass-type small, .grd .grd-pass-stub { font: 600 clamp(8px,1.9cqmin,12px)/1 var(--font); }
+.grd .grd-pass-type strong { font: 500 clamp(23px,10cqmin,60px)/.81 Georgia,serif; letter-spacing: -.065em; }
+.grd .grd-pass-stub { display: grid; padding: 14% 9%; gap: 7%; grid-template-rows: auto 1fr auto; border-left: 1px dashed #716f62; }
+.grd .grd-pass-stub i { background: repeating-linear-gradient(90deg,#272722 0 1px,transparent 1px 4px,#272722 4px 7px,transparent 7px 9px); }
+.grd .grd-booking { width: min(86cqw,102cqh,420px); padding: clamp(14px,5cqmin,26px); border-radius: 6px; background: #faf8f0; color: #222421; box-shadow: 0 6px 12px -10px #2226; }
+.grd .grd-booking header, .grd .grd-booking-total { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.grd .grd-booking header { padding-bottom: 3cqmin; border-bottom: 1px solid #b4b5aa; font-size: clamp(9px,2.8cqmin,14px); font-weight: 650; }
+.grd .grd-booking header span:last-child, .grd .grd-booking-trip small { font: 500 clamp(8px,2.1cqmin,11px)/1.3 var(--font); }
+.grd .grd-booking-trip { display: grid; gap: 1.3cqmin; margin: 4cqmin 0; }
+.grd .grd-booking-trip strong { font: 500 clamp(18px,6.4cqmin,36px)/1 Georgia,serif; letter-spacing: -.04em; }
+.grd .grd-booking-trip i { font: 400 .75em var(--font); }
+.grd .grd-booking-total { font-size: clamp(10px,2.6cqmin,14px); margin-bottom: 2cqmin; }
+.grd .grd-booking .grd-ctx-btn { display: flex; justify-content: space-between; align-items: center; border-radius: 4px; padding: 0 14px; height: clamp(29px,8cqmin,44px); font-weight: 600; }
+.grd .grd-icon-box { display: grid; place-items: center; background: #dadbd4; color: #252622; }
+.grd .grd-radio-sheet { width: min(90cqw,145cqh,600px); display: grid; grid-template-columns: 46% 1fr; align-items: center; background: #f8f7f0; }
+.grd .grd-radio-art { display: grid; place-items: center; aspect-ratio: 1; background: #242622; }
+.grd .grd-radio-art .grd-ic--big { width: 72%; border-radius: 24%; box-shadow: inset 0 0 0 1px #fff2; }
+.grd .grd-radio-mark { display: flex; justify-content: center; align-items: center; gap: 4%; width: 80%; height: 60%; transform: skew(-10deg); }
+.grd .grd-radio-mark i { width: 11%; height: 35%; border-radius: 100px; background: currentColor; }
+.grd .grd-radio-mark i:nth-child(even) { height: 73%; }
+.grd .grd-radio-mark i:nth-child(3) { height: 100%; }
+.grd .grd-radio-listing { min-width: 0; padding: 9%; }
+.grd .grd-radio-listing small { font: 500 clamp(8px,1.85cqmin,12px)/1.2 var(--font); }
+.grd .grd-radio-listing strong { display: block; margin: .23em 0; font: 650 clamp(16px,5.5cqmin,34px)/.95 var(--font); letter-spacing: -.06em; }
+.grd .grd-radio-listing p { font-size: clamp(9px,2.4cqmin,14px); line-height: 1.4; margin: 0; }
+.grd .grd-radio-playing { margin-top: 12%; border-top: 1px solid #c8c9c1; padding-top: 6%; display: flex; align-items: center; gap: 6%; }
+.grd .grd-radio-playing div { display: grid; gap: 2px; }
+.grd .grd-radio-playing b { font-size: clamp(9px,2.4cqmin,13px); }
+.grd .grd-ic--small { width: 20%; }
+.grd .grd-poster-h { font: italic 500 clamp(43px,20cqi,92px)/.85 Georgia,serif; letter-spacing: -.08em; max-width: 6ch; }
+.grd .grd-poster-in { position: relative; isolation: isolate; }
+.grd .grd-poster-lanes { position: absolute; z-index: -1; right: -5%; bottom: 15%; width: 90%; height: 36%; opacity: .55; }
+.grd .grd-poster-foot { font-family: var(--font); font-size: clamp(10px,3cqi,13px); }
+.grd .grd-spec-head { position: relative; }
+.grd .grd-proof-corner { position: absolute; top: 10%; left: 6%; width: 12px; height: 12px; border-top: 1px solid #faf8ef; border-left: 1px solid #faf8ef; }
+.grd .grd-phone-band { flex-direction: column; justify-content: space-between; align-items: start; }
+.grd .grd-phone-ticket-tag { background: #f6f2e7; color: #21241d; padding: 4px 7px; font: 600 10px/1.1 var(--font); }
+.grd .grd-phone-field { border: 0; border-top: 1px dashed var(--tl-line); border-radius: 0; font-family: var(--font); padding-inline: 0; }
+.grd .grd-phone-btn { border-radius: 4px; }
+
+.grd .grd-geom-more { display: none; }
+.grd .grd-art-point .cpk-wrap { min-width: 0; flex: none; width: auto; }
+.grd .grd-art-point .grd-art-ink { position: static; width: auto; }
+@media (max-width:767px) {
+  .grd .grd-geom-more { display: grid; place-items: center; margin-left: auto; width: 44px; height: 44px; border: 1px solid var(--tl-line); border-radius: var(--btn-radius); background: var(--tl-card); color: var(--tl-ink); }
+  .grd .grd-geom-more[aria-expanded="true"] { background: var(--tl-card2); }
+  .grd .grd-geometry-bar:not(.is-expanded) :is(.grd-row--angle,.grd-interp) { display: none; }
+  .grd .grd-geometry-bar.is-expanded .grd-row--angle { flex-basis: 100%; }
+}
+
+.grd .grd-geometry-bar .grd-geo { min-height: 52px; }
+.grd .grd-geometry-bar.is-expanded .grd-row--angle { min-height: 48px; }
+
+.grd .grd-geometry-bar .grd-row--angle { min-height: 48px; }
+.grd .grd-poster-foot { font-size: clamp(12px,3cqi,14px); }
+.grd .grd-poster-lanes { width: 62%; bottom: 13%; }
+@media (pointer:coarse) {
+  .grd .grd-geometry-bar .grd-row--angle { min-height: 64px; }
+}
+@media (max-width:767px) {
+  .grd .grd-geometry-bar .grd-geo { display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 4px; }
+  .grd .grd-geometry-bar .grd-geo > .grd-row:not(.grd-row--angle) { grid-column: 1; grid-row: 1; width: 100%; justify-content: start; gap: 2px; }
+  .grd .grd-geometry-bar .tl-pill { min-width: 44px; padding-inline: 6px; }
+  .grd .grd-geom-more { grid-column: 2; grid-row: 1; }
+  .grd .grd-geometry-bar :is(.grd-geo-live,.grd-row--angle,.grd-interp) { grid-column: 1/-1; }
+  .grd .grd-geometry-bar.is-expanded .grd-row--angle { min-height: 64px; }
+  .grd .grd-phone-form .grd-phone-h { display: block; margin: 0; font: 600 14px/1.2 var(--font); }
+  .grd .grd-phone-form .grd-phone-field { height: 26px; margin-top: 2px; }
+}
+
+.grd .grd-panel .tl-sec-head { min-height: 26px; }
+.grd .grd-panel .grd-stops-count { line-height: 20px; }
+@media (pointer:coarse) {
+  .grd .grd-panel .tl-sec-head { min-height: 44px; }
 }

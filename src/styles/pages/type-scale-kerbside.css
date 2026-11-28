@@ -28,14 +28,8 @@
 .tsc-page .tsk-ln.is-lit > .tsk-kb { opacity: 1; transform: none; }
 .tsc-page .tsk-loading { margin: 0; font-family: var(--font); font-size: 15px; line-height: 24px; font-weight: 500; color: var(--k-note); }
 .tsc-page .tsk-track { display: flex; flex-direction: column; }
-.tsc-page .tsk-route { position: relative; height: 20px; margin: 20px 64px 0 0; }
-.tsc-page .tsk-rt, .tsc-page .tsk-rd { position: absolute; left: 0; top: 7px; height: 6px; }
-.tsc-page .tsk-rt { right: 0; background: var(--k-concrete); }
-.tsc-page .tsk-rd { width: 60%; background: var(--k-asphalt); }
-.tsc-page .tsk-rs { position: absolute; top: 3px; width: 14px; height: 14px; background: var(--k-asphalt); }
-.tsc-page .tsk-ra { left: 0; }
-.tsc-page .tsk-rb { right: 0; background: var(--k-white); border: 3px solid var(--k-asphalt); }
-.tsc-page .tsk-rr { position: absolute; top: 0; left: 60%; width: 20px; height: 20px; margin-left: -10px; background: var(--k-signal); border: 1.5px solid var(--k-asphalt); }
+.tsc-page .tsk-route { position: relative; margin: 20px 64px 0 0; --route-signal: var(--k-signal); --route-paper: var(--k-white); }
+.tsc-page .kerbside-route { display: block; width: 100%; height: auto; }
 .tsc-page .tsk-rl { display: flex; justify-content: space-between; gap: 12px; color: var(--k-soft); }
 .tsc-page .tsk-rl span { white-space: nowrap; }
 .tsc-page .tsk-rider { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; align-items: center; margin-top: 28px; }

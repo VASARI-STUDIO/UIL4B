@@ -23,11 +23,11 @@ export function boxWithin(outer, inner) {
 }
 
 /** The ink for a measured box, or for the whole gradient until the box is known. */
-export const inkFor = (stops, type, angle, spot) => pickInk(stops, spot ? { type, angle, ...spot } : undefined)
+export const inkFor = (stops, type, angle, spot, mesh) => pickInk(stops, { type, angle, ...spot, mesh })
 
 /** The ink for each named box of a scene: `spots` is { name: measured box } or null before the first measure. */
-export function sceneInks(stops, type, angle, spots, names) {
-  return Object.fromEntries(names.map((name) => [name, inkFor(stops, type, angle, spots?.[name])]))
+export function sceneInks(stops, type, angle, spots, names, mesh) {
+  return Object.fromEntries(names.map((name) => [name, inkFor(stops, type, angle, spots?.[name], mesh)]))
 }
 
 /** "Text 4.8:1", with " · low" when the ratio misses 4.5:1. */

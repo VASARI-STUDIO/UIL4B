@@ -1,3 +1,4 @@
+import { openRandomSettings } from './gradient-controls.js'
 // /create/gradient: the palette row (`.grd-paint`) inside Stops.
 //
 // A chip press paints the highlighted stop (the "target"), then the target moves to
@@ -82,6 +83,7 @@ const sourceMenu = (page) => page.getByRole('button', { name: 'Colour source' })
 
 async function open(page) {
   await go(page, ROUTE)
+  await openRandomSettings(page)
   await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Gradient controls' })).toBeVisible()
 }

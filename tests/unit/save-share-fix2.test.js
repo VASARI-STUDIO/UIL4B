@@ -36,7 +36,7 @@ test('the generator marks only the person’s own gradient as a link, and opens 
   const src = read('src/pages/GradientGenerator.jsx')
   assert.match(src, /src: fromLibrary \? undefined : 'link'/)
   assert.match(src, /setFromLibrary\(!incoming\.link\)/)
-  assert.match(src, /'gi', 'src'\]\.forEach/, 'the marker leaves the address bar with the other hand-off keys')
+  assert.match(src, /'gi', 'src'[^\]]*\]\.forEach/, 'the marker leaves the address bar with the other hand-off keys')
 })
 
 /* ── the migration reads the key after the listing ───────────────────────── */
