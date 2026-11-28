@@ -121,7 +121,6 @@ export function placePopover(trigger, panel) {
   const w = panel.offsetWidth
   const h = panel.offsetHeight
   const vw = window.innerWidth
-  const vh = window.innerHeight
 
   // Portalled listboxes use viewport coordinates and clear both fixed bars.
   if (panel.dataset.popFixed === 'true') {
@@ -191,7 +190,9 @@ export function placePopover(trigger, panel) {
   // cap. The cap is what actually moves the panel: it is anchored to the
   // trigger and grows upward, so bounding it to the clear space keeps its top
   // edge below the nav instead of behind it.
-  const roomBelow = vh - anchor.bottom
+  // The room below ends at the fixed bottom tabs when there are any, not at the
+  // viewport edge: a panel sized to the edge runs under the tab bar on a phone.
+  const roomBelow = bottomObstruction() - anchor.bottom
   const roomAbove = anchor.top - topObstruction()
   const side = h + EDGE_PAD > roomBelow && roomAbove > roomBelow ? 'top' : 'bottom'
   setIfChanged(panel, 'data-pop-side', side)
