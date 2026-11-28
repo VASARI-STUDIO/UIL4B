@@ -310,6 +310,8 @@ test('no clean preview is committed: git tracks no picture under api/, and the s
   const { execFileSync } = await import('node:child_process')
   const tracked = execFileSync('git', ['ls-files', '--', 'api'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n').filter((f) => /\.(webp|png|jpe?g|avif|gif)$/i.test(f))
+    // Flyleaf's own photographs are theme assets read at export time (function-include-files.test.js carries them), not previews.
+    .filter((f) => !f.startsWith('api/_lib/exportThemes/fonts/33-flyleaf/'))
   assert.deepEqual(tracked, [], 'a picture is committed under api/')
   const ignored = execFileSync('git', ['check-ignore', '--no-index', 'api/_lib/pro/export-previews/01-presentation/slides/1.webp'], { cwd: ROOT, encoding: 'utf8' })
   assert.match(ignored, /export-previews/)
