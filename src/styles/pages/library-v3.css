@@ -564,8 +564,8 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lb
 }
 
 /* ══ The preview dialog ═════════════════════════════════════════════════════
-   Phone (the default): the bottom sheet. Header 56px (Close, counter, Previous,
-   Next at 44px), the preview 200px, the panel scrolls, the primary is 52px on
+   Phone (the default): the bottom sheet. Header 56px (counter at the left; Previous,
+   Next, Close at 44px at the right), the preview 200px, the panel scrolls, the primary is 52px on
    the bottom edge with the safe area under it. Tablet stacks the same parts in
    a centred card; desktop sets the preview left and the panel right. The layer
    itself carries .lib-surface.lib-v3, so its own rules chain off the layer. */
@@ -578,10 +578,7 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lb
 .lib-surface.lib-v3.gpd-layer[class] .gpd-head{
   grid-area:head;display:flex;align-items:center;min-height:56px;padding:6px 8px;touch-action:none;
 }
-.lib-surface.lib-v3.gpd-layer[class] .gpd-close{order:0}
-.lib-surface.lib-v3.gpd-layer[class] .gpd-count{order:1;flex:1 1 auto;text-align:center;font-size:14px;font-weight:560;color:var(--v3-sec);font-variant-numeric:tabular-nums}
-.lib-surface.lib-v3.gpd-layer[class] .gpd-prev{order:2}
-.lib-surface.lib-v3.gpd-layer[class] .gpd-next{order:3}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-count{flex:1 1 auto;text-align:left;padding-left:8px;font-size:14px;font-weight:560;color:var(--v3-sec);font-variant-numeric:tabular-nums}
 .lib-surface.lib-v3.gpd-layer[class] .gpd-icon{
   display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:44px;height:44px;padding:0;
   border:0;border-radius:999px;background:transparent;color:var(--v3-ink);cursor:pointer;
@@ -662,9 +659,6 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lb
   }
   .lib-surface.lib-v3.gpd-layer[class] .gpd-preview{margin:8px 0 8px 8px;border-radius:16px;touch-action:auto}
   .lib-surface.lib-v3.gpd-layer[class] .gpd-head{padding:8px 16px 0 8px;touch-action:auto}
-  .lib-surface.lib-v3.gpd-layer[class] .gpd-count{order:3;text-align:right;padding-right:8px}
-  .lib-surface.lib-v3.gpd-layer[class] .gpd-prev{order:1}
-  .lib-surface.lib-v3.gpd-layer[class] .gpd-next{order:2}
   .lib-surface.lib-v3.gpd-layer[class] .gpd-foot{padding:12px 24px 24px}
 }
 @media(hover:hover) and (pointer:fine){
