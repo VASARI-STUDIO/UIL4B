@@ -94,10 +94,11 @@ for (const page of SIZES) {
   }
 }
 
-test('Dispatch is registered as a Pro theme with the slides row only and both page sizes', () => {
+test('Dispatch is registered as a Pro theme with the slides and guide rows and both page sizes', () => {
   assert.ok(EXPORT_THEMES.some((t) => t.id === '35-dispatch'))
   assert.ok(themeHasRow('35-dispatch', 'slides'))
-  for (const row of ['guide', 'book', 'ui-kit']) assert.ok(!themeHasRow('35-dispatch', row), row)
+  assert.ok(themeHasRow('35-dispatch', 'guide'))
+  for (const row of ['book', 'ui-kit']) assert.ok(!themeHasRow('35-dispatch', row), row)
   assert.ok(themeHasPage('35-dispatch', '16x9') && themeHasPage('35-dispatch', 'a4-portrait') && !themeHasPage('35-dispatch', 'a4-landscape'))
   assert.deepEqual([...T.meta.pages], [...EXPORT_THEMES.find((t) => t.id === '35-dispatch').pages])
   assert.ok(!EXPORT_THEMES.find((t) => t.id === '35-dispatch').free, 'a Free account does not get the theme')
@@ -120,7 +121,7 @@ test('a Free account is refused, and the rows Dispatch lacks are unknown', async
   const base = { theme: '35-dispatch', design, projectName: NAME }
   const free = await ask('free-1', { ...base, row: 'slides', format: 'pdf' })
   assert.equal(free.code, 403); assert.equal(free.body.code, 'pro_required')
-  for (const [row, format] of [['book', 'pdf'], ['ui-kit', 'zip'], ['guide', 'pdf']]) {
+  for (const [row, format] of [['book', 'pdf'], ['ui-kit', 'zip']]) {
     const res = await ask('pro-1', { ...base, row, format })
     assert.equal(res.code, 400, row); assert.equal(res.body.code, 'unknown_row', row)
   }
@@ -216,5 +217,21 @@ test('every email address in the theme is a reserved .example or example.com one
     for (const [addr] of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/[A-Za-z0-9._-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g)) {
       assert.match(addr, /@(?:[a-z0-9-]+\.)*(?:example\.com|[a-z0-9-]+\.example)$/i, `${f}: ${addr}`)
     }
+  }
+})
+
+// THE UI STYLE GUIDE: 13 A4 pages on Pro and 7 on Free, in the theme's order, with no demo copy; the dialog's older guide ids preview a page.
+// Break: drop guidePreviewId from themes/35-dispatch/index.js, or 'guide' from its rows in src/data/exportThemes.js.
+test('the Dispatch style guide draws 13 pages on Pro, 7 on Free, no demo copy, and every older guide id previews a page', async () => {
+  const draw = async (skeleton) => (await renderThemeExport({ theme: '35-dispatch', row: 'guide', format: 'pdf', design, projectName: NAME, skeleton }, E)).html
+  const ids = (html) => [...html.matchAll(/<section[^>]*data-page="([^"]+)"/g)].map((m) => m[1])
+  const pro = await draw(false), free = await draw(true)
+  assert.deepEqual(ids(pro), ['cover', 'contents', 'screen', 'dark', 'roles', 'tints', 'type', 'buttons', 'fields', 'feedback', 'overlays', 'space', 'handoff'])
+  assert.deepEqual(ids(free), ['cover', 'screen', 'roles', 'type', 'buttons', 'fields', 'handoff'])
+  noDemo(pro, 'guide Pro'); noDemo(free, 'guide Free')
+  const { renderThemePage } = await import('../../api/_lib/exportThemeRoute.js')
+  for (const page of ['cover', 'interface', 'colour', 'contrast', 'type', 'components', 'icons']) {
+    const { html } = await renderThemePage({ theme: '35-dispatch', kind: 'guide', page, design, projectName: NAME }, E)
+    assert.match(html, /<section[^>]*data-page="/, `the guide preview for ${page} draws a page`)
   }
 })

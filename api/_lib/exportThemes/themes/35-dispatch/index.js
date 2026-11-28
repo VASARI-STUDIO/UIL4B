@@ -7,6 +7,8 @@ import { guidelines as pages4 } from './pages-4.js';
 import { a4 } from './pages-a4.js';
 import { brandOrder, css as kitCss, portrait } from './kit.js';
 import { photoCss } from './photos.js';
+import { guide as uiGuide } from './lane-guide.js';
+import { uiOrder } from './guide-helpers.js';
 import { realCopy } from './real-copy.js';
 
 export const meta = {
@@ -25,9 +27,9 @@ export const guidelines = { ...pages1, ...pages2, ...pages3, ...pages4 };
 // the A4 portrait edition (pages-a4.js) takes its pages in a portrait ctx; a 16:9 ctx keeps its own page
 for (const id of Object.keys(a4)) { const prev = guidelines[id]; guidelines[id] = (ctx) => (portrait(ctx) ? a4[id](ctx) : prev(ctx)); }
 export const uikit = {};
-export const guide = {};
+export const guide = { ...uiGuide, order: (edition, ctx) => uiOrder(ctx) };
 // the page list the document draws: only the pages that exist (the route also skips an id with no function)
-export const order = (kind, ctx) => (kind === 'guide' ? [] : brandOrder(ctx).filter((id) => typeof guidelines[id] === 'function'));
+export const order = (kind, ctx) => (kind === 'guide' ? uiOrder(ctx) : brandOrder(ctx).filter((id) => typeof guidelines[id] === 'function'));
 export const previewId = {
   cover: 'cover', contents: 'contents', intro: 'who', personality: 'voice', voice: 'voice', 'write-this': 'words', messaging: 'words',
   logo: 'mark', 'logo-versions': 'versions', 'clear-space': 'space', 'min-size': 'space', 'logo-grounds': 'versions', 'logo-misuse': 'misuse',
@@ -35,5 +37,7 @@ export const previewId = {
   typefaces: 'faces', hierarchy: 'scale', 'type-in-use': 'hierarchy', 'type-rules': 'type-rules',
   grid: 'grid', layouts: 'compositions', 'business-card': 'print', social: 'social', digital: 'digital', summary: 'summary', 'contact-scope': 'contact',
 };
-export const guidePreviewId = {};
+// the guide row's preview ids: the old guide ids map to the page that replaced them, every other id passes through (used only for the guide row)
+export const guidePreviewId = { interface: 'screen', colour: 'roles', contrast: 'roles', components: 'buttons', icons: 'space' };
 export const css = (ctx) => kitCss(ctx, photoCss(ctx));
+export { guideCss } from './guide-a4.js';
