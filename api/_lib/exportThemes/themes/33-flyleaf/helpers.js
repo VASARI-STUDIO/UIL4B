@@ -4,7 +4,7 @@
 import { readableOn } from '../../engine/color.js';
 
 export const BRAND_PAGES = ['cover', 'application', 'digital', 'logo', 'colour', 'specimen', 'type', 'strategy', 'composition', 'reference'];
-// The 13 pages of the Circular-level guide (13_ui_style_guide/02_spec.md). Pages 8, 9, 11 and 12 are drawn in slice 2; the route skips an id with no function.
+// The 13 pages of the UI style guide, shared by every theme's guide; the route skips an id with no function.
 export const UI_PAGES = ['cover', 'contents', 'screen', 'dark', 'roles', 'tints', 'type', 'buttons', 'fields', 'feedback', 'overlays', 'space', 'handoff'];
 // The Free skeleton: a fixed shorter list, chosen from the account's plan in the route (ctx.skeleton) and never from a request.
 export const BRAND_SKELETON = ['cover', 'logo', 'colour', 'type', 'reference'];

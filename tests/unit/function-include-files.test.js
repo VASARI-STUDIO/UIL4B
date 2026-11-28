@@ -465,9 +465,9 @@ test('includeFiles carries the export themes font folder, and the loader reads t
   assert.match(loader, /new URL\('\.\/fonts\/', import\.meta\.url\)/, 'the loader reads fonts from somewhere other than the folder includeFiles names')
 })
 
-// Flyleaf, Set Square and Dispatch read their photographs with fs (photos.js), which the file tracer does not follow, so a photo the glob misses passes locally and
+// Flyleaf, Set Square, Dispatch and Doorlist read their photographs with fs (photos.js), which the file tracer does not follow, so a photo the glob misses passes locally and
 // fails in the deploy ("That file didn't build"). Every file the theme can read must be matched, and nothing else in the folder is.
-for (const [theme, label, minFiles] of [['33-flyleaf', 'Flyleaf', 18], ['34-set-square', 'Set Square', 13], ['35-dispatch', 'Dispatch', 16]]) test(`includeFiles carries every photograph and light layer ${label} can read, and nothing broader`, async () => {
+for (const [theme, label, minFiles] of [['33-flyleaf', 'Flyleaf', 18], ['34-set-square', 'Set Square', 13], ['35-dispatch', 'Dispatch', 16], ['36-doorlist', 'Doorlist', 16]]) test(`includeFiles carries every photograph and light layer ${label} can read, and nothing broader`, async () => {
   // the photographs sit in a subfolder of the font folder, so its alternative must reach subfolders (`**`)
   const alternatives = expandBraces(includeFilesGlob()).filter((a) => EXPORT_THEME_FONTS.test(a))
   assert.deepEqual(alternatives, ['api/_lib/exportThemes/fonts/**'], 'includeFiles must carry the font folder with its subfolders, once')
@@ -480,10 +480,14 @@ for (const [theme, label, minFiles] of [['33-flyleaf', 'Flyleaf', 18], ['34-set-
     readable.add(`light-${img}-${area}.jpg`)
     if (area === 'screen') readable.add(`glare-${img}-${area}.jpg`)
   }
+  // a theme whose mockup corners live in a data file beside the photographs reads that file too
+  const mockupsJs = fs.readFileSync(path.join(root, 'api', '_lib', 'exportThemes', 'themes', theme, 'mockups.js'), 'utf8')
+  const dataFile = new RegExp(String.raw`new URL\('\.\./\.\./fonts/${theme}/([A-Za-z0-9_-]+\.json)'`, 'g')
+  for (const [, f] of mockupsJs.matchAll(dataFile)) readable.add(f)
   assert.ok(readable.size >= minFiles, 'the readable set is built from the theme itself')
   for (const f of readable) assert.ok(onDisk.includes(f), `${f} can be read by the theme but is not in fonts/${theme}`)
   assert.deepEqual(onDisk.filter((f) => !readable.has(f)), [], `a file in fonts/${theme} the theme never reads is shipped for nothing`)
-  assert.ok(onDisk.every((f) => /^[A-Za-z0-9-]+\.jpg$/.test(f)), `fonts/${theme} holds only the .jpg files the theme reads`)
+  assert.ok(onDisk.every((f) => /^[A-Za-z0-9-]+\.jpg$|^[A-Za-z0-9_-]+\.json$/.test(f)), `fonts/${theme} holds only the .jpg and .json files the theme reads`)
   const photosJs = fs.readFileSync(path.join(root, 'api', '_lib', 'exportThemes', 'themes', theme, 'photos.js'), 'utf8')
   assert.ok(photosJs.includes(`new URL('../../fonts/${theme}/', import.meta.url)`), 'photos.js reads from a folder other than the one includeFiles carries')
 })

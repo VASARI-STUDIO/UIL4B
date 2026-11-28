@@ -1,4 +1,4 @@
-// Theme 35, Dispatch: the UI style guide's page list. The 13 ids and the Free 7 are the spec's (13_ui_style_guide/02_spec.md); the route skips an id with no function.
+// Theme 35, Dispatch: the UI style guide's page list. The 13 ids and the Free 7 are shared by every theme's guide; the route skips an id with no function.
 export const UI_PAGES = ['cover', 'contents', 'screen', 'dark', 'roles', 'tints', 'type', 'buttons', 'fields', 'feedback', 'overlays', 'space', 'handoff'];
 // The Free skeleton: a fixed shorter list, chosen from the account's plan in the route (ctx.skeleton), never from a request.
 export const UI_SKELETON = ['cover', 'screen', 'roles', 'type', 'buttons', 'fields', 'handoff'];

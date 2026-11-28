@@ -311,13 +311,13 @@ test('/plans, the homepage and Settings all name the export line “Made with UI
 // (PlansPageR3A, HomePlans, HomeExports boards).
 test('theme counts follow the board: numerals in labels, words in sentences', () => {
   // Labels and row titles: numerals.
-  assert.equal(PRO_ROWS[1].title, 'All 25 export themes')
+  assert.equal(PRO_ROWS[1].title, 'All 26 export themes')
   assert.equal(THEME_FACTS.freeTag, 'Free in 3 themes')
   assert.equal(freeLines(true)[2], 'Brand guidelines in 3 export themes: Label, Swiss Field and Flyleaf, plus the UI kit in Standards')
   // Running sentences: words.
-  assert.match(plansLead(true), /Pro is the full studio: all twenty-five export themes, the UI kit and brand book,/)
-  assert.match(PRO_ROWS[1].sub, /^Twenty-two more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint, In use, Keynote, Stub, Front Page, Standards Plate, Notebook, Print Shop, Drawing Sheet, Fluted, Contact, Dieline, Set Square and Dispatch./)
-  assert.match(PRO_ROWS[1].phoneSub, /^Twenty-two more than Free, each with all \w+ exports\.$/)
-  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in three of the twenty-five themes, Label, Swiss Field and Flyleaf, and the UI kit in Standards')
-  assert.equal(THEME_FACTS.countWord, 'twenty-five')
+  assert.match(plansLead(true), /Pro is the full studio: all twenty-six export themes, the UI kit and brand book,/)
+  assert.match(PRO_ROWS[1].sub, /^Twenty-three more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint, In use, Keynote, Stub, Front Page, Standards Plate, Notebook, Print Shop, Drawing Sheet, Fluted, Contact, Dieline, Set Square, Dispatch and Doorlist./)
+  assert.match(PRO_ROWS[1].phoneSub, /^Twenty-three more than Free, each with all \w+ exports\.$/)
+  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in three of the twenty-six themes, Label, Swiss Field and Flyleaf, and the UI kit in Standards')
+  assert.equal(THEME_FACTS.countWord, 'twenty-six')
 })
