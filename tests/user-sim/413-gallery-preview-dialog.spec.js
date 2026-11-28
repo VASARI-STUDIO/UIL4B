@@ -39,16 +39,16 @@ test.describe('preview dialog, desktop', () => {
       await expect(dialog).toBeVisible()
       expect(await dialog.evaluate((d) => d.contains(document.activeElement)), 'focus is inside the dialog').toBe(true)
 
-      // Close is the first stop; walk Tab to the editor link.
-      await dialog.getByRole('button', { name: 'Close' }).focus()
-      const order = ['Close']
+      // The head reads count, Previous, Next, Close; walk Tab from Previous to the editor link.
+      await dialog.getByRole('button', { name: `Previous ${lib.noun}` }).focus()
+      const order = [`Previous ${lib.noun}`]
       for (let i = 0; i < 40; i += 1) {
         await page.keyboard.press('Tab')
         order.push(await page.evaluate(nameOf))
         if (order[order.length - 1] === lib.editor) break
       }
-      expect(order.slice(0, 3)).toEqual(['Close', `Previous ${lib.noun}`, `Next ${lib.noun}`])
-      expect(order[3], 'the first stop after Next is a colour row').toMatch(/^Copy /)
+      expect(order.slice(0, 3)).toEqual([`Previous ${lib.noun}`, `Next ${lib.noun}`, 'Close'])
+      expect(order[3], 'the first stop after Close is a colour row').toMatch(/^Copy /)
       expect(order[order.length - 1], 'the editor link is last').toBe(lib.editor)
 
       await expect(dialog.getByText(/^1 of \d+$/)).toBeVisible()
