@@ -338,8 +338,12 @@ export function loadFont(family, weights = [400], italics = []) {
     italics.forEach(w => existing.italics.add(w))
     const all = [...existing.weights].sort((a, b) => a - b)
     const allItalics = [...existing.italics].sort((a, b) => a - b)
-    existing.link.remove()
+    // The old link stays in the document until the new one settles: removing
+    // it first unloads faces already painted, and everything set in this
+    // family drops to the fallback until the wider sheet arrives.
+    const previous = existing.link
     const upgraded = injectFontLink(family, all, null, allItalics)
+    upgraded.ready.then(() => previous.remove())
     return upgraded.ready.then(() => upgraded.status)
   }
 

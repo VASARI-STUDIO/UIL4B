@@ -12,6 +12,9 @@ import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleF
 // The dialog brings its own styles: Font Pair opens it without the picker.
 import '../styles/pages/font-picker.css'
 
+// How long a tile waits for its face before showing the fallback instead.
+const FACE_TIMEOUT_MS = 3000
+
 // Browse the catalogue and pick a family by LOOKING at it.
 //
 // What this replaces: a native <select> fed by a search box. The select was a
@@ -93,16 +96,24 @@ function FontTile({ font, selected, onPick, onInspect }) {
     // Deliberately never synchronous: revealing on the same tick as the effect
     // would show the tile before the face can possibly have registered, which
     // is the fallback-pretending-to-be-the-family fault this guard exists for.
+    let timer = null
     const start = () => {
-      loadFont(font.family, [headingWeight(font), bodyWeight(font)])
-      Promise.resolve(document.fonts?.ready)
-        .then(() => { if (!cancelled) setReady(true) })
-        .catch(() => { if (!cancelled) setReady(true) })
+      const reveal = () => { clearTimeout(timer); if (!cancelled) setReady(true) }
+      const weight = headingWeight(font)
+      // Reveal once the face the tile paints in has actually loaded, not when
+      // the font set is merely idle (it is idle before the stylesheet has
+      // even arrived). A family that never loads shows in its fallback face
+      // after FACE_TIMEOUT_MS rather than staying a skeleton.
+      timer = setTimeout(reveal, FACE_TIMEOUT_MS)
+      Promise.resolve(loadFont(font.family, [weight, bodyWeight(font)]))
+        .then(() => document.fonts?.load?.(`${weight} 16px "${font.family}"`))
+        .catch(() => {})
+        .then(reveal)
     }
 
     if (!el || typeof IntersectionObserver === 'undefined') {
       start()
-      return () => { cancelled = true }
+      return () => { cancelled = true; clearTimeout(timer) }
     }
 
     const obs = new IntersectionObserver(([entry]) => {
@@ -111,7 +122,7 @@ function FontTile({ font, selected, onPick, onInspect }) {
       start()
     }, { rootMargin: '260px' })
     obs.observe(el)
-    return () => { cancelled = true; obs.disconnect() }
+    return () => { cancelled = true; clearTimeout(timer); obs.disconnect() }
   }, [font])
 
   return (
