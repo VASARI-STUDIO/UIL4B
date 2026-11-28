@@ -1,0 +1,21 @@
+/* The backing under the sticky library bar. Loaded with the toolbar, not in the
+   render-blocking sheet: only the library routes and the font dialog reach it.
+   The bar pins `--lbry-gap` below the fixed nav, so without this the strip above
+   it and the wedges beside its rounded ends show the page scrolling under.
+   `::before` is page ground a viewport wide, from the nav's bottom edge to the
+   bar's bottom edge. As a negative-z child it paints over the bar's own skin, so
+   `::after` repaints that skin (background, border and radius inherited, so every
+   variant follows). `--lbry-bw` is the border width both overshoot by; a variant
+   with no border sets it to 0. The gap uses the tokens the sticky offset uses. */
+.lbry-toolbar{--lbry-gap:calc(var(--nav-clear) + 8px - var(--chrome-h));--lbry-bw:1px}
+.lbry-toolbar::before{content:"";position:absolute;z-index:-1;top:calc(-1 * var(--lbry-gap) - var(--lbry-bw));bottom:calc(-1 * var(--lbry-bw));left:50%;width:100vw;margin-left:-50vw;background:var(--bg-0);pointer-events:auto}
+.lbry-toolbar::after{content:"";position:absolute;z-index:-1;inset:calc(-1 * var(--lbry-bw));border-radius:inherit;background:inherit;border:inherit;pointer-events:none}
+/* The icon and emoji band is already flush under the nav on page ground. */
+@media(min-width:641px) and (min-height:560px){.ig-band .lbry-toolbar::before,.ig-band .lbry-toolbar::after{display:none}}
+/* Phone: a resting bar sits in the page with nothing pinned above it; the
+   peeking bar is fixed `--nav-clear` under the nav. */
+@media(max-width:640px){
+  .lbry-toolbar:not([data-peek])::before,.lbry-toolbar:not([data-peek])::after{display:none}
+  .lbry-toolbar[data-peek]{--lbry-gap:calc(var(--nav-clear) - var(--chrome-h))}
+}
+@media(min-width:641px) and (max-width:980px){.lbry-toolbar::before{left:0;right:0;width:auto;margin-left:0;box-shadow:0 0 0 100vmax var(--bg-0);clip-path:inset(0 -100vmax)}}
