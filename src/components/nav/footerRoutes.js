@@ -1,4 +1,4 @@
-// WHERE THE SITE FOOTER RENDERS — everywhere. SpectrumFooter closes every page and every tool,
+// WHERE THE SITE FOOTER RENDERS: everywhere. SpectrumFooter closes every page and every tool,
 // from the front door to the app shell and the Create tools; the only pages without it are the
 // full-screen ones (the login and onboarding screens, the maintenance page and a library's
 // `?view=full` window). So there is no route list to keep: a page that should have no footer is a

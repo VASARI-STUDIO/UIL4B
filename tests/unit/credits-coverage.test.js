@@ -186,9 +186,10 @@ test('the attribution for the icon grid is reported unconditionally and drawn in
   assert.ok(!ICON_PAGE.includes('IconPackCredit') && !ICON_PAGE.includes('ig-credit'),
     'IconLibrary.jsx still draws its own credit strip as well as reporting to the footer')
   const create = stripComments(read('src/pages/CreateTool.jsx'))
-  assert.match(create, /<SpectrumFooter notice=\{<IconCredits rows=\{credits\.rows\} scope=\{credits\.scope\} \/>\} \/>/,
+  assert.match(create, /toolCarriesCredits/, 'CreateTool no longer asks which routes carry the licence notice')
+  assert.match(create, /<SpectrumFooter notice=\{carriesCredits \? <IconCredits rows=\{credits\.rows\} scope=\{credits\.scope\} \/> : null\} \/>/,
     'CreateTool no longer draws the licence notice in the footer on the icon routes')
-  assert.match(create, /onCredits=\{wearsSpectrumFooter \? reportCredits : undefined\}/, 'CreateTool no longer hands the library its credit report')
+  assert.match(create, /onCredits=\{carriesCredits \? reportCredits : undefined\}/, 'CreateTool no longer hands the library its credit report')
 })
 
 test('the credit names the packs in view, including the fallback grid’s', () => {
