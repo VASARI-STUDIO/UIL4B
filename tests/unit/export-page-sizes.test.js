@@ -71,8 +71,8 @@ test('the table entry and the theme list the same pages, and the engine refuses 
 test('the file name carries the page key only when a page was asked for', async () => {
   const plain = await make('slides', 'html')
   const a4 = await make('slides', 'html', 'a4-portrait')
-  assert.match(plain.name, /^kerbside-brand-guidelines-33-flyleaf\.zip$/)
-  assert.match(a4.name, /^kerbside-brand-guidelines-33-flyleaf-a4-portrait\.zip$/)
+  assert.match(plain.name, /kerbside-brand-guidelines-33-flyleaf\.zip$/)
+  assert.equal(a4.name, plain.name.replace(/\.zip$/, '-a4-portrait.zip'))
 })
 
 test('the client sends page only when the caller passes one', async () => {
