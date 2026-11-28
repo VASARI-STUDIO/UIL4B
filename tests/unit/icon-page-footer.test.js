@@ -7,7 +7,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { read, stripComments } from './helpers/source-text.js'
-import { toolCarriesCredits } from '../../src/components/nav/footerRoutes.js'
+import { toolCarriesCredits, footerClosesSale, footerTheme } from '../../src/components/nav/footerRoutes.js'
 import { creditRows } from '../../src/data/iconPackCredits.js'
 
 test('only the Icon and Emoji libraries add the licence notice to the footer', () => {
@@ -23,11 +23,12 @@ test('app pages and the Icon and Emoji libraries wear SpectrumFooter, other tool
   assert.ok(!fs.existsSync('src/components/AppFooter.jsx'), 'AppFooter.jsx is back')
   const app = stripComments(read('src/App.jsx'))
   // The app shell (every account, library, legal and system page) and the two surface indexes.
-  assert.equal((app.match(/<SpectrumFooter \/>/g) || []).length, 2, 'App.jsx should mount SpectrumFooter in the shell and on the indexes')
-  assert.ok(app.includes('{!fullScreen && <SpectrumFooter />}'), 'the shell footer is no longer dropped only for the full-screen view')
+  assert.equal((app.match(/<SpectrumFooter\b/g) || []).length, 2, 'App.jsx should mount SpectrumFooter in the shell and on the indexes')
+  assert.ok(app.includes('{!fullScreen && <SpectrumFooter inApp={!footerClosesSale(location.pathname)} theme={footerTheme(location.pathname)} />}'),
+    'the shell footer is no longer dropped only for the full-screen view, or no longer drops the sales close inside the app')
   // Create tools fill the screen and end without a footer; the Icon and Emoji libraries end with it.
   const tool = stripComments(read('src/pages/CreateTool.jsx'))
-  assert.match(tool, /\{carriesCredits && <SpectrumFooter notice=\{<IconCredits/, 'CreateTool no longer mounts SpectrumFooter on the Icon and Emoji libraries only')
+  assert.match(tool, /\{carriesCredits && <SpectrumFooter inApp notice=\{<IconCredits/, 'CreateTool no longer mounts SpectrumFooter on the Icon and Emoji libraries only')
   assert.equal((tool.match(/<SpectrumFooter/g) || []).length, 1, 'CreateTool mounts a second footer')
   for (const file of fs.readdirSync('src', { recursive: true })) {
     if (!/\.jsx?$/.test(file)) continue
@@ -76,4 +77,12 @@ test('the toolbar pins My icons and puts Add icon on the My icons view, not the 
   assert.ok(!toolbar.includes('ig-addbtn') && !toolbar.includes('count={'), 'Add icon or the visible count is back on the toolbar')
   assert.ok(!/value: 'custom'|id: 'custom'/.test(src), 'My icons is back in the pack menu or the group tray')
   assert.match(src, /ig-mysec-head[\s\S]*addIconButton/)
+})
+
+test('the sales close stays on marketing and reading pages, and the dashboard footer is dark', () => {
+  for (const path of ['/plans', '/learn', '/learn/brand-colour/', '/discover', '/privacy', '/terms', '/sitemap']) assert.equal(footerClosesSale(path), true, path)
+  for (const path of ['/projects', '/projects/abc', '/settings', '/checkout', '/community', '/create/icons', '/no-such-page']) assert.equal(footerClosesSale(path), false, path)
+  assert.equal(footerTheme('/projects'), 'dark')
+  assert.equal(footerTheme('/projects/'), 'dark')
+  for (const path of ['/projects/abc', '/settings', '/learn']) assert.equal(footerTheme(path), undefined, path)
 })
