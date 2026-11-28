@@ -29,7 +29,7 @@ export const ERROR_LINES = Object.freeze({
 })
 
 const CODE_STATUS = Object.freeze({
-  unknown_theme: 'unknown', unknown_row: 'unknown', unknown_format: 'unknown', invalid_project: 'invalid-project',
+  unknown_theme: 'unknown', unknown_row: 'unknown', unknown_format: 'unknown', unknown_page: 'unknown', invalid_project: 'invalid-project',
   pro_required: 'pro-required', design_too_large: 'too-large', rate_limited: 'rate-limited', build_failed: 'build-failed',
   auth_required: 'signed-out', contrast: 'low-contrast', font_missing: 'font-missing',
 })
@@ -53,14 +53,14 @@ export function fileNameFrom(header, ext) {
 }
 export const zipNameFrom = (header) => fileNameFrom(header, 'zip')
 
-export async function requestThemeExport({ theme, row, format, design, projectName }, { loadAuth, fetchImpl } = {}) {
+export async function requestThemeExport({ theme, row, format, design, projectName, page },{ loadAuth, fetchImpl } = {}) {
   try {
     const sdk = await loadAuth?.()
     const user = sdk?.auth?.currentUser
     const token = user ? await user.getIdToken() : null
     if (!token) return fail('signed-out')
     const doFetch = fetchImpl || globalThis.fetch
-    const payload = JSON.stringify({ theme, row, format, projectName, design: documentDesign(design) })
+    const payload = JSON.stringify({ theme, row, format, projectName, ...(page === undefined ? {} : { page }), design: documentDesign(design) })
     const ask = (idToken) => doFetch(EXPORT_DOCUMENT_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` }, body: payload,
     })

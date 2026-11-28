@@ -1,15 +1,17 @@
-// The themed exports, served from POST /api/ai?export=document with a body { theme, row, format, design, projectName }.
+// The themed exports, served from POST /api/ai?export=document with a body { theme, row, format, design, projectName, page? }.
+// `page` is optional: a key of EXPORT_PAGES (src/data/exportThemes.js) the theme lists, which sets the size of every page drawn.
 // api/_lib/exportDocument.js verifies the session and reads the plan, then hands a request that names a theme or a row to
 // serveThemeExport. Nothing here trusts the request beyond its allowlisted names and the two inputs projectToBrand takes.
 //
 //   theme, row or format not in the table                 400 { code: 'unknown_theme' | 'unknown_row' | 'unknown_format' }
+//   page that is not a size, or one the theme does not list  400 { code: 'unknown_page' }
 //   not Pro and not a free UI kit                         403 { code: 'pro_required', row, theme }
 //   over the per-account limit                            429 { code: 'rate_limited' } + Retry-After
 //   body over MAX_THEME_BODY_CHARS (Content-Length first)  413 { code: 'design_too_large' }
 //   project the engine refuses                            400 { code: 'invalid_project', inputCode, path? }
 //   a text pair that cannot reach its contrast, or a font file the deploy lacks   422 { code: 'contrast' | 'font_missing' }, logged here only
 //   anything else that throws                             500 { code: 'build_failed' }, logged here only
-//   zip rows                                              200, application/zip, name from the brand slug and theme id
+//   zip rows                                              200, application/zip, name from the brand slug and theme id (and the page key, when one was asked for)
 //   print rows                                            200 { ok: true, theme, row, format, html }
 //
 // A print row's html is a stand-alone document for the browser's print window: no script, no inline handler, no link to a file
@@ -17,7 +19,7 @@
 //
 // Every file name comes from brand.slug (limited to [a-z0-9-] by the engine) and the theme id, never from the project name.
 
-import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
+import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeRowFormat, themeHasRow, themeHasPage } from '../../src/data/exportThemes.js'
 import { assertThemeAccess } from './themeAccess.js'
 
 export const MAX_THEME_BODY_CHARS = 256 * 1024
@@ -184,14 +186,15 @@ export function siteBrand(brand) {
 }
 
 /** Builds one export. Returns { zip: Buffer, name } or { html } (a print document, with its CSP meta). */
-export async function renderThemeExport({ theme, row, format, design, projectName, skeleton = false }, engine) {
-  const opts = { skeleton: skeleton === true }
+export async function renderThemeExport({ theme, row, format, design, projectName, page, skeleton = false }, engine) {
+  const opts = { skeleton: skeleton === true, ...(page === undefined ? {} : { page }) }
+  const tag = page === undefined ? '' : `-${page}`
   const E = engine || await loadEngine()
   // Only these two values leave the request. The date defaults, and no brand object from the client reaches the engine.
   const brand = E.projectToBrand({ design, projectName })
   const slug = brand.slug
   const T = await THEMES[theme]()
-  const dirs = { guide: `${slug}-brand-guidelines-${theme}`, kit: `${slug}-ui-kit-${theme}` }
+  const dirs = { guide: `${slug}-brand-guidelines-${theme}${tag}`, kit: `${slug}-ui-kit-${theme}${tag}` }
   if (row === 'ui-kit') {
     const ctx = E.makeCtx(T, 'slot', 'uikit', E.loaders, T.kitSite ? siteBrand(brand) : brand, opts)
     const site = T.kitSite ? await premiumSite('kit', ctx, T) : null
@@ -207,7 +210,7 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   }
   if (row === 'guide') {
     // Free where the guidelines are free (a theme's rows list names it, src/data/exportThemes.js); the access check is unchanged.
-    const name = `${slug}-style-guide-${theme}`
+    const name = `${slug}-style-guide-${theme}${tag}`
     const g = styleGuide(E, T, E.makeCtx(T, 'slot', 'guide', E.loaders, brand, opts), format === 'pdf')
     const title = `${brand.name} style guide`
     if (format === 'pdf') return { html: withCsp(g.doc(title, g.pages.map((x) => x.html), true)) }
@@ -218,20 +221,21 @@ export async function renderThemeExport({ theme, row, format, design, projectNam
   }
   if (format === 'pdf') return { html: withCsp(bookPrint(E, T, brand, slug)) }
   const { files } = await bookSite(E, T, brand, slug)
-  return { name: `${slug}-brand-book-${theme}.zip`, zip: await zipOf(E, files, `${slug}-brand-book-${theme}`) }
+  return { name: `${slug}-brand-book-${theme}${tag}.zip`, zip: await zipOf(E, files, `${slug}-brand-book-${theme}${tag}`) }
 }
 
 /**
  * One page of a theme for the live preview, drawn the way renderThemeExport draws it for a print document (stand-alone, fonts
  * embedded, CSP meta first). `kind` is 'uikit' or 'guidelines' and `page` an engine page id; kind 'book' is the book's first
- * screen and takes no page. Returns { html }.
+ * screen and takes no page. `size` is an optional page size key (the export's `page` field; named apart because `page` is an id here).
+ * Returns { html }.
  */
-export async function renderThemePage({ theme, kind, page, design, projectName, skeleton = false }, engine) {
+export async function renderThemePage({ theme, kind, page, size, design, projectName, skeleton = false }, engine) {
   const E = engine || await loadEngine()
   const brand = E.projectToBrand({ design, projectName })
   const T = await THEMES[theme]()
   if (kind === 'book') return { html: withCsp(bookPrint(E, T, brand, brand.slug)) }
-  const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand, { skeleton: skeleton === true })
+  const ctx = E.makeCtx(T, 'slot', kind, E.loaders, brand, { skeleton: skeleton === true, ...(size === undefined ? {} : { page: size }) })
   return { html: withCsp(pagesDoc(E, T, ctx, kind, true, page)) }
 }
 
@@ -241,11 +245,12 @@ const safePath = (p) => (typeof p === 'string' && /^[A-Za-z0-9_.[\]-]{1,120}$/.t
  * The 400 body for a theme, row or format outside the table, or null. It reads nothing but the request, so a caller can check it
  * before it reads the account's plan.
  */
-export function themeRequestProblem({ theme, row, format }) {
+export function themeRequestProblem({ theme, row, format, page }) {
   if (typeof theme !== 'string' || !EXPORT_THEMES.some((t) => t.id === theme)) return { error: 'Unknown export theme', code: 'unknown_theme' }
   if (typeof row !== 'string' || !Object.hasOwn(THEME_ROW_FORMATS, row)) return { error: 'Unknown export row', code: 'unknown_row' }
   if (!themeHasRow(theme, row)) return { error: 'Unknown export row', code: 'unknown_row' }
   if (!isThemeRowFormat(row, format)) return { error: 'Unknown export format', code: 'unknown_format' }
+  if (page !== undefined && !themeHasPage(theme, page)) return { error: 'Unknown page size', code: 'unknown_page' }
   return null
 }
 
@@ -315,7 +320,7 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
   try {
     E = engine || await loadEngine()
     // Free (any plan but Pro) gets a theme's skeleton edition. It is decided here from the plan the caller read from the account, never from the request.
-    const out = await renderThemeExport({ theme, row, format, design: body.design, projectName: body.projectName, skeleton: plan?.id !== 'pro' }, E)
+    const out = await renderThemeExport({ theme, row, format, design: body.design, projectName: body.projectName, page: body.page, skeleton: plan?.id !== 'pro' }, E)
     if (out.zip) {
       res.setHeader('Content-Type', 'application/zip')
       res.setHeader('Content-Disposition', `attachment; filename="${out.name}"`)
