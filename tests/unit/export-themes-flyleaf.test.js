@@ -125,3 +125,17 @@ test('no client module imports the Flyleaf theme or the server theme folder', ()
   walk(path.resolve('src'))
   assert.deepEqual(hits, [])
 })
+
+// 5. THE PROJECT'S NAME PRINTS: the slot edition keeps the project's own name and colour names as words (meta.realCopy), so the cover and
+//    the running heads say "Margin", never a "Brand name" placeholder box. Break: drop realCopy from meta in themes/33-flyleaf/index.js.
+test('the project name and colour names print in the slot edition, not as placeholders', async () => {
+  for (const s of SHAPES) {
+    const res = await ask('pro-1', { theme: '33-flyleaf', row: s.row, format: s.format, design: designOf(['#2E7BB8', '#06070A', '#F2B544', '#EEF3F8', '#C4472D']), projectName: 'Margin' })
+    assert.equal(res.code, 200)
+    const html = res.body.html.replace(/<style>[\s\S]*?<\/style>/g, '')
+    assert.match(html, /Margin/, `${s.row}: the project name reaches the pages`)
+    assert.ok(!/>\s*Brand name\s*</.test(html), `${s.row}: no Brand name placeholder is printed`)
+  }
+  // no project name: the name is still a placeholder for the user to write
+  assert.equal(T.meta.realCopy('name', 'Your brand'), undefined)
+})

@@ -5,11 +5,13 @@
 import { guidelines } from './brand-pages.js';
 import { guide as uiGuide } from './lane-guide.js';
 import { brandOrder, uiOrder, palette } from './helpers.js';
+import { realCopy } from './real-copy.js';
 
 export const meta = {
   id: '33-flyleaf', name: 'Flyleaf', tier: 'Free',
   brand: 'margin',
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 }, guidePage: { w: 794, h: 1123 },
+  realCopy,  // the project's own name and colours print as words in the slot edition, not as placeholder boxes (see real-copy.js)
   chrome: { family: 'Hanken Grotesk', q: 'Hanken+Grotesk:wght@400;500;600', faces: [{ weight: 400, stem: 'HankenGrotesk-400' }, { weight: 500, stem: 'HankenGrotesk-500' }, { weight: 600, stem: 'HankenGrotesk-600' }] },
 };
 
