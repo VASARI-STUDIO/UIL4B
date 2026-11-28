@@ -174,15 +174,23 @@
 @media(max-width:767px){.pl-fig-n{font-size:40px}}
 .pl-lines{min-height:44px;margin:8px 0 0}
 .pl-lines p{margin:0;font-size:14px;line-height:22px;color:var(--v3-sec)}
+.pl-ledger{margin:24px 0 0;border-bottom:1px solid var(--v3-hair);font-variant-numeric:tabular-nums}
+.pl-row{display:grid;grid-template-columns:56px 1fr auto;column-gap:16px;padding:12px 0;border-top:1px solid var(--v3-hair);font-size:14px;line-height:1.45}
+.pl-when,.pl-amt{font-weight:500;color:var(--v3-ink)}
+.pl-what{color:var(--v3-sec)}
+.pl-amt{text-align:right}
+.pl-cancel{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
+@media(max-width:767px){.pl-row{grid-template-columns:52px 1fr auto}}
+.pl-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:8px}
+.pl-stripe{font-size:12px;line-height:1.5;color:var(--v3-sec);white-space:nowrap}
 .pl-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin-top:24px;padding:0 20px;border:0;border-radius:999px;background:var(--v3-ink);color:var(--v3-on-ink);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;transition:background-color 200ms var(--v3-ease),transform 140ms var(--v3-ease),opacity 150ms var(--v3-ease)}
 @media(hover:hover){.pl-go:hover:not(:disabled):not([aria-disabled="true"]){background:var(--v3-ink-hover)}}
 .pl-go:active:not(:disabled):not([aria-disabled="true"]){transform:scale(.97)}
 .pl-go:disabled,.pl-go[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
 .pl-go:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
-.pl-fine{margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
 .pl-err{margin:16px 0 0;font-size:14px;line-height:1.5;color:var(--danger)}
 .pl-err:focus-visible{outline:none}
-.pl-keep{display:flex;align-items:center;width:fit-content;min-height:44px;margin:16px 0 0;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-sec);cursor:pointer}
+.pl-keep{display:flex;align-items:center;width:fit-content;min-height:44px;margin:0;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-sec);cursor:pointer}
 .pl-keep:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
 @media(hover:hover){.pl-keep:hover{color:var(--v3-ink);text-decoration:underline;text-underline-offset:3px}}
 
