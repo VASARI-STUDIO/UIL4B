@@ -120,8 +120,13 @@ test.describe('on a 390px phone, in a real touch context', () => {
       expect(look.shadow, 'no shadow').toBe('none')
       expect(look.blur, 'no blur').toBe('none')
 
+      // At the end of the content the bar is still on screen, and at the very foot of the page
+      // it rests on top of the site footer rather than over it.
+      await page.evaluate(() => window.scrollTo(0, document.querySelector('.sp-footer').getBoundingClientRect().top + window.scrollY - window.innerHeight))
+      await expect(bar, 'the bar stays on screen at the end of the content').toBeInViewport()
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-      await expect(bar, 'the bar stays on screen at the foot of the page').toBeInViewport()
+      const gap = await page.evaluate(() => document.querySelector('.sp-footer').getBoundingClientRect().top - document.querySelector('.db-bar').getBoundingClientRect().bottom)
+      expect(gap, 'the bar sits above the footer and covers none of it').toBeGreaterThanOrEqual(-1)
     })
   })
 
